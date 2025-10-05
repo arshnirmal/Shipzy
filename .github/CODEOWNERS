@@ -1,0 +1,13 @@
+# See available CODEOWNERS features in the documentation:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Order is important: the last matching pattern takes the most precedence.
+
+* @shipzy/maintainers
+
+.github/ @shipzy/ci
+services/backend/ @shipzy/backend
+apps/ @shipzy/mobile
+infrastructure/ @shipzy/devops
+packages/ @shipzy/shared
+docs/ @shipzy/docs

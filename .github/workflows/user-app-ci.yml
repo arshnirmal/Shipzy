@@ -1,0 +1,39 @@
+name: User App CI
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "apps/user/**"
+    pull_request:
+        branches: [main]
+        paths:
+            - "apps/user/**"
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                  flutter-version: "3.x"
+                  channel: stable
+
+            - name: Install dependencies
+              working-directory: ./apps/user
+              run: flutter pub get
+
+            - name: Analyze
+              working-directory: ./apps/user
+              run: flutter analyze
+
+            - name: Run tests
+              working-directory: ./apps/user
+              run: flutter test
+
+            - name: Build APK
+              working-directory: ./apps/user
+              run: flutter build apk --debug
