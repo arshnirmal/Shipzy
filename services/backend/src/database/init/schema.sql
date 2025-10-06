@@ -75,7 +75,7 @@ INSERT INTO public.user_roles (name, description) VALUES
     ('client', 'Customer who books deliveries'),
     ('courier', 'Delivery driver/rider'),
     ('admin', 'Platform administrator'),
-    ('support', 'Customer support staff');
+    ('business', 'Business customer');
 
 -- Vehicle Categories
 CREATE TABLE public.vehicle_categories (
@@ -87,10 +87,9 @@ CREATE TABLE public.vehicle_categories (
 );
 
 INSERT INTO public.vehicle_categories (name, description) VALUES
-    ('bike', 'Two-wheeler motorcycle/scooter'),
-    ('auto', 'Three-wheeler auto-rickshaw'),
+    ('2-wheeler', 'Two-wheeler motorcycle/scooter'),
+    ('3-wheeler', 'Three-wheeler vehicle'),
     ('mini-truck', 'Small pickup truck'),
-    ('van', 'Covered cargo van');
 
 -- Order Statuses
 CREATE TABLE public.order_statuses (
@@ -124,7 +123,6 @@ INSERT INTO public.payment_methods (name, description) VALUES
     ('cod', 'Cash on Delivery'),
     ('prepaid_upi', 'Prepaid via UPI'),
     ('prepaid_card', 'Prepaid via Credit/Debit Card'),
-    ('wallet', 'Digital Wallet');
 
 -- Payment Statuses
 CREATE TABLE public.payment_statuses (
@@ -196,11 +194,47 @@ CREATE TABLE public.labels (
 );
 
 INSERT INTO public.labels (name, color_hex) VALUES
-    ('fragile', '#FF5733'),
-    ('perishable', '#33FF57'),
-    ('documents', '#3357FF'),
-    ('electronics', '#FF33A1'),
-    ('express', '#FFC300');
+    ('New', '#000000'),
+    ('Save 40%', '#000000');
+
+-- Weight Tiers (for pricing)
+CREATE TABLE public.weight_tiers (
+    tier_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    min_weight_kg NUMERIC(10, 2) NOT NULL,
+    max_weight_kg NUMERIC(10, 2) NOT NULL,
+    additional_charge NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT weight_tier_min_less_than_max CHECK (min_weight_kg < max_weight_kg),
+    -- EXCLUSION CONSTRAINT to prevent overlapping ranges
+    CONSTRAINT weight_tier_no_overlap EXCLUDE USING gist (numrange(min_weight_kg, max_weight_kg, '[]') WITH &&)
+);
+
+INSERT INTO public.weight_tiers (name, min_weight_kg, max_weight_kg, additional_charge) VALUES
+    ('Up to 1 kg', 0, 1, 0),
+    ('Up to 5 kg', 1, 5, 20),
+    ('Up to 10 kg', 5, 10, 40),
+    ('Up to 15 kg', 10, 15, 50),
+    ('Up to 20 kg', 15, 20, 60);
+    ('Up to 100 kg', 1, 100, 100);
+
+-- Delivery Types
+CREATE TABLE public.delivery_types (
+    delivery_type_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    base_rate NUMERIC(10, 2) NOT NULL,
+    per_km_rate NUMERIC(10, 2) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO public.delivery_types (name, description, base_rate, per_km_rate) VALUES 
+    ('Deliver Now', 'Immediate pickup and dropoff within 1 hour', 50.00, 8.20),
+    ('Scheduled', 'Scheduled deliveries arriving at predetermined times', 40.00, 8.20),
+    ('End-of-day', 'Delivery by close of business', 35.00, 7.50);
+
 
 -- ===================================================================
 -- SECTION 5: USERS SCHEMA
@@ -308,49 +342,21 @@ FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
 -- SECTION 6: LOGISTICS SCHEMA
 -- ===================================================================
 
--- Vehicle Capabilities
-CREATE TABLE logistics.vehicle_capabilities (
-    capability_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    icon_url VARCHAR(255),
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-INSERT INTO logistics.vehicle_capabilities (name, description) VALUES
-    ('refrigerated', 'Temperature-controlled cargo'),
-    ('fragile_handling', 'Specialized fragile item handling'),
-    ('oversized', 'Can handle oversized packages'),
-    ('express', 'Fast delivery capability');
-
--- Delivery Types
-CREATE TABLE logistics.delivery_types (
-    delivery_type_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    description TEXT,
-    base_rate NUMERIC(10, 2) NOT NULL,
-    per_km_rate NUMERIC(10, 2) NOT NULL,
-    estimated_time_minutes INT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TRIGGER set_timestamp_logistics_delivery_types
-BEFORE UPDATE ON logistics.delivery_types
-FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
-
-INSERT INTO logistics.delivery_types (name, description, base_rate, per_km_rate, estimated_time_minutes) VALUES
-    ('urgent', 'Immediate pickup and delivery', 50.00, 10.00, 60),
-    ('scheduled', 'Scheduled pickup at specified time', 30.00, 8.00, 120),
-    ('express', 'Same-day delivery', 40.00, 9.00, 180);
-
 -- Delivery Type Capabilities (Junction Table - FIXED from array)
 CREATE TABLE logistics.delivery_type_capabilities (
-    delivery_type_id INT NOT NULL REFERENCES logistics.delivery_types (delivery_type_id) ON DELETE CASCADE,
-    capability_id INT NOT NULL REFERENCES logistics.vehicle_capabilities (capability_id) ON DELETE CASCADE,
+    delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id) ON DELETE CASCADE,
+    weight_tier_id INT NOT NULL REFERENCES public.weight_tiers (tier_id) ON DELETE CASCADE,
     PRIMARY KEY (delivery_type_id, capability_id)
 );
+
+INSERT INTO logistics.delivery_type_capabilities (delivery_type_id, weight_tier_id) VALUES
+    (1, 1),
+    (1, 2),
+    (1, 3),
+    (1, 4),
+    (1, 5),
+    (2, 6),
+    (3, 6);
 
 -- Delivery Type Labels (Junction Table)
 CREATE TABLE logistics.delivery_type_labels (
@@ -359,24 +365,9 @@ CREATE TABLE logistics.delivery_type_labels (
     PRIMARY KEY (delivery_type_id, label_id)
 );
 
--- Weight Tiers (for pricing)
-CREATE TABLE logistics.weight_tiers (
-    tier_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    min_weight_kg NUMERIC(10, 2) NOT NULL,
-    max_weight_kg NUMERIC(10, 2) NOT NULL,
-    additional_charge NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT weight_tier_min_less_than_max CHECK (min_weight_kg < max_weight_kg),
-    -- EXCLUSION CONSTRAINT to prevent overlapping ranges
-    CONSTRAINT weight_tier_no_overlap EXCLUDE USING gist (numrange(min_weight_kg, max_weight_kg, '[]') WITH &&)
-);
-
-INSERT INTO logistics.weight_tiers (name, min_weight_kg, max_weight_kg, additional_charge) VALUES
-    ('Light', 0, 5, 0),
-    ('Medium', 5, 20, 20),
-    ('Heavy', 20, 50, 50),
-    ('Extra Heavy', 50, 100, 100);
+INSERT INTO logistics.delivery_type_labels (delivery_type_id, label_id) VALUES
+    (2, 1),
+    (3, 2);
 
 -- Courier Vehicles
 CREATE TABLE logistics.courier_vehicles (
