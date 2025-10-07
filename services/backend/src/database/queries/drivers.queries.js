@@ -5,7 +5,7 @@
  * Covers courier profiles, availability, and location
  */
 
-module.exports = {
+export default {
   // ============ COURIER PROFILE ============
   
   /**

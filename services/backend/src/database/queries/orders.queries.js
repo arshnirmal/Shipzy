@@ -5,7 +5,7 @@
  * Covers order CRUD, courier assignments, and order tracking
  */
 
-module.exports = {
+export default {
   // ============ FUNCTION CALLS ============
   
   /**

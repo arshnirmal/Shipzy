@@ -4,7 +4,7 @@
  * User profile and address management queries
  */
 
-module.exports = {
+export default {
   // ============ USER PROFILE ============
   
   /**

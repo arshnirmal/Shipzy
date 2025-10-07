@@ -1,0 +1,145 @@
+version: "3.9"
+
+services:
+  # ============================================
+  # PostgreSQL with PostGIS
+  # ============================================
+  postgres:
+    image: postgis/postgis:${POSTGIS_VERSION:-17-3.6-alpine}
+    container_name: shipzy-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - shipzy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+
+  # ============================================
+  # Backend API (Node.js + Fastify)
+  # ============================================
+  backend:
+    build:
+      context: ./services/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: shipzy-backend-dev
+    working_dir: /app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: ${BACKEND_PORT}
+      HOST: ${BACKEND_HOST}
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_POOL_MAX: 20
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
+
+      # Firebase (handled via service account key file in Docker container)
+
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN}
+
+      # Rate Limiting
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX}
+      RATE_LIMIT_TIMEWINDOW: ${RATE_LIMIT_TIMEWINDOW}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL}
+      LOG_QUERIES: ${LOG_QUERIES}
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shipzy-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:${BACKEND_PORT}/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: npm run dev
+
+  # ============================================
+  # ngrok (Public HTTPS Tunnel)
+  # ============================================
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: shipzy-ngrok-dev
+    restart: unless-stopped
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    command:
+      - "http"
+      - "backend:${BACKEND_PORT}"
+      - "--domain=${NGROK_DOMAIN}"
+      - "--log=stdout"
+      - "--log-level=info"
+    ports:
+      - "4040:4040" # ngrok web interface
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - shipzy-network
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  shipzy-network:
+    driver: bridge
+    name: shipzy-network-dev
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres-data:
+    name: shipzy-postgres-data-dev

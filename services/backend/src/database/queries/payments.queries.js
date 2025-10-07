@@ -4,7 +4,7 @@
  * Payment transaction queries
  */
 
-module.exports = {
+export default {
   // ============ PAYMENT TRANSACTIONS ============
   
   /**

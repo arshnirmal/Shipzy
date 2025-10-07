@@ -40,3 +40,5 @@ web/build/
 # Docker
 .DS_Store
 *.log
+
+shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json

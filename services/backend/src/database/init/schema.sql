@@ -235,6 +235,24 @@ INSERT INTO public.delivery_types (name, description, base_rate, per_km_rate) VA
     ('Scheduled', 'Scheduled deliveries arriving at predetermined times', 40.00, 8.20),
     ('End-of-day', 'Delivery by close of business', 35.00, 7.50);
 
+-- Package Types
+CREATE TABLE public.package_types (
+    package_type_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO public.package_types (name, description) VALUES
+    ('Document', 'Document package'),
+    ('Food', 'Food package'),
+    ('Clothes', 'Clothes package'),
+    ('Electronics', 'Electronics package'),
+    ('Medicine', 'Medicine package'),
+    ('Gift', 'Gift package'),
+    ('Grocery', 'Grocery package'),
+    ('Pet Supplies', 'Pet Supplies package'),
+    ('Other', 'Other package');
 
 -- ===================================================================
 -- SECTION 5: USERS SCHEMA
@@ -299,6 +317,9 @@ CREATE TABLE users.addresses (
     user_id INT NOT NULL REFERENCES users.profiles (user_id) ON DELETE CASCADE,
     address_type VARCHAR(50), -- 'home', 'work', 'other'
     label VARCHAR(100),
+    building_name VARCHAR(100),
+    floor_number VARCHAR(10),
+    room_number VARCHAR(10),
     full_address TEXT NOT NULL,
     landmark VARCHAR(255),
     city VARCHAR(100) NOT NULL,
@@ -360,7 +381,7 @@ INSERT INTO logistics.delivery_type_capabilities (delivery_type_id, weight_tier_
 
 -- Delivery Type Labels (Junction Table)
 CREATE TABLE logistics.delivery_type_labels (
-    delivery_type_id INT NOT NULL REFERENCES logistics.delivery_types (delivery_type_id) ON DELETE CASCADE,
+    delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id) ON DELETE CASCADE,
     label_id INT NOT NULL REFERENCES public.labels (label_id) ON DELETE CASCADE,
     PRIMARY KEY (delivery_type_id, label_id)
 );
@@ -424,6 +445,9 @@ COMMENT ON TABLE logistics.courier_status IS 'Real-time courier availability and
 -- Locations (pickup/delivery points)
 CREATE TABLE logistics.locations (
     location_id SERIAL PRIMARY KEY,
+    building_name VARCHAR(100),
+    floor_number VARCHAR(10),
+    room_number VARCHAR(10),
     address TEXT NOT NULL,
     latitude NUMERIC(10, 8) NOT NULL,
     longitude NUMERIC(11, 8) NOT NULL,
@@ -449,7 +473,7 @@ CREATE TABLE orders.requests (
     order_id SERIAL PRIMARY KEY,
     order_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
     client_id INT NOT NULL REFERENCES users.profiles (user_id) ON DELETE CASCADE,
-    delivery_type_id INT NOT NULL REFERENCES logistics.delivery_types (delivery_type_id),
+    delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id),
     status_id INT NOT NULL REFERENCES public.order_statuses (status_id),
     
     -- Pickup details
@@ -467,10 +491,12 @@ CREATE TABLE orders.requests (
     actual_delivery_time TIMESTAMPTZ,
     
     -- Package details
+    package_type_id INT NOT NULL REFERENCES public.package_types (package_type_id),
     package_description TEXT,
     package_weight_kg NUMERIC(10, 2),
     package_dimensions JSONB, -- {length, width, height, unit}
     special_instructions TEXT,
+    declared_value NUMERIC(10, 2) DEFAULT 0.00,
     
     -- Pricing
     estimated_distance_km NUMERIC(6, 2),

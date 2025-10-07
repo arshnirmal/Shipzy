@@ -26,7 +26,7 @@ echo "Droplet created with IP: $IP"
 # Run initial setup
 ssh root@$IP << EOF
   apt update && apt upgrade -y
-  apt install -y docker.io docker-compose nginx git
+  apt install -y docker.io docker compose nginx git
   systemctl enable docker
   systemctl start docker
   useradd -m shipzy

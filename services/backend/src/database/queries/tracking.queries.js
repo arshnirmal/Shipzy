@@ -4,7 +4,7 @@
  * Tracking and location queries
  */
 
-module.exports = {
+export default {
   // ============ FUNCTION CALLS ============
   
   /**

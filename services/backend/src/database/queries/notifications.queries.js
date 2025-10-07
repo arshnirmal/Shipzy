@@ -4,7 +4,7 @@
  * Notification queue and FCM token queries
  */
 
-module.exports = {
+export default {
   // ============ NOTIFICATION QUEUE ============
   
   /**

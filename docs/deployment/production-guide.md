@@ -17,7 +17,7 @@
    ```
    git clone <repo> /home/shipzy/shipzy
    cd /home/shipzy/shipzy
-   docker-compose -f infrastructure/docker/docker-compose.prod.yml up -d
+   docker compose -f infrastructure/docker/docker compose.prod.yml up -d
    ```
 
 3. **Configure Nginx**
@@ -28,7 +28,7 @@
    Run migrations: `docker exec backend npm run migrate`
 
 5. **Environment Variables**
-   Set secrets in docker-compose or env files.
+   Set secrets in docker compose or env files.
 
 6. **Monitoring**
    Set up logs, alerts.
