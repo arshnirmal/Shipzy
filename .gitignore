@@ -41,4 +41,17 @@ web/build/
 .DS_Store
 *.log
 
-shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json
+# IDE and Editor files
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+*firebase*adminsdk*.json
+*service-account*.json
+.env.dev
+.env.prod
