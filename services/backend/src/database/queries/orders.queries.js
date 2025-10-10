@@ -7,30 +7,30 @@
 
 export default {
   // ============ FUNCTION CALLS ============
-  
+
   /**
    * Call stored function: Calculate fare
    */
   CALL_CALCULATE_FARE: `
       SELECT orders.calculate_fare($1, $2, $3) AS result
   `,
-  
+
   /**
    * Call stored function: Create order with locations
    */
   CALL_CREATE_ORDER: `
       SELECT orders.create_order_with_locations($1) AS result
   `,
-  
+
   /**
    * Call stored function: Cancel order with refund
    */
   CALL_CANCEL_ORDER_WITH_REFUND: `
       SELECT orders.cancel_order_with_refund($1, $2, $3) AS result
   `,
-  
+
   // ============ ORDER RETRIEVAL ============
-  
+
   /**
    * Find order by ID with full details
    */
@@ -109,24 +109,27 @@ export default {
       WHERE o.order_id = $1
           AND o.deleted_at IS NULL
   `,
-  
+
   /**
    * Find orders by client (user's orders)
    */
   FIND_ORDERS_BY_CLIENT: `
-      SELECT 
+      SELECT
           o.order_id,
           o.order_uuid,
+          o.order_number,
           o.status_id,
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          o.package_description,
           o.total_price,
           o.created_at,
           pl.address AS pickup_address,
           dl.address AS delivery_address,
           ca.courier_id,
-          cu.full_name AS courier_name
+          cu.full_name AS courier_name,
+          cu.profile_picture_url AS courier_photo
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN logistics.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -139,30 +142,52 @@ export default {
       ORDER BY o.created_at DESC
       LIMIT $2 OFFSET $3
   `,
-  
+
+  /**
+   * Count total orders for client
+   */
+  COUNT_ORDERS_BY_CLIENT: `
+      SELECT COUNT(*) AS total
+      FROM orders.requests
+      WHERE client_id = $1
+          AND deleted_at IS NULL
+  `,
+
   /**
    * Find available orders for courier (within radius)
    */
   FIND_AVAILABLE_ORDERS_FOR_COURIER: `
-      SELECT 
+      SELECT
           o.order_id,
           o.order_uuid,
+          o.order_number,
           o.delivery_type_id,
           dt.name AS delivery_type,
           o.total_price,
           o.package_description,
           o.package_weight_kg,
           o.created_at,
+
+          -- Pickup location
           pl.address AS pickup_address,
+          pl.landmark AS pickup_landmark,
           ST_Y(pl.location::geometry) AS pickup_latitude,
           ST_X(pl.location::geometry) AS pickup_longitude,
+
+          -- Delivery location
           dl.address AS delivery_address,
+
+          -- Distance from courier
           ROUND(
               ST_Distance(
                   pl.location,
                   ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
               )::numeric / 1000, 2
-          ) AS distance_from_courier_km
+          ) AS distance_from_courier_km,
+
+          -- Estimated distance between pickup and delivery
+          o.estimated_distance_km
+
       FROM orders.requests o
       JOIN logistics.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
@@ -172,6 +197,10 @@ export default {
           AND NOT EXISTS (
               SELECT 1 FROM orders.courier_assignments ca
               WHERE ca.order_id = o.order_id
+                  AND ca.assignment_status_id NOT IN (
+                      SELECT status_id FROM public.assignment_statuses
+                      WHERE name IN ('rejected', 'cancelled')
+                  )
           )
           AND ST_DWithin(
               pl.location,
@@ -181,9 +210,9 @@ export default {
       ORDER BY o.created_at ASC
       LIMIT $5
   `,
-  
+
   // ============ ORDER STATUS UPDATES ============
-  
+
   /**
    * Update order status
    */
@@ -195,7 +224,7 @@ export default {
       WHERE order_id = $1
       RETURNING order_id, status_id, updated_at
   `,
-  
+
   /**
    * Mark order as picked up
    */
@@ -209,7 +238,7 @@ export default {
       WHERE order_id = $1
       RETURNING order_id, picked_up_at
   `,
-  
+
   /**
    * Mark order as delivered
    */
@@ -223,9 +252,9 @@ export default {
       WHERE order_id = $1
       RETURNING order_id, delivered_at
   `,
-  
+
   // ============ COURIER ASSIGNMENTS ============
-  
+
   /**
    * Create courier assignment
    */
@@ -242,21 +271,46 @@ export default {
       )
       RETURNING assignment_id, order_id, courier_id, assigned_at
   `,
-  
+
   /**
    * Accept assignment (courier accepts order)
    */
   ACCEPT_ASSIGNMENT: `
       UPDATE orders.courier_assignments
-      SET 
+      SET
           assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'accepted'),
           accepted_at = NOW(),
           updated_at = NOW()
-      WHERE assignment_id = $1
+      WHERE order_id = $1
           AND courier_id = $2
       RETURNING assignment_id, accepted_at
   `,
-  
+
+  /**
+   * Update order status to assigned
+   */
+  UPDATE_ORDER_STATUS_TO_ASSIGNED: `
+      UPDATE orders.requests
+      SET
+          status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'assigned'),
+          accepted_at = NOW(),
+          updated_at = NOW()
+      WHERE order_id = $1
+      RETURNING order_id
+  `,
+
+  /**
+   * Update courier status with current assignment
+   */
+  UPDATE_COURIER_CURRENT_ASSIGNMENT: `
+      UPDATE logistics.courier_status
+      SET
+          current_assignment_id = $2,
+          is_available = false,
+          updated_at = NOW()
+      WHERE courier_id = $1
+  `,
+
   /**
    * Reject assignment
    */
@@ -271,7 +325,7 @@ export default {
           AND courier_id = $2
       RETURNING assignment_id, rejected_at
   `,
-  
+
   /**
    * Find courier's active assignments
    */
@@ -306,9 +360,9 @@ export default {
           )
       ORDER BY ca.assigned_at DESC
   `,
-  
+
   // ============ DELIVERY TYPES ============
-  
+
   /**
    * Get all active delivery types
    */

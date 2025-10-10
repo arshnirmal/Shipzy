@@ -6,7 +6,7 @@
 
 export default {
   // ============ USER PROFILE ============
-  
+
   /**
    * Find user by UUID (for JWT payload)
    */
@@ -28,7 +28,7 @@ export default {
       WHERE u.user_uuid = $1
           AND u.deleted_at IS NULL
   `,
-  
+
   /**
    * Find user by phone number
    */
@@ -50,7 +50,7 @@ export default {
       WHERE u.phone_number = $1
           AND u.deleted_at IS NULL
   `,
-  
+
   /**
    * Update user profile
    */
@@ -64,18 +64,21 @@ export default {
       WHERE user_id = $1
       RETURNING user_id, full_name, email, profile_picture_url, updated_at
   `,
-  
+
   // ============ USER ADDRESSES ============
-  
+
   /**
    * Get user's saved addresses
    */
   GET_USER_ADDRESSES: `
-      SELECT 
+      SELECT
           a.address_id,
           a.address_type,
           a.label,
           a.full_address,
+          a.building,
+          a.floor,
+          a.flat_number,
           a.landmark,
           a.city,
           a.state,
@@ -88,7 +91,31 @@ export default {
       WHERE a.user_id = $1
       ORDER BY a.is_default DESC, a.created_at DESC
   `,
-  
+
+  /**
+   * Get single address by ID
+   */
+  GET_ADDRESS_BY_ID: `
+      SELECT
+          a.address_id,
+          a.user_id,
+          a.address_type,
+          a.label,
+          a.full_address,
+          a.building,
+          a.floor,
+          a.flat_number,
+          a.landmark,
+          a.city,
+          a.state,
+          a.postal_code,
+          ST_Y(a.location::geometry) AS latitude,
+          ST_X(a.location::geometry) AS longitude,
+          a.is_default
+      FROM users.addresses a
+      WHERE a.address_id = $1
+  `,
+
   /**
    * Save new address
    */
@@ -98,6 +125,9 @@ export default {
           address_type,
           label,
           full_address,
+          building,
+          floor,
+          flat_number,
           landmark,
           city,
           state,
@@ -106,13 +136,18 @@ export default {
           is_default
       )
       VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8,
-          ST_SetSRID(ST_MakePoint($10, $9), 4326)::geography,
-          $11
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+          ST_SetSRID(ST_MakePoint($13, $12), 4326)::geography,
+          $14
       )
-      RETURNING address_id, label, full_address, is_default, created_at
+      RETURNING
+          address_id,
+          label,
+          full_address,
+          is_default,
+          created_at
   `,
-  
+
   /**
    * Unset default addresses for user
    */
@@ -121,7 +156,7 @@ export default {
       SET is_default = false
       WHERE user_id = $1
   `,
-  
+
   /**
    * Delete address
    */
