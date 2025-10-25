@@ -1,8 +1,8 @@
 # 🚚 Shipzy - Hyperlocal Delivery Platform
 
-[![Backend CI](https://github.com/your-username/shipzy/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/your-username/shipzy/actions/workflows/backend-ci.yml)
-[![User App CI](https://github.com/your-username/shipzy/actions/workflows/user-app-ci.yml/badge.svg)](https://github.com/your-username/shipzy/actions/workflows/user-app-ci.yml)
-[![Driver App CI](https://github.com/your-username/shipzy/actions/workflows/driver-app-ci.yml/badge.svg)](https://github.com/your-username/shipzy/actions/workflows/driver-app-ci.yml)
+[![Backend CI](https://github.com/arshnirmal/shipzy/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/arshnirmal/shipzy/actions/workflows/backend-ci.yml)
+[![User App CI](https://github.com/arshnirmal/shipzy/actions/workflows/user-app-ci.yml/badge.svg)](https://github.com/arshnirmal/shipzy/actions/workflows/user-app-ci.yml)
+[![Driver App CI](https://github.com/arshnirmal/shipzy/actions/workflows/driver-app-ci.yml/badge.svg)](https://github.com/arshnirmal/shipzy/actions/workflows/driver-app-ci.yml)
 
 > A complete hyperlocal delivery platform connecting customers with nearby couriers for instant deliveries
 
@@ -45,7 +45,7 @@ This is a **monorepo** containing:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/shipzy.git
+git clone https://github.com/arshnirmal/shipzy.git
 cd shipzy
 
 # 2. Setup backend

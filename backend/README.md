@@ -130,19 +130,67 @@ services/backend/
 
 ### Authentication
 
-| Method | Endpoint                       | Description                  | Auth Required |
-| ------ | ------------------------------ | ---------------------------- | ------------- |
-| POST   | `/api/v1/auth/firebase/verify` | Login/Register with Firebase | No            |
-| POST   | `/api/v1/auth/refresh`         | Refresh JWT token            | No            |
-| POST   | `/api/v1/auth/logout`          | Logout (revoke token)        | Yes           |
+| Method | Endpoint                       | Description                     | Auth Required |
+| ------ | ------------------------------ | ------------------------------- | ------------- |
+| POST   | `/api/v1/auth/firebase/verify` | Login/Register with phone (OTP) | No            |
+| POST   | `/api/v1/auth/google/verify`   | Login/Register with Google      | No            |
+| POST   | `/api/v1/auth/refresh`         | Refresh JWT token               | No            |
+| POST   | `/api/v1/auth/logout`          | Logout (revoke token)           | Yes           |
+
+### User Management
+
+| Method | Endpoint                         | Description              | Auth Required |
+| ------ | -------------------------------- | ------------------------ | ------------- |
+| GET    | `/api/v1/users/me`               | Get current user profile | Yes           |
+| PUT    | `/api/v1/users/me`               | Update user profile      | Yes           |
+| GET    | `/api/v1/users/me/addresses`     | Get saved addresses      | Yes           |
+| POST   | `/api/v1/users/me/addresses`     | Save new address         | Yes           |
+| DELETE | `/api/v1/users/me/addresses/:id` | Delete saved address     | Yes           |
+
+### Driver Management
+
+| Method | Endpoint                          | Description             | Auth Required |
+| ------ | --------------------------------- | ----------------------- | ------------- |
+| GET    | `/api/v1/drivers/me`              | Get driver profile      | Yes (Courier) |
+| PUT    | `/api/v1/drivers/me`              | Update driver profile   | Yes (Courier) |
+| PUT    | `/api/v1/drivers/me/availability` | Toggle availability     | Yes (Courier) |
+| PUT    | `/api/v1/drivers/me/location`     | Update current location | Yes (Courier) |
+| GET    | `/api/v1/drivers/me/assignments`  | Get active assignments  | Yes (Courier) |
+| GET    | `/api/v1/drivers/me/earnings`     | Get earnings summary    | Yes (Courier) |
+
+### Order Management
+
+| Method | Endpoint                        | Description             | Auth Required |
+| ------ | ------------------------------- | ----------------------- | ------------- |
+| POST   | `/api/v1/orders/calculate-fare` | Calculate fare estimate | Yes           |
+| POST   | `/api/v1/orders`                | Create new order        | Yes (Client)  |
+| GET    | `/api/v1/orders`                | List user's orders      | Yes (Client)  |
+| GET    | `/api/v1/orders/available`      | List available orders   | Yes (Courier) |
+| GET    | `/api/v1/orders/:id`            | Get order details       | Yes           |
+| POST   | `/api/v1/orders/:id/cancel`     | Cancel order            | Yes           |
+| POST   | `/api/v1/orders/:id/accept`     | Driver accepts order    | Yes (Courier) |
+| PUT    | `/api/v1/orders/:id/status`     | Update order status     | Yes (Courier) |
+
+### Static Data
+
+| Method | Endpoint                            | Description            | Auth Required |
+| ------ | ----------------------------------- | ---------------------- | ------------- |
+| GET    | `/api/v1/static/delivery-types`     | Get delivery types     | No            |
+| GET    | `/api/v1/static/weight-tiers`       | Get weight tiers       | No            |
+| GET    | `/api/v1/static/vehicle-categories` | Get vehicle categories | No            |
+| GET    | `/api/v1/static/package-types`      | Get package types      | No            |
+| GET    | `/api/v1/static/payment-methods`    | Get payment methods    | No            |
+| GET    | `/api/v1/static/create-order-data`  | Get create order data  | No            |
+| GET    | `/api/v1/static/order-statuses`     | Get order statuses     | No            |
 
 ### Health Check
 
 | Method | Endpoint  | Description          | Auth Required |
 | ------ | --------- | -------------------- | ------------- |
 | GET    | `/health` | Server health status | No            |
+| GET    | `/api/v1` | API info             | No            |
 
-**More endpoints** (orders, tracking, payments) coming soon...
+**📋 Total: 25 implemented endpoints**
 
 ---
 
