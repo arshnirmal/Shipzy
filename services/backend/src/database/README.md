@@ -23,15 +23,15 @@ See `schema.sql` for full details.
 
 ## Initialization
 
-1. Set `DATABASE_URL` in `.env` (e.g., `postgresql://user:pass@localhost:5432/shipzy`).
+1. Set database environment variables in `.env` (see `.env.example` for required variables).
 2. Run the backend: `npm run dev` (connects automatically).
 3. Initialize schema:
    ```bash
-   psql $DATABASE_URL -f init/schema.sql
+   psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f init/schema.sql
    ```
 4. Seed development data:
    ```bash
-   psql $DATABASE_URL -f seeds/dev-data.sql
+   psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f seeds/dev-data.sql
    ```
 
 ## Migrations
@@ -41,22 +41,31 @@ Use a tool like `db-migrate` or manual SQL scripts. Track changes in a `migratio
 ## Usage in Backend
 
 Import queries:
+
 ```js
-const authQueries = require('./database/queries/auth.queries');
-const { query } = require('./database/db');
+const authQueries = require("./database/queries/auth.queries");
+const { query } = require("./database/db");
 
 // Execute query
-const result = await query(authQueries.createUser, [email, name, phone, role, hash]);
+const result = await query(authQueries.createUser, [
+  email,
+  name,
+  phone,
+  role,
+  hash,
+]);
 ```
 
 For functions, call via SQL:
+
 ```js
-await query('SELECT auth_hash_password($1)', [password]);
+await query("SELECT auth_hash_password($1)", [password]);
 ```
 
 For transactions:
+
 ```js
-const { withTransaction } = require('./database/transaction');
+const { withTransaction } = require("./database/transaction");
 await withTransaction(async (client) => {
   // Use client.query()
 });

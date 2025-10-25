@@ -1,9 +1,242 @@
+# ============================================================================
+# Shipzy Driver App - Flutter .gitignore
+# ============================================================================
+# Flutter application .gitignore for the Shipzy driver mobile app
+# Includes comprehensive patterns for Flutter, Dart, and mobile development
+# ============================================================================
+
+# ============================================================================
+# Flutter/Dart Specific
+# ============================================================================
+
+# Flutter build artifacts
+build/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.framework
+ios/Flutter/app.zip
+ios/Flutter/ephemeral
+ios/Flutter.podspec
+ios/Flutter/.last_build_id
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Android Flutter artifacts
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# Flutter dependencies
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# Flutter web builds
+web/build/
+
+# Flutter test coverage
+coverage/
+
+# ============================================================================
+# Android Specific
+# ============================================================================
+
+# Android Studio/Gradle
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+**/android/key.properties
+**/android/app/google-services.json
+
+# Android build artifacts
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# Android Studio
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+.idea/modules.xml
+.idea/misc.xml
+
+# ============================================================================
+# iOS Specific
+# ============================================================================
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+*.xccheckout
+
+# iOS build artifacts
+ios/build/
+ios/Pods/
+
+# CocoaPods
+ios/Podfile.lock
+ios/Pods/
+
+# ============================================================================
+# IDEs & Editors
+# ============================================================================
+
+# IntelliJ IDEA / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+.history/
+
+# Cursor IDE
+.cursor/
+.cursorignore
+
+# ============================================================================
+# Operating Systems
+# ============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================================
+# Development & Testing
+# ============================================================================
+
+# Test coverage
+.coverage/
+coverage.xml
+*.cover
+
+# Integration test artifacts
+integration_test/**/.test_output/
+integration_test/**/.test_times
+
+# Flutter Driver
+test_driver/**/.test_output/
+test_driver/**/.test_times
+
+# ============================================================================
+# Environment & Secrets
+# ============================================================================
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+
+# Firebase
+**/google-services.json
+**/GoogleService-Info.plist
+*firebase*adminsdk*.json
+
+# API keys and secrets
+secrets/
+credentials/
+keys/
+*.key
+*.pem
+*.crt
+
+# ============================================================================
+# Build & Distribution
+# ============================================================================
+
+# Release builds
+*.aab
+*.apk
+*.ipa
+*.app
+
+# Symbolication
+app.*.symbols
+
+# Obfuscation
+app.*.map.json
+
+# ============================================================================
+# Package Managers & Dependencies
+# ============================================================================
+
+# Pub
+.packages
+.pub/
+.pub-cache/
+
+# ============================================================================
+# Logs & Temporary Files
+# ============================================================================
+
+# Logs
+*.log
+logs/
+log/
+
+# Temporary files
+.tmp/
+temp/
+.cache/
+
+# ============================================================================
+# Documentation
+# ============================================================================
+
+# Generated API docs
+**/doc/api/
+
+# ============================================================================
+# Legacy & Miscellaneous
+# ============================================================================
+
 # Miscellaneous
 *.class
-*.log
 *.pyc
 *.swp
-.DS_Store
+*.swo
 .atom/
 .build/
 .buildlog/
@@ -12,34 +245,28 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# Vim
+*.swp
+*.swo
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# TextMate
+*.tmproj
+*.tmproject
+tmtags

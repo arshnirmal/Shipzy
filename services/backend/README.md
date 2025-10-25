@@ -47,7 +47,7 @@ npm install
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env with your credentials
+# Edit .env with your credentials (see .env.example for all required variables)
 
 # 4. Setup database
 psql -U postgres -f src/database/init/schema.sql
@@ -114,15 +114,15 @@ services/backend/
 
 ## 🛠️ Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| **Runtime** | Node.js 18+ |
-| **Framework** | Fastify 4.28 |
-| **Database** | PostgreSQL 14+ with PostGIS |
-| **Authentication** | Firebase Auth + JWT |
-| **Logger** | Pino |
-| **Validation** | AJV |
-| **Security** | Helmet, CORS, Rate Limiting |
+| Category           | Technology                  |
+| ------------------ | --------------------------- |
+| **Runtime**        | Node.js 18+                 |
+| **Framework**      | Fastify 4.28                |
+| **Database**       | PostgreSQL 14+ with PostGIS |
+| **Authentication** | Firebase Auth + JWT         |
+| **Logger**         | Pino                        |
+| **Validation**     | AJV                         |
+| **Security**       | Helmet, CORS, Rate Limiting |
 
 ---
 
@@ -130,17 +130,17 @@ services/backend/
 
 ### Authentication
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/v1/auth/firebase/verify` | Login/Register with Firebase | No |
-| POST | `/api/v1/auth/refresh` | Refresh JWT token | No |
-| POST | `/api/v1/auth/logout` | Logout (revoke token) | Yes |
+| Method | Endpoint                       | Description                  | Auth Required |
+| ------ | ------------------------------ | ---------------------------- | ------------- |
+| POST   | `/api/v1/auth/firebase/verify` | Login/Register with Firebase | No            |
+| POST   | `/api/v1/auth/refresh`         | Refresh JWT token            | No            |
+| POST   | `/api/v1/auth/logout`          | Logout (revoke token)        | Yes           |
 
 ### Health Check
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/health` | Server health status | No |
+| Method | Endpoint  | Description          | Auth Required |
+| ------ | --------- | -------------------- | ------------- |
+| GET    | `/health` | Server health status | No            |
 
 **More endpoints** (orders, tracking, payments) coming soon...
 
@@ -175,24 +175,96 @@ sequenceDiagram
 
 ## 🔧 Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment | `development` |
-| `PORT` | Server port | `3000` |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_NAME` | Database name | `shipzy_dev` |
-| `DB_USER` | Database user | `shipzy_user` |
-| `DB_PASSWORD` | Database password | `secure_password` |
-| `JWT_SECRET` | JWT signing key | (generate with openssl) |
-| `FIREBASE_PROJECT_ID` | Firebase project ID | From Firebase Console |
-| `FIREBASE_CLIENT_EMAIL` | Firebase service account | From Firebase Console |
-| `FIREBASE_PRIVATE_KEY` | Firebase private key | From Firebase Console |
+| Variable                 | Description                    | Example                      |
+| ------------------------ | ------------------------------ | ---------------------------- |
+| `NODE_ENV`               | Environment                    | `development`                |
+| `BACKEND_PORT`           | Server port                    | `3000`                       |
+| `BACKEND_HOST`           | Server host                    | `0.0.0.0`                    |
+| `POSTGRES_DB`            | Database name                  | `shipzy_dev`                 |
+| `POSTGRES_USER`          | Database user                  | `shipzy_user`                |
+| `POSTGRES_PASSWORD`      | Database password              | `secure_password`            |
+| `DB_HOST`                | Database host                  | `localhost`                  |
+| `DB_NAME`                | Database name                  | `shipzy_dev`                 |
+| `DB_USER`                | Database user                  | `shipzy_user`                |
+| `DB_PASSWORD`            | Database password              | `secure_password`            |
+| `DB_PORT`                | Database port                  | `5432`                       |
+| `DB_POOL_MAX`            | Database connection pool size  | `20`                         |
+| `JWT_SECRET`             | JWT signing key                | (generate with openssl)      |
+| `JWT_EXPIRES_IN`         | JWT expiration time            | `7d`                         |
+| `JWT_REFRESH_EXPIRES_IN` | JWT refresh token expiration   | `30d`                        |
+| `CORS_ORIGIN`            | CORS allowed origins           | `http://localhost:3000`      |
+| `RATE_LIMIT_MAX`         | Rate limiting max requests     | `100`                        |
+| `RATE_LIMIT_TIMEWINDOW`  | Rate limiting time window (ms) | `60000`                      |
+| `LOG_LEVEL`              | Logging level                  | `info`                       |
+| `LOG_QUERIES`            | Enable query logging           | `true`                       |
+| `NGROK_AUTHTOKEN`        | ngrok auth token               | From ngrok dashboard         |
+| `NGROK_DOMAIN`           | ngrok domain                   | `your-domain.ngrok-free.app` |
+
+**Note:** Firebase authentication is now handled via the service account key file (`shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json`) rather than environment variables.
 
 **See [.env.example](./.env.example) for complete list**
 
 ---
 
-## 🧪 Development
+## 🧪 Testing
+
+Shipzy Backend includes comprehensive test coverage with 100+ test cases covering all API endpoints, authentication, authorization, and database operations.
+
+### Available Test Scripts
+
+```bash
+# Run all tests with coverage
+npm test
+
+# Run tests in watch mode (development)
+npm run test:watch
+
+# Run comprehensive test suite
+npm run test:all
+
+# Run specific test modules
+npm run test:auth        # Authentication tests
+npm run test:users       # User management tests
+npm run test:drivers     # Driver management tests
+npm run test:orders      # Order management tests
+npm run test:static      # Static data tests
+npm run test:system      # Health check & system tests
+
+# Generate detailed coverage report
+npm run test:coverage
+
+# Setup/cleanup test database
+npm run test:db:setup
+npm run test:db:cleanup
+
+# Lint and format test files
+npm run lint:test
+npm run format:test
+```
+
+### Test Coverage
+
+- ✅ **Authentication & Authorization** (Firebase, JWT, Role-based access)
+- ✅ **User Management** (Profiles, addresses, validation)
+- ✅ **Driver Management** (Availability, location, earnings, assignments)
+- ✅ **Order Management** (Creation, status updates, cancellation, acceptance)
+- ✅ **Static Data** (Delivery types, vehicle categories, payment methods)
+- ✅ **System Health** (Health checks, error handling, performance)
+- ✅ **Integration Tests** (Complete user workflows, concurrent operations)
+- ✅ **Database Integration** (Test database setup, cleanup, validation)
+
+### Test Features
+
+- 🗄️ **Isolated Test Database** - Automatic setup and cleanup
+- 🔐 **Real Authentication** - Full Firebase and JWT token testing
+- 🚛 **Role-based Testing** - Client and courier workflow validation
+- 📊 **Performance Testing** - Concurrent request and load testing
+- 🛡️ **Security Testing** - Authentication and authorization edge cases
+- 🔄 **Integration Testing** - Complete order lifecycle workflows
+
+**See [tests/README.md](./tests/README.md) for detailed testing documentation**
+
+## 🛠️ Development
 
 ### Available Scripts
 
@@ -210,11 +282,10 @@ npm run lint:fix
 # Format code
 npm run format
 
-# Database migrations
-npm run migrate
-
-# Seed database
-npm run seed
+# Database operations
+npm run db:init
+npm run db:functions
+npm run db:seed
 ```
 
 ---
@@ -275,9 +346,16 @@ psql -U shipzy_user -d shipzy_dev -c "SELECT NOW();"
 
 ### Firebase Auth Issues
 
+The backend now uses a Firebase service account key file (`shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json`) instead of environment variables for Firebase authentication.
+
+To verify Firebase setup:
+
 ```bash
-# Verify credentials
-node -e "console.log(require('firebase-admin').credential.cert(JSON.parse(process.env.FIREBASE_PRIVATE_KEY)))"
+# Check if service account key file exists
+ls -la shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json
+
+# Verify Firebase Admin SDK can initialize
+node -e "console.log(require('firebase-admin').apps.length > 0 ? 'Firebase initialized' : 'Firebase not initialized')"
 ```
 
 ### Port Already in Use

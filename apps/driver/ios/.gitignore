@@ -1,20 +1,46 @@
-**/dgph
-*.mode1v3
-*.mode2v3
+# ============================================================================
+# Shipzy Driver App - iOS .gitignore
+# ============================================================================
+# iOS application .gitignore for the Shipzy driver mobile app
+# Includes comprehensive patterns for iOS development and Flutter
+# ============================================================================
+
+# ============================================================================
+# Xcode
+# ============================================================================
+
+# Xcode
+#
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+
+## User settings
+xcuserdata/
+
+## compatibility with Xcode 8 and earlier (ignoring not required starting Xcode 9)
+*.xcscmblueprint
+*.xccheckout
+
+## compatibility with Xcode 3 and earlier (ignoring not required starting Xcode 4)
+build/
+DerivedData/
 *.moved-aside
 *.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
 *.perspectivev3
-**/*sync/
-.sconsign.dblite
-.tags*
-**/.vagrant/
-**/DerivedData/
-Icon?
-**/Pods/
-**/.symlinks/
-profile
-xcuserdata
-**/.generated/
+!default.perspectivev3
+
+## Gcc Patch
+/*.gcno
+
+# ============================================================================
+# Flutter iOS Integration
+# ============================================================================
+
+# Flutter
 Flutter/App.framework
 Flutter/Flutter.framework
 Flutter/Flutter.podspec
@@ -24,10 +50,143 @@ Flutter/app.flx
 Flutter/app.zip
 Flutter/flutter_assets/
 Flutter/flutter_export_environment.sh
-ServiceDefinitions.json
+Flutter/.last_build_id
 Runner/GeneratedPluginRegistrant.*
 
-# Exceptions to above rules.
+# ============================================================================
+# CocoaPods
+# ============================================================================
+
+# CocoaPods
+Pods/
+Podfile.lock
+*.xcworkspace/xcuserdata/
+
+# ============================================================================
+# iOS Build Artifacts
+# ============================================================================
+
+# Build artifacts
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Carthage
+Carthage/Build/
+
+# Crashlytics
+crashlytics-build.properties
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ============================================================================
+# IDEs & Editors
+# ============================================================================
+
+# Xcode
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+
+# AppCode
+.idea/
+
+# VS Code
+.vscode/
+
+# Cursor IDE
+.cursor/
+
+# ============================================================================
+# Operating Systems
+# ============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ============================================================================
+# Development & Testing
+# ============================================================================
+
+# Test artifacts
+*.xctest
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# UI Test artifacts
+*.uitest
+
+# ============================================================================
+# Environment & Secrets
+# ============================================================================
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Provisioning profiles
+*.mobileprovision
+*.provisionprofile
+
+# Certificates
+*.p12
+*.cer
+*.pem
+
+# ============================================================================
+# Logs & Temporary Files
+# ============================================================================
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+.tmp/
+temp/
+.cache/
+
+# ============================================================================
+# Legacy & Miscellaneous
+# ============================================================================
+
+# Old build artifacts
+*.build/
+*.pbxuser
+*.perspective
+*.perspectivev3
+
+# SCM
+.svn/
+.git/
+.hg/
+
+# Archives
+*.framework.zip
+
+# SPM
+.swiftpm/
+
+# Exceptions (keep these)
 !default.mode1v3
 !default.mode2v3
 !default.pbxuser

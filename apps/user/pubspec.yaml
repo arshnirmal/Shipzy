@@ -53,7 +53,6 @@ dependencies:
   shimmer: ^3.0.0
   smooth_page_indicator: ^1.2.1
   timeago: ^3.7.1
-  upi_india: ^3.0.1
   url_launcher: ^6.3.2
 
 dev_dependencies:

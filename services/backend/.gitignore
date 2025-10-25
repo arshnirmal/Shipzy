@@ -1,11 +1,8 @@
 # ============================================================================
-# Shipzy Monorepo .gitignore
+# Shipzy Backend Service - Node.js .gitignore
 # ============================================================================
-# This .gitignore covers the entire monorepo including:
-# - Backend services (Node.js/Fastify)
-# - Flutter mobile apps (User & Driver)
-# - Docker configurations
-# - Development and production environments
+# Node.js/Fastify backend service .gitignore for the Shipzy API
+# Includes comprehensive patterns for Node.js, Docker, and backend development
 # ============================================================================
 
 # ============================================================================
@@ -21,14 +18,142 @@ yarn-error.log*
 .yarn-integrity
 .pnpm-debug.log*
 
-# Flutter/Dart
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
+# Package manager lock files (keep one, comment out others)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ============================================================================
+# Build Artifacts & Outputs
+# ============================================================================
+
+# Build outputs
+dist/
 build/
+out/
+*.tsbuildinfo
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output/
+coverage.lcov
+
+# TypeScript
+*.tsbuildinfo
+
+# ============================================================================
+# Environment & Secrets
+# ============================================================================
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+.env.staging.local
+
+# Firebase service accounts
+*firebase*adminsdk*.json
+*service-account*.json
+firebase-debug.log
+firestore-debug.log
+
+# SSL/TLS certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# API keys and secrets
+secrets/
+credentials/
+keys/
+*.key
+*.pem
+*.crt
+
+# ============================================================================
+# Logs & Temporary Files
+# ============================================================================
+
+# Application logs
+*.log
+logs/
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
+.tmp/
+temp/
+.tmp
+.cache/
+.parcel-cache/
+
+# ============================================================================
+# IDEs & Editors
+# ============================================================================
+
+# IntelliJ IDEA / WebStorm
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
+
+# VS Code
+.vscode/
+*.code-workspace
+.history/
+
+# Cursor IDE
+.cursor/
+.cursorignore
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# TextMate
+*.tmproj
+*.tmproject
+tmtags
 
 # ============================================================================
 # Operating Systems & Filesystems
@@ -61,144 +186,7 @@ $RECYCLE.BIN/
 *.msp
 
 # ============================================================================
-# IDEs & Editors
-# ============================================================================
-
-# IntelliJ IDEA / Android Studio
-*.iml
-*.ipr
-*.iws
-.idea/
-out/
-.idea_modules/
-
-# VS Code
-.vscode/
-*.code-workspace
-.history/
-
-# Vim
-*.swp
-*.swo
-*~
-
-# Emacs
-*~
-\#*\#
-/.emacs.desktop
-/.emacs.desktop.lock
-*.elc
-auto-save-list
-tramp
-.\#*
-
-# Sublime Text
-*.tmlanguage.cache
-*.tmPreferences.cache
-*.stTheme.cache
-*.sublime-workspace
-*.sublime-project
-
-# TextMate
-*.tmproj
-*.tmproject
-tmtags
-
-# ============================================================================
-# Build Artifacts & Outputs
-# ============================================================================
-
-# Flutter builds
-build/
-ios/Flutter/Flutter.framework
-ios/Flutter/Flutter.podspec
-ios/Flutter/Generated.xcconfig
-ios/Flutter/app.flx
-ios/Flutter/app.framework
-ios/Flutter/app.zip
-ios/Flutter/ephemeral
-ios/Flutter.podspec
-ios/Runner/GeneratedPluginRegistrant.*
-
-# Android builds
-android/.gradle/
-android/captures/
-android/gradlew
-android/gradlew.bat
-android/local.properties
-**/android/key.properties
-**/android/app/debug/
-**/android/app/profile/
-**/android/app/release/
-
-# Node.js builds & coverage
-coverage/
-*.lcov
-.nyc_output/
-coverage.lcov
-
-# Docker
-.dockerignore
-
-# ============================================================================
-# Secrets & Environment Variables
-# ============================================================================
-
-# Environment files
-.env
-.env.local
-.env.development
-.env.development.local
-.env.test
-.env.test.local
-.env.production
-.env.production.local
-.env.staging
-.env.staging.local
-
-# Firebase
-*firebase*adminsdk*.json
-*service-account*.json
-firebase-debug.log
-firestore-debug.log
-
-# SSL/TLS certificates
-*.pem
-*.key
-*.crt
-*.cer
-*.p12
-*.pfx
-
-# API keys and secrets
-*.key
-*.pem
-*.crt
-secrets/
-credentials/
-
-# ============================================================================
-# Logs & Temporary Files
-# ============================================================================
-
-# General logs
-*.log
-logs/
-log/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Temporary files
-.tmp/
-temp/
-.tmp
-.cache/
-.parcel-cache/
-
-# ============================================================================
-# Testing & Development
+# Development & Testing
 # ============================================================================
 
 # Test coverage
@@ -219,6 +207,9 @@ cypress/screenshots/
 test-results/
 playwright-report/
 
+# Mocha
+.mocha/
+
 # ============================================================================
 # Database & Data
 # ============================================================================
@@ -228,24 +219,27 @@ playwright-report/
 *.sqlite
 *.sqlite3
 
-# PostgreSQL dumps
+# PostgreSQL dumps (keep schema files)
 *.sql
-!**/init/schema.sql
-!**/seeds/*.sql
+!src/database/init/schema.sql
+!src/database/seeds/*.sql
 
-# ObjectBox (Flutter)
-**/objectbox-model.json
+# Database backups
+*.backup
+*.dump
 
 # ============================================================================
-# Documentation & Generated Files
+# Docker & Containerization
 # ============================================================================
 
-# Generated documentation
-docs/build/
-docs/.vuepress/dist/
+# Docker
+.dockerignore
 
-# API documentation
-**/doc/api/
+# Docker volumes (local development)
+docker/volumes/
+
+# Docker Compose overrides
+docker-compose.override.yml
 
 # ============================================================================
 # CI/CD & Deployment
@@ -254,12 +248,20 @@ docs/.vuepress/dist/
 # GitHub Actions
 .github/workflows/*.log
 
-# Docker Compose overrides
-docker-compose.override.yml
-docker-compose.*.yml
+# Build artifacts
+*.tgz
+*.tar.gz
 
-# Kubernetes
-*.yaml.bak
+# ============================================================================
+# Documentation
+# ============================================================================
+
+# Generated documentation
+docs/build/
+docs/.vuepress/dist/
+
+# API documentation
+doc/
 
 # ============================================================================
 # Archives & Backups
@@ -294,47 +296,17 @@ docker-compose.*.yml
 *.o
 
 # ============================================================================
-# Mobile Development Specific
+# Frameworks & Libraries
 # ============================================================================
 
-# Flutter symbolication
-app.*.symbols
+# Fastify
+.fastify/
 
-# Flutter obfuscation
-app.*.map.json
+# Express (if used)
+.express/
 
-# Android Studio
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/dictionaries
-.idea/libraries
-.idea/caches
-.idea/modules.xml
-.idea/misc.xml
-*.iml
-*.ipr
-
-# Xcode
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata/
-*.moved-aside
-*.xccheckout
-*.xcscmblueprint
-
-# ============================================================================
-# Cursor & AI IDEs
-# ============================================================================
-
-.cursor/
-.cursorignore
+# NestJS
+.nest/
 
 # ============================================================================
 # Local Development
@@ -351,6 +323,10 @@ TODO.md
 notes/
 scratchpad/
 
+# Development scripts
+dev.sh
+debug.sh
+
 # ============================================================================
 # Legacy & Deprecated
 # ============================================================================
@@ -360,9 +336,10 @@ dist/
 build/
 out/
 
-# Legacy Firebase configs
-.firebase/
-firebase.json.bak
+# Legacy configs
+*.old
+*.bak
+*.backup
 
 # ============================================================================
 # Security & Compliance

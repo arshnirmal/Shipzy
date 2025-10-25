@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1096727737605",
+    "project_id": "shipzy-37e1c",
+    "storage_bucket": "shipzy-37e1c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1096727737605:android:1d1b77200e411b0cd6336c",
+        "android_client_info": {
+          "package_name": "com.shipzy.shipzy_user"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoMVMf7aQsWbh9t1UYgx7lAHVOO59gxrg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

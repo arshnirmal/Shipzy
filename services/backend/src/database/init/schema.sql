@@ -89,7 +89,7 @@ CREATE TABLE public.vehicle_categories (
 INSERT INTO public.vehicle_categories (name, description) VALUES
     ('2-wheeler', 'Two-wheeler motorcycle/scooter'),
     ('3-wheeler', 'Three-wheeler vehicle'),
-    ('mini-truck', 'Small pickup truck'),
+    ('mini-truck', 'Small pickup truck');
 
 -- Order Statuses
 CREATE TABLE public.order_statuses (
@@ -122,7 +122,7 @@ CREATE TABLE public.payment_methods (
 INSERT INTO public.payment_methods (name, description) VALUES
     ('cod', 'Cash on Delivery'),
     ('prepaid_upi', 'Prepaid via UPI'),
-    ('prepaid_card', 'Prepaid via Credit/Debit Card'),
+    ('prepaid_card', 'Prepaid via Credit/Debit Card');
 
 -- Payment Statuses
 CREATE TABLE public.payment_statuses (
@@ -215,8 +215,8 @@ INSERT INTO public.weight_tiers (name, min_weight_kg, max_weight_kg, additional_
     ('Up to 5 kg', 1, 5, 20),
     ('Up to 10 kg', 5, 10, 40),
     ('Up to 15 kg', 10, 15, 50),
-    ('Up to 20 kg', 15, 20, 60);
-    ('Up to 100 kg', 1, 100, 100);
+    ('Up to 20 kg', 15, 20, 60),
+    ('Up to 100 kg', 20, 100, 100);
 
 -- Delivery Types
 CREATE TABLE public.delivery_types (
@@ -247,7 +247,7 @@ INSERT INTO public.package_types (name, description) VALUES
     ('Document', 'Document package'),
     ('Food', 'Food package'),
     ('Clothes', 'Clothes package'),
-    ('Electronics', 'Electronics package'),
+    ('Electronics', 'Electronics package');
     ('Medicine', 'Medicine package'),
     ('Gift', 'Gift package'),
     ('Grocery', 'Grocery package'),
