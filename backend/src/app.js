@@ -16,6 +16,7 @@ import {
 } from "./middleware/ratelimit.middleware.js";
 
 // Import routes
+import addressesRoutes from "./modules/addresses/addresses.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import driversRoutes from "./modules/drivers/drivers.routes.js";
 import ordersRoutes from "./modules/orders/orders.routes.js";
@@ -126,6 +127,7 @@ export const buildApp = async (opts = {}) => {
     config: authRateLimitConfig, // Stricter rate limit for auth
   });
 
+  await app.register(addressesRoutes, { prefix: "/api/v1/addresses" });
   await app.register(usersRoutes, { prefix: "/api/v1/users" });
   await app.register(driversRoutes, { prefix: "/api/v1/drivers" });
   await app.register(ordersRoutes, { prefix: "/api/v1/orders" });

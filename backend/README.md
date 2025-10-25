@@ -171,6 +171,16 @@ services/backend/
 | POST   | `/api/v1/orders/:id/accept`     | Driver accepts order    | Yes (Courier) |
 | PUT    | `/api/v1/orders/:id/status`     | Update order status     | Yes (Courier) |
 
+### Address & Location
+
+| Method | Endpoint                            | Description                            | Auth Required |
+| ------ | ----------------------------------- | -------------------------------------- | ------------- |
+| POST   | `/api/v1/addresses/search`          | Search places (step 1)                 | Yes           |
+| POST   | `/api/v1/addresses/retrieve`        | Get place details (step 2)             | Yes           |
+| POST   | `/api/v1/addresses/reverse-geocode` | Reverse geocode coordinates            | Yes           |
+| POST   | `/api/v1/addresses/directions`      | Get directions between points          | Yes           |
+| POST   | `/api/v1/addresses/distance`        | Calculate distance between coordinates | Yes           |
+
 ### Static Data
 
 | Method | Endpoint                            | Description            | Auth Required |
@@ -190,7 +200,7 @@ services/backend/
 | GET    | `/health` | Server health status | No            |
 | GET    | `/api/v1` | API info             | No            |
 
-**📋 Total: 25 implemented endpoints**
+**📋 Total: 30 implemented endpoints**
 
 ---
 

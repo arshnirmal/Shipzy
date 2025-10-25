@@ -32,6 +32,7 @@ class TestRunner {
 
       // Import and run all test suites
       const testSuites = [
+        { name: "Addresses & Location", module: "./addresses.test.js" },
         { name: "Authentication", module: "./auth.test.js" },
         { name: "Users Management", module: "./users.test.js" },
         { name: "Drivers Management", module: "./drivers.test.js" },

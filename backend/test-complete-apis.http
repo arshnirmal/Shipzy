@@ -1,5 +1,5 @@
 ### 🚀 SHIPZY API - Complete Implementation Tests
-### Test all 25 endpoints across all modules
+### Test all 27 endpoints across all modules
 
 ### ================================================
 ### 1. AUTHENTICATION TESTS (3 endpoints)
@@ -257,6 +257,121 @@ GET http://localhost:3000/api/v1
 ### - CLIENT_ACCESS_TOKEN: JWT token for client role
 
 ### ================================================
+### ================================================
+### 7. ADDRESS & LOCATION TESTS (5 endpoints)
+### ================================================
+
+### 7.1 Search Places (Step 1 - Get Suggestions)
+POST http://localhost:3000/api/v1/addresses/search
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "query": "Connaught Place",
+  "proximity": "77.2167,28.6139",
+  "limit": 5
+}
+
+### 7.2 Search Places with Different Query
+POST http://localhost:3000/api/v1/addresses/search
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "query": "restaurants",
+  "proximity": "77.2167,28.6139",
+  "limit": 3
+}
+
+### 7.3 Retrieve Place Details (Step 2 - Use sessionToken from step 1)
+POST http://localhost:3000/api/v1/addresses/retrieve
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "mapboxId": "dXJuOm1ieHBsYzpBc...",
+  "sessionToken": "1234567890_abcdef123456"
+}
+
+### 7.4 Reverse Geocode Coordinates (Delhi)
+POST http://localhost:3000/api/v1/addresses/reverse-geocode
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "latitude": 28.6139,
+  "longitude": 77.2167
+}
+
+### 7.5 Reverse Geocode (Times Square, NYC)
+POST http://localhost:3000/api/v1/addresses/reverse-geocode
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "latitude": 40.7580,
+  "longitude": -73.9857
+}
+
+### 7.6 Get Directions (Delhi to Mumbai)
+POST http://localhost:3000/api/v1/addresses/directions
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "origin": {
+    "latitude": 28.6139,
+    "longitude": 77.2167
+  },
+  "destination": {
+    "latitude": 19.0760,
+    "longitude": 72.8777
+  },
+  "profile": "driving"
+}
+
+### 7.7 Get Directions (Walking)
+POST http://localhost:3000/api/v1/addresses/directions
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "origin": {
+    "latitude": 40.7580,
+    "longitude": -73.9857
+  },
+  "destination": {
+    "latitude": 40.7505,
+    "longitude": -73.9934
+  },
+  "profile": "walking"
+}
+
+### 7.8 Calculate Distance (Delhi to Mumbai)
+POST http://localhost:3000/api/v1/addresses/distance
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "lat1": 28.6139,
+  "lon1": 77.2167,
+  "lat2": 19.0760,
+  "lon2": 72.8777
+}
+
+### 7.9 Calculate Distance (NYC coordinates)
+POST http://localhost:3000/api/v1/addresses/distance
+Content-Type: application/json
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+{
+  "lat1": 40.7580,
+  "lon1": -73.9857,
+  "lat2": 40.7505,
+  "lon2": -73.9934
+}
+
+### ================================================
 ### USAGE INSTRUCTIONS:
 ### ================================================
 
@@ -265,3 +380,4 @@ GET http://localhost:3000/api/v1
 ### 3. Tests are organized by module for easy debugging
 ### 4. All endpoints require proper authentication except static data
 ### 5. Static data endpoints are public and don't need auth headers
+### 6. Address endpoints require MAPBOX_ACCESS_TOKEN environment variable
