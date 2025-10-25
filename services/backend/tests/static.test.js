@@ -1,7 +1,7 @@
 // tests/static.test.js
-const request = require("supertest");
-const { testDb } = require("./database.js");
-const { createTestAuthHeaders } = require("./setup.js");
+import request from "supertest";
+import { testDb } from "./database.js";
+import { createTestAuthHeaders } from "./setup.js";
 
 describe("Static Data API", () => {
   let app;

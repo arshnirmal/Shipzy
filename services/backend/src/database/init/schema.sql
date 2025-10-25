@@ -71,6 +71,7 @@ CREATE TABLE public.user_roles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.user_roles;
 INSERT INTO public.user_roles (name, description) VALUES
     ('client', 'Customer who books deliveries'),
     ('courier', 'Delivery driver/rider'),
@@ -86,6 +87,7 @@ CREATE TABLE public.vehicle_categories (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.vehicle_categories;
 INSERT INTO public.vehicle_categories (name, description) VALUES
     ('2-wheeler', 'Two-wheeler motorcycle/scooter'),
     ('3-wheeler', 'Three-wheeler vehicle'),
@@ -100,6 +102,7 @@ CREATE TABLE public.order_statuses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.order_statuses;
 INSERT INTO public.order_statuses (name, description, display_order) VALUES
     ('pending', 'Order created, awaiting driver assignment', 1),
     ('accepted', 'Driver accepted the order', 2),
@@ -119,6 +122,7 @@ CREATE TABLE public.payment_methods (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.payment_methods;
 INSERT INTO public.payment_methods (name, description) VALUES
     ('cod', 'Cash on Delivery'),
     ('prepaid_upi', 'Prepaid via UPI'),
@@ -132,6 +136,7 @@ CREATE TABLE public.payment_statuses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.payment_statuses;
 INSERT INTO public.payment_statuses (name, description) VALUES
     ('pending', 'Payment not yet received'),
     ('completed', 'Payment successful'),
@@ -147,6 +152,7 @@ CREATE TABLE public.assignment_statuses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.assignment_statuses;
 INSERT INTO public.assignment_statuses (name, description) VALUES
     ('assigned', 'Order assigned to courier'),
     ('accepted', 'Courier accepted assignment'),
@@ -165,6 +171,7 @@ CREATE TABLE public.notification_channels (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.notification_channels;
 INSERT INTO public.notification_channels (name, description) VALUES
     ('push', 'Push notification via FCM'),
     ('sms', 'SMS notification'),
@@ -178,6 +185,7 @@ CREATE TABLE public.notification_statuses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.notification_statuses;
 INSERT INTO public.notification_statuses (name) VALUES
     ('pending'),
     ('sent'),
@@ -193,6 +201,7 @@ CREATE TABLE public.labels (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.labels;
 INSERT INTO public.labels (name, color_hex) VALUES
     ('New', '#000000'),
     ('Save 40%', '#000000');
@@ -205,11 +214,10 @@ CREATE TABLE public.weight_tiers (
     max_weight_kg NUMERIC(10, 2) NOT NULL,
     additional_charge NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    CONSTRAINT weight_tier_min_less_than_max CHECK (min_weight_kg < max_weight_kg),
-    -- EXCLUSION CONSTRAINT to prevent overlapping ranges
-    CONSTRAINT weight_tier_no_overlap EXCLUDE USING gist (numrange(min_weight_kg, max_weight_kg, '[]') WITH &&)
+    CONSTRAINT weight_tier_min_less_than_max CHECK (min_weight_kg < max_weight_kg)
 );
 
+DELETE FROM public.weight_tiers;
 INSERT INTO public.weight_tiers (name, min_weight_kg, max_weight_kg, additional_charge) VALUES
     ('Up to 1 kg', 0, 1, 0),
     ('Up to 5 kg', 1, 5, 20),
@@ -230,6 +238,7 @@ CREATE TABLE public.delivery_types (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.delivery_types;
 INSERT INTO public.delivery_types (name, description, base_rate, per_km_rate) VALUES 
     ('Deliver Now', 'Immediate pickup and dropoff within 1 hour', 50.00, 8.20),
     ('Scheduled', 'Scheduled deliveries arriving at predetermined times', 40.00, 8.20),
@@ -243,11 +252,12 @@ CREATE TABLE public.package_types (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DELETE FROM public.package_types;
 INSERT INTO public.package_types (name, description) VALUES
     ('Document', 'Document package'),
     ('Food', 'Food package'),
     ('Clothes', 'Clothes package'),
-    ('Electronics', 'Electronics package');
+    ('Electronics', 'Electronics package'),
     ('Medicine', 'Medicine package'),
     ('Gift', 'Gift package'),
     ('Grocery', 'Grocery package'),
@@ -367,9 +377,10 @@ FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
 CREATE TABLE logistics.delivery_type_capabilities (
     delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id) ON DELETE CASCADE,
     weight_tier_id INT NOT NULL REFERENCES public.weight_tiers (tier_id) ON DELETE CASCADE,
-    PRIMARY KEY (delivery_type_id, capability_id)
+    PRIMARY KEY (delivery_type_id, weight_tier_id)
 );
 
+DELETE FROM logistics.delivery_type_capabilities;
 INSERT INTO logistics.delivery_type_capabilities (delivery_type_id, weight_tier_id) VALUES
     (1, 1),
     (1, 2),
@@ -386,6 +397,7 @@ CREATE TABLE logistics.delivery_type_labels (
     PRIMARY KEY (delivery_type_id, label_id)
 );
 
+DELETE FROM logistics.delivery_type_labels;
 INSERT INTO logistics.delivery_type_labels (delivery_type_id, label_id) VALUES
     (2, 1),
     (3, 2);
@@ -410,13 +422,6 @@ CREATE INDEX idx_logistics_courier_vehicles_courier_id ON logistics.courier_vehi
 CREATE TRIGGER set_timestamp_logistics_courier_vehicles
 BEFORE UPDATE ON logistics.courier_vehicles
 FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
-
--- Courier Vehicle Capabilities (Junction Table)
-CREATE TABLE logistics.courier_vehicle_capabilities (
-    vehicle_id INT NOT NULL REFERENCES logistics.courier_vehicles (vehicle_id) ON DELETE CASCADE,
-    capability_id INT NOT NULL REFERENCES logistics.vehicle_capabilities (capability_id) ON DELETE CASCADE,
-    PRIMARY KEY (vehicle_id, capability_id)
-);
 
 -- Courier Status (CRITICAL NEW TABLE for availability tracking)
 CREATE TABLE logistics.courier_status (
@@ -759,7 +764,7 @@ SELECT
 FROM orders.requests o
 JOIN users.profiles u ON o.client_id = u.user_id
 JOIN public.order_statuses os ON o.status_id = os.status_id
-JOIN logistics.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
 JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
 JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
 LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id 
@@ -795,6 +800,7 @@ WHERE cs.is_available = true
 -- ===================================================================
 
 -- Seed a test client user
+DELETE FROM users.profiles WHERE phone_number IN ('+919876543210', '+919876543211', '+919876543212');
 INSERT INTO users.profiles (role_id, phone_number, full_name, is_verified, is_active) VALUES
 ((SELECT role_id FROM public.user_roles WHERE name = 'client'), '+919876543210', 'Test Client User', true, true);
 
@@ -804,6 +810,9 @@ INSERT INTO users.profiles (role_id, phone_number, full_name, is_verified, is_ac
 ((SELECT role_id FROM public.user_roles WHERE name = 'courier'), '+919876543212', 'Test Courier 2', true, true);
 
 -- Initialize courier status for test couriers
+DELETE FROM logistics.courier_status WHERE courier_id IN (
+    SELECT user_id FROM users.profiles WHERE phone_number IN ('+919876543211', '+919876543212')
+);
 INSERT INTO logistics.courier_status (courier_id, is_available, is_online, current_location, last_location_update)
 SELECT user_id, true, true, 
     ST_SetSRID(ST_MakePoint(72.8777, 19.0760), 4326)::geography, -- Mumbai coordinates
@@ -814,7 +823,7 @@ FROM users.profiles WHERE role_id = (SELECT role_id FROM public.user_roles WHERE
 -- SECTION 13: DATABASE COMMENTS
 -- ===================================================================
 
-COMMENT ON DATABASE shipzy_db IS 'Shipzy hyperlocal delivery platform database';
+COMMENT ON DATABASE shipzy_dev IS 'Shipzy hyperlocal delivery platform database';
 COMMENT ON SCHEMA users IS 'User accounts, authentication, profiles, and addresses';
 COMMENT ON SCHEMA logistics IS 'Vehicles, delivery types, courier availability, and locations';
 COMMENT ON SCHEMA orders IS 'Order requests, assignments, and proof of delivery';

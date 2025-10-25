@@ -1,4 +1,4 @@
-// jest.config.js
+// jest.config.cjs
 module.exports = {
   testEnvironment: "node",
   testMatch: ["**/tests/**/*.test.js", "**/tests/**/*.spec.js"],
@@ -17,10 +17,10 @@ module.exports = {
   forceExit: true,
   clearMocks: true,
   restoreMocks: true,
-  transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$))"],
-  testPathIgnorePatterns: ["/node_modules/", "/coverage/"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   transform: {},
+  transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$))"],
+  testPathIgnorePatterns: ["/node_modules/", "/coverage/"],
 };

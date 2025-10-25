@@ -45,7 +45,7 @@ BEGIN
     -- Get weight tier surcharge if weight provided
     IF p_weight_kg > 0 THEN
         SELECT additional_charge INTO v_weight_additional_charge
-        FROM logistics.weight_tiers
+        FROM public.weight_tiers
         WHERE p_weight_kg >= min_weight_kg
             AND p_weight_kg < max_weight_kg
         LIMIT 1;

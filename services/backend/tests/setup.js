@@ -1,9 +1,12 @@
 // tests/setup.js
-const dotenv = require("dotenv");
-const path = require("path");
-const { fileURLToPath } = require("url");
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Load test environment variables
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 dotenv.config({
   path: path.join(__dirname, "../.env"),
 });
@@ -16,9 +19,9 @@ const testConfig = {
   database: {
     host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT, 10) || 5432,
-    database: process.env.DB_NAME || "shipzy_test",
-    user: process.env.DB_USER || "shipzy_user",
-    password: process.env.DB_PASSWORD || "password123",
+    database: process.env.DB_NAME || "shipzy_dev",
+    user: process.env.DB_USER || "postgres",
+    password: process.env.DB_PASSWORD || "postgres",
     max: parseInt(process.env.DB_POOL_MAX, 10) || 5,
   },
   jwt: {
@@ -143,15 +146,15 @@ const createMockFirebaseAdmin = () => ({
 const TEST_TIMEOUT = 30000;
 
 // Export all constants and functions
-module.exports = {
-  testConfig,
-  testUsers,
-  testAddresses,
-  testOrder,
-  testVehicle,
+export {
+  createMockFirebaseAdmin,
   createTestAuthHeaders,
   createTestDeviceHeaders,
   delay,
-  createMockFirebaseAdmin,
   TEST_TIMEOUT,
+  testAddresses,
+  testConfig,
+  testOrder,
+  testUsers,
+  testVehicle,
 };

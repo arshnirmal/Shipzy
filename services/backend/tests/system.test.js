@@ -1,6 +1,6 @@
 // tests/system.test.js
-const request = require("supertest");
-const { testDb } = require("./database.js");
+import request from "supertest";
+import { testDb } from "./database.js";
 
 describe("System API", () => {
   let app;
