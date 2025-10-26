@@ -9,32 +9,27 @@ part 'auth_state_provider.g.dart';
 @riverpod
 class AuthState extends _$AuthState {
   @override
-  Stream<AuthStateData> build() {
-    // Listen to Firebase auth state changes
-    return FirebaseAuth.instance.authStateChanges().asyncMap((firebaseUser) async {
-      if (firebaseUser == null) {
-        return const AuthStateData.unauthenticated();
-      }
+  Stream<AuthStateData> build() => FirebaseAuth.instance.authStateChanges().asyncMap((firebaseUser) async {
+    if (firebaseUser == null) {
+      return const AuthStateData.unauthenticated();
+    }
 
-      // Get user data from backend/storage
-      final storage = ref.read(secureStorageProvider);
-      final accessToken = await storage.read(key: 'access_token');
+    // Get user data from backend/storage
+    final storage = ref.read(secureStorageProvider);
+    final accessToken = await storage.read(key: 'access_token');
 
-      if (accessToken == null) {
-        return const AuthStateData.unauthenticated();
-      }
+    if (accessToken == null) {
+      return const AuthStateData.unauthenticated();
+    }
 
-      // Fetch user profile
-      final user = await _fetchUserProfile(firebaseUser.uid);
+    // Fetch user profile
+    final user = await _fetchUserProfile(firebaseUser.uid);
 
-      return AuthStateData.authenticated(user);
-    });
-  }
+    return AuthStateData.authenticated(user);
+  });
 
-  Future<AppUser> _fetchUserProfile(String uid) async {
-    // TODO: Implement API call to fetch user profile
-    return AppUser(userUuid: uid, phoneNumber: FirebaseAuth.instance.currentUser?.phoneNumber ?? '', fullName: '');
-  }
+  Future<AppUser> _fetchUserProfile(String uid) async =>
+      AppUser(userUuid: uid, phoneNumber: FirebaseAuth.instance.currentUser?.phoneNumber ?? '', fullName: '');
 
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();

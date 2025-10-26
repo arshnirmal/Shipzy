@@ -3,16 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
+import '../screens/auth/otp_screen.dart';
+import '../screens/auth/phone_auth_screen.dart';
+import '../screens/home/home_screen.dart';
 import '../screens/new_order/address_form_screen.dart';
 import '../screens/new_order/address_list_screen.dart';
 import '../screens/new_order/create_order_screen.dart';
-import '../screens/home/home_screen.dart';
+import '../screens/new_order/payment_screen.dart';
 import '../screens/orders/order_details_screen.dart';
 import '../screens/orders/order_list_screen.dart';
 import '../screens/orders/order_tracking_screen.dart';
-import '../screens/auth/otp_screen.dart';
-import '../screens/new_order/payment_screen.dart';
-import '../screens/auth/phone_auth_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import 'app_routes.dart';
@@ -29,15 +29,35 @@ GoRouter router(Ref ref) {
 
     // Redirect logic based on auth state
     redirect: (context, state) {
-      final isAuthenticated = authState.maybeWhen(
-        data: (authData) => authData.maybeWhen(authenticated: (_) => true, orElse: () => false),
-        orElse: () => false,
-      );
+      final authStateValue = authState;
 
       final isAuthRoute = state.matchedLocation == AppRoutes.phoneAuth || state.matchedLocation == AppRoutes.otp;
+      final isOnSplash = state.matchedLocation == AppRoutes.splash;
+
+      // Handle splash screen redirects
+      if (isOnSplash) {
+        return authStateValue.maybeWhen(
+          data: (authData) => authData.maybeWhen(
+            authenticated: (_) => AppRoutes.home,
+            unauthenticated: () => AppRoutes.phoneAuth,
+            orElse: () => AppRoutes.phoneAuth, // Default to phone auth if unknown state
+          ),
+          orElse: () => null, // Stay on splash while loading
+        );
+      }
+
+      // If auth state is still loading, don't redirect
+      final isAuthenticated = authStateValue.maybeWhen(
+        data: (authData) => authData.maybeWhen(authenticated: (_) => true, orElse: () => false),
+        orElse: () => null, // Loading state
+      );
+
+      if (isAuthenticated == null) {
+        return null; // Stay on current route while loading
+      }
 
       // If not authenticated and not on auth route, redirect to phone auth
-      if (!isAuthenticated && !isAuthRoute && state.matchedLocation != AppRoutes.splash) {
+      if (!isAuthenticated && !isAuthRoute) {
         return AppRoutes.phoneAuth;
       }
 
