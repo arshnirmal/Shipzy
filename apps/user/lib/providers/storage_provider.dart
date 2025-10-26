@@ -4,15 +4,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ignore: depend_on_referenced_packages
-import '../../objectbox.g.dart';
+import '../objectbox.g.dart';
 
 part 'storage_provider.g.dart';
 
 // ============ SECURE STORAGE ============
 @Riverpod(keepAlive: true)
-FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
+FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
 
 // ============ SHARED PREFERENCES ============
 @Riverpod(keepAlive: true)

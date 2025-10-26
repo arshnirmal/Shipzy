@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app/app.dart';
-import 'core/utils/logger.dart';
+import 'app.dart';
+import 'utils/logger.dart';
 
 Future<void> main() async {
   // Ensure Flutter bindings

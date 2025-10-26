@@ -9,12 +9,11 @@
 import 'dart:typed_data';
 
 import 'package:flat_buffers/flat_buffers.dart' as fb;
-import 'package:objectbox/internal.dart'
-    as obx_int; // generated code can access "internal" functionality
+import 'package:objectbox/internal.dart' as obx_int; // generated code can access "internal" functionality
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
-import 'features/auth/domain/models/user.dart';
+import 'models/user.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -25,60 +24,15 @@ final _entities = <obx_int.ModelEntity>[
     lastPropertyId: const obx_int.IdUid(9, 8998313979225501352),
     flags: 0,
     properties: <obx_int.ModelProperty>[
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(1, 5293636612079901117),
-        name: 'id',
-        type: 6,
-        flags: 1,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(2, 6638355151059508031),
-        name: 'userUuid',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(3, 2362688897217646211),
-        name: 'phoneNumber',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(4, 397556645879112901),
-        name: 'fullName',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(5, 898045710105087275),
-        name: 'email',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(6, 8085992770549757188),
-        name: 'profilePictureUrl',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(7, 4268088323301194849),
-        name: 'isVerified',
-        type: 1,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(8, 6388050552662158106),
-        name: 'role',
-        type: 9,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(9, 8998313979225501352),
-        name: 'createdAt',
-        type: 10,
-        flags: 0,
-      ),
+      obx_int.ModelProperty(id: const obx_int.IdUid(1, 5293636612079901117), name: 'id', type: 6, flags: 1),
+      obx_int.ModelProperty(id: const obx_int.IdUid(2, 6638355151059508031), name: 'userUuid', type: 9, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(3, 2362688897217646211), name: 'phoneNumber', type: 9, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(4, 397556645879112901), name: 'fullName', type: 9, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(5, 898045710105087275), name: 'email', type: 9, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(6, 8085992770549757188), name: 'profilePictureUrl', type: 9, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(7, 4268088323301194849), name: 'isVerified', type: 1, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(8, 6388050552662158106), name: 'role', type: 9, flags: 0),
+      obx_int.ModelProperty(id: const obx_int.IdUid(9, 8998313979225501352), name: 'createdAt', type: 10, flags: 0),
     ],
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
@@ -148,15 +102,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (AppUser object, fb.Builder fbb) {
         final userUuidOffset = fbb.writeString(object.userUuid);
         final phoneNumberOffset = fbb.writeString(object.phoneNumber);
-        final fullNameOffset = object.fullName == null
-            ? null
-            : fbb.writeString(object.fullName!);
-        final emailOffset = object.email == null
-            ? null
-            : fbb.writeString(object.email!);
-        final profilePictureUrlOffset = object.profilePictureUrl == null
-            ? null
-            : fbb.writeString(object.profilePictureUrl!);
+        final fullNameOffset = object.fullName == null ? null : fbb.writeString(object.fullName!);
+        final emailOffset = object.email == null ? null : fbb.writeString(object.email!);
+        final profilePictureUrlOffset = object.profilePictureUrl == null ? null : fbb.writeString(object.profilePictureUrl!);
         final roleOffset = fbb.writeString(object.role);
         fbb.startTable(10);
         fbb.addInt64(0, object.id);
@@ -174,44 +122,16 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectFromFB: (obx.Store store, ByteData fbData) {
         final buffer = fb.BufferContext(fbData);
         final rootOffset = buffer.derefObject(0);
-        final createdAtValue = const fb.Int64Reader().vTableGetNullable(
-          buffer,
-          rootOffset,
-          20,
-        );
-        final idParam = const fb.Int64Reader().vTableGet(
-          buffer,
-          rootOffset,
-          4,
-          0,
-        );
-        final userUuidParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 6, '');
-        final phoneNumberParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 8, '');
-        final fullNameParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGetNullable(buffer, rootOffset, 10);
-        final emailParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGetNullable(buffer, rootOffset, 12);
-        final profilePictureUrlParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGetNullable(buffer, rootOffset, 14);
-        final isVerifiedParam = const fb.BoolReader().vTableGet(
-          buffer,
-          rootOffset,
-          16,
-          false,
-        );
-        final roleParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 18, '');
-        final createdAtParam = createdAtValue == null
-            ? null
-            : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+        final createdAtValue = const fb.Int64Reader().vTableGetNullable(buffer, rootOffset, 20);
+        final idParam = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+        final userUuidParam = const fb.StringReader(asciiOptimization: true).vTableGet(buffer, rootOffset, 6, '');
+        final phoneNumberParam = const fb.StringReader(asciiOptimization: true).vTableGet(buffer, rootOffset, 8, '');
+        final fullNameParam = const fb.StringReader(asciiOptimization: true).vTableGetNullable(buffer, rootOffset, 10);
+        final emailParam = const fb.StringReader(asciiOptimization: true).vTableGetNullable(buffer, rootOffset, 12);
+        final profilePictureUrlParam = const fb.StringReader(asciiOptimization: true).vTableGetNullable(buffer, rootOffset, 14);
+        final isVerifiedParam = const fb.BoolReader().vTableGet(buffer, rootOffset, 16, false);
+        final roleParam = const fb.StringReader(asciiOptimization: true).vTableGet(buffer, rootOffset, 18, '');
+        final createdAtParam = createdAtValue == null ? null : DateTime.fromMillisecondsSinceEpoch(createdAtValue);
         final object = AppUser(
           id: idParam,
           userUuid: userUuidParam,
@@ -235,47 +155,29 @@ obx_int.ModelDefinition getObjectBoxModel() {
 /// [AppUser] entity fields to define ObjectBox queries.
 class AppUser_ {
   /// See [AppUser.id].
-  static final id = obx.QueryIntegerProperty<AppUser>(
-    _entities[0].properties[0],
-  );
+  static final id = obx.QueryIntegerProperty<AppUser>(_entities[0].properties[0]);
 
   /// See [AppUser.userUuid].
-  static final userUuid = obx.QueryStringProperty<AppUser>(
-    _entities[0].properties[1],
-  );
+  static final userUuid = obx.QueryStringProperty<AppUser>(_entities[0].properties[1]);
 
   /// See [AppUser.phoneNumber].
-  static final phoneNumber = obx.QueryStringProperty<AppUser>(
-    _entities[0].properties[2],
-  );
+  static final phoneNumber = obx.QueryStringProperty<AppUser>(_entities[0].properties[2]);
 
   /// See [AppUser.fullName].
-  static final fullName = obx.QueryStringProperty<AppUser>(
-    _entities[0].properties[3],
-  );
+  static final fullName = obx.QueryStringProperty<AppUser>(_entities[0].properties[3]);
 
   /// See [AppUser.email].
-  static final email = obx.QueryStringProperty<AppUser>(
-    _entities[0].properties[4],
-  );
+  static final email = obx.QueryStringProperty<AppUser>(_entities[0].properties[4]);
 
   /// See [AppUser.profilePictureUrl].
-  static final profilePictureUrl = obx.QueryStringProperty<AppUser>(
-    _entities[0].properties[5],
-  );
+  static final profilePictureUrl = obx.QueryStringProperty<AppUser>(_entities[0].properties[5]);
 
   /// See [AppUser.isVerified].
-  static final isVerified = obx.QueryBooleanProperty<AppUser>(
-    _entities[0].properties[6],
-  );
+  static final isVerified = obx.QueryBooleanProperty<AppUser>(_entities[0].properties[6]);
 
   /// See [AppUser.role].
-  static final role = obx.QueryStringProperty<AppUser>(
-    _entities[0].properties[7],
-  );
+  static final role = obx.QueryStringProperty<AppUser>(_entities[0].properties[7]);
 
   /// See [AppUser.createdAt].
-  static final createdAt = obx.QueryDateProperty<AppUser>(
-    _entities[0].properties[8],
-  );
+  static final createdAt = obx.QueryDateProperty<AppUser>(_entities[0].properties[8]);
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/theme/app_theme.dart';
 import 'providers/theme_provider.dart';
-import 'router/app_router.dart';
+import 'theme/app_theme.dart';
+import 'utils/app_router.dart';
 
 /// The main application widget that sets up the app's theme, routing, and providers.
 ///

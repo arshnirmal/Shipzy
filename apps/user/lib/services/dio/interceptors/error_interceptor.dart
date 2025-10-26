@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../utils/logger.dart';
+import '../../../utils/logger.dart';
 
 class ErrorInterceptor extends Interceptor {
   ErrorInterceptor(this.ref);

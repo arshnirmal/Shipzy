@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../storage/storage_provider.dart';
+import '../../../providers/storage_provider.dart';
 
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this.ref);

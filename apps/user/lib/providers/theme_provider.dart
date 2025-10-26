@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../core/storage/storage_provider.dart';
+import 'storage_provider.dart';
 
 part 'theme_provider.g.dart';
 
