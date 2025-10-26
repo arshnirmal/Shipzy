@@ -4,9 +4,5 @@ class PhoneAuthScreen extends StatelessWidget {
   const PhoneAuthScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-        body: Center(
-          child: Text('Phone Auth Screen'),
-        ),
-      );
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Phone Auth Screen')));
 }

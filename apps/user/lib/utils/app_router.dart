@@ -3,17 +3,17 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
-import '../screens/address_form_screen.dart';
-import '../screens/address_list_screen.dart';
-import '../screens/create_order_screen.dart';
-import '../screens/home_screen.dart';
-import '../screens/order_details_screen.dart';
-import '../screens/order_list_screen.dart';
-import '../screens/order_tracking_screen.dart';
-import '../screens/otp_screen.dart';
-import '../screens/payment_screen.dart';
-import '../screens/phone_auth_screen.dart';
-import '../screens/profile_screen.dart';
+import '../screens/new_order/address_form_screen.dart';
+import '../screens/new_order/address_list_screen.dart';
+import '../screens/new_order/create_order_screen.dart';
+import '../screens/home/home_screen.dart';
+import '../screens/orders/order_details_screen.dart';
+import '../screens/orders/order_list_screen.dart';
+import '../screens/orders/order_tracking_screen.dart';
+import '../screens/auth/otp_screen.dart';
+import '../screens/new_order/payment_screen.dart';
+import '../screens/auth/phone_auth_screen.dart';
+import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import 'app_routes.dart';
 
