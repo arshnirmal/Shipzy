@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 
 import 'dio/api_client.dart';
@@ -6,29 +7,26 @@ class AuthService {
   AuthService(this._apiClient);
   final ApiClient _apiClient;
 
-  Future<String> sendOtp(String phoneNumber) async {
-    try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/firebase/verify',
-        data: {'phoneNumber': phoneNumber, 'deviceId': 'mobile-device-${DateTime.now().millisecondsSinceEpoch}'},
-      );
-
-      return response.data?['verificationId'] as String;
-    } on DioException catch (e) {
-      throw Exception('Failed to send OTP: ${e.message}');
-    }
+  Future<String> _getDeviceId() async {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.id;
   }
 
-  Future<Map<String, dynamic>> verifyOtp(String verificationId, String otp) async {
+  /// Verify Firebase ID token with backend and create/login user
+  Future<Map<String, dynamic>> verifyWithBackend(String idToken, {String? fullName, String? email}) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/auth/firebase/verify',
-        data: {'idToken': verificationId, 'otp': otp, 'deviceId': 'mobile-device-${DateTime.now().millisecondsSinceEpoch}'},
-      );
+      final deviceId = await _getDeviceId();
+      final data = <String, dynamic>{'idToken': idToken, 'deviceId': deviceId, 'role': 'client'};
+
+      if (fullName != null) data['fullName'] = fullName;
+      if (email != null) data['email'] = email;
+
+      final response = await _apiClient.post<Map<String, dynamic>>('/auth/firebase/verify', data: data);
 
       return response.data!;
     } on DioException catch (e) {
-      throw Exception('Failed to verify OTP: ${e.message}');
+      throw Exception('Failed to verify with backend: ${e.message}');
     }
   }
 }

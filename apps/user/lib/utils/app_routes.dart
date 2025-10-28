@@ -16,6 +16,9 @@ class AppRoutes {
   /// Route for OTP verification.
   static const String otp = '/otp';
 
+  /// Route for profile creation (first-time users).
+  static const String createProfile = '/create-profile';
+
   // ============ MAIN APP ROUTES ============
   /// Route for the home screen.
   static const String home = '/home';

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
+import '../screens/auth/create_profile_screen.dart';
 import '../screens/auth/otp_screen.dart';
 import '../screens/auth/phone_auth_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -38,7 +39,7 @@ GoRouter router(Ref ref) {
       if (isOnSplash) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
-            authenticated: (_) => AppRoutes.home,
+            authenticated: (user, isNewUser) => isNewUser ? AppRoutes.createProfile : AppRoutes.home,
             unauthenticated: () => AppRoutes.phoneAuth,
             orElse: () => AppRoutes.phoneAuth, // Default to phone auth if unknown state
           ),
@@ -47,23 +48,35 @@ GoRouter router(Ref ref) {
       }
 
       // If auth state is still loading, don't redirect
-      final isAuthenticated = authStateValue.maybeWhen(
-        data: (authData) => authData.maybeWhen(authenticated: (_) => true, orElse: () => false),
+      final authResult = authStateValue.maybeWhen(
+        data: (authData) => authData.maybeWhen(
+          authenticated: (user, isNewUser) => isNewUser ? 'new_user' : 'authenticated',
+          unauthenticated: () => 'unauthenticated',
+          orElse: () => 'unknown',
+        ),
         orElse: () => null, // Loading state
       );
 
-      if (isAuthenticated == null) {
+      if (authResult == null) {
         return null; // Stay on current route while loading
       }
 
+      final isAuthenticated = authResult == 'authenticated' || authResult == 'new_user';
+      final isNewUser = authResult == 'new_user';
+
       // If not authenticated and not on auth route, redirect to phone auth
-      if (!isAuthenticated && !isAuthRoute) {
+      if (!isAuthenticated && !isAuthRoute && state.matchedLocation != AppRoutes.createProfile) {
         return AppRoutes.phoneAuth;
       }
 
-      // If authenticated and on auth route, redirect to home
+      // If authenticated and on auth route, redirect based on user status
       if (isAuthenticated && isAuthRoute) {
-        return AppRoutes.home;
+        return isNewUser ? AppRoutes.createProfile : AppRoutes.home;
+      }
+
+      // If new user and not on create profile, redirect to create profile
+      if (isNewUser && state.matchedLocation != AppRoutes.createProfile && !isAuthRoute && state.matchedLocation != AppRoutes.splash) {
+        return AppRoutes.createProfile;
       }
 
       return null;
@@ -83,6 +96,7 @@ GoRouter router(Ref ref) {
           return OtpScreen(phoneNumber: phoneNumber ?? '');
         },
       ),
+      GoRoute(path: AppRoutes.createProfile, name: 'createProfile', builder: (context, state) => const CreateProfileScreen()),
 
       // ============ MAIN APP (Shell Route for Bottom Nav) ============
       ShellRoute(

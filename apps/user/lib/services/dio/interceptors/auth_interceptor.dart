@@ -10,7 +10,7 @@ class AuthInterceptor extends Interceptor {
   @override
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     // Get access token
-    final tokenStorage = ref.read(tokenStorageProvider.notifier);
+    final tokenStorage = ref.read(tokenStorageProvider);
     final accessToken = await tokenStorage.getAccessToken();
 
     if (accessToken != null) {
@@ -25,7 +25,7 @@ class AuthInterceptor extends Interceptor {
     // Handle token refresh on 401
     if (err.response?.statusCode == 401) {
       try {
-        final tokenStorage = ref.read(tokenStorageProvider.notifier);
+        final tokenStorage = ref.read(tokenStorageProvider);
         final refreshToken = await tokenStorage.getRefreshToken();
 
         if (refreshToken != null) {
@@ -36,7 +36,7 @@ class AuthInterceptor extends Interceptor {
         }
       } catch (e) {
         // Refresh failed, logout user
-        final tokenStorage = ref.read(tokenStorageProvider.notifier);
+        final tokenStorage = ref.read(tokenStorageProvider);
         await tokenStorage.clearTokens();
       }
     }
