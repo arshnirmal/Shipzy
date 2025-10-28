@@ -63,6 +63,8 @@ build/
 objectbox.g.dart
 objectbox-model.json
 
+apps/user/lib/utils/app_router.g.dart
+
 # Coverage
 coverage/
 *.lcov
@@ -286,4 +288,3 @@ backend/scripts/*.log
 # Uncomment if you have local development scripts you don't want to commit
 # **/scripts/local-*.sh
 # **/scripts/dev-*.sh
-
