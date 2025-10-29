@@ -124,7 +124,7 @@ class PhoneAuthState {
 
   bool get isValidPhoneNumber => phoneNumber.length == 10 && RegExp(r'^\d{10}$').hasMatch(phoneNumber);
 
-  bool get canSendOtp => !isLoading && isValidPhoneNumber && error == null;
+  bool get canSendOtp => !isLoading && isValidPhoneNumber;
 
   PhoneAuthState copyWith({
     String? phoneNumber,

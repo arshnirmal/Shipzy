@@ -12,7 +12,20 @@
           "package_name": "com.shipzy.shipzy_user"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1096727737605-fl4c5pbqgb79h4q30q94nbic7niidhes.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shipzy.shipzy_user",
+            "certificate_hash": "fbf439ba021630945adb19d605b8b3c83339b71b"
+          }
+        },
+        {
+          "client_id": "1096727737605-fsc7jogik3e8qle69bmhueu1i3785sfm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCoMVMf7aQsWbh9t1UYgx7lAHVOO59gxrg"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1096727737605-fsc7jogik3e8qle69bmhueu1i3785sfm.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1096727737605-lpgdv2ntebnve1eag6ph8vneh34i1mkd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.shipzy.shipzyUser"
+              }
+            }
+          ]
         }
       }
     }
