@@ -4,8 +4,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
 import '../screens/auth/create_profile_screen.dart';
-import '../screens/auth/otp_screen.dart';
-import '../screens/auth/phone_auth_screen.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/new_order/address_form_screen.dart';
 import '../screens/new_order/address_list_screen.dart';
@@ -32,7 +32,7 @@ GoRouter router(Ref ref) {
     redirect: (context, state) {
       final authStateValue = authState;
 
-      final isAuthRoute = state.matchedLocation == AppRoutes.phoneAuth || state.matchedLocation == AppRoutes.otp;
+      final isAuthRoute = state.matchedLocation == AppRoutes.login || state.matchedLocation == AppRoutes.register;
       final isOnSplash = state.matchedLocation == AppRoutes.splash;
 
       // Handle splash screen redirects
@@ -40,8 +40,8 @@ GoRouter router(Ref ref) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
             authenticated: (user, isNewUser) => isNewUser ? AppRoutes.createProfile : AppRoutes.home,
-            unauthenticated: () => AppRoutes.phoneAuth,
-            orElse: () => AppRoutes.phoneAuth, // Default to phone auth if unknown state
+            unauthenticated: () => AppRoutes.login,
+            orElse: () => AppRoutes.login, // Default to login if unknown state
           ),
           orElse: () => null, // Stay on splash while loading
         );
@@ -66,7 +66,7 @@ GoRouter router(Ref ref) {
 
       // If not authenticated and not on auth route, redirect to phone auth
       if (!isAuthenticated && !isAuthRoute && state.matchedLocation != AppRoutes.createProfile) {
-        return AppRoutes.phoneAuth;
+        return AppRoutes.login;
       }
 
       // If authenticated and on auth route, redirect based on user status
@@ -87,15 +87,8 @@ GoRouter router(Ref ref) {
       GoRoute(path: AppRoutes.splash, name: 'splash', builder: (context, state) => const SplashScreen()),
 
       // ============ AUTHENTICATION ============
-      GoRoute(path: AppRoutes.phoneAuth, name: 'phoneAuth', builder: (context, state) => const PhoneAuthScreen()),
-      GoRoute(
-        path: AppRoutes.otp,
-        name: 'otp',
-        builder: (context, state) {
-          final phoneNumber = state.extra as String?;
-          return OtpScreen(phoneNumber: phoneNumber ?? '');
-        },
-      ),
+      GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
       GoRoute(path: AppRoutes.createProfile, name: 'createProfile', builder: (context, state) => const CreateProfileScreen()),
 
       // ============ MAIN APP (Shell Route for Bottom Nav) ============

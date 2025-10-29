@@ -10,11 +10,11 @@ class AppRoutes {
   /// Route for the splash screen.
   static const String splash = '/';
 
-  /// Route for phone number authentication.
-  static const String phoneAuth = '/phone-auth';
+  /// Route for email/password login.
+  static const String login = '/login';
 
-  /// Route for OTP verification.
-  static const String otp = '/otp';
+  /// Route for account registration.
+  static const String register = '/register';
 
   /// Route for profile creation (first-time users).
   static const String createProfile = '/create-profile';
