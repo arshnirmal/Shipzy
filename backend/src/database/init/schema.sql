@@ -273,9 +273,10 @@ CREATE TABLE users.profiles (
     user_id SERIAL PRIMARY KEY,
     user_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
     role_id INT NOT NULL REFERENCES public.user_roles (role_id),
-    phone_number VARCHAR(20) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE, -- NULLABLE for OTP-only auth
-    password_hash VARCHAR(255), -- NULLABLE for OTP-only auth
+    firebase_uid VARCHAR(255) UNIQUE, -- Firebase Auth UID for social auth
+    phone_number VARCHAR(20) UNIQUE, -- NULLABLE for email-only auth
+    email VARCHAR(100) UNIQUE NOT NULL, -- REQUIRED for email auth, UNIQUE constraint enforced
+    password_hash VARCHAR(255) NOT NULL, -- REQUIRED for email auth
     full_name VARCHAR(100) NOT NULL,
     profile_picture_url VARCHAR(255),
     is_verified BOOLEAN DEFAULT FALSE,
@@ -286,27 +287,29 @@ CREATE TABLE users.profiles (
 );
 
 CREATE INDEX idx_users_profiles_role_id ON users.profiles (role_id);
-CREATE INDEX idx_users_profiles_phone ON users.profiles (phone_number);
-CREATE INDEX idx_users_profiles_email ON users.profiles (email) WHERE email IS NOT NULL;
+CREATE INDEX idx_users_profiles_firebase_uid ON users.profiles (firebase_uid) WHERE firebase_uid IS NOT NULL;
+CREATE INDEX idx_users_profiles_email ON users.profiles (email);
 CREATE INDEX idx_users_profiles_deleted_at ON users.profiles (deleted_at) WHERE deleted_at IS NULL;
 
 CREATE TRIGGER set_timestamp_users_profiles
 BEFORE UPDATE ON users.profiles
 FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
 
--- Authentication Sessions (OTP + JWT management)
+-- Authentication Sessions (JWT management for email/password and social auth)
 CREATE TABLE users.auth_sessions (
     session_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users.profiles (user_id) ON DELETE CASCADE,
-    phone_number VARCHAR(20) NOT NULL,
-    otp_code VARCHAR(6),
+    email VARCHAR(100) NOT NULL, -- Email for email/password auth
+    phone_number VARCHAR(20), -- Phone for legacy OTP auth or optional phone verification
+    otp_code VARCHAR(6), -- For phone verification if needed
     otp_expires_at TIMESTAMPTZ,
     is_verified BOOLEAN DEFAULT FALSE,
     verification_attempts INT DEFAULT 0,
-    jwt_token_hash VARCHAR(255), -- Store hashed JWT for revocation
+    jwt_token_hash VARCHAR(255) UNIQUE NOT NULL, -- Store hashed JWT for revocation
     device_id VARCHAR(255),
     device_info JSONB, -- Store device details
     ip_address INET,
+    auth_method VARCHAR(20) DEFAULT 'email', -- 'email', 'google', 'apple', 'phone'
     created_at TIMESTAMPTZ DEFAULT NOW(),
     verified_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
@@ -314,9 +317,10 @@ CREATE TABLE users.auth_sessions (
 );
 
 CREATE INDEX idx_users_auth_sessions_user_id ON users.auth_sessions (user_id);
+CREATE INDEX idx_users_auth_sessions_email ON users.auth_sessions (email);
 CREATE INDEX idx_users_auth_sessions_phone ON users.auth_sessions (phone_number);
 CREATE INDEX idx_users_auth_sessions_expires_at ON users.auth_sessions (expires_at);
-CREATE INDEX idx_users_auth_sessions_jwt_hash ON users.auth_sessions (jwt_token_hash) WHERE jwt_token_hash IS NOT NULL;
+CREATE INDEX idx_users_auth_sessions_jwt_hash ON users.auth_sessions (jwt_token_hash);
 
 COMMENT ON COLUMN users.auth_sessions.otp_code IS 'Plain OTP for development, should be hashed in production';
 COMMENT ON COLUMN users.auth_sessions.jwt_token_hash IS 'SHA256 hash of JWT token for revocation checking';
@@ -799,22 +803,20 @@ WHERE cs.is_available = true
 -- SECTION 12: SAMPLE SEED DATA (Optional for Development)
 -- ===================================================================
 
--- Seed a test client user
-DELETE FROM users.profiles WHERE phone_number IN ('+919876543210', '+919876543211', '+919876543212');
-INSERT INTO users.profiles (role_id, phone_number, full_name, is_verified, is_active) VALUES
-((SELECT role_id FROM public.user_roles WHERE name = 'client'), '+919876543210', 'Test Client User', true, true);
-
--- Seed test courier users
-INSERT INTO users.profiles (role_id, phone_number, full_name, is_verified, is_active) VALUES
-((SELECT role_id FROM public.user_roles WHERE name = 'courier'), '+919876543211', 'Test Courier 1', true, true),
-((SELECT role_id FROM public.user_roles WHERE name = 'courier'), '+919876543212', 'Test Courier 2', true, true);
+-- Seed test users with email and password hashes
+DELETE FROM users.profiles WHERE email IN ('client@example.com', 'courier1@example.com', 'courier2@example.com');
+INSERT INTO users.profiles (role_id, phone_number, email, password_hash, full_name, is_verified, is_active) VALUES
+-- Password hash for 'password123' using bcrypt
+((SELECT role_id FROM public.user_roles WHERE name = 'client'), '+919876543210', 'client@example.com', '$2b$10$xHcL8XH1CV5xvFYV0Cb8Ne/.1YqkJcKvzDf8QH9dKj8Vz9vJcQg/q', 'Test Client User', true, true),
+((SELECT role_id FROM public.user_roles WHERE name = 'courier'), '+919876543211', 'courier1@example.com', '$2b$10$xHcL8XH1CV5xvFYV0Cb8Ne/.1YqkJcKvzDf8QH9dKj8Vz9vJcQg/q', 'Test Courier 1', true, true),
+((SELECT role_id FROM public.user_roles WHERE name = 'courier'), '+919876543212', 'courier2@example.com', '$2b$10$xHcL8XH1CV5xvFYV0Cb8Ne/.1YqkJcKvzDf8QH9dKj8Vz9vJcQg/q', 'Test Courier 2', true, true);
 
 -- Initialize courier status for test couriers
 DELETE FROM logistics.courier_status WHERE courier_id IN (
-    SELECT user_id FROM users.profiles WHERE phone_number IN ('+919876543211', '+919876543212')
+    SELECT user_id FROM users.profiles WHERE email IN ('courier1@example.com', 'courier2@example.com')
 );
 INSERT INTO logistics.courier_status (courier_id, is_available, is_online, current_location, last_location_update)
-SELECT user_id, true, true, 
+SELECT user_id, true, true,
     ST_SetSRID(ST_MakePoint(72.8777, 19.0760), 4326)::geography, -- Mumbai coordinates
     NOW()
 FROM users.profiles WHERE role_id = (SELECT role_id FROM public.user_roles WHERE name = 'courier');

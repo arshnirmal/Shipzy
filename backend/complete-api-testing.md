@@ -1,20 +1,20 @@
 # 🚀 **Shipzy Backend - Complete API Testing Guide**
 
-> **30 Endpoints** | **6 Modules** | **Production Ready**
+> **36 Endpoints** | **6 Modules** | **Production Ready**
 
-This comprehensive testing guide covers all 30 API endpoints across 6 modules with real cURL examples, request/response formats, and testing workflows.
+This comprehensive testing guide covers all 36 API endpoints across 6 modules with real cURL examples, request/response formats, and testing workflows.
 
 ---
 
 ## 📋 **Table of Contents**
 
 1. [Setup & Prerequisites](#setup)
-2. [Authentication APIs (4 endpoints)](#authentication)
+2. [Authentication APIs (6 endpoints)](#authentication)
 3. [User Management APIs (5 endpoints)](#users)
 4. [Driver Management APIs (6 endpoints)](#drivers)
 5. [Order Management APIs (8 endpoints)](#orders)
 6. [Address & Location APIs (5 endpoints)](#addresses)
-7. [Static Data APIs (2 endpoints)](#static)
+7. [Static Data APIs (7 endpoints)](#static)
 8. [Complete Testing Workflows](#workflows)
 9. [Error Handling Examples](#errors)
 
@@ -71,7 +71,7 @@ npm start
 
 <a name="authentication"></a>
 
-## 🔐 **2. Authentication APIs (4 endpoints)**
+## 🔐 **2. Authentication APIs (5 endpoints)**
 
 ### **2.1 Health Check**
 
@@ -91,48 +91,7 @@ curl -X GET "http://localhost:3000/health" \
 }
 ```
 
-### **2.2 Firebase Phone Authentication**
-
-```bash
-curl -X POST "$BASE_URL/auth/firebase/verify" \
-  -H "Content-Type: application/json" \
-  -H "X-Device-Id: device-123-456" \
-  -d '{
-    "idToken": "'"$FIREBASE_ID_TOKEN"'",
-    "fullName": "John Doe",
-    "role": "client"
-  }'
-```
-
-**Response (New User):**
-
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "isNewUser": true,
-    "user": {
-      "userId": 1,
-      "userUuid": "550e8400-e29b-41d4-a716-446655440000",
-      "firebaseUid": "firebase-uid-123",
-      "phoneNumber": "+919876543210",
-      "fullName": "John Doe",
-      "email": null,
-      "role": "client",
-      "isVerified": true,
-      "createdAt": "2025-10-25T00:00:00.000Z"
-    },
-    "tokens": {
-      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "expiresIn": "7d"
-    }
-  }
-}
-```
-
-### **2.3 Google Authentication**
+### **2.2 Google Authentication**
 
 ```bash
 curl -X POST "$BASE_URL/auth/google/verify" \
@@ -166,7 +125,83 @@ curl -X POST "$BASE_URL/auth/google/verify" \
 }
 ```
 
-### **2.4 Refresh Token**
+### **2.3 User Registration**
+
+```bash
+curl -X POST "$BASE_URL/auth/register" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Id: device-register-123" \
+  -d '{
+    "fullName": "John Doe",
+    "email": "john.doe@example.com",
+    "password": "securepassword123",
+    "role": "client",
+    "phoneNumber": "+919876543210"
+  }'
+```
+
+**Response (New User):**
+
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "isNewUser": true,
+    "user": {
+      "userId": 3,
+      "userUuid": "550e8400-e29b-41d4-a716-446655440003",
+      "fullName": "John Doe",
+      "email": "john.doe@example.com",
+      "phoneNumber": "+919876543210",
+      "role": "client",
+      "isVerified": false,
+      "createdAt": "2025-10-25T00:00:00.000Z"
+    },
+    "tokens": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "expiresIn": "7d"
+    }
+  }
+}
+```
+
+### **2.4 User Login**
+
+```bash
+curl -X POST "$BASE_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Id: device-login-456" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "securepassword123"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "User logged in successfully",
+  "data": {
+    "isNewUser": false,
+    "user": {
+      "userId": 3,
+      "fullName": "John Doe",
+      "email": "john.doe@example.com",
+      "role": "client",
+      "profileComplete": true,
+      "createdAt": "2025-10-25T00:00:00.000Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+### **2.5 Refresh Token**
 
 ```bash
 curl -X POST "$BASE_URL/auth/refresh" \
@@ -189,7 +224,7 @@ curl -X POST "$BASE_URL/auth/refresh" \
 }
 ```
 
-### **2.5 Logout**
+### **2.6 Logout**
 
 ```bash
 curl -X POST "$BASE_URL/auth/logout" \
@@ -1078,7 +1113,181 @@ curl -X GET "$BASE_URL/static/delivery-types" \
 }
 ```
 
-### **7.2 Get Create Order Data (Combined)**
+### **7.2 Get Weight Tiers**
+
+```bash
+curl -X GET "$BASE_URL/static/weight-tiers" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Weight tiers retrieved successfully",
+  "data": [
+    {
+      "tierId": 1,
+      "name": "Light",
+      "minWeightKg": 0.1,
+      "maxWeightKg": 2.0,
+      "additionalCharge": 0.0
+    },
+    {
+      "tierId": 2,
+      "name": "Medium",
+      "minWeightKg": 2.1,
+      "maxWeightKg": 5.0,
+      "additionalCharge": 20.0
+    }
+  ]
+}
+```
+
+### **7.3 Get Vehicle Categories**
+
+```bash
+curl -X GET "$BASE_URL/static/vehicle-categories" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Vehicle categories retrieved successfully",
+  "data": [
+    {
+      "categoryId": 1,
+      "name": "bike",
+      "description": "Motorcycle/Bike delivery",
+      "maxWeightKg": 10.0,
+      "icon": "motorcycle"
+    },
+    {
+      "categoryId": 2,
+      "name": "scooter",
+      "description": "Electric scooter delivery",
+      "maxWeightKg": 8.0,
+      "icon": "scooter"
+    }
+  ]
+}
+```
+
+### **7.4 Get Package Types**
+
+```bash
+curl -X GET "$BASE_URL/static/package-types" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Package types retrieved successfully",
+  "data": [
+    {
+      "packageTypeId": 1,
+      "name": "documents",
+      "description": "Documents and small items",
+      "icon": "document"
+    },
+    {
+      "packageTypeId": 2,
+      "name": "food",
+      "description": "Food delivery",
+      "icon": "food"
+    }
+  ]
+}
+```
+
+### **7.5 Get Payment Methods**
+
+```bash
+curl -X GET "$BASE_URL/static/payment-methods" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Payment methods retrieved successfully",
+  "data": [
+    {
+      "methodId": 1,
+      "name": "cash",
+      "displayName": "Cash on Delivery",
+      "description": "Pay cash when package is delivered",
+      "isActive": true
+    },
+    {
+      "methodId": 2,
+      "name": "wallet",
+      "displayName": "Wallet",
+      "description": "Pay using wallet balance",
+      "isActive": true
+    }
+  ]
+}
+```
+
+### **7.6 Get Order Statuses**
+
+```bash
+curl -X GET "$BASE_URL/static/order-statuses" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Order statuses retrieved successfully",
+  "data": [
+    {
+      "statusId": 1,
+      "name": "pending",
+      "description": "Order created, waiting for driver assignment"
+    },
+    {
+      "statusId": 2,
+      "name": "accepted",
+      "description": "Driver has accepted the order"
+    },
+    {
+      "statusId": 3,
+      "name": "picked_up",
+      "description": "Package has been picked up by driver"
+    },
+    {
+      "statusId": 4,
+      "name": "in_transit",
+      "description": "Package is on the way to delivery"
+    },
+    {
+      "statusId": 5,
+      "name": "delivered",
+      "description": "Package has been delivered successfully"
+    },
+    {
+      "statusId": 6,
+      "name": "cancelled",
+      "description": "Order has been cancelled"
+    }
+  ]
+}
+```
+
+### **7.7 Get Create Order Data (Combined)**
 
 ```bash
 curl -X GET "$BASE_URL/static/create-order-data" \
@@ -1105,15 +1314,15 @@ curl -X GET "$BASE_URL/static/create-order-data" \
 
 <a name="workflows"></a>
 
-## 🔄 **8. Complete Testing Workflows**
+## 🔄 **9. Complete Testing Workflows**
 
 ### **Client Journey: Order Creation**
 
 ```bash
 # 1. Authenticate
-curl -X POST "$BASE_URL/auth/firebase/verify" \
+curl -X POST "$BASE_URL/auth/google/verify" \
   -H "Content-Type: application/json" \
-  -d '{"idToken": "'"$FIREBASE_ID_TOKEN"'", "fullName": "John Doe", "role": "client"}'
+  -d '{"idToken": "'"$GOOGLE_ID_TOKEN"'", "role": "client"}'
 
 # 2. Get profile
 curl -X GET "$BASE_URL/users/me" \
@@ -1148,9 +1357,9 @@ curl -X GET "$BASE_URL/orders/1" \
 
 ```bash
 # 1. Authenticate as driver
-curl -X POST "$BASE_URL/auth/firebase/verify" \
+curl -X POST "$BASE_URL/auth/google/verify" \
   -H "Content-Type: application/json" \
-  -d '{"idToken": "'"$FIREBASE_ID_TOKEN"'", "fullName": "Jane Driver", "role": "courier"}'
+  -d '{"idToken": "'"$GOOGLE_ID_TOKEN"'", "role": "courier"}'
 
 # 2. Go online
 curl -X PUT "$BASE_URL/drivers/me/availability" \
@@ -1294,10 +1503,10 @@ echo "1. Health Check:"
 curl -s -X GET "$BASE_URL/../health" | jq '.status'
 
 # Authentication test
-echo "2. Firebase Authentication:"
-RESPONSE=$(curl -s -X POST "$BASE_URL/auth/firebase/verify" \
+echo "2. Google Authentication:"
+RESPONSE=$(curl -s -X POST "$BASE_URL/auth/google/verify" \
   -H "Content-Type: application/json" \
-  -d "{\"idToken\": \"$FIREBASE_ID_TOKEN\", \"fullName\": \"Test User\", \"role\": \"client\"}")
+  -d "{\"idToken\": \"$GOOGLE_ID_TOKEN\", \"role\": \"client\"}")
 
 ACCESS_TOKEN=$(echo $RESPONSE | jq -r '.data.tokens.accessToken')
 echo "Token received: ${ACCESS_TOKEN:0:50}..."

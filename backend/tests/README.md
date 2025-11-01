@@ -79,7 +79,10 @@ The test suite covers:
 
 ### ✅ Authentication & Authorization
 
-- Firebase token verification
+- **Multi-Authentication Support:**
+  - Firebase Phone OTP verification
+  - Google OAuth token verification
+  - Email/Password registration and login
 - JWT token management (access/refresh)
 - User logout and token revocation
 - Role-based access control (client, courier, admin)

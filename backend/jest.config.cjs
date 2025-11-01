@@ -1,10 +1,10 @@
 // jest.config.cjs
 module.exports = {
   testEnvironment: "node",
-  testMatch: ["**/tests/**/*.test.js", "**/tests/**/*.spec.js"],
+  testMatch: ["**/tests/**/*.test.{js,ts}", "**/tests/**/*.spec.{js,ts}"],
   collectCoverageFrom: [
-    "src/**/*.js",
-    "!src/server.js",
+    "src/**/*.{js,ts}",
+    "!src/server.ts",
     "!src/config/**",
     "!src/database/**",
     "!**/node_modules/**",
@@ -17,10 +17,16 @@ module.exports = {
   forceExit: true,
   clearMocks: true,
   restoreMocks: true,
+  extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
-  transform: {},
+  transform: {
+    "^.+\\.(ts|js)$": ["ts-jest", {
+      useESM: true,
+      tsconfig: "tsconfig.json"
+    }]
+  },
   transformIgnorePatterns: ["node_modules/(?!(.*\\.mjs$))"],
   testPathIgnorePatterns: ["/node_modules/", "/coverage/"],
 };

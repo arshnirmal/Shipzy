@@ -11,11 +11,11 @@
 
 ## 📋 Overview
 
-Shipzy Backend is a high-performance REST API built with Fastify, Firebase Authentication, and PostgreSQL. It powers a hyperlocal delivery platform connecting customers with nearby couriers.
+Shipzy Backend is a high-performance REST API built with Fastify, multi-provider authentication (Firebase, Google OAuth, Email/Password), and PostgreSQL. It powers a hyperlocal delivery platform connecting customers with nearby couriers.
 
 ### Key Features
 
-- ✅ **Firebase Phone Authentication** (OTP-based)
+- ✅ **Multi-Authentication** (Firebase Phone OTP, Google OAuth, Email/Password)
 - ✅ **JWT Token Management** with refresh tokens
 - ✅ **Role-Based Access Control** (Client, Courier, Admin)
 - ✅ **PostgreSQL Database** with PostGIS for geospatial queries
@@ -119,7 +119,7 @@ services/backend/
 | **Runtime**        | Node.js 18+                 |
 | **Framework**      | Fastify 4.28                |
 | **Database**       | PostgreSQL 14+ with PostGIS |
-| **Authentication** | Firebase Auth + JWT         |
+| **Authentication** | Firebase Auth + Google OAuth + Email/Password + JWT |
 | **Logger**         | Pino                        |
 | **Validation**     | AJV                         |
 | **Security**       | Helmet, CORS, Rate Limiting |
@@ -134,6 +134,8 @@ services/backend/
 | ------ | ------------------------------ | ------------------------------- | ------------- |
 | POST   | `/api/v1/auth/firebase/verify` | Login/Register with phone (OTP) | No            |
 | POST   | `/api/v1/auth/google/verify`   | Login/Register with Google      | No            |
+| POST   | `/api/v1/auth/register`        | User registration (email)       | No            |
+| POST   | `/api/v1/auth/login`           | User login (email)              | No            |
 | POST   | `/api/v1/auth/refresh`         | Refresh JWT token               | No            |
 | POST   | `/api/v1/auth/logout`          | Logout (revoke token)           | Yes           |
 
@@ -200,11 +202,19 @@ services/backend/
 | GET    | `/health` | Server health status | No            |
 | GET    | `/api/v1` | API info             | No            |
 
-**📋 Total: 30 implemented endpoints**
+**📋 Total: 37 implemented endpoints**
 
 ---
 
 ## 🔐 Authentication Flow
+
+The backend supports multiple authentication methods:
+
+1. **Firebase Phone Authentication** (OTP-based)
+2. **Google OAuth Authentication**
+3. **Email/Password Registration & Login**
+
+The flow below shows the Firebase phone authentication process:
 
 ```mermaid
 sequenceDiagram

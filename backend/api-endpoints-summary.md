@@ -1,26 +1,27 @@
 # 📡 Shipzy Backend - API Endpoints Summary
 
-## **30 Endpoints | 6 Modules | Complete Coverage**
+## **36 Endpoints | 6 Modules | Complete Coverage**
 
 | Module                | Endpoints | Auth Required | Status      |
 | --------------------- | --------- | ------------- | ----------- |
-| 🔐 Authentication     | 4         | No/Yes        | ✅ Complete |
+| 🔐 Authentication     | 5         | No/Yes        | ✅ Complete |
 | 👤 User Management    | 5         | Yes           | ✅ Complete |
 | 🚗 Driver Management  | 6         | Yes (Courier) | ✅ Complete |
 | 📦 Order Management   | 8         | Yes           | ✅ Complete |
 | 🗺️ Address & Location | 5         | Yes           | ✅ Complete |
-| 📊 Static Data        | 2         | No            | ✅ Complete |
+| 📊 Static Data        | 7         | No            | ✅ Complete |
 
 ---
 
-## 🔐 **Authentication Module (4 endpoints)**
+## 🔐 **Authentication Module (5 endpoints)**
 
-| Method | Endpoint                       | Description                 | Auth |
-| ------ | ------------------------------ | --------------------------- | ---- |
-| POST   | `/api/v1/auth/firebase/verify` | Phone/SMS authentication    | No   |
-| POST   | `/api/v1/auth/google/verify`   | Google OAuth authentication | No   |
-| POST   | `/api/v1/auth/refresh`         | Refresh JWT tokens          | No   |
-| POST   | `/api/v1/auth/logout`          | Logout and revoke tokens    | Yes  |
+| Method | Endpoint                     | Description                 | Auth |
+| ------ | ---------------------------- | --------------------------- | ---- |
+| POST   | `/api/v1/auth/google/verify` | Google OAuth authentication | No   |
+| POST   | `/api/v1/auth/register`      | User registration           | No   |
+| POST   | `/api/v1/auth/login`         | User login                  | No   |
+| POST   | `/api/v1/auth/refresh`       | Refresh JWT tokens          | No   |
+| POST   | `/api/v1/auth/logout`        | Logout and revoke tokens    | Yes  |
 
 ---
 
@@ -76,12 +77,17 @@
 
 ---
 
-## 📊 **Static Data Module (2 endpoints)**
+## 📊 **Static Data Module (7 endpoints)**
 
-| Method | Endpoint                           | Description                | Auth |
-| ------ | ---------------------------------- | -------------------------- | ---- |
-| GET    | `/api/v1/static/delivery-types`    | Available delivery options | No   |
-| GET    | `/api/v1/static/create-order-data` | Combined static data       | No   |
+| Method | Endpoint                            | Description                | Auth |
+| ------ | ----------------------------------- | -------------------------- | ---- |
+| GET    | `/api/v1/static/delivery-types`     | Available delivery options | No   |
+| GET    | `/api/v1/static/weight-tiers`       | Package weight tiers       | No   |
+| GET    | `/api/v1/static/vehicle-categories` | Available vehicle types    | No   |
+| GET    | `/api/v1/static/package-types`      | Package type options       | No   |
+| GET    | `/api/v1/static/payment-methods`    | Payment method options     | No   |
+| GET    | `/api/v1/static/create-order-data`  | Combined static data       | No   |
+| GET    | `/api/v1/static/order-statuses`     | Order status definitions   | No   |
 
 ---
 
@@ -124,9 +130,9 @@ DB_PORT=5432
 
 ## 📈 **API Statistics**
 
-- **Total Endpoints**: 30
+- **Total Endpoints**: 36
 - **Modules**: 6
-- **Authentication Methods**: 2 (Firebase Phone, Google OAuth)
+- **Authentication Methods**: 3 (Google OAuth, Email Register, Email Login)
 - **Caching**: Node-cache (1-hour TTL)
 - **Rate Limiting**: Built-in Fastify rate limiting
 - **Database**: PostgreSQL with PostGIS

@@ -1,0 +1,455 @@
+// services/backend/src/modules/auth/auth.service.ts
+import crypto from "crypto";
+import bcrypt from "bcrypt";
+import { verifyFirebaseToken } from "../../config/firebase";
+import logger from "../../config/logger";
+import {
+  AuthenticationError,
+  ValidationError,
+} from "../../utils/error.util";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyToken,
+} from "../../utils/jwt.util";
+import authRepository from "./auth.repository";
+import { DeviceInfo } from "../../types/index";
+
+interface UserData {
+  fullName?: string;
+  roleName?: string;
+  email?: string;
+  password?: string;
+  phoneNumber?: string;
+}
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface RegisterData {
+  fullName: string;
+  email: string;
+  password: string;
+  role?: string;
+  phoneNumber?: string;
+}
+
+interface AuthResult {
+  user: any;
+  accessToken: string;
+  refreshToken: string;
+  isNewUser?: boolean;
+}
+
+class AuthService {
+
+  /**
+   * Refresh JWT token
+   */
+  async refreshToken(refreshToken: string): Promise<AuthResult> {
+    try {
+      // 1. Verify refresh token
+      const decoded = verifyToken(refreshToken);
+
+      // 2. Find user by UUID
+      const user = await authRepository.findByUuid(decoded.userUuid);
+
+      if (!user) {
+        throw new AuthenticationError("User not found");
+      }
+
+      if (!user.is_active) {
+        throw new AuthenticationError("User account is inactive");
+      }
+
+      // 3. Generate new access token
+      const tokenPayload = {
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+        role: user.role_name,
+        email: user.email,
+        phoneNumber: user.phone_number,
+      };
+
+      const newAccessToken = generateAccessToken(tokenPayload);
+
+      // 4. Store new token hash
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(newAccessToken)
+        .digest("hex");
+
+      await authRepository.storeJwtToken({
+        userId: user.user_id,
+        email: user.email,
+        phoneNumber: user.phone_number,
+        tokenHash,
+        deviceId: null,
+        deviceInfo: null,
+        ipAddress: null,
+        authMethod: 'refresh',
+      });
+
+      return {
+        accessToken: newAccessToken,
+        expiresIn: "7d",
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Token refresh failed",
+        error: (error as Error).message
+      });
+      throw new AuthenticationError("Invalid or expired refresh token");
+    }
+  }
+
+  /**
+   * Logout user (revoke token)
+   */
+  async logout(tokenHash: string): Promise<any> {
+    try {
+      const result = await authRepository.revokeToken(tokenHash);
+
+      if (!result) {
+        throw new AuthenticationError("Token not found");
+      }
+
+      logger.info("User logged out", { sessionId: result.session_id });
+
+      return { message: "Logged out successfully" };
+    } catch (error) {
+      logger.error({
+        msg: "Logout failed",
+        error: (error as Error).message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get role ID by role name
+   */
+  async _getRoleId(roleName) {
+    const roleMap = {
+      client: 1,
+      courier: 2,
+      admin: 3,
+    };
+
+    const roleId = roleMap[roleName.toLowerCase()];
+
+    if (!roleId) {
+      throw new ValidationError("Invalid role name");
+    }
+
+    return roleId;
+  }
+
+  /**
+   * Verify Google ID token and create/login user
+   */
+  async verifyGoogleAndCreateUser(
+    idToken: string,
+    userData: UserData,
+    deviceInfo: DeviceInfo
+  ): Promise<AuthResult> {
+    try {
+      // 1. Verify Firebase ID token (Google uses Firebase Auth)
+      const decodedToken = await verifyFirebaseToken(idToken);
+
+      logger.info("Google token verified", {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+      });
+
+      // 2. Check if user exists by Firebase UID
+      let user = await authRepository.findByFirebaseUid(decodedToken.uid);
+
+      let isNewUser = false;
+
+      // 3. If user doesn't exist, create new user
+      if (!user) {
+        isNewUser = true;
+
+        // Validate required fields for new user
+        if (!userData.roleName) {
+          throw new ValidationError("Role is required for new users");
+        }
+
+        // Get role ID
+        const roleId = await this._getRoleId(userData.roleName);
+
+        // Create user with Google profile data
+        user = await authRepository.createUser({
+          roleId,
+          firebaseUid: decodedToken.uid,
+          phoneNumber: null, // Google auth doesn't provide phone
+          fullName:
+            decodedToken.name ||
+            decodedToken.email?.split("@")[0] ||
+            "Google User",
+          email: decodedToken.email,
+          passwordHash: null, // Social auth doesn't require password
+          roleName: userData.roleName,
+        });
+
+        logger.info("New user created via Google auth", {
+          userId: user.user_id,
+        });
+      }
+
+      // 4. Create JWT tokens
+      const accessToken = generateAccessToken({
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+        role: user.role_name,
+        email: user.email,
+      });
+
+      const refreshToken = generateRefreshToken({
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+      });
+
+      // 5. Store token hash in database
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(accessToken)
+        .digest("hex");
+
+      await authRepository.storeJwtToken({
+        userId: user.user_id,
+        email: user.email,
+        phoneNumber: user.phone_number,
+        tokenHash,
+        deviceId: deviceInfo?.deviceId,
+        deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
+        ipAddress: deviceInfo?.ipAddress,
+        authMethod: 'google',
+      });
+
+      // 6. Return user data and tokens
+      return {
+        user: {
+          userId: user.user_id,
+          fullName: user.full_name,
+          email: user.email,
+          role: user.role_name,
+          profileComplete: user.profile_complete,
+          createdAt: user.created_at,
+        },
+        accessToken,
+        refreshToken,
+        isNewUser,
+      };
+    } catch (error) {
+      logger.error("Google authentication service error", {
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Register new user with email/password
+   */
+  async registerWithEmail(
+    userData: RegisterData,
+    deviceInfo: DeviceInfo
+  ): Promise<AuthResult> {
+    try {
+      const { fullName, email, password, role = 'client', phoneNumber } = userData;
+
+      // Validate required fields
+      if (!fullName || !email || !password) {
+        throw new ValidationError("Full name, email, and password are required");
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new ValidationError("Invalid email format");
+      }
+
+      // Validate password strength
+      if (password.length < 8) {
+        throw new ValidationError("Password must be at least 8 characters long");
+      }
+
+      // Check if user already exists
+      const existingUser = await authRepository.findByEmail(email);
+      if (existingUser) {
+        throw new ValidationError("User with this email already exists");
+      }
+
+      // Get role ID
+      const roleId = await this._getRoleId(role);
+
+      // Hash password
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      // Create user
+      const user = await authRepository.createEmailUser({
+        roleId,
+        fullName,
+        email,
+        passwordHash,
+        phoneNumber,
+        roleName: role,
+      });
+
+      logger.info("New user registered with email", { userId: user.user_id, email });
+
+      // Generate JWT tokens
+      const tokenPayload = {
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+        role: user.role_name || role,
+        email: user.email,
+      };
+
+      const accessToken = generateAccessToken(tokenPayload);
+      const refreshToken = generateRefreshToken({
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+      });
+
+      // Store token hash in database
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(accessToken)
+        .digest("hex");
+
+      await authRepository.storeJwtToken({
+        userId: user.user_id,
+        email: user.email,
+        phoneNumber: user.phone_number,
+        tokenHash,
+        deviceId: deviceInfo?.deviceId,
+        deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
+        ipAddress: deviceInfo?.ipAddress,
+        authMethod: 'email',
+      });
+
+      return {
+        user: {
+          userId: user.user_id,
+          userUuid: user.user_uuid,
+          fullName: user.full_name,
+          email: user.email,
+          phoneNumber: user.phone_number,
+          role: user.role_name || role,
+          isVerified: user.is_verified,
+          createdAt: user.created_at,
+        },
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn: "7d",
+        },
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Email registration failed",
+        error: (error as Error).message
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Login with email/password
+   */
+  async loginWithEmail(
+    credentials: LoginCredentials,
+    deviceInfo: DeviceInfo
+  ): Promise<AuthResult> {
+    try {
+      const { email, password } = credentials;
+
+      // Validate required fields
+      if (!email || !password) {
+        throw new ValidationError("Email and password are required");
+      }
+
+      // Find user by email
+      const user = await authRepository.findByEmail(email);
+      if (!user) {
+        throw new AuthenticationError("Invalid email or password");
+      }
+
+      // Check if user is active
+      if (!user.is_active) {
+        throw new AuthenticationError("Account is deactivated");
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      if (!isPasswordValid) {
+        throw new AuthenticationError("Invalid email or password");
+      }
+
+      logger.info("User logged in with email", { userId: user.user_id, email });
+
+      // Generate JWT tokens
+      const tokenPayload = {
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+        role: user.role_name,
+        email: user.email,
+      };
+
+      const accessToken = generateAccessToken(tokenPayload);
+      const refreshToken = generateRefreshToken({
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+      });
+
+      // Store token hash in database
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(accessToken)
+        .digest("hex");
+
+      await authRepository.storeJwtToken({
+        userId: user.user_id,
+        email: user.email,
+        phoneNumber: user.phone_number,
+        tokenHash,
+        deviceId: deviceInfo?.deviceId,
+        deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
+        ipAddress: deviceInfo?.ipAddress,
+        authMethod: 'email',
+      });
+
+      return {
+        user: {
+          userId: user.user_id,
+          userUuid: user.user_uuid,
+          fullName: user.full_name,
+          email: user.email,
+          phoneNumber: user.phone_number,
+          role: user.role_name,
+          isVerified: user.is_verified,
+          createdAt: user.created_at,
+        },
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn: "7d",
+        },
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Email login failed",
+        error: (error as Error).message
+      });
+      throw error;
+    }
+  }
+}
+
+export default new AuthService();

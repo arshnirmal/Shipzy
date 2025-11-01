@@ -60,10 +60,7 @@ build/
 *.freezed.dart
 
 # ObjectBox generated files
-objectbox.g.dart
 objectbox-model.json
-
-apps/user/lib/utils/app_router.g.dart
 
 # Coverage
 coverage/

@@ -138,11 +138,11 @@ class TestDatabase {
     const query = `
       INSERT INTO users.profiles (
         user_uuid, role_id, phone_number, email, full_name,
-        firebase_uid, is_verified, is_active
+        firebase_uid, password_hash, is_verified, is_active
       ) VALUES (
         gen_random_uuid(),
         (SELECT role_id FROM public.user_roles WHERE name = $1),
-        $2, $3, $4, $5, true, true
+        $2, $3, $4, $5, $6, true, true
       ) RETURNING *`;
 
     const result = await this.pool.query(query, [
@@ -151,6 +151,7 @@ class TestDatabase {
       userData.email,
       userData.fullName,
       userData.firebaseUid,
+      userData.passwordHash || "$2b$10$dummy.hash.for.firebase.users", // Dummy hash for Firebase users
     ]);
 
     return result.rows[0];

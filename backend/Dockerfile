@@ -31,8 +31,10 @@ FROM base AS development
 # Install all dependencies (including devDependencies)
 RUN npm install
 
-# Copy source code
+# Copy source code and TypeScript config
 COPY src ./src
+COPY tsconfig.json ./
+COPY .eslintrc.js ./
 
 # Copy Firebase service account key file
 COPY shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json ./
@@ -51,12 +53,15 @@ CMD ["npm", "run", "dev"]
 # ============================================
 FROM base AS production-builder
 
-# Install only production dependencies
-RUN npm ci --only=production
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
 
-# Copy source code and Firebase service account key file
+# Copy source code, TypeScript config, and Firebase service account key file
 COPY . .
 COPY shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json .
+
+# Build TypeScript
+RUN npm run build
 
 # ============================================
 # Production Stage
@@ -71,9 +76,9 @@ RUN apk update && apk add --no-cache \
 
 WORKDIR /app
 
-# Copy dependencies and files from builder
+# Copy dependencies and compiled files from builder
 COPY --from=production-builder /app/node_modules ./node_modules
-COPY --from=production-builder /app/src ./src
+COPY --from=production-builder /app/dist ./dist
 COPY --from=production-builder /app/package*.json ./
 COPY --from=production-builder /app/shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json ./
 
