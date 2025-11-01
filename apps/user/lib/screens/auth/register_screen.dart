@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -43,22 +44,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                   const SizedBox(height: 32),
-                  Text(
-                    'Create Account',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+                  Center(
+                    child: Text(
+                      'Create Account',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -219,7 +221,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Expanded(
                         child: _SocialButton(
                           label: 'Google',
-                          icon: const Icon(Icons.g_translate, size: 20),
+                          icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
                           onPressed: () {
                             // TODO: Trigger Google sign-up
                           },
@@ -229,7 +231,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Expanded(
                         child: _SocialButton(
                           label: 'Apple',
-                          icon: const Icon(Icons.apple, size: 22),
+                          icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
                           onPressed: () {
                             // TODO: Trigger Apple sign-up
                           },
@@ -242,7 +244,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             ),
           ),
-        ),
       ),
     );
   }

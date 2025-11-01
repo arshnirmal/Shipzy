@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
-import '../screens/auth/create_profile_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -89,7 +88,6 @@ GoRouter router(Ref ref) {
       // ============ AUTHENTICATION ============
       GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
-      GoRoute(path: AppRoutes.createProfile, name: 'createProfile', builder: (context, state) => const CreateProfileScreen()),
 
       // ============ MAIN APP (Shell Route for Bottom Nav) ============
       ShellRoute(
