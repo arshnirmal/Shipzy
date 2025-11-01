@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/user.dart';
 import 'auth_service_provider.dart';
+import 'google_auth_provider.dart';
 import 'storage_provider.dart';
 
 part 'auth_state_provider.g.dart';
@@ -38,11 +39,11 @@ class AuthState extends _$AuthState {
     await storage.deleteAll();
   }
 
-  /// Complete authentication by verifying with backend and storing tokens
-  Future<AuthResult> completeAuthentication(String idToken, {String? fullName, String? email}) async {
+  /// Complete Google authentication by verifying with backend and storing tokens
+  Future<AuthResult> completeGoogleAuthentication(String idToken, {String role = 'client'}) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final result = await authService.verifyWithBackend(idToken, fullName: fullName, email: email);
+      final result = await authService.verifyGoogleToken(idToken, role: role);
 
       // Store tokens
       final storage = ref.read(secureStorageProvider);
@@ -57,6 +58,121 @@ class AuthState extends _$AuthState {
     } catch (e) {
       return AuthResult.error(e.toString());
     }
+  }
+
+  /// Register with email and password
+  Future<AuthResult> register({
+    required String fullName,
+    required String email,
+    required String password,
+    required String phoneNumber,
+    String role = 'client',
+  }) async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.register(
+        fullName: fullName,
+        email: email,
+        password: password,
+        phoneNumber: phoneNumber,
+        role: role,
+      );
+
+      // Store tokens
+      final storage = ref.read(secureStorageProvider);
+      final tokens = result['tokens'];
+      await storage.write(key: 'access_token', value: tokens['accessToken']);
+      await storage.write(key: 'refresh_token', value: tokens['refreshToken']);
+
+      // Create user object
+      final userData = result['user'];
+      final user = AppUser.fromJson(userData);
+
+      return AuthResult.success(user, result['isNewUser'] as bool);
+    } catch (e) {
+      return AuthResult.error(e.toString());
+    }
+  }
+
+  /// Login with email and password
+  Future<AuthResult> login({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.login(email: email, password: password);
+
+      // Store tokens
+      final storage = ref.read(secureStorageProvider);
+      await storage.write(key: 'access_token', value: result['accessToken']);
+      await storage.write(key: 'refresh_token', value: result['refreshToken']);
+
+      // Create user object
+      final userData = result['user'];
+      final user = AppUser.fromJson(userData);
+
+      return AuthResult.success(user, result['isNewUser'] as bool);
+    } catch (e) {
+      return AuthResult.error(e.toString());
+    }
+  }
+
+  /// Refresh access token
+  Future<bool> refreshAccessToken() async {
+    try {
+      final storage = ref.read(secureStorageProvider);
+      final refreshToken = await storage.read(key: 'refresh_token');
+
+      if (refreshToken == null) {
+        return false;
+      }
+
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.refreshToken(refreshToken);
+
+      // Update access token
+      await storage.write(key: 'access_token', value: result['accessToken']);
+
+      return true;
+    } catch (e) {
+      // If refresh fails, clear tokens
+      await signOut();
+      return false;
+    }
+  }
+
+  /// Logout user
+  Future<void> logout() async {
+    try {
+      final storage = ref.read(secureStorageProvider);
+      final accessToken = await storage.read(key: 'access_token');
+
+      if (accessToken != null) {
+        final authService = ref.read(authServiceProvider);
+        await authService.logout(accessToken);
+      }
+    } catch (e) {
+      // Continue with local logout even if API call fails
+    } finally {
+      // Clear local storage
+      final storage = ref.read(secureStorageProvider);
+      await storage.deleteAll();
+
+      // Sign out from Google if signed in
+      try {
+        final googleAuth = ref.read(googleAuthProvider);
+        await googleAuth.signOut();
+      } catch (e) {
+        // Ignore Google sign-out errors
+      }
+    }
+  }
+
+  /// Legacy method for backward compatibility
+  @deprecated
+  Future<AuthResult> completeAuthentication(String idToken, {String? fullName, String? email}) async {
+    return completeGoogleAuthentication(idToken);
   }
 }
 

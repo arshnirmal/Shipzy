@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/auth_state_provider.dart';
+import '../../providers/google_auth_provider.dart';
+import '../../utils/app_routes.dart';
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -14,27 +18,121 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
-    // TODO: Wire up with email auth provider (planned in subsequent task)
+    setState(() => _isLoading = true);
+
+    try {
+      final authState = ref.read(authStateProvider.notifier);
+      final result = await authState.register(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        phoneNumber: _phoneController.text.trim(),
+        role: 'client',
+      );
+
+      result.when(
+        success: (user, isNewUser) {
+          // Navigate to home or profile completion
+          if (context.mounted) {
+            context.go(AppRoutes.home);
+          }
+        },
+        error: (message) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An unexpected error occurred: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final googleAuth = ref.read(googleAuthProvider.notifier);
+      final account = await googleAuth.signIn();
+
+      if (account != null) {
+        final idToken = await googleAuth.getIdToken();
+        if (idToken != null) {
+          final authState = ref.read(authStateProvider.notifier);
+          final result = await authState.completeGoogleAuthentication(idToken, role: 'client');
+
+          result.when(
+            success: (user, isNewUser) {
+              if (context.mounted) {
+                context.go(AppRoutes.home);
+              }
+            },
+            error: (message) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
+              }
+            },
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign-up failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -113,6 +211,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
+                    'Phone Number',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(hintText: 'Enter phone number (e.g. +919876543210)'),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your phone number';
+                      }
+                      final phoneRegex = RegExp(r'^\+[1-9]\d{1,14}$');
+                      if (!phoneRegex.hasMatch(value.trim())) {
+                        return 'Please enter a valid phone number with country code';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
                     'Password',
                     style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w500,
@@ -177,14 +300,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _submit,
-                      child: Text(
-                        'Create Account',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
+                      onPressed: _isLoading ? null : _submit,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              'Create Account',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -222,9 +354,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         child: _SocialButton(
                           label: 'Google',
                           icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
-                          onPressed: () {
-                            // TODO: Trigger Google sign-up
-                          },
+                          onPressed: _isLoading ? null : _handleGoogleSignUp,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -232,9 +362,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         child: _SocialButton(
                           label: 'Apple',
                           icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
-                          onPressed: () {
-                            // TODO: Trigger Apple sign-up
-                          },
+                          onPressed: null, // TODO: Implement Apple sign-up
                         ),
                       ),
                     ],
@@ -283,14 +411,14 @@ class _SocialButton extends StatelessWidget {
 
   final String label;
   final Widget icon;
-  final VoidCallback onPressed;
+  final Future<void> Function()? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return OutlinedButton.icon(
-      onPressed: onPressed,
+      onPressed: onPressed == null ? null : () => onPressed!(),
       icon: icon,
       label: Text(
         label,

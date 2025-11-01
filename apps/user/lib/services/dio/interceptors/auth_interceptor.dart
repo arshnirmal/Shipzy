@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../providers/auth_state_provider.dart';
 import '../../../providers/storage_provider.dart';
+import '../dio_provider.dart';
 
 class AuthInterceptor extends Interceptor {
   AuthInterceptor(this.ref);
@@ -25,19 +27,44 @@ class AuthInterceptor extends Interceptor {
     // Handle token refresh on 401
     if (err.response?.statusCode == 401) {
       try {
-        final tokenStorage = ref.read(tokenStorageProvider);
-        final refreshToken = await tokenStorage.getRefreshToken();
+        final authState = ref.read(authStateProvider.notifier);
+        final refreshSuccess = await authState.refreshAccessToken();
 
-        if (refreshToken != null) {
-          // Refresh token logic here
-          // Call refresh endpoint
-          // Update tokens
-          // Retry original request
+        if (refreshSuccess) {
+          // Retry the original request with new token
+          final tokenStorage = ref.read(tokenStorageProvider);
+          final newAccessToken = await tokenStorage.getAccessToken();
+
+          if (newAccessToken != null) {
+            final newOptions = err.requestOptions.copyWith(
+              headers: {
+                ...err.requestOptions.headers,
+                'Authorization': 'Bearer $newAccessToken',
+              },
+            );
+
+            try {
+              final dioClient = ref.read(dioProvider);
+              final response = await dioClient.request(
+                newOptions.path,
+                options: Options(
+                  method: newOptions.method,
+                  headers: newOptions.headers,
+                ),
+                data: newOptions.data,
+                queryParameters: newOptions.queryParameters,
+              );
+
+              return handler.resolve(response);
+            } catch (retryError) {
+              return handler.next(err);
+            }
+          }
         }
       } catch (e) {
         // Refresh failed, logout user
-        final tokenStorage = ref.read(tokenStorageProvider);
-        await tokenStorage.clearTokens();
+        final authState = ref.read(authStateProvider.notifier);
+        await authState.logout();
       }
     }
 
