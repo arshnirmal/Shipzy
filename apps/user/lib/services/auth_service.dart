@@ -4,6 +4,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 
 import '../models/auth/auth_response.dart';
+import '../models/user.dart';
 import 'dio/api_client.dart';
 
 class AuthService {
@@ -99,6 +100,21 @@ class AuthService {
       return RefreshTokenResponse.fromJson(response.data!);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Token refresh');
+    }
+  }
+
+  /// Get current user profile
+  Future<AppUser> getCurrentUser(String accessToken) async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>('/users/me', options: Options(headers: {'Authorization': 'Bearer $accessToken'}));
+
+      if (response.data?['success'] != true) {
+        throw Exception(response.data?['message'] ?? 'Failed to get user profile');
+      }
+
+      return AppUser.fromJson(response.data!['data'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Get current user');
     }
   }
 

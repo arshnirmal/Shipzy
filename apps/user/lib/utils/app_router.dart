@@ -173,12 +173,10 @@ class ErrorScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Error: ${error.toString()}')));
 }
 
-// TODO: Create these widgets
+// TODO(dev): Create these widgets
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(); // Placeholder
-  }
+  Widget build(BuildContext context) => Container(); // Placeholder
 }

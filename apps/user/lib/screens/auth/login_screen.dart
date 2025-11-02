@@ -64,7 +64,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
       );
     } catch (e) {
-      SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+      if (mounted) {
+        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -93,7 +95,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
       );
     } catch (e) {
-      SnackbarUtils.showError(context, 'Google sign-in failed. Please try again.');
+      if (mounted) {
+        SnackbarUtils.showError(context, 'Google sign-in failed. Please try again.');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

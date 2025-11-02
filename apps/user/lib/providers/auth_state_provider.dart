@@ -24,9 +24,16 @@ class AuthState extends _$AuthState {
         return const AuthStateData.unauthenticated();
       }
 
-      // TODO: Implement /users/me endpoint call
-      return const AuthStateData.unauthenticated();
+      // Validate token by fetching current user
+      final authService = ref.read(authServiceProvider);
+      final user = await authService.getCurrentUser(accessToken);
+
+      // Check if user profile is complete (determines if new user)
+      final isNewUser = !user.profileComplete;
+
+      return AuthStateData.authenticated(user, isNewUser: isNewUser);
     } catch (e) {
+      AppLogger.e('Auth status check failed: $e');
       await _clearTokens();
       return const AuthStateData.unauthenticated();
     }

@@ -24,8 +24,14 @@ class ErrorInterceptor extends Interceptor {
       case DioExceptionType.cancel:
         // Request cancelled
         break;
-      default:
-        // Other errors
+      case DioExceptionType.connectionError:
+        // Connection error
+        break;
+      case DioExceptionType.badCertificate:
+        // Certificate error
+        break;
+      case DioExceptionType.unknown:
+        // Unknown error
         break;
     }
 

@@ -71,7 +71,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         },
       );
     } catch (e) {
-      SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+      if (mounted) {
+        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -100,7 +102,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         },
       );
     } catch (e) {
-      SnackbarUtils.showError(context, 'Google sign-up failed. Please try again.');
+      if (mounted) {
+        SnackbarUtils.showError(context, 'Google sign-up failed. Please try again.');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

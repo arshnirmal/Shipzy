@@ -12,7 +12,9 @@ class SnackbarUtils {
 
   /// Shows a success message with primary color background
   static void showSuccess(BuildContext context, String message) {
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(
       context,
@@ -21,7 +23,9 @@ class SnackbarUtils {
 
   /// Shows an error message with error color background
   static void showError(BuildContext context, String message, {bool showDismiss = false}) {
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -35,7 +39,9 @@ class SnackbarUtils {
 
   /// Shows an informational message with surface color background
   static void showInfo(BuildContext context, String message) {
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(
       context,
@@ -51,7 +57,9 @@ class SnackbarUtils {
     SnackBarAction? action,
     Duration duration = const Duration(seconds: 4),
   }) {
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
