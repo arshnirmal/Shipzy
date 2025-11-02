@@ -14,8 +14,8 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
   }
 
   Future<void> _loadThemeMode() async {
-    final prefs = await ref.read(sharedPreferencesProvider);
-    final themeModeString = prefs.getString('theme_mode') ?? 'system';
+    final prefs = ref.read(sharedPreferencesProvider);
+    final themeModeString = prefs.value?.getString('theme_mode') ?? 'system';
 
     state = switch (themeModeString) {
       'light' => ThemeMode.light,
@@ -26,8 +26,8 @@ class ThemeModeNotifier extends _$ThemeModeNotifier {
 
   Future<void> setThemeMode(ThemeMode mode) async {
     state = mode;
-    final prefs = await ref.read(sharedPreferencesProvider);
-    await prefs.setString('theme_mode', mode.name);
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.value?.setString('theme_mode', mode.name);
   }
 
   void toggleTheme() {

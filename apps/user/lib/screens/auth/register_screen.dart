@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/snackbar_utils.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -57,44 +58,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
 
       result.when(
-        success: (user, isNewUser) {
-          if (context.mounted) {
-            // Show success message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Welcome to Shipzy, ${user.fullName}!'),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+        success: (user, {required bool isNewUser}) {
+          // Dismiss keyboard and show success message
+          FocusScope.of(context).unfocus();
+          SnackbarUtils.showSuccess(context, 'Welcome to Shipzy, ${user.fullName}!');
 
-            // Navigate to home
-            context.go(AppRoutes.home);
-          }
+          // Navigate to home
+          context.go(AppRoutes.home);
         },
         error: (message) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_getErrorMessage(message)),
-                backgroundColor: Theme.of(context).colorScheme.error,
-                behavior: SnackBarBehavior.floating,
-                action: SnackBarAction(label: 'Dismiss', textColor: Colors.white, onPressed: () {}),
-              ),
-            );
-          }
+          SnackbarUtils.showError(context, _getErrorMessage(message), showDismiss: true);
         },
       );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('An unexpected error occurred. Please try again.'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -110,39 +87,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final result = await authState.signInWithGoogle();
 
       result.when(
-        success: (user, isNewUser) {
-          if (context.mounted) {
-            final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName ?? "there"}!' : 'Welcome back, ${user.fullName ?? "User"}!';
+        success: (user, {required bool isNewUser}) {
+          final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName}!' : 'Welcome back, ${user.fullName}!';
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message), backgroundColor: Theme.of(context).colorScheme.primary, behavior: SnackBarBehavior.floating),
-            );
-
-            context.go(AppRoutes.home);
-          }
+          // Dismiss keyboard and show success message
+          FocusScope.of(context).unfocus();
+          SnackbarUtils.showSuccess(context, message);
+          context.go(AppRoutes.home);
         },
         error: (message) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_getErrorMessage(message)),
-                backgroundColor: Theme.of(context).colorScheme.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
+          SnackbarUtils.showError(context, _getErrorMessage(message));
         },
       );
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Google sign-up failed. Please try again.'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      SnackbarUtils.showError(context, 'Google sign-up failed. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -395,7 +353,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: _SocialButton(
                         label: 'Apple',
                         icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
-                        onPressed: null, // TODO: Implement Apple sign-up
+                        onPressed: null, // TODO(dev): Implement Apple sign-up
                       ),
                     ),
                   ],
@@ -420,7 +378,7 @@ class _AuthDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.outline.withOpacity(0.2);
+    final dividerColor = theme.colorScheme.outline.withValues(alpha: 0.2);
 
     return Row(
       children: [
@@ -460,7 +418,7 @@ class _SocialButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: theme.colorScheme.outline.withOpacity(0.3)),
+        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
         backgroundColor: theme.colorScheme.surface,
       ),
     );

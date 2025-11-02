@@ -1,3 +1,5 @@
+// lib/services/dio/api_client.dart
+
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -6,15 +8,18 @@ import '../../providers/dio_provider.dart';
 part 'api_client.g.dart';
 
 @riverpod
-ApiClient apiClient(Ref ref) => ApiClient(ref);
+ApiClient apiClient(Ref ref) {
+  // ✅ FIX: Watch dioProvider and pass Dio instance directly
+  final dio = ref.watch(dioProvider);
+  return ApiClient(dio);
+}
 
 /// API Client wrapper around Dio for making HTTP requests
 class ApiClient {
-  ApiClient(this._ref);
+  // ✅ FIX: Accept Dio directly, not Ref
+  ApiClient(this._dio);
 
-  final Ref _ref;
-
-  Dio get _dio => _ref.read(dioProvider);
+  final Dio _dio;
 
   /// GET request
   Future<Response<T>> get<T>(String path, {Map<String, dynamic>? queryParameters, Options? options}) =>

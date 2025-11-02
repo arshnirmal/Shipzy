@@ -3,6 +3,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/user.dart';
+import '../utils/logger.dart';
 import 'auth_service_provider.dart';
 import 'google_auth_provider.dart';
 import 'storage_provider.dart';
@@ -14,7 +15,6 @@ class AuthState extends _$AuthState {
   @override
   Future<AuthStateData> build() async => _checkAuthStatus();
 
-  /// Check if user has valid tokens
   Future<AuthStateData> _checkAuthStatus() async {
     try {
       final storage = ref.read(secureStorageProvider);
@@ -24,35 +24,17 @@ class AuthState extends _$AuthState {
         return const AuthStateData.unauthenticated();
       }
 
-      // Fetch user profile from backend
-      final user = await _fetchUserProfile();
-      if (user == null) {
-        return const AuthStateData.unauthenticated();
-      }
-
-      return AuthStateData.authenticated(user);
+      // TODO: Implement /users/me endpoint call
+      return const AuthStateData.unauthenticated();
     } catch (e) {
-      // If token is invalid, clear and return unauthenticated
       await _clearTokens();
       return const AuthStateData.unauthenticated();
     }
   }
 
-  /// Fetch user profile from backend using stored token
-  Future<AppUser?> _fetchUserProfile() async {
-    try {
-      // TODO: Call your backend's /users/me endpoint
-      // For now, return null (you'll implement this when you have the endpoint)
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Google Sign-In Flow
+  /// Google Sign-In
   Future<AuthResult> signInWithGoogle({String role = 'client'}) async {
     try {
-      // Step 1: Sign in with Google SDK
       final googleAuth = ref.read(googleAuthProvider.notifier);
       final account = await googleAuth.signIn();
 
@@ -60,34 +42,25 @@ class AuthState extends _$AuthState {
         return const AuthResult.error('Google sign-in cancelled');
       }
 
-      // Step 2: Get ID token
       final idToken = await googleAuth.getIdToken();
-
       if (idToken == null) {
         return const AuthResult.error('Failed to get Google ID token');
       }
 
-      // Step 3: Verify with backend and get JWT tokens
       final authService = ref.read(authServiceProvider);
-      final result = await authService.verifyGoogleToken(idToken, role: role);
+      final response = await authService.verifyGoogleToken(idToken, role: role);
 
-      // Step 4: Store JWT tokens
-      await _storeTokens(result['data']['accessToken'], result['data']['refreshToken']);
+      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
-      // Step 5: Create user object and update state
-      final userData = result['data']['user'];
-      final user = AppUser.fromJson(userData);
-      final isNewUser = result['data']['isNewUser'] as bool;
+      state = AsyncData(AuthStateData.authenticated(response.data.user, isNewUser: response.data.isNewUser));
 
-      state = AsyncData(AuthStateData.authenticated(user, isNewUser: isNewUser));
-
-      return AuthResult.success(user, isNewUser);
+      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
-  /// Register with email and password
+  /// Register
   Future<AuthResult> register({
     required String fullName,
     required String email,
@@ -97,48 +70,37 @@ class AuthState extends _$AuthState {
   }) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final result = await authService.register(fullName: fullName, email: email, password: password, phoneNumber: phoneNumber, role: role);
+      final response = await authService.register(fullName: fullName, email: email, password: password, phoneNumber: phoneNumber, role: role);
 
-      // Store tokens
-      final tokens = result['data']['tokens'];
-      await _storeTokens(tokens['accessToken'], tokens['refreshToken']);
+      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
-      // Create user object
-      final userData = result['data']['user'];
-      final user = AppUser.fromJson(userData);
-      final isNewUser = result['data']['isNewUser'] as bool;
+      state = AsyncData(AuthStateData.authenticated(response.data.user, isNewUser: response.data.isNewUser));
 
-      state = AsyncData(AuthStateData.authenticated(user, isNewUser: isNewUser));
-
-      return AuthResult.success(user, isNewUser);
+      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
-  /// Login with email and password
+  /// Login
   Future<AuthResult> login({required String email, required String password}) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final result = await authService.login(email: email, password: password);
+      final response = await authService.login(email: email, password: password);
 
-      // Store tokens
-      await _storeTokens(result['data']['accessToken'], result['data']['refreshToken']);
+      AppLogger.d('Login response: ${response.data.toJson()}');
 
-      // Create user object
-      final userData = result['data']['user'];
-      final user = AppUser.fromJson(userData);
-      final isNewUser = result['data']['isNewUser'] as bool? ?? false;
+      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
-      state = AsyncData(AuthStateData.authenticated(user, isNewUser: isNewUser));
+      state = AsyncData(AuthStateData.authenticated(response.data.user));
 
-      return AuthResult.success(user, isNewUser);
+      return AuthResult.success(response.data.user, isNewUser: false);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
-  /// Refresh access token
+  /// Refresh token
   Future<bool> refreshAccessToken() async {
     try {
       final storage = ref.read(secureStorageProvider);
@@ -149,86 +111,70 @@ class AuthState extends _$AuthState {
       }
 
       final authService = ref.read(authServiceProvider);
-      final result = await authService.refreshToken(refreshToken);
+      final response = await authService.refreshToken(refreshToken);
 
-      // Update access token only
-      await storage.write(key: 'access_token', value: result['data']['accessToken']);
+      await storage.write(key: 'access_token', value: response.data.accessToken);
 
       return true;
     } catch (e) {
-      // If refresh fails, logout user
       await logout();
       return false;
     }
   }
 
-  /// Logout user
+  /// Logout
   Future<void> logout() async {
     try {
       final storage = ref.read(secureStorageProvider);
       final accessToken = await storage.read(key: 'access_token');
 
       if (accessToken != null) {
-        // Call backend logout
         final authService = ref.read(authServiceProvider);
         await authService.logout(accessToken);
       }
     } catch (e) {
-      // Continue with local logout even if API call fails
+      // Continue with local logout
     } finally {
-      // Clear tokens and state
       await _clearTokens();
 
-      // Sign out from Google if signed in
       try {
         final googleAuth = ref.read(googleAuthProvider.notifier);
         await googleAuth.signOut();
       } catch (e) {
-        // Ignore Google sign-out errors
+        // Ignore
       }
 
       state = const AsyncData(AuthStateData.unauthenticated());
     }
   }
 
-  /// Store tokens in secure storage
   Future<void> _storeTokens(String accessToken, String refreshToken) async {
     final storage = ref.read(secureStorageProvider);
     await storage.write(key: 'access_token', value: accessToken);
     await storage.write(key: 'refresh_token', value: refreshToken);
   }
 
-  /// Clear all tokens
   Future<void> _clearTokens() async {
     final storage = ref.read(secureStorageProvider);
     await storage.deleteAll();
   }
 }
 
-// Auth state sealed class
+// Auth state classes
 sealed class AuthStateData {
   const AuthStateData();
-
   const factory AuthStateData.authenticated(AppUser user, {bool isNewUser}) = Authenticated;
   const factory AuthStateData.unauthenticated() = Unauthenticated;
 
-  T when<T>({required T Function(AppUser user, bool isNewUser) authenticated, required T Function() unauthenticated}) {
-    final state = this;
-    if (state is Authenticated) {
-      return authenticated(state.user, state.isNewUser);
+  T maybeWhen<T>({required T Function() orElse, T Function(AppUser user, {required bool isNewUser})? authenticated, T Function()? unauthenticated}) {
+    if (this is Authenticated) {
+      final auth = this as Authenticated;
+      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ?? orElse();
+    } else if (this is Unauthenticated) {
+      return unauthenticated?.call() ?? orElse();
     } else {
-      return unauthenticated();
+      return orElse();
     }
-  }
-
-  T maybeWhen<T>({required T Function() orElse, T Function(AppUser user, bool isNewUser)? authenticated, T Function()? unauthenticated}) {
-    final state = this;
-    if (state is Authenticated && authenticated != null) {
-      return authenticated(state.user, state.isNewUser);
-    } else if (state is Unauthenticated && unauthenticated != null) {
-      return unauthenticated();
-    }
-    return orElse();
   }
 }
 
@@ -242,26 +188,26 @@ class Unauthenticated extends AuthStateData {
   const Unauthenticated();
 }
 
-// Auth result for handling authentication completion
+// Auth result
 sealed class AuthResult {
   const AuthResult();
-
-  const factory AuthResult.success(AppUser user, bool isNewUser) = AuthSuccess;
+  const factory AuthResult.success(AppUser user, {required bool isNewUser}) = AuthSuccess;
   const factory AuthResult.error(String message) = AuthError;
 
-  T when<T>({required T Function(AppUser user, bool isNewUser) success, required T Function(String message) error}) {
-    final result = this;
-    if (result is AuthSuccess) {
-      return success(result.user, result.isNewUser);
-    } else if (result is AuthError) {
-      return error(result.message);
+  T when<T>({required T Function(AppUser user, {required bool isNewUser}) success, required T Function(String message) error}) {
+    if (this is AuthSuccess) {
+      final s = this as AuthSuccess;
+      return success(s.user, isNewUser: s.isNewUser);
+    } else if (this is AuthError) {
+      final e = this as AuthError;
+      return error(e.message);
     }
-    throw UnsupportedError('Unknown AuthResult type');
+    throw UnsupportedError('Unknown AuthResult');
   }
 }
 
 class AuthSuccess extends AuthResult {
-  const AuthSuccess(this.user, this.isNewUser);
+  const AuthSuccess(this.user, {required this.isNewUser});
   final AppUser user;
   final bool isNewUser;
 }

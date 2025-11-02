@@ -1,49 +1,71 @@
+// lib/providers/storage_provider.dart
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:riverpod/riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ignore: depend_on_referenced_packages
-import '../objectbox.g.dart';
+part 'storage_provider.g.dart';
 
-// ============ SECURE STORAGE ============
-final secureStorageProvider = Provider<FlutterSecureStorage>((ref) => const FlutterSecureStorage());
+// ============ SECURE STORAGE (for tokens) ============
 
-// ============ SHARED PREFERENCES ============
-final sharedPreferencesProvider = Provider<Future<SharedPreferences>>((ref) => SharedPreferences.getInstance());
+@Riverpod(keepAlive: true)
+FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+);
 
-// ============ OBJECTBOX DATABASE ============
-final objectboxStoreProvider = Provider<Future<Store>>((ref) async {
-  final dir = await getApplicationDocumentsDirectory();
-  return openStore(directory: '${dir.path}/objectbox');
-});
+// ============ SHARED PREFERENCES (for app settings) ============
 
-// ============ TOKEN STORAGE ============
-final tokenStorageProvider = Provider<TokenStorage>(TokenStorage.new);
+@Riverpod(keepAlive: true)
+Future<SharedPreferences> sharedPreferences(Ref ref) async => SharedPreferences.getInstance();
 
+// ============ TOKEN STORAGE HELPER ============
+
+@riverpod
+TokenStorage tokenStorage(Ref ref) => TokenStorage(ref);
+
+/// Helper class for token management
 class TokenStorage {
-  TokenStorage(this.ref);
-  final Ref ref;
+  TokenStorage(this._ref);
 
+  final Ref _ref;
+
+  FlutterSecureStorage get _storage => _ref.read(secureStorageProvider);
+
+  // Token keys
+  static const _accessTokenKey = 'access_token';
+  static const _refreshTokenKey = 'refresh_token';
+
+  /// Save both access and refresh tokens
   Future<void> saveTokens({required String accessToken, required String refreshToken}) async {
-    final storage = ref.read(secureStorageProvider);
-    await storage.write(key: 'access_token', value: accessToken);
-    await storage.write(key: 'refresh_token', value: refreshToken);
+    await Future.wait([_storage.write(key: _accessTokenKey, value: accessToken), _storage.write(key: _refreshTokenKey, value: refreshToken)]);
   }
 
-  Future<String?> getAccessToken() async {
-    final storage = ref.read(secureStorageProvider);
-    return storage.read(key: 'access_token');
+  /// Get access token
+  Future<String?> getAccessToken() async => _storage.read(key: _accessTokenKey);
+
+  /// Get refresh token
+  Future<String?> getRefreshToken() async => _storage.read(key: _refreshTokenKey);
+
+  /// Update only access token (used during token refresh)
+  Future<void> updateAccessToken(String accessToken) async {
+    await _storage.write(key: _accessTokenKey, value: accessToken);
   }
 
-  Future<String?> getRefreshToken() async {
-    final storage = ref.read(secureStorageProvider);
-    return storage.read(key: 'refresh_token');
-  }
-
+  /// Clear all tokens (logout)
   Future<void> clearTokens() async {
-    final storage = ref.read(secureStorageProvider);
-    await storage.delete(key: 'access_token');
-    await storage.delete(key: 'refresh_token');
+    await Future.wait([_storage.delete(key: _accessTokenKey), _storage.delete(key: _refreshTokenKey)]);
+  }
+
+  /// Clear all secure storage data
+  Future<void> clearAll() async {
+    await _storage.deleteAll();
+  }
+
+  /// Check if user has tokens
+  Future<bool> hasTokens() async {
+    final accessToken = await getAccessToken();
+    final refreshToken = await getRefreshToken();
+    return accessToken != null && refreshToken != null;
   }
 }

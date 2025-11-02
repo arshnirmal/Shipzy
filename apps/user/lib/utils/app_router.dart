@@ -38,7 +38,7 @@ GoRouter router(Ref ref) {
       if (isOnSplash) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
-            authenticated: (user, isNewUser) => isNewUser ? AppRoutes.createProfile : AppRoutes.home,
+            authenticated: (user, {required bool isNewUser}) => isNewUser ? AppRoutes.createProfile : AppRoutes.home,
             unauthenticated: () => AppRoutes.login,
             orElse: () => AppRoutes.login, // Default to login if unknown state
           ),
@@ -49,7 +49,7 @@ GoRouter router(Ref ref) {
       // If auth state is still loading, don't redirect
       final authResult = authStateValue.maybeWhen(
         data: (authData) => authData.maybeWhen(
-          authenticated: (user, isNewUser) => isNewUser ? 'new_user' : 'authenticated',
+          authenticated: (user, {required bool isNewUser}) => isNewUser ? 'new_user' : 'authenticated',
           unauthenticated: () => 'unauthenticated',
           orElse: () => 'unknown',
         ),

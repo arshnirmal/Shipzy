@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/snackbar_utils.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -26,14 +27,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         context.go(AppRoutes.login);
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Logout failed: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+      SnackbarUtils.showError(context, 'Logout failed: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoggingOut = false);

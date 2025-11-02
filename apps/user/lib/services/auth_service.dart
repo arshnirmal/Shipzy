@@ -3,6 +3,7 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 
+import '../models/auth/auth_response.dart';
 import 'dio/api_client.dart';
 
 class AuthService {
@@ -16,13 +17,12 @@ class AuthService {
       final androidInfo = await deviceInfo.androidInfo;
       return androidInfo.id;
     } catch (e) {
-      // Fallback to a generated ID if device info fails
       return 'unknown-device-${DateTime.now().millisecondsSinceEpoch}';
     }
   }
 
   /// Google OAuth authentication
-  Future<Map<String, dynamic>> verifyGoogleToken(String idToken, {String role = 'client'}) async {
+  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'client'}) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -35,14 +35,14 @@ class AuthService {
         throw Exception(response.data?['message'] ?? 'Google authentication failed');
       }
 
-      return response.data!;
+      return GoogleAuthResponse.fromJson(response.data!);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Google authentication');
     }
   }
 
-  /// User registration with email and password
-  Future<Map<String, dynamic>> register({
+  /// User registration
+  Future<RegisterResponse> register({
     required String fullName,
     required String email,
     required String password,
@@ -61,14 +61,14 @@ class AuthService {
         throw Exception(response.data?['message'] ?? 'Registration failed');
       }
 
-      return response.data!;
+      return RegisterResponse.fromJson(response.data!);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Registration');
     }
   }
 
-  /// User login with email and password
-  Future<Map<String, dynamic>> login({required String email, required String password}) async {
+  /// User login
+  Future<LoginResponse> login({required String email, required String password}) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -81,14 +81,14 @@ class AuthService {
         throw Exception(response.data?['message'] ?? 'Login failed');
       }
 
-      return response.data!;
+      return LoginResponse.fromJson(response.data!);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Login');
     }
   }
 
   /// Refresh access token
-  Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
+  Future<RefreshTokenResponse> refreshToken(String refreshToken) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refreshToken});
 
@@ -96,14 +96,14 @@ class AuthService {
         throw Exception(response.data?['message'] ?? 'Token refresh failed');
       }
 
-      return response.data!;
+      return RefreshTokenResponse.fromJson(response.data!);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Token refresh');
     }
   }
 
   /// Logout user
-  Future<Map<String, dynamic>> logout(String accessToken) async {
+  Future<void> logout(String accessToken) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/logout',
@@ -113,14 +113,12 @@ class AuthService {
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Logout failed');
       }
-
-      return response.data!;
     } on DioException catch (e) {
       throw _handleDioError(e, 'Logout');
     }
   }
 
-  /// Handle Dio errors with better messages
+  /// Handle Dio errors
   Exception _handleDioError(DioException e, String operation) {
     if (e.response != null) {
       final data = e.response!.data;
