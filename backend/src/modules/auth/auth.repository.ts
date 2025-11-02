@@ -4,34 +4,38 @@ import db from "../../database/db";
 import authQueries from "../../database/queries/auth.queries";
 
 interface User {
-  id: number;
-  uuid: string;
+  user_id: number;
+  user_uuid: string;
   firebase_uid?: string;
   full_name: string;
   email?: string;
   phone_number?: string;
-  role: string;
+  role_name: string;
   is_active: boolean;
+  is_verified?: boolean;
+  profile_complete?: boolean;
+  password_hash?: string;
   created_at: Date;
-  updated_at: Date;
+  updated_at?: Date;
 }
 
 interface Session {
-  id: number;
+  session_id: number;
   user_id: number;
   token_hash: string;
   expires_at: Date;
   is_revoked: boolean;
   created_at: Date;
+  last_activity_at?: Date;
 }
 
 interface CreateUserData {
   roleId: number;
   firebaseUid?: string;
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   fullName: string;
   email?: string;
-  passwordHash?: string;
+  passwordHash?: string | null;
   roleName?: string;
 }
 
@@ -40,7 +44,7 @@ interface CreateEmailUserData {
   fullName: string;
   email: string;
   passwordHash: string;
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   roleName?: string;
 }
 
@@ -49,9 +53,9 @@ interface StoreJwtTokenData {
   email?: string;
   phoneNumber?: string;
   tokenHash: string;
-  deviceId?: string;
+  deviceId?: string | null;
   deviceInfo?: any;
-  ipAddress?: string;
+  ipAddress?: string | null;
   authMethod?: string;
 }
 
@@ -84,7 +88,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -102,7 +106,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding user by phone",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -118,7 +122,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding user by email",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -129,7 +133,14 @@ class AuthRepository {
    */
   async createUser(userData: CreateUserData): Promise<User> {
     try {
-      const { roleId, firebaseUid, phoneNumber, fullName, email, passwordHash = null } = userData;
+      const {
+        roleId,
+        firebaseUid,
+        phoneNumber,
+        fullName,
+        email,
+        passwordHash = null,
+      } = userData;
 
       const result = await db.query(authQueries.CREATE_USER, [
         roleId,
@@ -151,7 +162,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error creating user",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -162,7 +173,13 @@ class AuthRepository {
    */
   async createEmailUser(userData: CreateEmailUserData): Promise<User> {
     try {
-      const { roleId, fullName, email, passwordHash, phoneNumber = null } = userData;
+      const {
+        roleId,
+        fullName,
+        email,
+        passwordHash,
+        phoneNumber = null,
+      } = userData;
 
       const result = await db.query(authQueries.CREATE_EMAIL_USER, [
         roleId,
@@ -183,7 +200,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error creating email user",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -202,7 +219,7 @@ class AuthRepository {
         deviceId,
         deviceInfo,
         ipAddress,
-        authMethod = 'email',
+        authMethod = "email",
       } = sessionData;
 
       const result = await db.query(authQueries.STORE_JWT_TOKEN, [
@@ -220,7 +237,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error storing JWT token",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -238,7 +255,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error validating JWT token",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -253,7 +270,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error updating session activity",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       // Don't throw - this is non-critical
     }
@@ -269,7 +286,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error revoking token",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -284,7 +301,7 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error revoking all user tokens",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }

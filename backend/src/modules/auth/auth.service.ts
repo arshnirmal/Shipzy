@@ -1,12 +1,9 @@
 // services/backend/src/modules/auth/auth.service.ts
-import crypto from "crypto";
+import crypto from "node:crypto";
 import bcrypt from "bcrypt";
 import { verifyFirebaseToken } from "../../config/firebase";
 import logger from "../../config/logger";
-import {
-  AuthenticationError,
-  ValidationError,
-} from "../../utils/error.util";
+import { AuthenticationError, ValidationError } from "../../utils/error.util";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -38,13 +35,18 @@ interface RegisterData {
 
 interface AuthResult {
   user: any;
-  accessToken: string;
-  refreshToken: string;
+  accessToken?: string;
+  refreshToken?: string;
   isNewUser?: boolean;
+  expiresIn?: string;
+  tokens?: {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: string;
+  };
 }
 
 class AuthService {
-
   /**
    * Refresh JWT token
    */
@@ -89,17 +91,19 @@ class AuthService {
         deviceId: null,
         deviceInfo: null,
         ipAddress: null,
-        authMethod: 'refresh',
+        authMethod: "refresh",
       });
 
       return {
+        user,
         accessToken: newAccessToken,
+        refreshToken,
         expiresIn: "7d",
       };
     } catch (error) {
       logger.error({
         msg: "Token refresh failed",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw new AuthenticationError("Invalid or expired refresh token");
     }
@@ -116,13 +120,13 @@ class AuthService {
         throw new AuthenticationError("Token not found");
       }
 
-      logger.info("User logged out", { sessionId: result.session_id });
+      logger.info({ msg: "User logged out", sessionId: result.session_id });
 
       return { message: "Logged out successfully" };
     } catch (error) {
       logger.error({
         msg: "Logout failed",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -131,14 +135,14 @@ class AuthService {
   /**
    * Get role ID by role name
    */
-  async _getRoleId(roleName) {
+  async _getRoleId(roleName: string) {
     const roleMap = {
       client: 1,
       courier: 2,
       admin: 3,
     };
 
-    const roleId = roleMap[roleName.toLowerCase()];
+    const roleId = roleMap[roleName.toLowerCase() as keyof typeof roleMap];
 
     if (!roleId) {
       throw new ValidationError("Invalid role name");
@@ -153,13 +157,14 @@ class AuthService {
   async verifyGoogleAndCreateUser(
     idToken: string,
     userData: UserData,
-    deviceInfo: DeviceInfo
+    deviceInfo: DeviceInfo,
   ): Promise<AuthResult> {
     try {
       // 1. Verify Firebase ID token (Google uses Firebase Auth)
       const decodedToken = await verifyFirebaseToken(idToken);
 
-      logger.info("Google token verified", {
+      logger.info({
+        msg: "Google token verified",
         uid: decodedToken.uid,
         email: decodedToken.email,
       });
@@ -195,7 +200,8 @@ class AuthService {
           roleName: userData.roleName,
         });
 
-        logger.info("New user created via Google auth", {
+        logger.info({
+          msg: "New user created via Google auth",
           userId: user.user_id,
         });
       }
@@ -205,7 +211,7 @@ class AuthService {
         userId: user.user_id,
         userUuid: user.user_uuid,
         role: user.role_name,
-        email: user.email,
+        phoneNumber: user.phone_number,
       });
 
       const refreshToken = generateRefreshToken({
@@ -227,7 +233,7 @@ class AuthService {
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
         ipAddress: deviceInfo?.ipAddress,
-        authMethod: 'google',
+        authMethod: "google",
       });
 
       // 6. Return user data and tokens
@@ -245,8 +251,9 @@ class AuthService {
         isNewUser,
       };
     } catch (error) {
-      logger.error("Google authentication service error", {
-        error: error.message,
+      logger.error({
+        msg: "Google authentication service error",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -257,14 +264,22 @@ class AuthService {
    */
   async registerWithEmail(
     userData: RegisterData,
-    deviceInfo: DeviceInfo
+    deviceInfo: DeviceInfo,
   ): Promise<AuthResult> {
     try {
-      const { fullName, email, password, role = 'client', phoneNumber } = userData;
+      const {
+        fullName,
+        email,
+        password,
+        role = "client",
+        phoneNumber,
+      } = userData;
 
       // Validate required fields
       if (!fullName || !email || !password) {
-        throw new ValidationError("Full name, email, and password are required");
+        throw new ValidationError(
+          "Full name, email, and password are required",
+        );
       }
 
       // Validate email format
@@ -275,13 +290,26 @@ class AuthService {
 
       // Validate password strength
       if (password.length < 8) {
-        throw new ValidationError("Password must be at least 8 characters long");
+        throw new ValidationError(
+          "Password must be at least 8 characters long",
+        );
       }
 
-      // Check if user already exists
-      const existingUser = await authRepository.findByEmail(email);
-      if (existingUser) {
+      // Check if user already exists by email
+      const existingUserByEmail = await authRepository.findByEmail(email);
+      if (existingUserByEmail) {
         throw new ValidationError("User with this email already exists");
+      }
+
+      // Check if user already exists by phone number (if provided)
+      if (phoneNumber) {
+        const existingUserByPhone =
+          await authRepository.findByPhone(phoneNumber);
+        if (existingUserByPhone) {
+          throw new ValidationError(
+            "User with this phone number already exists",
+          );
+        }
       }
 
       // Get role ID
@@ -301,7 +329,11 @@ class AuthService {
         roleName: role,
       });
 
-      logger.info("New user registered with email", { userId: user.user_id, email });
+      logger.info({
+        msg: "New user registered with email",
+        userId: user.user_id,
+        email,
+      });
 
       // Generate JWT tokens
       const tokenPayload = {
@@ -331,7 +363,7 @@ class AuthService {
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
         ipAddress: deviceInfo?.ipAddress,
-        authMethod: 'email',
+        authMethod: "email",
       });
 
       return {
@@ -354,7 +386,7 @@ class AuthService {
     } catch (error) {
       logger.error({
         msg: "Email registration failed",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -365,7 +397,7 @@ class AuthService {
    */
   async loginWithEmail(
     credentials: LoginCredentials,
-    deviceInfo: DeviceInfo
+    deviceInfo: DeviceInfo,
   ): Promise<AuthResult> {
     try {
       const { email, password } = credentials;
@@ -387,12 +419,19 @@ class AuthService {
       }
 
       // Verify password
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      const isPasswordValid = await bcrypt.compare(
+        password,
+        user.password_hash!,
+      );
       if (!isPasswordValid) {
         throw new AuthenticationError("Invalid email or password");
       }
 
-      logger.info("User logged in with email", { userId: user.user_id, email });
+      logger.info({
+        msg: "User logged in with email",
+        userId: user.user_id,
+        email,
+      });
 
       // Generate JWT tokens
       const tokenPayload = {
@@ -422,7 +461,7 @@ class AuthService {
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
         ipAddress: deviceInfo?.ipAddress,
-        authMethod: 'email',
+        authMethod: "email",
       });
 
       return {
@@ -445,7 +484,7 @@ class AuthService {
     } catch (error) {
       logger.error({
         msg: "Email login failed",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }

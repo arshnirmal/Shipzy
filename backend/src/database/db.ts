@@ -34,14 +34,35 @@ const query = async (
   params: any[] = [],
 ): Promise<pg.QueryResult> => {
   const start = Date.now();
+
+  // ✅ Validate query text
+  if (!text || typeof text !== "string") {
+    logger.error({
+      msg: "Database query called with invalid text",
+      text,
+      textType: typeof text,
+      params,
+      stack: new Error(
+        `Database query text is invalid: received ${typeof text}. This usually means a query constant is undefined. ${text}`,
+      ).stack,
+    });
+    throw new Error(
+      `Database query text is invalid: received ${typeof text}. This usually means a query constant is undefined.`,
+    );
+  }
+
   try {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
 
-    if (config.logging.logQueries) {
+    // ✅ Safe logging
+    if (config?.logging?.logQueries) {
+      const queryPreview =
+        text.length > 100 ? text.substring(0, 100) + "..." : text;
+
       logger.debug({
         msg: "Query executed",
-        query: text.substring(0, 100),
+        query: queryPreview,
         duration: `${duration}ms`,
         rows: result.rowCount,
       });
@@ -49,11 +70,15 @@ const query = async (
 
     return result;
   } catch (error) {
+    const queryPreview =
+      text.length > 100 ? text.substring(0, 100) + "..." : text;
+
     logger.error({
       msg: "Database query error",
-      query: text.substring(0, 100),
+      query: queryPreview,
       params,
       error: (error as Error).message,
+      stack: (error as Error).stack,
     });
     throw error;
   }
@@ -109,6 +134,5 @@ pool.query("SELECT NOW()", (err, res) => {
 export default {
   query,
   getClient,
-  pool,
   closePool,
 };

@@ -83,13 +83,13 @@ const config: Config = {
 
 // Validation
 const requiredEnvVars = [
-  "DB_PASSWORD",
   "JWT_SECRET",
   "MAPBOX_ACCESS_TOKEN",
   // Firebase credentials are now handled via service account key file
   // 'FIREBASE_PROJECT_ID',
   // 'FIREBASE_CLIENT_EMAIL',
   // 'FIREBASE_PRIVATE_KEY',
+  // DB_PASSWORD is optional and defaults to empty string
 ];
 
 const missingEnvVars = requiredEnvVars.filter(

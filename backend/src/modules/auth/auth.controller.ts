@@ -1,10 +1,9 @@
 // services/backend/src/modules/auth/auth.controller.ts
-import crypto from "crypto";
+import crypto from "node:crypto";
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger";
 import { errorResponse, successResponse } from "../../utils/response.util";
 import authService from "./auth.service";
-import { DeviceInfo } from "../../types/index";
 
 interface GoogleVerifyBody {
   idToken: string;
@@ -35,7 +34,7 @@ class AuthController {
    */
   async refreshToken(
     request: FastifyRequest<{ Body: RefreshTokenBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { refreshToken } = request.body;
@@ -46,9 +45,13 @@ class AuthController {
     } catch (error) {
       logger.error({
         msg: "Token refresh controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 401);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 401,
+      );
     }
   }
 
@@ -58,7 +61,7 @@ class AuthController {
    */
   async verifyGoogle(
     request: FastifyRequest<{ Body: GoogleVerifyBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { idToken, role } = request.body;
@@ -67,8 +70,10 @@ class AuthController {
       const deviceInfo: any = {
         ipAddress: request.ip,
       };
-      if (request.headers["x-device-id"] !== undefined) deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined) deviceInfo.userAgent = request.headers["user-agent"];
+      if (request.headers["x-device-id"] !== undefined)
+        deviceInfo.deviceId = request.headers["x-device-id"];
+      if (request.headers["user-agent"] !== undefined)
+        deviceInfo.userAgent = request.headers["user-agent"];
 
       const userData: any = {};
       if (role !== undefined) userData.roleName = role;
@@ -92,7 +97,11 @@ class AuthController {
         msg: "Google verification controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -118,9 +127,13 @@ class AuthController {
     } catch (error) {
       logger.error({
         msg: "Logout controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -130,7 +143,7 @@ class AuthController {
    */
   async register(
     request: FastifyRequest<{ Body: RegisterBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { fullName, email, password, role, phoneNumber } = request.body;
@@ -139,8 +152,10 @@ class AuthController {
       const deviceInfo: any = {
         ipAddress: request.ip,
       };
-      if (request.headers["x-device-id"] !== undefined) deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined) deviceInfo.userAgent = request.headers["user-agent"];
+      if (request.headers["x-device-id"] !== undefined)
+        deviceInfo.deviceId = request.headers["x-device-id"];
+      if (request.headers["user-agent"] !== undefined)
+        deviceInfo.userAgent = request.headers["user-agent"];
 
       const registerData: any = { fullName, email, password };
       if (role !== undefined) registerData.role = role;
@@ -162,7 +177,11 @@ class AuthController {
         msg: "Registration controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -172,7 +191,7 @@ class AuthController {
    */
   async login(
     request: FastifyRequest<{ Body: LoginBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { email, password } = request.body;
@@ -181,8 +200,10 @@ class AuthController {
       const deviceInfo: any = {
         ipAddress: request.ip,
       };
-      if (request.headers["x-device-id"] !== undefined) deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined) deviceInfo.userAgent = request.headers["user-agent"];
+      if (request.headers["x-device-id"] !== undefined)
+        deviceInfo.deviceId = request.headers["x-device-id"];
+      if (request.headers["user-agent"] !== undefined)
+        deviceInfo.userAgent = request.headers["user-agent"];
 
       const result = await authService.loginWithEmail(
         { email, password },
@@ -193,9 +214,13 @@ class AuthController {
     } catch (error) {
       logger.error({
         msg: "Login controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 401);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 401,
+      );
     }
   }
 }
