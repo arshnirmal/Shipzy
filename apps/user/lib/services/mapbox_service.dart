@@ -9,7 +9,8 @@ class MapboxService {
 
   // Get current location
   Future<geolocator.Position> getCurrentLocation() async {
-    final serviceEnabled = await geolocator.Geolocator.isLocationServiceEnabled();
+    final serviceEnabled =
+        await geolocator.Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       throw Exception('Location services are disabled');
     }
@@ -30,13 +31,22 @@ class MapboxService {
   }
 
   // Create camera position
-  CameraOptions createCameraOptions({required double latitude, required double longitude, double zoom = 14.0}) => CameraOptions(
+  CameraOptions createCameraOptions({
+    required double latitude,
+    required double longitude,
+    double zoom = 14.0,
+  }) => CameraOptions(
     center: Point(coordinates: Position(longitude, latitude)),
     zoom: zoom,
   );
 
   // Add marker
-  Future<void> addMarker({required MapboxMap mapboxMap, required double latitude, required double longitude, String? imageName}) async {
+  Future<void> addMarker({
+    required MapboxMap mapboxMap,
+    required double latitude,
+    required double longitude,
+    String? imageName,
+  }) async {
     await mapboxMap.annotations.createPointAnnotationManager().then((manager) {
       manager.create(
         PointAnnotationOptions(

@@ -14,5 +14,7 @@ class AddressFormScreen extends StatelessWidget {
   final String? addressId;
 
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Address Form Screen - ${addressId ?? 'New'}')));
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(child: Text('Address Form Screen - ${addressId ?? 'New'}')),
+  );
 }

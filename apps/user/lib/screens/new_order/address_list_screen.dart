@@ -8,5 +8,6 @@ class AddressListScreen extends StatelessWidget {
   const AddressListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Address List Screen')));
+  Widget build(BuildContext context) =>
+      const Scaffold(body: Center(child: Text('Address List Screen')));
 }

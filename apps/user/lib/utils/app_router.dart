@@ -31,14 +31,17 @@ GoRouter router(Ref ref) {
     redirect: (context, state) {
       final authStateValue = authState;
 
-      final isAuthRoute = state.matchedLocation == AppRoutes.login || state.matchedLocation == AppRoutes.register;
+      final isAuthRoute =
+          state.matchedLocation == AppRoutes.login ||
+          state.matchedLocation == AppRoutes.register;
       final isOnSplash = state.matchedLocation == AppRoutes.splash;
 
       // Handle splash screen redirects
       if (isOnSplash) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
-            authenticated: (user, {required bool isNewUser}) => isNewUser ? AppRoutes.createProfile : AppRoutes.home,
+            authenticated: (user, {required bool isNewUser}) =>
+                isNewUser ? AppRoutes.createProfile : AppRoutes.home,
             unauthenticated: () => AppRoutes.login,
             orElse: () => AppRoutes.login, // Default to login if unknown state
           ),
@@ -49,7 +52,8 @@ GoRouter router(Ref ref) {
       // If auth state is still loading, don't redirect
       final authResult = authStateValue.maybeWhen(
         data: (authData) => authData.maybeWhen(
-          authenticated: (user, {required bool isNewUser}) => isNewUser ? 'new_user' : 'authenticated',
+          authenticated: (user, {required bool isNewUser}) =>
+              isNewUser ? 'new_user' : 'authenticated',
           unauthenticated: () => 'unauthenticated',
           orElse: () => 'unknown',
         ),
@@ -60,11 +64,14 @@ GoRouter router(Ref ref) {
         return null; // Stay on current route while loading
       }
 
-      final isAuthenticated = authResult == 'authenticated' || authResult == 'new_user';
+      final isAuthenticated =
+          authResult == 'authenticated' || authResult == 'new_user';
       final isNewUser = authResult == 'new_user';
 
       // If not authenticated and not on auth route, redirect to phone auth
-      if (!isAuthenticated && !isAuthRoute && state.matchedLocation != AppRoutes.createProfile) {
+      if (!isAuthenticated &&
+          !isAuthRoute &&
+          state.matchedLocation != AppRoutes.createProfile) {
         return AppRoutes.login;
       }
 
@@ -74,7 +81,10 @@ GoRouter router(Ref ref) {
       }
 
       // If new user and not on create profile, redirect to create profile
-      if (isNewUser && state.matchedLocation != AppRoutes.createProfile && !isAuthRoute && state.matchedLocation != AppRoutes.splash) {
+      if (isNewUser &&
+          state.matchedLocation != AppRoutes.createProfile &&
+          !isAuthRoute &&
+          state.matchedLocation != AppRoutes.splash) {
         return AppRoutes.createProfile;
       }
 
@@ -83,19 +93,43 @@ GoRouter router(Ref ref) {
 
     routes: [
       // ============ SPLASH ============
-      GoRoute(path: AppRoutes.splash, name: 'splash', builder: (context, state) => const SplashScreen()),
+      GoRoute(
+        path: AppRoutes.splash,
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
 
       // ============ AUTHENTICATION ============
-      GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(
+        path: AppRoutes.login,
+        name: 'login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
 
       // ============ MAIN APP (Shell Route for Bottom Nav) ============
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
-          GoRoute(path: AppRoutes.home, name: 'home', builder: (context, state) => const HomeScreen()),
-          GoRoute(path: AppRoutes.orderList, name: 'orderList', builder: (context, state) => const OrderListScreen()),
-          GoRoute(path: AppRoutes.profile, name: 'profile', builder: (context, state) => const ProfileScreen()),
+          GoRoute(
+            path: AppRoutes.home,
+            name: 'home',
+            builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.orderList,
+            name: 'orderList',
+            builder: (context, state) => const OrderListScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.profile,
+            name: 'profile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
         ],
       ),
 
@@ -103,7 +137,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: AppRoutes.createOrder,
         name: 'createOrder',
-        pageBuilder: (context, state) => const CustomTransitionPage(child: CreateOrderScreen(), transitionsBuilder: _slideTransition),
+        pageBuilder: (context, state) => const CustomTransitionPage(
+          child: CreateOrderScreen(),
+          transitionsBuilder: _slideTransition,
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.orderDetails}/:orderId',
@@ -123,7 +160,11 @@ GoRouter router(Ref ref) {
       ),
 
       // ============ ADDRESS ============
-      GoRoute(path: AppRoutes.addressList, name: 'addressList', builder: (context, state) => const AddressListScreen()),
+      GoRoute(
+        path: AppRoutes.addressList,
+        name: 'addressList',
+        builder: (context, state) => const AddressListScreen(),
+      ),
       GoRoute(
         path: AppRoutes.addressForm,
         name: 'addressForm',
@@ -139,7 +180,10 @@ GoRouter router(Ref ref) {
         name: 'payment',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return PaymentScreen(orderId: extra?['orderId'] as String, amount: extra?['amount'] as double);
+          return PaymentScreen(
+            orderId: extra?['orderId'] as String,
+            amount: extra?['amount'] as double,
+          );
         },
       ),
     ],
@@ -150,8 +194,18 @@ GoRouter router(Ref ref) {
 }
 
 // Custom slide transition
-Widget _slideTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => SlideTransition(
-  position: animation.drive(Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).chain(CurveTween(curve: Curves.easeInOut))),
+Widget _slideTransition(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) => SlideTransition(
+  position: animation.drive(
+    Tween<Offset>(
+      begin: const Offset(1, 0),
+      end: Offset.zero,
+    ).chain(CurveTween(curve: Curves.easeInOut)),
+  ),
   child: child,
 );
 
@@ -161,7 +215,8 @@ class MainShell extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Scaffold(body: child, bottomNavigationBar: const AppBottomNavBar());
+  Widget build(BuildContext context) =>
+      Scaffold(body: child, bottomNavigationBar: const AppBottomNavBar());
 }
 
 // Error screen
@@ -170,7 +225,8 @@ class ErrorScreen extends StatelessWidget {
   final Exception? error;
 
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Error: ${error.toString()}')));
+  Widget build(BuildContext context) =>
+      Scaffold(body: Center(child: Text('Error: ${error.toString()}')));
 }
 
 // TODO(dev): Create these widgets

@@ -10,4 +10,3 @@ AuthService authService(Ref ref) {
   final apiClient = ref.watch(apiClientProvider);
   return AuthService(apiClient);
 }
-

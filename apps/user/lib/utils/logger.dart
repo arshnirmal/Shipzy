@@ -11,7 +11,9 @@ class AppLogger {
   ///
   /// Must be called before using any logging methods.
   static void init() {
-    _logger = Logger(printer: PrettyPrinter(methodCount: 0, errorMethodCount: 5));
+    _logger = Logger(
+      printer: PrettyPrinter(methodCount: 0, errorMethodCount: 5),
+    );
   }
 
   /// Logs a debug message.

@@ -47,7 +47,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authState = ref.read(authStateProvider.notifier);
-      final result = await authState.login(email: _emailController.text.trim(), password: _passwordController.text);
+      final result = await authState.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
       result.when(
         success: (user, {required bool isNewUser}) {
@@ -60,12 +63,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
         error: (message) {
           AppLogger.e('Login error: $message');
-          SnackbarUtils.showError(context, _getErrorMessage(message), showDismiss: true);
+          SnackbarUtils.showError(
+            context,
+            _getErrorMessage(message),
+            showDismiss: true,
+          );
         },
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'An unexpected error occurred. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -83,7 +93,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       result.when(
         success: (user, {required bool isNewUser}) {
-          final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName}!' : 'Welcome back, ${user.fullName}!';
+          final message = isNewUser
+              ? 'Welcome to Shipzy, ${user.fullName}!'
+              : 'Welcome back, ${user.fullName}!';
 
           // Dismiss keyboard and show success message
           FocusScope.of(context).unfocus();
@@ -96,7 +108,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'Google sign-in failed. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'Google sign-in failed. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -107,11 +122,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _getErrorMessage(String error) {
     // Parse common error messages from backend
-    if (error.contains('Invalid credentials') || error.contains('Invalid email or password')) {
+    if (error.contains('Invalid credentials') ||
+        error.contains('Invalid email or password')) {
       return 'Invalid email or password. Please try again.';
     } else if (error.contains('User not found')) {
       return 'No account found with this email.';
-    } else if (error.contains('Network error') || error.contains('Connection timeout')) {
+    } else if (error.contains('Network error') ||
+        error.contains('Connection timeout')) {
       return 'Network error. Please check your connection.';
     } else if (error.contains('Server not responding')) {
       return 'Server is not responding. Please try again later.';
@@ -127,7 +144,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -139,7 +158,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Center(
                   child: Text(
                     'Sign In',
-                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
 
@@ -148,7 +170,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Email Field
                 Text(
                   'Email Address',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -156,7 +181,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: const InputDecoration(hintText: 'Enter email address', prefixIcon: Icon(Icons.email_outlined)),
+                  decoration: const InputDecoration(
+                    hintText: 'Enter email address',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
@@ -174,7 +202,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Password Field
                 Text(
                   'Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -188,7 +219,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       onPressed: _togglePasswordVisibility,
-                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -213,13 +248,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : () {
                             // TODO(dev): Navigate to forgot password flow
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Forgot password feature coming soon!'), behavior: SnackBarBehavior.floating),
+                              const SnackBar(
+                                content: Text(
+                                  'Forgot password feature coming soon!',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                              ),
                             );
                           },
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     child: Text(
                       'Forgot password?',
-                      style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w500),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -236,11 +283,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? const SizedBox(
                             height: 24,
                             width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
                           )
                         : Text(
                             'Sign In',
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
@@ -251,13 +304,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Don't have an account?", style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      "Don't have an account?",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     TextButton(
-                      onPressed: _isLoading ? null : () => context.push(AppRoutes.register),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      onPressed: _isLoading
+                          ? null
+                          : () => context.push(AppRoutes.register),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                      ),
                       child: Text(
                         'Create Account',
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                   ],
@@ -276,7 +342,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: _SocialButton(
                         label: 'Google',
-                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
+                        icon: SvgPicture.asset(
+                          'assets/icons/Google.svg',
+                          width: 20,
+                          height: 20,
+                        ),
                         onPressed: _isLoading ? null : _handleGoogleSignIn,
                       ),
                     ),
@@ -284,7 +354,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: _SocialButton(
                         label: 'Apple',
-                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
+                        icon: SvgPicture.asset(
+                          'assets/icons/Apple.svg',
+                          width: 22,
+                          height: 22,
+                        ),
                         onPressed: null, // TODO(dev): Implement Apple sign-in
                       ),
                     ),
@@ -319,7 +393,10 @@ class _AuthDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             text,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
@@ -330,7 +407,11 @@ class _AuthDivider extends StatelessWidget {
 
 // Social Button Widget
 class _SocialButton extends StatelessWidget {
-  const _SocialButton({required this.label, required this.icon, required this.onPressed});
+  const _SocialButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
 
   final String label;
   final Widget icon;
@@ -345,12 +426,17 @@ class _SocialButton extends StatelessWidget {
       icon: icon,
       label: Text(
         label,
-        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: theme.colorScheme.onSurface,
+        ),
       ),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+        ),
         backgroundColor: theme.colorScheme.surface,
       ),
     );

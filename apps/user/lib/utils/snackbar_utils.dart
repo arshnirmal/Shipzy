@@ -16,13 +16,21 @@ class SnackbarUtils {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: Theme.of(context).colorScheme.primary, behavior: _getBehavior(context)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        behavior: _getBehavior(context),
+      ),
+    );
   }
 
   /// Shows an error message with error color background
-  static void showError(BuildContext context, String message, {bool showDismiss = false}) {
+  static void showError(
+    BuildContext context,
+    String message, {
+    bool showDismiss = false,
+  }) {
     if (!context.mounted) {
       return;
     }
@@ -32,7 +40,13 @@ class SnackbarUtils {
         content: Text(message),
         backgroundColor: Theme.of(context).colorScheme.error,
         behavior: _getBehavior(context),
-        action: showDismiss ? SnackBarAction(label: 'Dismiss', textColor: Colors.white, onPressed: () {}) : null,
+        action: showDismiss
+            ? SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: () {},
+              )
+            : null,
       ),
     );
   }
@@ -43,9 +57,13 @@ class SnackbarUtils {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: Theme.of(context).colorScheme.surface, behavior: _getBehavior(context)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        behavior: _getBehavior(context),
+      ),
+    );
   }
 
   /// Shows a custom SnackBar with full configuration

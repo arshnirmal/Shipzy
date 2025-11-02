@@ -12,9 +12,17 @@ class AuthInterceptor extends Interceptor {
   bool _isRefreshing = false;
 
   @override
-  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     // Skip adding token for auth endpoints
-    final authEndpoints = ['/auth/login', '/auth/register', '/auth/google/verify', '/auth/refresh'];
+    final authEndpoints = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/google/verify',
+      '/auth/refresh',
+    ];
 
     if (authEndpoints.any((endpoint) => options.path.contains(endpoint))) {
       return handler.next(options);
@@ -32,7 +40,10 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     // Handle token refresh on 401 Unauthorized
     if (err.response?.statusCode == 401 && !_isRefreshing) {
       // Don't retry auth endpoints
@@ -53,10 +64,18 @@ class AuthInterceptor extends Interceptor {
         }
 
         // Create a new Dio instance for refresh request (to avoid interceptor loops)
-        final dio = Dio(BaseOptions(baseUrl: err.requestOptions.baseUrl, headers: {'Content-Type': 'application/json'}));
+        final dio = Dio(
+          BaseOptions(
+            baseUrl: err.requestOptions.baseUrl,
+            headers: {'Content-Type': 'application/json'},
+          ),
+        );
 
         // Call refresh endpoint
-        final response = await dio.post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refreshToken});
+        final response = await dio.post<Map<String, dynamic>>(
+          '/auth/refresh',
+          data: {'refreshToken': refreshToken},
+        );
 
         if (response.data?['success'] == true) {
           final newAccessToken = response.data!['data']['accessToken'];
@@ -74,7 +93,10 @@ class AuthInterceptor extends Interceptor {
           final retryDio = Dio(BaseOptions(baseUrl: retryOptions.baseUrl));
           final retryResponse = await retryDio.request<dynamic>(
             retryOptions.path,
-            options: Options(method: retryOptions.method, headers: retryOptions.headers),
+            options: Options(
+              method: retryOptions.method,
+              headers: retryOptions.headers,
+            ),
             data: retryOptions.data,
             queryParameters: retryOptions.queryParameters,
           );

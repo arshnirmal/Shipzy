@@ -5,5 +5,6 @@ class OrderDetailsScreen extends StatelessWidget {
   final String orderId;
 
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Order Details Screen - $orderId')));
+  Widget build(BuildContext context) =>
+      Scaffold(body: Center(child: Text('Order Details Screen - $orderId')));
 }

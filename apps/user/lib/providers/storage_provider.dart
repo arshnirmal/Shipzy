@@ -17,7 +17,8 @@ FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
 // ============ SHARED PREFERENCES (for app settings) ============
 
 @Riverpod(keepAlive: true)
-Future<SharedPreferences> sharedPreferences(Ref ref) async => SharedPreferences.getInstance();
+Future<SharedPreferences> sharedPreferences(Ref ref) async =>
+    SharedPreferences.getInstance();
 
 // ============ TOKEN STORAGE HELPER ============
 
@@ -37,15 +38,22 @@ class TokenStorage {
   static const _refreshTokenKey = 'refresh_token';
 
   /// Save both access and refresh tokens
-  Future<void> saveTokens({required String accessToken, required String refreshToken}) async {
-    await Future.wait([_storage.write(key: _accessTokenKey, value: accessToken), _storage.write(key: _refreshTokenKey, value: refreshToken)]);
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await Future.wait([
+      _storage.write(key: _accessTokenKey, value: accessToken),
+      _storage.write(key: _refreshTokenKey, value: refreshToken),
+    ]);
   }
 
   /// Get access token
   Future<String?> getAccessToken() async => _storage.read(key: _accessTokenKey);
 
   /// Get refresh token
-  Future<String?> getRefreshToken() async => _storage.read(key: _refreshTokenKey);
+  Future<String?> getRefreshToken() async =>
+      _storage.read(key: _refreshTokenKey);
 
   /// Update only access token (used during token refresh)
   Future<void> updateAccessToken(String accessToken) async {
@@ -54,7 +62,10 @@ class TokenStorage {
 
   /// Clear all tokens (logout)
   Future<void> clearTokens() async {
-    await Future.wait([_storage.delete(key: _accessTokenKey), _storage.delete(key: _refreshTokenKey)]);
+    await Future.wait([
+      _storage.delete(key: _accessTokenKey),
+      _storage.delete(key: _refreshTokenKey),
+    ]);
   }
 
   /// Clear all secure storage data

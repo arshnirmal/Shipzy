@@ -9,7 +9,11 @@ class ErrorInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    AppLogger.e('API Error: ${err.message}', error: err, stackTrace: err.stackTrace);
+    AppLogger.e(
+      'API Error: ${err.message}',
+      error: err,
+      stackTrace: err.stackTrace,
+    );
 
     // Handle different error types
     switch (err.type) {

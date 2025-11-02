@@ -18,7 +18,10 @@ Future<void> main() async {
   await Firebase.initializeApp();
 
   // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   // Set system UI overlay
   SystemChrome.setSystemUIOverlayStyle(

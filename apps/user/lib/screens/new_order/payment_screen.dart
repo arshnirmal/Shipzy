@@ -19,5 +19,11 @@ class PaymentScreen extends StatelessWidget {
   final double? amount;
 
   @override
-  Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Payment Screen - Order: ${orderId ?? 'N/A'}, Amount: ${amount ?? 0}')));
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: Text(
+        'Payment Screen - Order: ${orderId ?? 'N/A'}, Amount: ${amount ?? 0}',
+      ),
+    ),
+  );
 }

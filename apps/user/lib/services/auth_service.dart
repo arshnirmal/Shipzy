@@ -23,7 +23,10 @@ class AuthService {
   }
 
   /// Google OAuth authentication
-  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'client'}) async {
+  Future<GoogleAuthResponse> verifyGoogleToken(
+    String idToken, {
+    String role = 'client',
+  }) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -33,7 +36,9 @@ class AuthService {
       );
 
       if (response.data?['success'] != true) {
-        throw Exception(response.data?['message'] ?? 'Google authentication failed');
+        throw Exception(
+          response.data?['message'] ?? 'Google authentication failed',
+        );
       }
 
       return GoogleAuthResponse.fromJson(response.data!);
@@ -54,7 +59,13 @@ class AuthService {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/register',
-        data: {'fullName': fullName, 'email': email, 'password': password, 'role': role, 'phoneNumber': phoneNumber},
+        data: {
+          'fullName': fullName,
+          'email': email,
+          'password': password,
+          'role': role,
+          'phoneNumber': phoneNumber,
+        },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
 
@@ -69,7 +80,10 @@ class AuthService {
   }
 
   /// User login
-  Future<LoginResponse> login({required String email, required String password}) async {
+  Future<LoginResponse> login({
+    required String email,
+    required String password,
+  }) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -91,7 +105,10 @@ class AuthService {
   /// Refresh access token
   Future<RefreshTokenResponse> refreshToken(String refreshToken) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refreshToken});
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Token refresh failed');
@@ -106,10 +123,15 @@ class AuthService {
   /// Get current user profile
   Future<AppUser> getCurrentUser(String accessToken) async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>('/users/me', options: Options(headers: {'Authorization': 'Bearer $accessToken'}));
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/users/me',
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
 
       if (response.data?['success'] != true) {
-        throw Exception(response.data?['message'] ?? 'Failed to get user profile');
+        throw Exception(
+          response.data?['message'] ?? 'Failed to get user profile',
+        );
       }
 
       return AppUser.fromJson(response.data!['data'] as Map<String, dynamic>);
@@ -138,7 +160,9 @@ class AuthService {
   Exception _handleDioError(DioException e, String operation) {
     if (e.response != null) {
       final data = e.response!.data;
-      final message = data is Map<String, dynamic> ? data['message'] ?? data['error'] : 'Unknown error';
+      final message = data is Map<String, dynamic>
+          ? data['message'] ?? data['error']
+          : 'Unknown error';
       return Exception('$operation failed: $message');
     } else if (e.type == DioExceptionType.connectionTimeout) {
       return Exception('$operation failed: Connection timeout');

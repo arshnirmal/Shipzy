@@ -61,18 +61,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         success: (user, {required bool isNewUser}) {
           // Dismiss keyboard and show success message
           FocusScope.of(context).unfocus();
-          SnackbarUtils.showSuccess(context, 'Welcome to Shipzy, ${user.fullName}!');
+          SnackbarUtils.showSuccess(
+            context,
+            'Welcome to Shipzy, ${user.fullName}!',
+          );
 
           // Navigate to home
           context.go(AppRoutes.home);
         },
         error: (message) {
-          SnackbarUtils.showError(context, _getErrorMessage(message), showDismiss: true);
+          SnackbarUtils.showError(
+            context,
+            _getErrorMessage(message),
+            showDismiss: true,
+          );
         },
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'An unexpected error occurred. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -90,7 +100,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       result.when(
         success: (user, {required bool isNewUser}) {
-          final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName}!' : 'Welcome back, ${user.fullName}!';
+          final message = isNewUser
+              ? 'Welcome to Shipzy, ${user.fullName}!'
+              : 'Welcome back, ${user.fullName}!';
 
           // Dismiss keyboard and show success message
           FocusScope.of(context).unfocus();
@@ -103,7 +115,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'Google sign-up failed. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'Google sign-up failed. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -113,11 +128,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   String _getErrorMessage(String error) {
-    if (error.contains('Email already exists') || error.contains('already registered')) {
+    if (error.contains('Email already exists') ||
+        error.contains('already registered')) {
       return 'An account with this email already exists.';
     } else if (error.contains('Phone number already exists')) {
       return 'This phone number is already registered.';
-    } else if (error.contains('Network error') || error.contains('Connection timeout')) {
+    } else if (error.contains('Network error') ||
+        error.contains('Connection timeout')) {
       return 'Network error. Please check your connection.';
     } else if (error.contains('Server not responding')) {
       return 'Server is not responding. Please try again later.';
@@ -133,7 +150,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -145,7 +164,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Center(
                   child: Text(
                     'Create Account',
-                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
 
@@ -154,7 +176,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Full Name Field
                 Text(
                   'Full Name',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -162,7 +187,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(hintText: 'Enter full name', prefixIcon: Icon(Icons.person_outline)),
+                  decoration: const InputDecoration(
+                    hintText: 'Enter full name',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your full name';
@@ -179,7 +207,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Email Field
                 Text(
                   'Email Address',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -187,7 +218,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: const InputDecoration(hintText: 'Enter email address', prefixIcon: Icon(Icons.email_outlined)),
+                  decoration: const InputDecoration(
+                    hintText: 'Enter email address',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your email';
@@ -205,7 +239,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Phone Number Field
                 Text(
                   'Phone Number',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -235,7 +272,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Password Field
                 Text(
                   'Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -248,8 +288,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     helperText: 'Minimum 8 characters',
                     suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -268,7 +313,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Confirm Password Field
                 Text(
                   'Confirm Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -281,8 +329,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     hintText: 'Re-enter password',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                      icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      onPressed: () => setState(
+                        () =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword,
+                      ),
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                      ),
                     ),
                   ),
                   validator: (value) {
@@ -308,11 +363,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ? const SizedBox(
                             height: 24,
                             width: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
                           )
                         : Text(
                             'Create Account',
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
@@ -323,13 +384,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have an account?', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      'Already have an account?',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.pop(),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                      ),
                       child: Text(
                         'Sign In',
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                   ],
@@ -348,7 +420,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Expanded(
                       child: _SocialButton(
                         label: 'Google',
-                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
+                        icon: SvgPicture.asset(
+                          'assets/icons/Google.svg',
+                          width: 20,
+                          height: 20,
+                        ),
                         onPressed: _isLoading ? null : _handleGoogleSignUp,
                       ),
                     ),
@@ -356,7 +432,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Expanded(
                       child: _SocialButton(
                         label: 'Apple',
-                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
+                        icon: SvgPicture.asset(
+                          'assets/icons/Apple.svg',
+                          width: 22,
+                          height: 22,
+                        ),
                         onPressed: null, // TODO(dev): Implement Apple sign-up
                       ),
                     ),
@@ -391,7 +471,10 @@ class _AuthDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             text,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
@@ -402,7 +485,11 @@ class _AuthDivider extends StatelessWidget {
 
 // Social Button Widget
 class _SocialButton extends StatelessWidget {
-  const _SocialButton({required this.label, required this.icon, required this.onPressed});
+  const _SocialButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
 
   final String label;
   final Widget icon;
@@ -417,12 +504,17 @@ class _SocialButton extends StatelessWidget {
       icon: icon,
       label: Text(
         label,
-        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: theme.colorScheme.onSurface,
+        ),
       ),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+        ),
         backgroundColor: theme.colorScheme.surface,
       ),
     );

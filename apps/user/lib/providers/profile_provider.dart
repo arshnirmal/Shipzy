@@ -32,12 +32,20 @@ class Profile extends _$Profile {
 }
 
 class ProfileState {
-  const ProfileState({this.isLoading = false, this.error, this.isSuccess = false});
+  const ProfileState({
+    this.isLoading = false,
+    this.error,
+    this.isSuccess = false,
+  });
 
   final bool isLoading;
   final String? error;
   final bool isSuccess;
 
   ProfileState copyWith({bool? isLoading, String? error, bool? isSuccess}) =>
-      ProfileState(isLoading: isLoading ?? this.isLoading, error: error ?? this.error, isSuccess: isSuccess ?? this.isSuccess);
+      ProfileState(
+        isLoading: isLoading ?? this.isLoading,
+        error: error ?? this.error,
+        isSuccess: isSuccess ?? this.isSuccess,
+      );
 }
