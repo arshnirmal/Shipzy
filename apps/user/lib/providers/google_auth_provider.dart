@@ -1,3 +1,5 @@
+// lib/providers/google_auth_provider.dart
+
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -5,19 +7,12 @@ part 'google_auth_provider.g.dart';
 
 @riverpod
 class GoogleAuth extends _$GoogleAuth {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'profile',
-      'openid',
-    ],
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile', 'openid']);
 
   @override
-  GoogleSignInAccount? build() {
-    return null;
-  }
+  GoogleSignInAccount? build() => null;
 
+  /// Sign in with Google
   Future<GoogleSignInAccount?> signIn() async {
     try {
       final account = await _googleSignIn.signIn();
@@ -29,9 +24,10 @@ class GoogleAuth extends _$GoogleAuth {
     }
   }
 
+  /// Get Google ID token
   Future<String?> getIdToken() async {
     try {
-      final account = await _googleSignIn.currentUser;
+      final account = _googleSignIn.currentUser ?? state;
       if (account == null) {
         throw Exception('No Google account signed in');
       }
@@ -43,6 +39,7 @@ class GoogleAuth extends _$GoogleAuth {
     }
   }
 
+  /// Sign out from Google
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
@@ -52,20 +49,19 @@ class GoogleAuth extends _$GoogleAuth {
     }
   }
 
+  /// Disconnect Google account
   Future<void> disconnect() async {
     try {
       await _googleSignIn.disconnect();
       state = null;
     } catch (error) {
-      throw Exception('Google disconnect failed: $error');
+      // Ignore disconnect errors (user might not be connected)
     }
   }
 
-  Future<bool> isSignedIn() async {
-    return await _googleSignIn.isSignedIn();
-  }
+  /// Check if user is signed in
+  Future<bool> isSignedIn() async => _googleSignIn.isSignedIn();
 
-  Future<GoogleSignInAccount?> getCurrentUser() async {
-    return _googleSignIn.currentUser;
-  }
+  /// Get current Google user
+  Future<GoogleSignInAccount?> getCurrentUser() async => _googleSignIn.currentUser;
 }

@@ -1,10 +1,11 @@
+// lib/screens/auth/login_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_state_provider.dart';
-import '../../providers/google_auth_provider.dart';
 import '../../utils/app_routes.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -18,7 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -30,9 +30,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _togglePasswordVisibility() {
-    setState(() {
-      _obscurePassword = !_obscurePassword;
-    });
+    setState(() => _obscurePassword = !_obscurePassword);
   }
 
   Future<void> _submit() async {
@@ -40,18 +38,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    // Dismiss keyboard
+    FocusScope.of(context).unfocus();
+
     setState(() => _isLoading = true);
 
     try {
       final authState = ref.read(authStateProvider.notifier);
-      final result = await authState.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      final result = await authState.login(email: _emailController.text.trim(), password: _passwordController.text);
 
       result.when(
         success: (user, isNewUser) {
           if (context.mounted) {
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Welcome back, ${user.fullName ?? "User"}!'),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+
+            // Navigate to home
             context.go(AppRoutes.home);
           }
         },
@@ -59,8 +67,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(message),
+                content: Text(_getErrorMessage(message)),
                 backgroundColor: Theme.of(context).colorScheme.error,
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(label: 'Dismiss', textColor: Colors.white, onPressed: () {}),
               ),
             );
           }
@@ -70,8 +80,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('An unexpected error occurred: $e'),
+            content: const Text('An unexpected error occurred. Please try again.'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -86,40 +97,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final googleAuth = ref.read(googleAuthProvider.notifier);
-      final account = await googleAuth.signIn();
+      final authState = ref.read(authStateProvider.notifier);
+      final result = await authState.signInWithGoogle();
 
-      if (account != null) {
-        final idToken = await googleAuth.getIdToken();
-        if (idToken != null) {
-          final authState = ref.read(authStateProvider.notifier);
-          final result = await authState.completeGoogleAuthentication(idToken, role: 'client');
+      result.when(
+        success: (user, isNewUser) {
+          if (context.mounted) {
+            final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName ?? "there"}!' : 'Welcome back, ${user.fullName ?? "User"}!';
 
-          result.when(
-            success: (user, isNewUser) {
-              if (context.mounted) {
-                context.go(AppRoutes.home);
-              }
-            },
-            error: (message) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                );
-              }
-            },
-          );
-        }
-      }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message), backgroundColor: Theme.of(context).colorScheme.primary, behavior: SnackBarBehavior.floating),
+            );
+
+            context.go(AppRoutes.home);
+          }
+        },
+        error: (message) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_getErrorMessage(message)),
+                backgroundColor: Theme.of(context).colorScheme.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Google sign-in failed: $e'),
+            content: const Text('Google sign-in failed. Please try again.'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -128,6 +139,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  String _getErrorMessage(String error) {
+    // Parse common error messages from backend
+    if (error.contains('Invalid credentials') || error.contains('Invalid email or password')) {
+      return 'Invalid email or password. Please try again.';
+    } else if (error.contains('User not found')) {
+      return 'No account found with this email.';
+    } else if (error.contains('Network error') || error.contains('Connection timeout')) {
+      return 'Network error. Please check your connection.';
+    } else if (error.contains('Server not responding')) {
+      return 'Server is not responding. Please try again later.';
+    }
+    return error;
   }
 
   @override
@@ -139,140 +164,172 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
-              Center(
-                child: Text(
-                  'Sign In',
-                  style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Email Address',
-                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(hintText: 'Enter email address'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                  if (!emailRegex.hasMatch(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Password',
-                style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _submit(),
-                decoration: InputDecoration(
-                  hintText: 'Enter password',
-                  suffixIcon: IconButton(
-                    onPressed: _togglePasswordVisibility,
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                  ),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    // TODO: Navigate to forgot password flow
-                  },
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 32),
+
+                // Title
+                Center(
                   child: Text(
-                    'Forgot password?',
-                    style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w500),
+                    'Sign In',
+                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          'Sign In',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
-                        ),
+
+                const SizedBox(height: 32),
+
+                // Email Field
+                Text(
+                  'Email Address',
+                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Don't have an account?", style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                  TextButton(
-                    onPressed: () => context.push(AppRoutes.register),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  enabled: !_isLoading,
+                  decoration: const InputDecoration(hintText: 'Enter email address', prefixIcon: Icon(Icons.email_outlined)),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                    if (!emailRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                // Password Field
+                Text(
+                  'Password',
+                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  enabled: !_isLoading,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: 'Enter password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      onPressed: _togglePasswordVisibility,
+                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 8),
+
+                // Forgot Password
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            // TODO: Navigate to forgot password flow
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Forgot password feature coming soon!'), behavior: SnackBarBehavior.floating),
+                            );
+                          },
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     child: Text(
-                      'Create Account',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                      'Forgot password?',
+                      style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w500),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _AuthDivider(text: 'Or Sign in with'),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SocialButton(
-                      label: 'Google',
-                      icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
-                      onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Sign In Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                          )
+                        : Text(
+                            'Sign In',
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
+                          ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SocialButton(
-                      label: 'Apple',
-                      icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
-                      onPressed: null, // TODO: Implement Apple sign-in
+                ),
+
+                const SizedBox(height: 16),
+
+                // Create Account Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Don't have an account?", style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    TextButton(
+                      onPressed: _isLoading ? null : () => context.push(AppRoutes.register),
+                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      child: Text(
+                        'Create Account',
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Divider
+                const _AuthDivider(text: 'Or Sign in with'),
+
+                const SizedBox(height: 24),
+
+                // Social Login Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SocialButton(
+                        label: 'Google',
+                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
+                        onPressed: _isLoading ? null : _handleGoogleSignIn,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _SocialButton(
+                        label: 'Apple',
+                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
+                        onPressed: null, // TODO: Implement Apple sign-in
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
@@ -280,6 +337,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
+// Divider Widget
 class _AuthDivider extends StatelessWidget {
   const _AuthDivider({required this.text});
 
@@ -306,19 +364,20 @@ class _AuthDivider extends StatelessWidget {
   }
 }
 
+// Social Button Widget
 class _SocialButton extends StatelessWidget {
   const _SocialButton({required this.label, required this.icon, required this.onPressed});
 
   final String label;
   final Widget icon;
-  final Future<void> Function()? onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return OutlinedButton.icon(
-      onPressed: onPressed == null ? null : () => onPressed!(),
+      onPressed: onPressed,
       icon: icon,
       label: Text(
         label,

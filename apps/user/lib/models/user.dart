@@ -1,13 +1,20 @@
+// lib/models/user.dart
+
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:objectbox/objectbox.dart';
 
 // ignore_for_file: must_be_immutable
+
+part 'user.g.dart';
+
 @Entity()
+@JsonSerializable()
 class AppUser extends Equatable {
   AppUser({
-    this.id = 0, // ObjectBox ID, 0 means auto-increment
     required this.userUuid,
     required this.phoneNumber,
+    this.id = 0, // ObjectBox ID, 0 means auto-increment
     this.fullName,
     this.email,
     this.profilePictureUrl,
@@ -16,27 +23,34 @@ class AppUser extends Equatable {
     this.createdAt,
   });
 
-  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-    id: json['id'] as int? ?? 0,
-    userUuid: json['userUuid'] as String,
-    phoneNumber: json['phoneNumber'] as String,
-    fullName: json['fullName'] as String?,
-    email: json['email'] as String?,
-    profilePictureUrl: json['profilePictureUrl'] as String?,
-    isVerified: json['isVerified'] as bool? ?? false,
-    role: json['role'] as String? ?? 'client',
-    createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
-  );
+  factory AppUser.fromJson(Map<String, dynamic> json) => _$AppUserFromJson(json);
 
   @Id()
+  @JsonKey(includeFromJson: false, includeToJson: false)
   int id;
+
+  @JsonKey(name: 'userUuid')
   final String userUuid;
+
+  @JsonKey(name: 'phoneNumber')
   final String phoneNumber;
+
+  @JsonKey(name: 'fullName')
   final String? fullName;
+
+  @JsonKey(name: 'email')
   final String? email;
+
+  @JsonKey(name: 'profilePictureUrl')
   final String? profilePictureUrl;
+
+  @JsonKey(name: 'isVerified')
   final bool isVerified;
+
+  @JsonKey(name: 'role')
   final String role;
+
+  @JsonKey(name: 'createdAt')
   final DateTime? createdAt;
 
   AppUser copyWith({
@@ -61,38 +75,7 @@ class AppUser extends Equatable {
     createdAt: createdAt ?? this.createdAt,
   );
 
-  // Factory method for creating new users (ObjectBox will assign ID)
-  factory AppUser.create({
-    required String userUuid,
-    required String phoneNumber,
-    String? fullName,
-    String? email,
-    String? profilePictureUrl,
-    bool isVerified = false,
-    String role = 'client',
-    DateTime? createdAt,
-  }) => AppUser(
-    userUuid: userUuid,
-    phoneNumber: phoneNumber,
-    fullName: fullName,
-    email: email,
-    profilePictureUrl: profilePictureUrl,
-    isVerified: isVerified,
-    role: role,
-    createdAt: createdAt,
-  );
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'userUuid': userUuid,
-    'phoneNumber': phoneNumber,
-    'fullName': fullName,
-    'email': email,
-    'profilePictureUrl': profilePictureUrl,
-    'isVerified': isVerified,
-    'role': role,
-    'createdAt': createdAt?.toIso8601String(),
-  };
+  Map<String, dynamic> toJson() => _$AppUserToJson(this);
 
   @override
   List<Object?> get props => [id, userUuid, phoneNumber, fullName, email, profilePictureUrl, isVerified, role, createdAt];

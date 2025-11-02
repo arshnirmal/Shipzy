@@ -3,8 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'interceptors/auth_interceptor.dart';
-import 'interceptors/error_interceptor.dart';
+import '../services/dio/interceptors/auth_interceptor.dart';
+import '../services/dio/interceptors/error_interceptor.dart';
 
 part 'dio_provider.g.dart';
 
