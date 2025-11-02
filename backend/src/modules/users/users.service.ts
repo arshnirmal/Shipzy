@@ -40,6 +40,7 @@ interface AddressData {
   flatNumber?: string;
   landmark?: string;
   isDefault?: boolean;
+  [key: string]: any;
 }
 
 class UsersService {
@@ -70,7 +71,7 @@ class UsersService {
     } catch (error) {
       logger.error({
         msg: "Error getting current user",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -81,7 +82,7 @@ class UsersService {
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData
+    updateData: UpdateProfileData,
   ): Promise<UserProfile> {
     try {
       // Validate email format if provided
@@ -103,12 +104,17 @@ class UsersService {
         fullName: updatedUser.full_name,
         email: updatedUser.email,
         profilePictureUrl: updatedUser.profile_picture_url,
+        role: updatedUser.role_name,
+        phoneNumber: updatedUser.phone_number,
+        isVerified: updatedUser.is_verified,
+        isActive: updatedUser.is_active,
+        createdAt: updatedUser.created_at,
         updatedAt: updatedUser.updated_at,
       };
     } catch (error) {
       logger.error({
         msg: "Error updating user profile",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -133,15 +139,15 @@ class UsersService {
         city: addr.city,
         state: addr.state,
         postalCode: addr.postal_code,
-        latitude: parseFloat(addr.latitude),
-        longitude: parseFloat(addr.longitude),
+        latitude: addr.latitude,
+        longitude: addr.longitude,
         isDefault: addr.is_default,
         createdAt: addr.created_at,
       }));
     } catch (error) {
       logger.error({
         msg: "Error getting user addresses",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -150,10 +156,7 @@ class UsersService {
   /**
    * Save new address
    */
-  async saveAddress(
-    userId: number,
-    addressData: AddressData
-  ): Promise<any> {
+  async saveAddress(userId: number, addressData: AddressData): Promise<any> {
     try {
       // Validate required fields
       const requiredFields = [
@@ -198,7 +201,7 @@ class UsersService {
     } catch (error) {
       logger.error({
         msg: "Error saving address",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -230,7 +233,7 @@ class UsersService {
     } catch (error) {
       logger.error({
         msg: "Error deleting address",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }

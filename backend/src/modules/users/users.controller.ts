@@ -2,6 +2,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger";
 import { errorResponse, successResponse } from "../../utils/response.util";
+import { AuthenticationError } from "../../utils/error.util";
 import usersService from "./users.service";
 
 interface UpdateProfileBody {
@@ -30,8 +31,15 @@ class UsersController {
    * GET /api/v1/users/me
    * Get current user profile
    */
-  async getCurrentUser(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getCurrentUser(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<any> {
     try {
+      if (!request.user) {
+        throw new AuthenticationError("User not authenticated");
+      }
+
       const { userUuid } = request.user;
 
       const user = await usersService.getCurrentUser(userUuid);
@@ -42,10 +50,15 @@ class UsersController {
         "User profile retrieved successfully",
       );
     } catch (error) {
-      logger.error("Get current user controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Get current user controller error",
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -55,9 +68,13 @@ class UsersController {
    */
   async updateProfile(
     request: FastifyRequest<{ Body: UpdateProfileBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
+      if (!request.user) {
+        throw new AuthenticationError("User not authenticated");
+      }
+
       const { userId } = request.user;
       const updateData = request.body;
 
@@ -71,9 +88,13 @@ class UsersController {
     } catch (error) {
       logger.error({
         msg: "Update profile controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -81,8 +102,15 @@ class UsersController {
    * GET /api/v1/users/me/addresses
    * Get saved addresses
    */
-  async getAddresses(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getAddresses(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<any> {
     try {
+      if (!request.user) {
+        throw new AuthenticationError("User not authenticated");
+      }
+
       const { userId } = request.user;
 
       const addresses = await usersService.getAddresses(userId);
@@ -95,9 +123,13 @@ class UsersController {
     } catch (error) {
       logger.error({
         msg: "Get addresses controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -107,9 +139,13 @@ class UsersController {
    */
   async saveAddress(
     request: FastifyRequest<{ Body: SaveAddressBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
+      if (!request.user) {
+        throw new AuthenticationError("User not authenticated");
+      }
+
       const { userId } = request.user;
       const addressData = request.body;
 
@@ -124,9 +160,13 @@ class UsersController {
     } catch (error) {
       logger.error({
         msg: "Save address controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -136,21 +176,32 @@ class UsersController {
    */
   async deleteAddress(
     request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
+      if (!request.user) {
+        throw new AuthenticationError("User not authenticated");
+      }
+
       const { userId } = request.user;
       const { id } = request.params;
 
-      const result = await usersService.deleteAddress(parseInt(id), userId);
+      const result = await usersService.deleteAddress(
+        Number.parseInt(id),
+        userId,
+      );
 
       return successResponse(reply, result, "Address deleted successfully");
     } catch (error) {
       logger.error({
         msg: "Delete address controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 }
