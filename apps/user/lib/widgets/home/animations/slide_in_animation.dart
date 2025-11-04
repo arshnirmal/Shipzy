@@ -52,23 +52,21 @@ class _SlideInAnimationState extends State<SlideInAnimation>
     // Stagger animation based on index
 
     Future.delayed(widget.delay * widget.index, () {
-      if (mounted) _controller.forward();
+      if (mounted) {
+        _controller.forward();
+      }
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-
-      child: SlideTransition(position: _slideAnimation, child: widget.child),
-    );
-  }
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _fadeAnimation,
+    child: SlideTransition(position: _slideAnimation, child: widget.child),
+  );
 
   @override
   void dispose() {
     _controller.dispose();
-
     super.dispose();
   }
 }

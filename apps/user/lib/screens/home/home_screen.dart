@@ -2,8 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../providers/orders_provider.dart';
+import '../../utils/app_routes.dart';
 import '../../widgets/home/active_deliveries_section.dart';
 import '../../widgets/home/cta_card.dart';
 import '../../widgets/home/location_header.dart';
@@ -42,8 +44,8 @@ class HomeScreen extends ConsumerWidget {
                     child: ActiveDeliveriesSection(
                       orders: activeOrders,
                       onViewAll: () {
-                        // Navigate to orders tab
-                        // This will be handled by bottom nav
+                        // Navigate to orders tab using GoRouter
+                        context.go(AppRoutes.orderList);
                       },
                     ),
                   ),
@@ -55,7 +57,8 @@ class HomeScreen extends ConsumerWidget {
                     child: RecentActivitySection(
                       orders: completedOrders,
                       onViewAll: () {
-                        // Navigate to orders tab
+                        // Navigate to orders tab using GoRouter
+                        context.go(AppRoutes.orderList);
                       },
                     ),
                   ),

@@ -23,9 +23,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final authState = ref.read(authStateProvider.notifier);
       await authState.logout();
 
-      if (context.mounted) {
-        context.go(AppRoutes.login);
+      if (!mounted) {
+        return;
       }
+      context.go(AppRoutes.login);
     } catch (e) {
       SnackbarUtils.showError(context, 'Logout failed: $e');
     } finally {
@@ -45,7 +46,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         backgroundColor: theme.colorScheme.surface,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

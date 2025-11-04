@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 import '../../models/orders/order.dart';
 
 class OrderStatusBadge extends StatelessWidget {
-  const OrderStatusBadge({required this.status, this.size = OrderStatusBadgeSize.medium, super.key});
+  const OrderStatusBadge({
+    required this.status,
+    this.size = OrderStatusBadgeSize.medium,
+    super.key,
+  });
 
   final OrderStatus status;
   final OrderStatusBadgeSize size;
@@ -33,12 +37,19 @@ class OrderStatusBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(color: colors.dot, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: colors.dot,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 6),
           Text(
             status.label,
-            style: TextStyle(color: colors.text, fontSize: fontSize, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: colors.text,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -51,48 +62,48 @@ class OrderStatusBadge extends StatelessWidget {
     switch (status) {
       case OrderStatus.pending:
         return _StatusColors(
-          background: theme.colorScheme.tertiary.withOpacity(0.1),
-          border: theme.colorScheme.tertiary.withOpacity(0.3),
+          background: theme.colorScheme.tertiary.withValues(alpha: 0.1),
+          border: theme.colorScheme.tertiary.withValues(alpha: 0.3),
           dot: theme.colorScheme.tertiary,
           text: theme.colorScheme.tertiary,
         );
 
       case OrderStatus.accepted:
         return _StatusColors(
-          background: theme.colorScheme.primary.withOpacity(0.1),
-          border: theme.colorScheme.primary.withOpacity(0.3),
+          background: theme.colorScheme.primary.withValues(alpha: 0.1),
+          border: theme.colorScheme.primary.withValues(alpha: 0.3),
           dot: theme.colorScheme.primary,
           text: theme.colorScheme.primary,
         );
 
       case OrderStatus.pickedUp:
         return _StatusColors(
-          background: const Color(0xFFFFA500).withOpacity(0.1),
-          border: const Color(0xFFFFA500).withOpacity(0.3),
+          background: const Color(0xFFFFA500).withValues(alpha: 0.1),
+          border: const Color(0xFFFFA500).withValues(alpha: 0.3),
           dot: const Color(0xFFFFA500),
           text: const Color(0xFFFFA500),
         );
 
       case OrderStatus.inTransit:
         return _StatusColors(
-          background: theme.colorScheme.secondary.withOpacity(0.1),
-          border: theme.colorScheme.secondary.withOpacity(0.3),
+          background: theme.colorScheme.secondary.withValues(alpha: 0.1),
+          border: theme.colorScheme.secondary.withValues(alpha: 0.3),
           dot: theme.colorScheme.secondary,
           text: theme.colorScheme.secondary,
         );
 
       case OrderStatus.delivered:
         return _StatusColors(
-          background: theme.colorScheme.secondary.withOpacity(0.1),
-          border: theme.colorScheme.secondary.withOpacity(0.3),
+          background: theme.colorScheme.secondary.withValues(alpha: 0.1),
+          border: theme.colorScheme.secondary.withValues(alpha: 0.3),
           dot: theme.colorScheme.secondary,
           text: theme.colorScheme.secondary,
         );
 
       case OrderStatus.cancelled:
         return _StatusColors(
-          background: theme.colorScheme.error.withOpacity(0.1),
-          border: theme.colorScheme.error.withOpacity(0.3),
+          background: theme.colorScheme.error.withValues(alpha: 0.1),
+          border: theme.colorScheme.error.withValues(alpha: 0.3),
           dot: theme.colorScheme.error,
           text: theme.colorScheme.error,
         );
@@ -101,7 +112,12 @@ class OrderStatusBadge extends StatelessWidget {
 }
 
 class _StatusColors {
-  const _StatusColors({required this.background, required this.border, required this.dot, required this.text});
+  const _StatusColors({
+    required this.background,
+    required this.border,
+    required this.dot,
+    required this.text,
+  });
 
   final Color background;
   final Color border;

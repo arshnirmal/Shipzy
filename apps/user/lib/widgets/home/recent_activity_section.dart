@@ -84,7 +84,7 @@ class _RecentActivityItem extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           border: Border(left: BorderSide(color: isDelivered ? theme.colorScheme.secondary : theme.colorScheme.error, width: 3)),
-          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -118,10 +118,10 @@ class _RecentActivityItem extends StatelessWidget {
             ),
             Text(
               _formatDate(isDelivered ? order.deliveredAt : (isCancelled ? order.cancelledAt : order.createdAt)),
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.4)),
+            Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
           ],
         ),
       ),
@@ -129,7 +129,9 @@ class _RecentActivityItem extends StatelessWidget {
   }
 
   String _formatDate(DateTime? date) {
-    if (date == null) return '';
+    if (date == null) {
+      return '';
+    }
 
     final now = DateTime.now();
     final difference = now.difference(date);

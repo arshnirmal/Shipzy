@@ -33,10 +33,13 @@ class UserLocation extends _$UserLocation {
       }
 
       // Get current position
-      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final position = await Geolocator.getCurrentPosition();
 
       // Reverse geocode to get address
-      final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
 
       final placemark = placemarks.firstOrNull;
       return LocationData(
@@ -45,7 +48,8 @@ class UserLocation extends _$UserLocation {
         city: placemark?.locality ?? '',
         state: placemark?.administrativeArea ?? '',
         country: placemark?.country ?? '',
-        formattedAddress: '${placemark?.locality ?? ''}, ${placemark?.administrativeArea ?? ''}',
+        formattedAddress:
+            '${placemark?.locality ?? ''}, ${placemark?.administrativeArea ?? ''}',
       );
     } catch (e) {
       return null;
