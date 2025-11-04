@@ -46,10 +46,10 @@ export default {
                 '[]'::json
             ) AS labels
 
-        FROM logistics.delivery_types dt
-        LEFT JOIN logistics.delivery_type_capabilities dtc ON dt.delivery_type_id = dtc.delivery_type_id
+        FROM public.delivery_types dt
+        LEFT JOIN public.delivery_type_capabilities dtc ON dt.delivery_type_id = dtc.delivery_type_id
         LEFT JOIN public.weight_tiers wt ON dtc.weight_tier_id = wt.tier_id
-        LEFT JOIN logistics.delivery_type_labels dtl ON dt.delivery_type_id = dtl.delivery_type_id
+        LEFT JOIN public.delivery_type_labels dtl ON dt.delivery_type_id = dtl.delivery_type_id
         LEFT JOIN public.labels l ON dtl.label_id = l.label_id
         WHERE dt.is_active = true
         GROUP BY dt.delivery_type_id
@@ -68,7 +68,7 @@ export default {
             per_km_rate,
             estimated_time_minutes,
             is_active
-        FROM logistics.delivery_types
+        FROM public.delivery_types
         WHERE delivery_type_id = $1
             AND is_active = true
     `,
@@ -132,7 +132,7 @@ export default {
             vc.max_weight_kg,
             vc.icon
         FROM public.vehicle_categories vc
-        JOIN logistics.courier_vehicles cv ON vc.category_id = cv.category_id
+        JOIN public.courier_vehicles cv ON vc.category_id = cv.category_id
         WHERE cv.is_active = true
         ORDER BY vc.max_weight_kg ASC
     `,

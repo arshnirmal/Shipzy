@@ -71,27 +71,15 @@ CREATE TABLE public.user_roles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-DELETE FROM public.user_roles;
-INSERT INTO public.user_roles (name, description) VALUES
-    ('client', 'Customer who books deliveries'),
-    ('courier', 'Delivery driver/rider'),
-    ('admin', 'Platform administrator'),
-    ('business', 'Business customer');
-
 -- Vehicle Categories
 CREATE TABLE public.vehicle_categories (
     category_id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT,
+    max_weight_kg NUMERIC(10, 2),
     icon_url VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-DELETE FROM public.vehicle_categories;
-INSERT INTO public.vehicle_categories (name, description) VALUES
-    ('2-wheeler', 'Two-wheeler motorcycle/scooter'),
-    ('3-wheeler', 'Three-wheeler vehicle'),
-    ('mini-truck', 'Small pickup truck');
 
 -- Order Statuses
 CREATE TABLE public.order_statuses (
@@ -102,17 +90,6 @@ CREATE TABLE public.order_statuses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-DELETE FROM public.order_statuses;
-INSERT INTO public.order_statuses (name, description, display_order) VALUES
-    ('pending', 'Order created, awaiting driver assignment', 1),
-    ('accepted', 'Driver accepted the order', 2),
-    ('picked_up', 'Package picked up from sender', 3),
-    ('in_transit', 'Package in transit to destination', 4),
-    ('delivered', 'Successfully delivered', 5),
-    ('cancelled', 'Order cancelled', 6),
-    ('undeliverable', 'Could not deliver to recipient', 7),
-    ('returned', 'Package returned to sender', 8);
-
 -- Payment Methods
 CREATE TABLE public.payment_methods (
     method_id SERIAL PRIMARY KEY,
@@ -122,12 +99,6 @@ CREATE TABLE public.payment_methods (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-DELETE FROM public.payment_methods;
-INSERT INTO public.payment_methods (name, description) VALUES
-    ('cod', 'Cash on Delivery'),
-    ('prepaid_upi', 'Prepaid via UPI'),
-    ('prepaid_card', 'Prepaid via Credit/Debit Card');
-
 -- Payment Statuses
 CREATE TABLE public.payment_statuses (
     status_id SERIAL PRIMARY KEY,
@@ -135,14 +106,6 @@ CREATE TABLE public.payment_statuses (
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-DELETE FROM public.payment_statuses;
-INSERT INTO public.payment_statuses (name, description) VALUES
-    ('pending', 'Payment not yet received'),
-    ('completed', 'Payment successful'),
-    ('failed', 'Payment failed'),
-    ('refunded', 'Payment refunded'),
-    ('cancelled', 'Payment cancelled');
 
 -- Assignment Statuses
 CREATE TABLE public.assignment_statuses (
@@ -152,17 +115,6 @@ CREATE TABLE public.assignment_statuses (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-DELETE FROM public.assignment_statuses;
-INSERT INTO public.assignment_statuses (name, description) VALUES
-    ('assigned', 'Order assigned to courier'),
-    ('accepted', 'Courier accepted assignment'),
-    ('rejected', 'Courier rejected assignment'),
-    ('picked_up', 'Package picked up'),
-    ('in_transit', 'Package in transit'),
-    ('delivered', 'Package delivered'),
-    ('cancelled', 'Assignment cancelled'),
-    ('returned', 'Package returned');
-
 -- Notification Channels
 CREATE TABLE public.notification_channels (
     channel_id SERIAL PRIMARY KEY,
@@ -171,27 +123,12 @@ CREATE TABLE public.notification_channels (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-DELETE FROM public.notification_channels;
-INSERT INTO public.notification_channels (name, description) VALUES
-    ('push', 'Push notification via FCM'),
-    ('sms', 'SMS notification'),
-    ('email', 'Email notification'),
-    ('in_app', 'In-app notification banner');
-
 -- Notification Statuses
 CREATE TABLE public.notification_statuses (
     status_id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-DELETE FROM public.notification_statuses;
-INSERT INTO public.notification_statuses (name) VALUES
-    ('pending'),
-    ('sent'),
-    ('delivered'),
-    ('read'),
-    ('failed');
 
 -- Labels (for categorization)
 CREATE TABLE public.labels (
@@ -200,11 +137,6 @@ CREATE TABLE public.labels (
     color_hex VARCHAR(7),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-DELETE FROM public.labels;
-INSERT INTO public.labels (name, color_hex) VALUES
-    ('New', '#000000'),
-    ('Save 40%', '#000000');
 
 -- Weight Tiers (for pricing)
 CREATE TABLE public.weight_tiers (
@@ -216,15 +148,6 @@ CREATE TABLE public.weight_tiers (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT weight_tier_min_less_than_max CHECK (min_weight_kg < max_weight_kg)
 );
-
-DELETE FROM public.weight_tiers;
-INSERT INTO public.weight_tiers (name, min_weight_kg, max_weight_kg, additional_charge) VALUES
-    ('Up to 1 kg', 0, 1, 0),
-    ('Up to 5 kg', 1, 5, 20),
-    ('Up to 10 kg', 5, 10, 40),
-    ('Up to 15 kg', 10, 15, 50),
-    ('Up to 20 kg', 15, 20, 60),
-    ('Up to 100 kg', 20, 100, 100);
 
 -- Delivery Types
 CREATE TABLE public.delivery_types (
@@ -238,12 +161,6 @@ CREATE TABLE public.delivery_types (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-DELETE FROM public.delivery_types;
-INSERT INTO public.delivery_types (name, description, base_rate, per_km_rate) VALUES 
-    ('Deliver Now', 'Immediate pickup and dropoff within 1 hour', 50.00, 8.20),
-    ('Scheduled', 'Scheduled deliveries arriving at predetermined times', 40.00, 8.20),
-    ('End-of-day', 'Delivery by close of business', 35.00, 7.50);
-
 -- Package Types
 CREATE TABLE public.package_types (
     package_type_id SERIAL PRIMARY KEY,
@@ -252,7 +169,100 @@ CREATE TABLE public.package_types (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ===================================================================
+-- MASTER/STATIC DATA INSERTS
+-- ===================================================================
+
+-- Clear existing data
+DELETE FROM public.user_roles;
+DELETE FROM public.vehicle_categories;
+DELETE FROM public.order_statuses;
+DELETE FROM public.payment_methods;
+DELETE FROM public.payment_statuses;
+DELETE FROM public.assignment_statuses;
+DELETE FROM public.notification_channels;
+DELETE FROM public.notification_statuses;
+DELETE FROM public.labels;
+DELETE FROM public.weight_tiers;
+DELETE FROM public.delivery_types;
 DELETE FROM public.package_types;
+DELETE FROM public.delivery_type_capabilities;
+DELETE FROM public.delivery_type_labels;
+
+-- Insert master data
+INSERT INTO public.user_roles (name, description) VALUES
+    ('client', 'Customer who books deliveries'),
+    ('courier', 'Delivery driver/rider'),
+    ('admin', 'Platform administrator'),
+    ('business', 'Business customer');
+
+INSERT INTO public.vehicle_categories (name, description, max_weight_kg) VALUES
+    ('2-wheeler', 'Two-wheeler motorcycle/scooter', 20),
+    ('3-wheeler', 'Three-wheeler vehicle', 100),
+    ('mini-truck', 'Small pickup truck', 200);
+
+INSERT INTO public.order_statuses (name, description, display_order) VALUES
+    ('pending', 'Order created, awaiting driver assignment', 1),
+    ('accepted', 'Driver accepted the order', 2),
+    ('picked_up', 'Package picked up from sender', 3),
+    ('in_transit', 'Package in transit to destination', 4),
+    ('delivered', 'Successfully delivered', 5),
+    ('cancelled', 'Order cancelled', 6),
+    ('undeliverable', 'Could not deliver to recipient', 7),
+    ('returned', 'Package returned to sender', 8);
+
+INSERT INTO public.payment_methods (name, description) VALUES
+    ('cod', 'Cash on Delivery'),
+    ('prepaid_upi', 'Prepaid via UPI'),
+    ('prepaid_card', 'Prepaid via Credit/Debit Card');
+
+INSERT INTO public.payment_statuses (name, description) VALUES
+    ('pending', 'Payment not yet received'),
+    ('completed', 'Payment successful'),
+    ('failed', 'Payment failed'),
+    ('refunded', 'Payment refunded'),
+    ('cancelled', 'Payment cancelled');
+
+INSERT INTO public.assignment_statuses (name, description) VALUES
+    ('assigned', 'Order assigned to courier'),
+    ('accepted', 'Courier accepted assignment'),
+    ('rejected', 'Courier rejected assignment'),
+    ('picked_up', 'Package picked up'),
+    ('in_transit', 'Package in transit'),
+    ('delivered', 'Package delivered'),
+    ('cancelled', 'Assignment cancelled'),
+    ('returned', 'Package returned');
+
+INSERT INTO public.notification_channels (name, description) VALUES
+    ('push', 'Push notification via FCM'),
+    ('sms', 'SMS notification'),
+    ('email', 'Email notification'),
+    ('in_app', 'In-app notification banner');
+
+INSERT INTO public.notification_statuses (name) VALUES
+    ('pending'),
+    ('sent'),
+    ('delivered'),
+    ('read'),
+    ('failed');
+
+INSERT INTO public.labels (name, color_hex) VALUES
+    ('New', '#000000'),
+    ('Save 40%', '#000000');
+
+INSERT INTO public.weight_tiers (name, min_weight_kg, max_weight_kg, additional_charge) VALUES
+    ('Up to 1 kg', 0, 1, 0),
+    ('Up to 5 kg', 1, 5, 20),
+    ('Up to 10 kg', 5, 10, 40),
+    ('Up to 15 kg', 10, 15, 100),
+    ('Up to 20 kg', 15, 20, 150),
+    ('Up to 100 kg', 20, 100, 100);
+
+INSERT INTO public.delivery_types (name, description, base_rate, per_km_rate) VALUES
+    ('Deliver Now', 'Immediate pickup and dropoff within 1 hour', 50.00, 8.20),
+    ('Scheduled', 'Scheduled deliveries arriving at predetermined times', 40.00, 8.20),
+    ('End-of-day', 'Delivery by close of business', 35.00, 7.50);
+
 INSERT INTO public.package_types (name, description) VALUES
     ('Document', 'Document package'),
     ('Food', 'Food package'),
@@ -263,6 +273,19 @@ INSERT INTO public.package_types (name, description) VALUES
     ('Grocery', 'Grocery package'),
     ('Pet Supplies', 'Pet Supplies package'),
     ('Other', 'Other package');
+
+INSERT INTO public.delivery_type_capabilities (delivery_type_id, weight_tier_id) VALUES
+    (1, 1),
+    (1, 2),
+    (1, 3),
+    (1, 4),
+    (1, 5),
+    (2, 6),
+    (3, 6);
+
+INSERT INTO public.delivery_type_labels (delivery_type_id, label_id) VALUES
+    (2, 1),
+    (3, 2);
 
 -- ===================================================================
 -- SECTION 5: USERS SCHEMA
@@ -331,9 +354,9 @@ CREATE TABLE users.addresses (
     user_id INT NOT NULL REFERENCES users.profiles (user_id) ON DELETE CASCADE,
     address_type VARCHAR(50), -- 'home', 'work', 'other'
     label VARCHAR(100),
-    building_name VARCHAR(100),
-    floor_number VARCHAR(10),
-    room_number VARCHAR(10),
+    building VARCHAR(100),
+    floor VARCHAR(10),
+    flat_number VARCHAR(10),
     full_address TEXT NOT NULL,
     landmark VARCHAR(255),
     city VARCHAR(100) NOT NULL,
@@ -377,34 +400,19 @@ FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
 -- SECTION 6: LOGISTICS SCHEMA
 -- ===================================================================
 
--- Delivery Type Capabilities (Junction Table - FIXED from array)
-CREATE TABLE logistics.delivery_type_capabilities (
+-- Delivery Type Capabilities (Junction Table - moved to SECTION 4)
+CREATE TABLE public.delivery_type_capabilities (
     delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id) ON DELETE CASCADE,
     weight_tier_id INT NOT NULL REFERENCES public.weight_tiers (tier_id) ON DELETE CASCADE,
     PRIMARY KEY (delivery_type_id, weight_tier_id)
 );
 
-DELETE FROM logistics.delivery_type_capabilities;
-INSERT INTO logistics.delivery_type_capabilities (delivery_type_id, weight_tier_id) VALUES
-    (1, 1),
-    (1, 2),
-    (1, 3),
-    (1, 4),
-    (1, 5),
-    (2, 6),
-    (3, 6);
-
--- Delivery Type Labels (Junction Table)
-CREATE TABLE logistics.delivery_type_labels (
+-- Delivery Type Labels (Junction Table - moved to SECTION 4)
+CREATE TABLE public.delivery_type_labels (
     delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id) ON DELETE CASCADE,
     label_id INT NOT NULL REFERENCES public.labels (label_id) ON DELETE CASCADE,
     PRIMARY KEY (delivery_type_id, label_id)
 );
-
-DELETE FROM logistics.delivery_type_labels;
-INSERT INTO logistics.delivery_type_labels (delivery_type_id, label_id) VALUES
-    (2, 1),
-    (3, 2);
 
 -- Courier Vehicles
 CREATE TABLE logistics.courier_vehicles (
@@ -481,6 +489,9 @@ CREATE INDEX idx_logistics_locations_location ON logistics.locations USING GIST 
 CREATE TABLE orders.requests (
     order_id SERIAL PRIMARY KEY,
     order_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+    ordernumber VARCHAR(50) GENERATED ALWAYS AS (
+        'ORD-' || TO_CHAR(createdat, 'YYYYMMDD') || '-' || LPAD(orderid::TEXT, 5, '0')
+    ) STORED,
     client_id INT NOT NULL REFERENCES users.profiles (user_id) ON DELETE CASCADE,
     delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id),
     status_id INT NOT NULL REFERENCES public.order_statuses (status_id),

@@ -29,7 +29,7 @@ class StaticService {
     } catch (error) {
       logger.error({
         msg: "Error getting delivery types",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -52,7 +52,7 @@ class StaticService {
     } catch (error) {
       logger.error({
         msg: "Error getting weight tiers",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -69,12 +69,13 @@ class StaticService {
         categoryId: cat.category_id,
         name: cat.name,
         description: cat.description,
-        maxWeightKg: parseFloat(cat.max_weight_kg),
+        maxWeightKg: cat.max_weight_kg,
         icon: cat.icon,
       }));
     } catch (error) {
-      logger.error("Error getting vehicle categories", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting vehicle categories",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -96,7 +97,7 @@ class StaticService {
     } catch (error) {
       logger.error({
         msg: "Error getting package types",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -119,7 +120,7 @@ class StaticService {
     } catch (error) {
       logger.error({
         msg: "Error getting payment methods",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -154,7 +155,7 @@ class StaticService {
     } catch (error) {
       logger.error({
         msg: "Error getting create order data",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -175,7 +176,7 @@ class StaticService {
     } catch (error) {
       logger.error({
         msg: "Error getting order statuses",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -184,7 +185,7 @@ class StaticService {
   /**
    * Helper: Format estimated time for display
    */
-  _formatEstimatedTime(minutes) {
+  _formatEstimatedTime(minutes: number) {
     if (!minutes) return null;
 
     if (minutes < 60) {

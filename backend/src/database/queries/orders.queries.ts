@@ -98,7 +98,7 @@ export default {
           
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
-      JOIN logistics.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.payment_methods pm ON o.payment_method_id = pm.method_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
@@ -132,8 +132,8 @@ export default {
           cu.profile_picture_url AS courier_photo
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
-      JOIN logistics.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
+      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
@@ -189,7 +189,7 @@ export default {
           o.estimated_distance_km
 
       FROM orders.requests o
-      JOIN logistics.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       WHERE o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'pending')
@@ -375,7 +375,7 @@ export default {
           per_km_rate,
           estimated_time_minutes,
           is_active
-      FROM logistics.delivery_types
+      FROM public.delivery_types
       WHERE is_active = true
       ORDER BY base_rate ASC
   `,

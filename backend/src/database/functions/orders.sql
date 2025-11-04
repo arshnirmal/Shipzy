@@ -30,7 +30,7 @@ BEGIN
     -- Get delivery type rates
     SELECT base_rate, per_km_rate
     INTO v_base_rate, v_per_km_rate
-    FROM logistics.delivery_types
+    FROM public.delivery_types
     WHERE delivery_type_id = p_delivery_type_id
         AND is_active = true;
     
