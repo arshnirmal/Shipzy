@@ -113,9 +113,10 @@ export default {
         phone_number,
         full_name,
         email,
+        password_hash,
         is_verified
       )
-      VALUES ($1, $2, $3, $4, $5, true)
+      VALUES ($1, $2, $3, $4, $5, $6, true)
       RETURNING
         user_id,
         user_uuid,

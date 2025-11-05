@@ -13,17 +13,15 @@ class StaticService {
       return deliveryTypes.map((dt) => ({
         deliveryTypeId: dt.delivery_type_id,
         name: dt.name,
+        displayName: dt.display_name,
         description: dt.description,
         pricing: {
-          baseRate: parseFloat(dt.base_rate),
-          perKmRate: parseFloat(dt.per_km_rate),
+          baseRate: Number.parseFloat(dt.base_rate),
+          perKmRate: Number.parseFloat(dt.per_km_rate),
         },
-        estimatedTimeMinutes: dt.estimated_time_minutes,
-        estimatedTimeDisplay: this._formatEstimatedTime(
-          dt.estimated_time_minutes,
-        ),
-        supportedWeightTiers: dt.supported_weight_tiers || [],
         labels: dt.labels || [],
+        supportedVehicles: dt.supported_vehicles || [],
+        sortOrder: dt.sort_order,
         isActive: dt.is_active,
       }));
     } catch (error) {
@@ -45,9 +43,9 @@ class StaticService {
       return tiers.map((tier) => ({
         tierId: tier.tier_id,
         name: tier.name,
-        minWeightKg: parseFloat(tier.min_weight_kg),
-        maxWeightKg: parseFloat(tier.max_weight_kg),
-        additionalCharge: parseFloat(tier.additional_charge),
+        minWeightKg: Number.parseFloat(tier.min_weight_kg),
+        maxWeightKg: Number.parseFloat(tier.max_weight_kg),
+        additionalCharge: Number.parseFloat(tier.additional_charge),
       }));
     } catch (error) {
       logger.error({
@@ -179,23 +177,6 @@ class StaticService {
         error: (error as Error).message,
       });
       throw error;
-    }
-  }
-
-  /**
-   * Helper: Format estimated time for display
-   */
-  _formatEstimatedTime(minutes: number) {
-    if (!minutes) return null;
-
-    if (minutes < 60) {
-      return `${minutes} mins`;
-    } else if (minutes < 1440) {
-      const hours = Math.floor(minutes / 60);
-      return `${hours} ${hours === 1 ? "hour" : "hours"}`;
-    } else {
-      const days = Math.floor(minutes / 1440);
-      return `${days} ${days === 1 ? "day" : "days"}`;
     }
   }
 }

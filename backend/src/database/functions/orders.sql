@@ -10,8 +10,9 @@
 -- ========================================
 CREATE OR REPLACE FUNCTION orders.calculate_fare(
     p_delivery_type_id INT,
+    p_vehicle_category_id INT,
     p_distance_km NUMERIC,
-    p_weight_kg NUMERIC DEFAULT 0
+    p_weight_kg NUMERIC
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -20,55 +21,118 @@ AS $$
 DECLARE
     v_base_rate NUMERIC;
     v_per_km_rate NUMERIC;
-    v_weight_additional_charge NUMERIC := 0;
+    v_weight_surcharge NUMERIC := 0;
     v_base_price NUMERIC;
     v_distance_price NUMERIC;
-    v_weight_surcharge NUMERIC;
     v_total_price NUMERIC;
+    v_max_weight NUMERIC;
     result JSON;
 BEGIN
-    -- Get delivery type rates
-    SELECT base_rate, per_km_rate
+    -- ============================================================
+    -- STEP 1: Validate vehicle category supports this delivery type
+    -- ============================================================
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM public.delivery_type_capabilities dtc
+        WHERE dtc.delivery_type_id = p_delivery_type_id
+          AND dtc.vehicle_category_id = p_vehicle_category_id
+          AND dtc.is_active = TRUE
+        LIMIT 1
+    ) THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'Vehicle category not supported for this delivery type',
+            'error_code', 'INVALID_VEHICLE_DELIVERY_COMBO'
+        );
+    END IF;
+    
+    -- ============================================================
+    -- STEP 2: Check if weight exceeds vehicle capacity
+    -- ============================================================
+    SELECT max_weight_kg INTO v_max_weight
+    FROM public.vehicle_categories
+    WHERE category_id = p_vehicle_category_id
+      AND is_active = TRUE;
+    
+    IF p_weight_kg > v_max_weight THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'Weight exceeds vehicle capacity',
+            'error_code', 'WEIGHT_EXCEEDS_CAPACITY',
+            'max_weight_kg', v_max_weight
+        );
+    END IF;
+    
+    -- ============================================================
+    -- STEP 3: Get base and per-km rates (with override support)
+    -- ============================================================
+    SELECT 
+        COALESCE(dtc.base_rate_override, dt.base_rate),
+        COALESCE(dtc.per_km_rate_override, dt.per_km_rate)
     INTO v_base_rate, v_per_km_rate
-    FROM public.delivery_types
-    WHERE delivery_type_id = p_delivery_type_id
-        AND is_active = true;
+    FROM public.delivery_types dt
+    LEFT JOIN public.delivery_type_capabilities dtc 
+        ON dt.delivery_type_id = dtc.delivery_type_id
+        AND dtc.vehicle_category_id = p_vehicle_category_id
+        AND dtc.is_active = TRUE
+    WHERE dt.delivery_type_id = p_delivery_type_id
+      AND dt.is_active = TRUE
+    LIMIT 1;
     
     IF NOT FOUND THEN
         RETURN json_build_object(
-            'success', false,
+            'success', FALSE,
             'error', 'Invalid delivery type',
             'error_code', 'INVALID_DELIVERY_TYPE'
         );
     END IF;
     
-    -- Get weight tier surcharge if weight provided
-    IF p_weight_kg > 0 THEN
-        SELECT additional_charge INTO v_weight_additional_charge
-        FROM public.weight_tiers
-        WHERE p_weight_kg >= min_weight_kg
-            AND p_weight_kg < max_weight_kg
-        LIMIT 1;
-        
-        v_weight_additional_charge := COALESCE(v_weight_additional_charge, 0);
+    -- ============================================================
+    -- STEP 4: Get weight tier surcharge
+    -- IMPORTANT: Only from tiers supported by this delivery+vehicle combo
+    -- ============================================================
+    SELECT wt.additional_charge
+    INTO v_weight_surcharge
+    FROM public.weight_tiers wt
+    JOIN public.delivery_type_capabilities dtc 
+        ON wt.tier_id = dtc.weight_tier_id
+    WHERE dtc.delivery_type_id = p_delivery_type_id
+      AND dtc.vehicle_category_id = p_vehicle_category_id
+      AND dtc.is_active = TRUE
+      AND p_weight_kg > wt.min_weight_kg 
+      AND p_weight_kg <= wt.max_weight_kg
+    LIMIT 1;
+    
+    -- If no exact tier found, weight might be invalid
+    IF v_weight_surcharge IS NULL THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', 'No pricing available for this weight',
+            'error_code', 'INVALID_WEIGHT_FOR_COMBO',
+            'weight_kg', p_weight_kg
+        );
     END IF;
     
-    -- Calculate fare components
+    -- ============================================================
+    -- STEP 5: Calculate final price
+    -- ============================================================
     v_base_price := v_base_rate;
     v_distance_price := ROUND(p_distance_km * v_per_km_rate, 2);
-    v_weight_surcharge := v_weight_additional_charge;
     v_total_price := v_base_price + v_distance_price + v_weight_surcharge;
     
-    -- Build result
+    -- ============================================================
+    -- STEP 6: Return structured result
+    -- ============================================================
     result := json_build_object(
-        'success', true,
+        'success', TRUE,
         'fare_breakdown', json_build_object(
             'base_price', v_base_price,
             'distance_km', p_distance_km,
             'distance_price', v_distance_price,
             'weight_kg', p_weight_kg,
             'weight_surcharge', v_weight_surcharge,
-            'total_price', v_total_price
+            'total_price', v_total_price,
+            'currency', 'INR'
         )
     );
     
@@ -76,7 +140,7 @@ BEGIN
     
 EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object(
-        'success', false,
+        'success', FALSE,
         'error', SQLERRM,
         'error_code', 'CALCULATION_ERROR'
     );
@@ -99,6 +163,7 @@ AS $$
 DECLARE
     v_client_id INT;
     v_delivery_type_id INT;
+    v_vehicle_category_id INT;
     v_payment_method_id INT;
     v_pickup_location_id INT;
     v_delivery_location_id INT;
@@ -113,24 +178,50 @@ DECLARE
     result JSON;
 BEGIN
     -- Extract and validate required fields
-    v_client_id := (p_order_data->>'client_id')::INT;
-    v_delivery_type_id := (p_order_data->>'delivery_type_id')::INT;
-    v_payment_method_id := (p_order_data->>'payment_method_id')::INT;
+    v_client_id := (p_order_data->>'clientId')::INT;
+    v_delivery_type_id := (p_order_data->>'deliveryTypeId')::INT;
+    v_vehicle_category_id := (p_order_data->>'vehicleCategoryId')::INT;
+    v_payment_method_id := (p_order_data->>'paymentMethodId')::INT;
     
     -- Validate client exists
-    IF NOT EXISTS (SELECT 1 FROM users.profiles WHERE user_id = v_client_id AND is_active = true) THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM users.profiles 
+        WHERE user_id = v_client_id AND is_active = true
+    ) THEN
         RETURN json_build_object('success', false, 'error', 'Invalid client_id');
     END IF;
     
-    -- Get pending status
-    SELECT status_id INTO v_status_id FROM public.order_statuses WHERE name = 'pending';
+    -- VALIDATE: Vehicle category is supported for this delivery type
+    IF NOT EXISTS (
+        SELECT 1 FROM public.delivery_type_capabilities
+        WHERE delivery_type_id = v_delivery_type_id
+          AND vehicle_category_id = v_vehicle_category_id
+          AND is_active = TRUE
+    ) THEN
+        RETURN json_build_object(
+            'success', false, 
+            'error', 'Vehicle category not supported for this delivery type'
+        );
+    END IF;
+    
+    -- Get 'pending' status
+    SELECT status_id INTO v_status_id 
+    FROM public.order_statuses 
+    WHERE name = 'pending';
     
     -- Calculate fare
-    SELECT orders.calculate_fare(
+    SELECT * INTO v_fare_calculation
+    FROM orders.calculate_fare(
         v_delivery_type_id,
-        (p_order_data->>'estimated_distance_km')::NUMERIC,
-        (p_order_data->>'package_weight_kg')::NUMERIC
-    ) INTO v_fare_calculation;
+        v_vehicle_category_id,
+        (p_order_data->>'estimatedDistanceKm')::NUMERIC,
+        (p_order_data->>'packageWeightKg')::NUMERIC
+    );
+    
+    -- Check if fare calculation was successful
+    IF NOT (v_fare_calculation->>'success')::BOOLEAN THEN
+        RETURN v_fare_calculation;  -- Return the error from calculate_fare
+    END IF;
     
     -- Extract fare components
     v_base_price := (v_fare_calculation->'fare_breakdown'->>'base_price')::NUMERIC;
@@ -143,8 +234,7 @@ BEGIN
         address, latitude, longitude, location,
         city, state, postal_code, landmark,
         contact_name, contact_phone
-    )
-    VALUES (
+    ) VALUES (
         p_order_data->'pickup'->>'address',
         (p_order_data->'pickup'->>'latitude')::NUMERIC,
         (p_order_data->'pickup'->>'longitude')::NUMERIC,
@@ -157,20 +247,18 @@ BEGIN
         )::geography,
         p_order_data->'pickup'->>'city',
         p_order_data->'pickup'->>'state',
-        p_order_data->'pickup'->>'postal_code',
+        p_order_data->'pickup'->>'postalCode',
         p_order_data->'pickup'->>'landmark',
-        p_order_data->'pickup'->>'contact_name',
-        p_order_data->'pickup'->>'contact_phone'
-    )
-    RETURNING location_id INTO v_pickup_location_id;
+        p_order_data->'pickup'->>'contactName',
+        p_order_data->'pickup'->>'contactPhone'
+    ) RETURNING location_id INTO v_pickup_location_id;
     
     -- Create delivery location
     INSERT INTO logistics.locations (
         address, latitude, longitude, location,
         city, state, postal_code, landmark,
         contact_name, contact_phone
-    )
-    VALUES (
+    ) VALUES (
         p_order_data->'delivery'->>'address',
         (p_order_data->'delivery'->>'latitude')::NUMERIC,
         (p_order_data->'delivery'->>'longitude')::NUMERIC,
@@ -183,17 +271,17 @@ BEGIN
         )::geography,
         p_order_data->'delivery'->>'city',
         p_order_data->'delivery'->>'state',
-        p_order_data->'delivery'->>'postal_code',
+        p_order_data->'delivery'->>'postalCode',
         p_order_data->'delivery'->>'landmark',
-        p_order_data->'delivery'->>'contact_name',
-        p_order_data->'delivery'->>'contact_phone'
-    )
-    RETURNING location_id INTO v_delivery_location_id;
+        p_order_data->'delivery'->>'contactName',
+        p_order_data->'delivery'->>'contactPhone'
+    ) RETURNING location_id INTO v_delivery_location_id;
     
     -- Create order
     INSERT INTO orders.requests (
         client_id,
         delivery_type_id,
+        vehicle_category_id,
         status_id,
         pickup_location_id,
         delivery_location_id,
@@ -212,40 +300,40 @@ BEGIN
         total_price,
         payment_method_id,
         scheduled_pickup_time
-    )
-    VALUES (
+    ) VALUES (
         v_client_id,
         v_delivery_type_id,
+        v_vehicle_category_id,
         v_status_id,
         v_pickup_location_id,
         v_delivery_location_id,
-        p_order_data->'pickup'->>'contact_name',
-        p_order_data->'pickup'->>'contact_phone',
-        p_order_data->'delivery'->>'contact_name',
-        p_order_data->'delivery'->>'contact_phone',
-        p_order_data->>'package_description',
-        (p_order_data->>'package_weight_kg')::NUMERIC,
-        p_order_data->'package_dimensions',
-        p_order_data->>'special_instructions',
-        (p_order_data->>'estimated_distance_km')::NUMERIC,
+        p_order_data->'pickup'->>'contactName',
+        p_order_data->'pickup'->>'contactPhone',
+        p_order_data->'delivery'->>'contactName',
+        p_order_data->'delivery'->>'contactPhone',
+        p_order_data->>'packageDescription',
+        (p_order_data->>'packageWeightKg')::NUMERIC,
+        p_order_data->>'packageDimensions',
+        p_order_data->>'specialInstructions',
+        (p_order_data->>'estimatedDistanceKm')::NUMERIC,
         v_base_price,
         v_distance_price,
         v_weight_surcharge,
         v_total_price,
         v_payment_method_id,
-        (p_order_data->>'scheduled_pickup_time')::TIMESTAMPTZ
-    )
-    RETURNING order_id, order_uuid INTO v_order_id, v_order_uuid;
+        (p_order_data->>'scheduledPickupTime')::TIMESTAMPTZ
+    ) RETURNING order_id, order_uuid INTO v_order_id, v_order_uuid;
     
     -- Build success response
     result := json_build_object(
         'success', true,
         'order', json_build_object(
-            'order_id', v_order_id,
-            'order_uuid', v_order_uuid,
+            'orderId', v_order_id,
+            'orderUuid', v_order_uuid,
+            'orderNumber', (SELECT order_number FROM orders.requests WHERE order_id = v_order_id),
             'status', 'pending',
-            'total_price', v_total_price,
-            'created_at', NOW()
+            'totalPrice', v_total_price,
+            'createdAt', NOW()
         )
     );
     

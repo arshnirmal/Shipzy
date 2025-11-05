@@ -24,6 +24,7 @@ interface UserProfile {
 interface UpdateProfileData {
   fullName?: string;
   email?: string;
+  profilePictureUrl?: string;
 }
 
 interface AddressData {

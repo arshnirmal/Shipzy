@@ -12,7 +12,7 @@ export default {
    * Call stored function: Calculate fare
    */
   CALL_CALCULATE_FARE: `
-      SELECT orders.calculate_fare($1, $2, $3) AS result
+      SELECT orders.calculate_fare($1, $2, $3, $4) AS result
   `,
 
   /**
@@ -38,6 +38,7 @@ export default {
       SELECT 
           o.order_id,
           o.order_uuid,
+          o.order_number,
           o.client_id,
           u.full_name AS client_name,
           u.phone_number AS client_phone,
@@ -45,6 +46,9 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          o.vehicle_category_id,
+          vc.name AS vehicle_category, 
+          vc.display_name AS vehicle_category_display,
           o.package_description,
           o.package_weight_kg,
           o.package_dimensions,
@@ -64,6 +68,9 @@ export default {
           
           -- Pickup details
           pl.location_id AS pickup_location_id,
+          pl.building_name AS pickup_building,
+          pl.floor_number AS pickup_floor,
+          pl.room_number AS pickup_flat,
           pl.address AS pickup_address,
           pl.landmark AS pickup_landmark,
           pl.city AS pickup_city,
@@ -73,9 +80,12 @@ export default {
           ST_X(pl.location::geometry) AS pickup_longitude,
           o.pickup_contact_name,
           o.pickup_contact_phone,
-          
+
           -- Delivery details
           dl.location_id AS delivery_location_id,
+          dl.building_name AS delivery_building,
+          dl.floor_number AS delivery_floor,
+          dl.room_number AS delivery_flat,
           dl.address AS delivery_address,
           dl.landmark AS delivery_landmark,
           dl.city AS delivery_city,
@@ -91,6 +101,7 @@ export default {
           ca.courier_id,
           cu.full_name AS courier_name,
           cu.phone_number AS courier_phone,
+          cu.profile_picture_url AS courier_photo,
           ca.assignment_status_id,
           ast.name AS assignment_status,
           ca.assigned_at,
@@ -99,6 +110,7 @@ export default {
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       JOIN public.payment_methods pm ON o.payment_method_id = pm.method_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
@@ -107,7 +119,8 @@ export default {
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
       LEFT JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       WHERE o.order_id = $1
-          AND o.deleted_at IS NULL
+      AND o.deleted_at IS NULL
+
   `,
 
   /**
@@ -122,6 +135,8 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          o.vehicle_category_id,
+          vc.name AS vehicle_category,
           o.package_description,
           o.total_price,
           o.created_at,
@@ -133,7 +148,8 @@ export default {
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-      JOIN public.locations pl ON o.pickup_location_id = pl.location_id
+      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
+      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
@@ -359,24 +375,5 @@ export default {
               WHERE name IN ('delivered', 'cancelled', 'rejected')
           )
       ORDER BY ca.assigned_at DESC
-  `,
-
-  // ============ DELIVERY TYPES ============
-
-  /**
-   * Get all active delivery types
-   */
-  GET_DELIVERY_TYPES: `
-      SELECT 
-          delivery_type_id,
-          name,
-          description,
-          base_rate,
-          per_km_rate,
-          estimated_time_minutes,
-          is_active
-      FROM public.delivery_types
-      WHERE is_active = true
-      ORDER BY base_rate ASC
   `,
 };

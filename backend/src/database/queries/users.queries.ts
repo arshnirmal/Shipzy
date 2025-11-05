@@ -137,7 +137,7 @@ export default {
       )
       VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-          ST_SetSRID(ST_MakePoint($13, $12), 4326)::geography,
+          ST_SetSRID(ST_MakePoint($12, $13), 4326)::geography,
           $14
       )
       RETURNING

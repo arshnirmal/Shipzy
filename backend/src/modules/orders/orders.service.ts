@@ -16,6 +16,7 @@ interface FareData {
 
 interface OrderData {
   deliveryTypeId: number;
+  vehicleCategoryId: number;
   paymentMethodId: number;
   pickup: {
     addressId: number;
@@ -114,6 +115,7 @@ class OrdersService {
       // Validate required fields
       const requiredFields = [
         "deliveryTypeId",
+        "vehicleCategoryId",
         "paymentMethodId",
         "pickup",
         "delivery",
@@ -156,22 +158,20 @@ class OrdersService {
 
       // Prepare order data for stored function
       const orderPayload = {
-        client_id: clientId,
-        delivery_type_id: orderData.deliveryTypeId,
-        payment_method_id: orderData.paymentMethodId,
+        clientId: clientId,
+        deliveryTypeId: orderData.deliveryTypeId,
+        vehicleCategoryId: orderData.vehicleCategoryId, // Missing this field
+        paymentMethodId: orderData.paymentMethodId,
         pickup: {
           address: orderData.pickup.address,
           latitude: orderData.pickup.latitude,
           longitude: orderData.pickup.longitude,
           city: orderData.pickup.city,
           state: orderData.pickup.state,
-          postal_code: orderData.pickup.postalCode,
+          postalCode: orderData.pickup.postalCode,
           landmark: orderData.pickup.landmark || null,
-          building: orderData.pickup.building || null,
-          floor: orderData.pickup.floor || null,
-          flat_number: orderData.pickup.flatNumber || null,
-          contact_name: orderData.pickup.contactName,
-          contact_phone: orderData.pickup.contactPhone,
+          contactName: orderData.pickup.contactName,
+          contactPhone: orderData.pickup.contactPhone,
         },
         delivery: {
           address: orderData.delivery.address,
@@ -179,20 +179,17 @@ class OrdersService {
           longitude: orderData.delivery.longitude,
           city: orderData.delivery.city,
           state: orderData.delivery.state,
-          postal_code: orderData.delivery.postalCode,
+          postalCode: orderData.delivery.postalCode,
           landmark: orderData.delivery.landmark || null,
-          building: orderData.delivery.building || null,
-          floor: orderData.delivery.floor || null,
-          flat_number: orderData.delivery.flatNumber || null,
-          contact_name: orderData.delivery.contactName,
-          contact_phone: orderData.delivery.contactPhone,
+          contactName: orderData.delivery.contactName,
+          contactPhone: orderData.delivery.contactPhone,
         },
-        package_description: orderData.packageDescription || null,
-        package_weight_kg: orderData.packageWeightKg || 0,
-        package_dimensions: orderData.packageDimensions || null,
-        special_instructions: orderData.specialInstructions || null,
-        estimated_distance_km: orderData.estimatedDistanceKm,
-        scheduled_pickup_time: orderData.scheduledPickupTime || null,
+        packageDescription: orderData.packageDescription || null,
+        packageWeightKg: orderData.packageWeightKg || 0,
+        packageDimensions: orderData.packageDimensions || null,
+        specialInstructions: orderData.specialInstructions || null,
+        estimatedDistanceKm: orderData.estimatedDistanceKm,
+        scheduledPickupTime: orderData.scheduledPickupTime || null,
       };
 
       const result = await ordersRepository.createOrder(orderPayload);

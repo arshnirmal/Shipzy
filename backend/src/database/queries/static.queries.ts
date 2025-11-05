@@ -11,49 +11,47 @@ export default {
    * Get all active delivery types with pricing
    */
   GET_DELIVERY_TYPES: `
-        SELECT
-            dt.delivery_type_id,
-            dt.name,
-            dt.description,
-            dt.base_rate,
-            dt.per_km_rate,
-            dt.estimated_time_minutes,
-            dt.is_active,
-
-            -- Get supported weight tiers
-            COALESCE(
-                json_agg(
-                    json_build_object(
-                        'tier_id', wt.tier_id,
-                        'name', wt.name,
-                        'min_weight_kg', wt.min_weight_kg,
-                        'max_weight_kg', wt.max_weight_kg,
-                        'additional_charge', wt.additional_charge
-                    ) ORDER BY wt.min_weight_kg
-                ) FILTER (WHERE wt.tier_id IS NOT NULL),
-                '[]'::json
-            ) AS supported_weight_tiers,
-
-            -- Get applicable labels/tags
-            COALESCE(
-                json_agg(
-                    DISTINCT jsonb_build_object(
-                        'label_id', l.label_id,
-                        'name', l.name,
-                        'icon', l.icon
-                    )
-                ) FILTER (WHERE l.label_id IS NOT NULL),
-                '[]'::json
-            ) AS labels
-
-        FROM public.delivery_types dt
-        LEFT JOIN public.delivery_type_capabilities dtc ON dt.delivery_type_id = dtc.delivery_type_id
-        LEFT JOIN public.weight_tiers wt ON dtc.weight_tier_id = wt.tier_id
-        LEFT JOIN public.delivery_type_labels dtl ON dt.delivery_type_id = dtl.delivery_type_id
-        LEFT JOIN public.labels l ON dtl.label_id = l.label_id
-        WHERE dt.is_active = true
-        GROUP BY dt.delivery_type_id
-        ORDER BY dt.base_rate ASC
+    SELECT 
+        dt.delivery_type_id,
+        dt.name,
+        dt.display_name,
+        dt.description,
+        dt.base_rate,
+        dt.per_km_rate,
+        dt.sort_order,
+        dt.is_active,
+        
+        -- Promotional labels (NEW, 40% OFF, etc.)
+        COALESCE(
+        json_agg(DISTINCT jsonb_build_object(
+            'labelId', l.label_id,
+            'text', l.display_text,
+            'color', l.color,
+            'backgroundColor', l.background_color
+        ) ORDER BY dtl.display_order) FILTER (WHERE l.label_id IS NOT NULL),
+        '[]'::json
+        ) AS labels,
+        
+        -- Supported vehicle categories with max weights
+        COALESCE(
+        json_agg(DISTINCT jsonb_build_object(
+            'categoryId', vc.category_id,
+            'name', vc.name,
+            'displayName', vc.display_name,
+            'maxWeightKg', vc.max_weight_kg,
+            'iconUrl', vc.icon_url
+        )) FILTER (WHERE vc.category_id IS NOT NULL),
+        '[]'::json
+        ) AS supported_vehicles
+        
+    FROM public.delivery_types dt
+    LEFT JOIN public.delivery_type_labels dtl ON dt.delivery_type_id = dtl.delivery_type_id
+    LEFT JOIN public.labels l ON dtl.label_id = l.label_id AND l.is_active = TRUE
+    LEFT JOIN public.delivery_type_capabilities dtc ON dt.delivery_type_id = dtc.delivery_type_id AND dtc.is_active = TRUE
+    LEFT JOIN public.vehicle_categories vc ON dtc.vehicle_category_id = vc.category_id AND vc.is_active = TRUE
+    WHERE dt.is_active = TRUE
+    GROUP BY dt.delivery_type_id
+    ORDER BY dt.sort_order ASC
     `,
 
   /**
@@ -66,7 +64,6 @@ export default {
             description,
             base_rate,
             per_km_rate,
-            estimated_time_minutes,
             is_active
         FROM public.delivery_types
         WHERE delivery_type_id = $1
@@ -79,7 +76,7 @@ export default {
    * Get all weight tiers
    */
   GET_WEIGHT_TIERS: `
-        SELECT
+        SELECT 
             tier_id,
             name,
             min_weight_kg,
@@ -111,13 +108,16 @@ export default {
    * Get all vehicle categories
    */
   GET_VEHICLE_CATEGORIES: `
-        SELECT
+        SELECT 
             category_id,
             name,
+            display_name,
             description,
             max_weight_kg,
-            icon
+            icon_url,
+            is_active
         FROM public.vehicle_categories
+        WHERE is_active = TRUE
         ORDER BY max_weight_kg ASC
     `,
 
@@ -209,4 +209,77 @@ export default {
         FROM public.assignment_statuses
         ORDER BY status_id ASC
     `,
+
+  /**
+   * Get weight tiers for a specific delivery type + vehicle combination
+   */
+  GET_WEIGHT_TIERS_FOR_COMBO: `
+        SELECT 
+            wt.tier_id,
+            wt.name,
+            wt.min_weight_kg,
+            wt.max_weight_kg,
+            wt.additional_charge
+        FROM public.weight_tiers wt
+        JOIN public.delivery_type_capabilities dtc 
+        ON wt.tier_id = dtc.weight_tier_id
+        WHERE dtc.delivery_type_id = $1
+        AND dtc.vehicle_category_id = $2
+        AND dtc.is_active = TRUE
+        ORDER BY wt.min_weight_kg ASC
+
+    `,
+
+  /**
+   * Get complete delivery options for order creation UI
+   * Returns delivery types with supported vehicles and labels
+   */
+  GET_DELIVERY_OPTIONS: `
+        SELECT 
+            dt.delivery_type_id,
+            dt.name,
+            dt.display_name,
+            dt.description,
+            dt.base_rate,
+            dt.per_km_rate,
+            dt.sort_order,
+            dt.is_active,
+            
+            -- Labels (promotional tags like "NEW", "40% OFF")
+            COALESCE(
+                json_agg(DISTINCT jsonb_build_object(
+                'labelId', l.label_id,
+                'name', l.name,
+                'displayText', l.display_text,
+                'color', l.color,
+                'backgroundColor', l.background_color
+                ) ORDER BY dtl.display_order) FILTER (WHERE l.label_id IS NOT NULL),
+                '[]'::json
+            ) AS labels,
+            
+            -- Supported vehicle categories
+            COALESCE(
+                json_agg(DISTINCT jsonb_build_object(
+                'categoryId', vc.category_id,
+                'name', vc.name,
+                'displayName', vc.display_name,
+                'maxWeightKg', vc.max_weight_kg,
+                'iconUrl', vc.icon_url
+                )) FILTER (WHERE vc.category_id IS NOT NULL),
+                '[]'::json
+            ) AS supported_vehicles
+            
+        FROM public.delivery_types dt
+        LEFT JOIN public.delivery_type_labels dtl 
+        ON dt.delivery_type_id = dtl.delivery_type_id
+        LEFT JOIN public.labels l 
+        ON dtl.label_id = l.label_id AND l.is_active = TRUE
+        LEFT JOIN public.delivery_type_capabilities dtc 
+        ON dt.delivery_type_id = dtc.delivery_type_id AND dtc.is_active = TRUE
+        LEFT JOIN public.vehicle_categories vc 
+        ON dtc.vehicle_category_id = vc.category_id AND vc.is_active = TRUE
+        WHERE dt.is_active = TRUE
+        GROUP BY dt.delivery_type_id
+        ORDER BY dt.sort_order ASC
+  `,
 };

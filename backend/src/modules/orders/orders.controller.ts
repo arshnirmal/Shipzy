@@ -16,6 +16,7 @@ interface CalculateFareBody {
 
 interface CreateOrderBody {
   deliveryTypeId: number;
+  vehicleCategoryId: number;
   paymentMethodId: number;
   pickupAddressId: number;
   deliveryAddressId: number;
