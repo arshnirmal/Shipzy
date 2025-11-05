@@ -70,25 +70,21 @@ CREATE SCHEMA IF NOT EXISTS notifications;
 -- SECTION 3: UTILITY FUNCTIONS
 -- ===================================================================
 -- Auto-update timestamp trigger function
-CREATE
-OR REPLACE FUNCTION public.trigger_set_timestamp() RETURNS TRIGGER AS $ $ BEGIN NEW.updated_at = NOW();
-
-RETURN NEW;
-
+CREATE OR REPLACE FUNCTION public.trigger_set_timestamp() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
 END;
-
-$ $ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to set order number
-CREATE
-OR REPLACE FUNCTION orders.set_order_number() RETURNS TRIGGER LANGUAGE plpgsql AS $ $ BEGIN -- Generate order number: ORD-YYYYMMDD-000001
-NEW.order_number := 'ORD-' || TO_CHAR(NEW.created_at, 'YYYYMMDD') || '-' || LPAD(NEW.order_id :: TEXT, 6, '0');
-
-RETURN NEW;
-
+CREATE OR REPLACE FUNCTION orders.set_order_number() RETURNS TRIGGER AS $$
+BEGIN
+  -- Generate order number: ORD-YYYYMMDD-000001
+  NEW.order_number := 'ORD-' || TO_CHAR(NEW.created_at, 'YYYYMMDD') || '-' || LPAD(NEW.order_id :: TEXT, 6, '0');
+  RETURN NEW;
 END;
-
-$ $;
+$$ LANGUAGE plpgsql;
 
 -- ===================================================================
 -- SECTION 4: REFERENCE/ENUM TABLES (public schema)
@@ -684,7 +680,7 @@ CREATE TABLE users.profiles (
     role_id INT NOT NULL REFERENCES public.user_roles (role_id),
     firebase_uid VARCHAR(255) UNIQUE,
     -- Firebase Auth UID for social auth
-    phone_number VARCHAR(20) UNIQUE,
+    phone_number VARCHAR(20),
     -- NULLABLE for email-only auth
     email VARCHAR(100) UNIQUE NOT NULL,
     -- REQUIRED for email auth, UNIQUE constraint enforced
