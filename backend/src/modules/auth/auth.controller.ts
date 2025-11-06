@@ -210,7 +210,7 @@ class AuthController {
         deviceInfo,
       );
 
-      return successResponse(reply, result, "Login successful");
+  return successResponse(reply, result, "User logged in successfully");
     } catch (error) {
       logger.error({
         msg: "Login controller error",

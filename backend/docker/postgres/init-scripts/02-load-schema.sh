@@ -9,7 +9,7 @@ set -e
 echo "🏗️  Creating database schema..."
 
 # Load the schema file
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f "/docker-entrypoint-initdb.d/02-schema.sql"
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f "/tmp/schema.sql"
 
 echo "✅ Database schema created successfully"
 echo ""

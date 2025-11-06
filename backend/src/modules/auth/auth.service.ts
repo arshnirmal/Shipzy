@@ -11,6 +11,7 @@ import {
 } from "../../utils/jwt.util";
 import authRepository from "./auth.repository";
 import { DeviceInfo } from "../../types/index";
+import { getRoleId } from "../../utils/roles.utils";
 
 interface UserData {
   fullName?: string;
@@ -133,25 +134,6 @@ class AuthService {
   }
 
   /**
-   * Get role ID by role name
-   */
-  async _getRoleId(roleName: string) {
-    const roleMap = {
-      client: 1,
-      courier: 2,
-      admin: 3,
-    };
-
-    const roleId = roleMap[roleName.toLowerCase() as keyof typeof roleMap];
-
-    if (!roleId) {
-      throw new ValidationError("Invalid role name");
-    }
-
-    return roleId;
-  }
-
-  /**
    * Verify Google ID token and create/login user
    */
   async verifyGoogleAndCreateUser(
@@ -184,7 +166,7 @@ class AuthService {
         }
 
         // Get role ID
-        const roleId = await this._getRoleId(userData.roleName);
+        const roleId = getRoleId(userData.roleName);
 
         // Create user with Google profile data
         user = await authRepository.createUser({
@@ -301,22 +283,11 @@ class AuthService {
         throw new ValidationError("User with this email already exists");
       }
 
-      // Check if user already exists by phone number (if provided)
-      if (phoneNumber) {
-        const existingUserByPhone =
-          await authRepository.findByPhone(phoneNumber);
-        if (existingUserByPhone) {
-          throw new ValidationError(
-            "User with this phone number already exists",
-          );
-        }
-      }
-
       // Get role ID
-      const roleId = await this._getRoleId(role);
+      const roleId = getRoleId(role);
 
       // Hash password
-      const saltRounds = 10;
+      const saltRounds = 12;
       const passwordHash = await bcrypt.hash(password, saltRounds);
 
       // Create user
@@ -373,7 +344,7 @@ class AuthService {
           fullName: user.full_name,
           email: user.email,
           phoneNumber: user.phone_number,
-          role: user.role_name || role,
+          role: user.role_name,
           isVerified: user.is_verified,
           createdAt: user.created_at,
         },
@@ -492,3 +463,6 @@ class AuthService {
 }
 
 export default new AuthService();
+function _getRoleId(roleName: string) {
+  throw new Error("Function not implemented.");
+}

@@ -2,6 +2,7 @@
 import logger from "../../config/logger";
 import db from "../../database/db";
 import authQueries from "../../database/queries/auth.queries";
+import { getUserRoleName } from "../../utils/roles.utils";
 
 interface User {
   user_id: number;
@@ -153,6 +154,8 @@ class AuthRepository {
 
       const user = result.rows[0];
 
+      user.role_name = getUserRoleName(roleId);
+
       // Initialize courier status if role is courier
       if (userData.roleName === "courier") {
         await db.query(authQueries.INITIALIZE_COURIER_STATUS, [user.user_id]);
@@ -190,6 +193,8 @@ class AuthRepository {
       ]);
 
       const user = result.rows[0];
+
+      user.role_name = getUserRoleName(roleId);
 
       // Initialize courier status if role is courier
       if (userData.roleName === "courier") {
