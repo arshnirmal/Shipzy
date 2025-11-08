@@ -109,8 +109,9 @@ class StaticController {
         "Package types retrieved successfully",
       );
     } catch (error) {
-      logger.error("Get package types controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Get package types controller error",
+        error: (error as Error).message,
       });
       return errorResponse(
         reply,
@@ -137,8 +138,9 @@ class StaticController {
         "Payment methods retrieved successfully",
       );
     } catch (error) {
-      logger.error("Get payment methods controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Get payment methods controller error",
+        error: (error as Error).message,
       });
       return errorResponse(
         reply,
@@ -165,8 +167,9 @@ class StaticController {
         "Create order data retrieved successfully",
       );
     } catch (error) {
-      logger.error("Get create order data controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Get create order data controller error",
+        error: (error as Error).message,
       });
       return errorResponse(
         reply,
@@ -193,8 +196,9 @@ class StaticController {
         "Order statuses retrieved successfully",
       );
     } catch (error) {
-      logger.error("Get order statuses controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Get order statuses controller error",
+        error: (error as Error).message,
       });
       return errorResponse(
         reply,

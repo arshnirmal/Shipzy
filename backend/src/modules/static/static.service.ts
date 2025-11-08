@@ -68,7 +68,7 @@ class StaticService {
         name: cat.name,
         description: cat.description,
         maxWeightKg: cat.max_weight_kg,
-        icon: cat.icon,
+        icon: cat.icon_url,
       }));
     } catch (error) {
       logger.error({
@@ -126,30 +126,11 @@ class StaticService {
 
   /**
    * Get all static data for create order screen
+   * Returns delivery types with nested vehicles and weight tiers, plus package types and payment methods
    */
   async getCreateOrderData() {
     try {
-      const [
-        deliveryTypes,
-        weightTiers,
-        vehicleCategories,
-        packageTypes,
-        paymentMethods,
-      ] = await Promise.all([
-        this.getDeliveryTypes(),
-        this.getWeightTiers(),
-        this.getVehicleCategories(),
-        this.getPackageTypes(),
-        this.getPaymentMethods(),
-      ]);
-
-      return {
-        deliveryTypes,
-        weightTiers,
-        vehicleCategories,
-        packageTypes,
-        paymentMethods,
-      };
+      return await staticRepository.getCreateOrderData();
     } catch (error) {
       logger.error({
         msg: "Error getting create order data",

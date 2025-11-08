@@ -14,7 +14,7 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting delivery types",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -23,15 +23,16 @@ class StaticRepository {
   /**
    * Get delivery type by ID
    */
-  async getDeliveryTypeById(deliveryTypeId) {
+  async getDeliveryTypeById(deliveryTypeId: number) {
     try {
       const result = await db.query(staticQueries.GET_DELIVERY_TYPE_BY_ID, [
         deliveryTypeId,
       ]);
       return result.rows[0] || null;
     } catch (error) {
-      logger.error("Error getting delivery type by ID", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting delivery type by ID",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -47,7 +48,7 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting weight tiers",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -56,15 +57,16 @@ class StaticRepository {
   /**
    * Get weight tier for specific weight
    */
-  async getWeightTierForWeight(weightKg) {
+  async getWeightTierForWeight(weightKg: number) {
     try {
       const result = await db.query(staticQueries.GET_WEIGHT_TIER_FOR_WEIGHT, [
         weightKg,
       ]);
       return result.rows[0] || null;
     } catch (error) {
-      logger.error("Error getting weight tier for weight", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting weight tier for weight",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -78,8 +80,9 @@ class StaticRepository {
       const result = await db.query(staticQueries.GET_VEHICLE_CATEGORIES);
       return result.rows;
     } catch (error) {
-      logger.error("Error getting vehicle categories", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting vehicle categories",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -95,7 +98,7 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting package types",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -111,7 +114,7 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting labels",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -127,7 +130,7 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting payment methods",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -143,7 +146,7 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting order statuses",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -157,8 +160,26 @@ class StaticRepository {
       const result = await db.query(staticQueries.GET_ASSIGNMENT_STATUSES);
       return result.rows;
     } catch (error) {
-      logger.error("Error getting assignment statuses", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting assignment statuses",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all static data for create order screen in a single query
+   * Returns delivery types with nested vehicles and weight tiers, plus package types and payment methods
+   */
+  async getCreateOrderData() {
+    try {
+      const result = await db.query(staticQueries.GET_CREATE_ORDER_DATA);
+      return result.rows[0].data;
+    } catch (error) {
+      logger.error({
+        msg: "Error getting create order data",
+        error: (error as Error).message,
       });
       throw error;
     }
