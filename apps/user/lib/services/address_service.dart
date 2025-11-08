@@ -29,10 +29,7 @@ class AddressService {
   /// Save new address
   Future<SavedAddress> saveAddress(CreateAddress addressData) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/users/me/addresses',
-        data: addressData.toJson(),
-      );
+      final response = await _apiClient.post<Map<String, dynamic>>('/users/me/addresses', data: addressData.toJson());
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to save address');
@@ -69,8 +66,12 @@ class AddressService {
         return Exception('Server error during $operation: $message (Status: $statusCode)');
       case DioExceptionType.cancel:
         return Exception('Request cancelled during $operation');
-      default:
-        return Exception('Network error during $operation: ${e.message}');
+      case DioExceptionType.connectionError:
+        return Exception('Connection error during $operation: ${e.message}');
+      case DioExceptionType.badCertificate:
+        return Exception('SSL certificate error during $operation');
+      case DioExceptionType.unknown:
+        return Exception('Unknown network error during $operation: ${e.message}');
     }
   }
 }

@@ -163,7 +163,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    // TODO(arsh): Navigate to add address screen
+                    // TODO: Navigate to add address screen
                   },
                   icon: const Icon(Icons.add_location_outlined),
                   label: const Text('Add New Address'),

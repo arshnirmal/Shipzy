@@ -20,7 +20,7 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const HomeAppBar(), // ✅ Use the new AppBar widget
+      appBar: const HomeAppBar(),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => ref.read(ordersProvider.notifier).refresh(),
