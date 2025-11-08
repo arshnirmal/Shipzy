@@ -76,28 +76,27 @@ GoRouter router(Ref ref) {
           GoRoute(
             path: AppRoutes.home,
             name: 'home',
-            pageBuilder: (context, state) => const NoTransitionPage(child: HomeScreen()),
+            pageBuilder: (context, state) => const CustomTransitionPage(child: HomeScreen(), transitionsBuilder: _fadeTransition),
+          ),
+          GoRoute(
+            path: AppRoutes.createOrder,
+            name: 'createOrder',
+            pageBuilder: (context, state) => const CustomTransitionPage(child: CreateOrderScreen(), transitionsBuilder: _fadeTransition),
           ),
           GoRoute(
             path: AppRoutes.orderList,
             name: 'orderList',
-            pageBuilder: (context, state) => const NoTransitionPage(child: OrdersListScreen()),
+            pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersListScreen(), transitionsBuilder: _fadeTransition),
           ),
           GoRoute(
             path: AppRoutes.profile,
             name: 'profile',
-            pageBuilder: (context, state) => const NoTransitionPage(child: ProfileScreen()),
+            pageBuilder: (context, state) => const CustomTransitionPage(child: ProfileScreen(), transitionsBuilder: _fadeTransition),
           ),
         ],
       ),
 
       // ============ ORDER FLOW ============
-      GoRoute(
-        path: AppRoutes.createOrder,
-        name: 'createOrder',
-        pageBuilder: (context, state) => const CustomTransitionPage(child: CreateOrderScreen(), transitionsBuilder: _slideTransition),
-      ),
-
       GoRoute(
         path: AppRoutes.orderDetailsPath,
         name: 'orderDetails',
@@ -139,9 +138,9 @@ GoRouter router(Ref ref) {
   );
 }
 
-// Custom slide transition
-Widget _slideTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => SlideTransition(
-  position: animation.drive(Tween(begin: const Offset(1, 0), end: Offset.zero).chain(CurveTween(curve: Curves.easeInOut))),
+// Custom fade transition for smooth bottom navigation
+Widget _fadeTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => FadeTransition(
+  opacity: animation.drive(CurveTween(curve: Curves.easeInOut)),
   child: child,
 );
 

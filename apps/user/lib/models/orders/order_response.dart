@@ -13,50 +13,29 @@ part 'order_response.g.dart';
 abstract class OrdersResponse with _$OrdersResponse {
   const factory OrdersResponse({
     required bool success,
-    required String message,
-    required OrdersData data,
+    required List<Order> data,
+    required Pagination pagination,
     required String timestamp,
+    String? message,
   }) = _OrdersResponse;
 
-  factory OrdersResponse.fromJson(Map<String, dynamic> json) =>
-      _$OrdersResponseFromJson(json);
-}
-
-@freezed
-abstract class OrdersData with _$OrdersData {
-  const factory OrdersData({
-    required List<Order> orders,
-    required Pagination pagination,
-  }) = _OrdersData;
-
-  factory OrdersData.fromJson(Map<String, dynamic> json) =>
-      _$OrdersDataFromJson(json);
+  factory OrdersResponse.fromJson(Map<String, dynamic> json) => _$OrdersResponseFromJson(json);
 }
 
 @freezed
 abstract class Pagination with _$Pagination {
-  const factory Pagination({
-    required int page,
-    required int limit,
-    required int total,
-    required int pages,
-  }) = _Pagination;
+  const factory Pagination({required int page, required int limit, required int total, @JsonKey(name: 'totalPages') required int pages}) =
+      _Pagination;
 
-  factory Pagination.fromJson(Map<String, dynamic> json) =>
-      _$PaginationFromJson(json);
+  factory Pagination.fromJson(Map<String, dynamic> json) => _$PaginationFromJson(json);
 }
 
 /// Single order response
 
 @freezed
 abstract class OrderDetailResponse with _$OrderDetailResponse {
-  const factory OrderDetailResponse({
-    required bool success,
-    required String message,
-    required Order data,
-    required String timestamp,
-  }) = _OrderDetailResponse;
+  const factory OrderDetailResponse({required bool success, required String message, required Order data, required String timestamp}) =
+      _OrderDetailResponse;
 
-  factory OrderDetailResponse.fromJson(Map<String, dynamic> json) =>
-      _$OrderDetailResponseFromJson(json);
+  factory OrderDetailResponse.fromJson(Map<String, dynamic> json) => _$OrderDetailResponseFromJson(json);
 }

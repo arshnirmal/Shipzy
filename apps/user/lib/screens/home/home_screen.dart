@@ -8,7 +8,7 @@ import '../../providers/orders_provider.dart';
 import '../../utils/app_routes.dart';
 import '../../widgets/home/active_deliveries_section.dart';
 import '../../widgets/home/cta_card.dart';
-import '../../widgets/home/location_header.dart';
+import '../../widgets/home/home_app_bar.dart';
 import '../../widgets/home/recent_activity_section.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -17,12 +17,13 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ordersState = ref.watch(ordersProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
+      appBar: const HomeAppBar(), // ✅ Use the new AppBar widget
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => ref.read(ordersProvider.notifier).refresh(),
-
           child: ordersState.when(
             data: (orders) {
               final ordersNotifier = ref.read(ordersProvider.notifier);
@@ -31,8 +32,6 @@ class HomeScreen extends ConsumerWidget {
 
               return CustomScrollView(
                 slivers: [
-                  // Location Header
-                  const SliverToBoxAdapter(child: LocationHeader()),
                   const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
                   // CTA Card
@@ -41,44 +40,28 @@ class HomeScreen extends ConsumerWidget {
 
                   // Active Deliveries Section
                   SliverToBoxAdapter(
-                    child: ActiveDeliveriesSection(
-                      orders: activeOrders,
-                      onViewAll: () {
-                        // Navigate to orders tab using GoRouter
-                        context.go(AppRoutes.orderList);
-                      },
-                    ),
+                    child: ActiveDeliveriesSection(orders: activeOrders, onViewAll: () => context.go(AppRoutes.orderList)),
                   ),
-
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
                   // Recent Activity Section
                   SliverToBoxAdapter(
-                    child: RecentActivitySection(
-                      orders: completedOrders,
-                      onViewAll: () {
-                        // Navigate to orders tab using GoRouter
-                        context.go(AppRoutes.orderList);
-                      },
-                    ),
+                    child: RecentActivitySection(orders: completedOrders, onViewAll: () => context.go(AppRoutes.orderList)),
                   ),
-
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ],
               );
             },
-
             loading: () => const Center(child: CircularProgressIndicator()),
-
             error: (error, stack) => Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+                  Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
                   const SizedBox(height: 16),
-                  Text('Failed to load orders', style: Theme.of(context).textTheme.titleMedium),
+                  Text('Failed to load orders', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text(error.toString(), style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+                  Text(error.toString(), style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () => ref.read(ordersProvider.notifier).refresh(),

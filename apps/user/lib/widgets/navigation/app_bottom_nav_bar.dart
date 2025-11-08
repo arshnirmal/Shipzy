@@ -12,46 +12,55 @@ class AppBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentLocation = GoRouterState.of(context).uri.toString();
-
-    // Determine current index based on location
     final currentIndex = _getCurrentIndex(currentLocation);
 
     return Container(
+      height: 80,
+      padding: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Home',
-                isActive: currentIndex == 0,
-                onTap: () => context.go(AppRoutes.home),
-              ),
-              _NavItem(
-                icon: Icons.receipt_long_outlined,
-                activeIcon: Icons.receipt_long,
-                label: 'Orders',
-                isActive: currentIndex == 1,
-                onTap: () => context.go(AppRoutes.orderList),
-              ),
-              _CreateButton(onTap: () => context.push(AppRoutes.createOrder)),
-              _NavItem(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                label: 'Profile',
-                isActive: currentIndex == 2,
-                onTap: () => context.go(AppRoutes.profile),
-              ),
-            ],
+        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: theme.brightness == Brightness.light ? 0.05 : 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _NavItem(
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home_rounded,
+            label: 'Home',
+            isActive: currentIndex == 0,
+            onTap: () => context.go(AppRoutes.home),
+          ),
+          _NavItem(
+            icon: Icons.add_box_outlined,
+            activeIcon: Icons.add_box_rounded,
+            label: 'New Order',
+            isActive: currentIndex == 1,
+            onTap: () => context.go(AppRoutes.createOrder),
+            isHighlighted: true, // Make "New Order" stand out
+          ),
+          _NavItem(
+            icon: Icons.receipt_long_outlined,
+            activeIcon: Icons.receipt_long_rounded,
+            label: 'Orders',
+            isActive: currentIndex == 2,
+            onTap: () => context.go(AppRoutes.orderList),
+          ),
+          _NavItem(
+            icon: Icons.person_outline_rounded,
+            activeIcon: Icons.person_rounded,
+            label: 'Profile',
+            isActive: currentIndex == 3,
+            onTap: () => context.go(AppRoutes.profile),
+          ),
+        ],
       ),
     );
   }
@@ -60,96 +69,87 @@ class AppBottomNavBar extends StatelessWidget {
     if (location.startsWith(AppRoutes.home)) {
       return 0;
     }
-    if (location.startsWith(AppRoutes.orderList)) {
+    if (location.startsWith(AppRoutes.createOrder)) {
       return 1;
     }
-    if (location.startsWith(AppRoutes.profile)) {
+    if (location.startsWith(AppRoutes.orderList)) {
       return 2;
+    }
+    if (location.startsWith(AppRoutes.profile)) {
+      return 3;
     }
     return 0;
   }
 }
 
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.activeIcon, required this.label, required this.isActive, required this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.isHighlighted = false,
+  });
 
   final IconData icon;
   final IconData activeIcon;
   final String label;
   final bool isActive;
   final VoidCallback onTap;
+  final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Special styling for highlighted items (like "New Order")
+    final effectiveColor = isHighlighted && isActive
+        ? theme.colorScheme.primary
+        : isActive
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
 
     return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isActive ? theme.colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  isActive ? activeIcon : icon,
-                  color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateButton extends StatelessWidget {
-  const _CreateButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          child: const Icon(Icons.add, color: Colors.white, size: 28),
+          splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+          highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon Container with Animation
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  padding: EdgeInsets.all(isActive ? 6 : 4),
+                  decoration: BoxDecoration(
+                    color: isActive ? theme.colorScheme.primary.withValues(alpha: 0.12) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    isActive ? activeIcon : icon,
+                    color: effectiveColor,
+                    size: 26, // Slightly larger for better visibility
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Label Text
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(fontSize: 11, fontWeight: isActive ? FontWeight.w600 : FontWeight.w500, color: effectiveColor, letterSpacing: 0.1),
+                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

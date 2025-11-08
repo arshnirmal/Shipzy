@@ -5,11 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/orders/order.dart';
 
 class OrderStatusBadge extends StatelessWidget {
-  const OrderStatusBadge({
-    required this.status,
-    this.size = OrderStatusBadgeSize.medium,
-    super.key,
-  });
+  const OrderStatusBadge({required this.status, this.size = OrderStatusBadgeSize.medium, super.key});
 
   final OrderStatus status;
   final OrderStatusBadgeSize size;
@@ -17,9 +13,7 @@ class OrderStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = _getStatusColors(context);
-
     final fontSize = size == OrderStatusBadgeSize.small ? 11.0 : 12.0;
-
     final padding = size == OrderStatusBadgeSize.small
         ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
         : const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
@@ -37,19 +31,12 @@ class OrderStatusBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: colors.dot,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: colors.dot, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
           Text(
             status.label,
-            style: TextStyle(
-              color: colors.text,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: colors.text, fontSize: fontSize, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -77,11 +64,12 @@ class OrderStatusBadge extends StatelessWidget {
         );
 
       case OrderStatus.pickedUp:
+        // ✅ FIXED: Now uses theme's tertiary color (orange) instead of hardcoded
         return _StatusColors(
-          background: const Color(0xFFFFA500).withValues(alpha: 0.1),
-          border: const Color(0xFFFFA500).withValues(alpha: 0.3),
-          dot: const Color(0xFFFFA500),
-          text: const Color(0xFFFFA500),
+          background: theme.colorScheme.tertiary.withValues(alpha: 0.15),
+          border: theme.colorScheme.tertiary.withValues(alpha: 0.4),
+          dot: theme.colorScheme.tertiary,
+          text: theme.colorScheme.tertiary,
         );
 
       case OrderStatus.inTransit:
@@ -112,12 +100,7 @@ class OrderStatusBadge extends StatelessWidget {
 }
 
 class _StatusColors {
-  const _StatusColors({
-    required this.background,
-    required this.border,
-    required this.dot,
-    required this.text,
-  });
+  const _StatusColors({required this.background, required this.border, required this.dot, required this.text});
 
   final Color background;
   final Color border;

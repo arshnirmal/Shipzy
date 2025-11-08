@@ -16,7 +16,7 @@ class Orders extends _$Orders {
     final orderService = ref.read(orderServiceProvider);
     try {
       final response = await orderService.fetchOrders(status: status);
-      return response.data.orders;
+      return response.data;
     } catch (e) {
       throw Exception('Failed to fetch orders: $e');
     }
@@ -27,14 +27,7 @@ class Orders extends _$Orders {
     state = await AsyncValue.guard(() async => fetchOrders());
   }
 
-  List<Order> get activeOrders => state.maybeWhen(
-    data: (orders) => orders.where((order) => order.status.isActive).toList(),
-    orElse: () => [],
-  );
+  List<Order> get activeOrders => state.maybeWhen(data: (orders) => orders.where((order) => order.status.isActive).toList(), orElse: () => []);
 
-  List<Order> get completedOrders => state.maybeWhen(
-    data: (orders) =>
-        orders.where((order) => order.status.isCompleted).toList(),
-    orElse: () => [],
-  );
+  List<Order> get completedOrders => state.maybeWhen(data: (orders) => orders.where((order) => order.status.isCompleted).toList(), orElse: () => []);
 }

@@ -12,7 +12,7 @@ class LocationHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    final locationState = ref.watch(userLocationProvider);
+    final locationState = ref.watch(locationNotifierProvider);
 
     return locationState.when(
       data: (location) {
@@ -26,30 +26,17 @@ class LocationHeader extends ConsumerWidget {
 
           child: Row(
             children: [
-              Icon(
-                Icons.location_on,
-                color: theme.colorScheme.primary,
-                size: 20,
-              ),
+              Icon(Icons.location_on, color: theme.colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Your Location',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
+                    Text('Your Location', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
                     const SizedBox(height: 2),
                     Text(
-                      location.formattedAddress,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      location.fullAddress,
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -62,14 +49,8 @@ class LocationHeader extends ConsumerWidget {
                 },
                 icon: CircleAvatar(
                   radius: 18,
-                  backgroundColor: theme.colorScheme.primary.withValues(
-                    alpha: 0.1,
-                  ),
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  child: Icon(Icons.person_outline, size: 20, color: theme.colorScheme.primary),
                 ),
               ),
             ],

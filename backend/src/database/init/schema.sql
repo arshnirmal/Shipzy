@@ -864,7 +864,7 @@ CREATE TABLE logistics.locations (
     location_id SERIAL PRIMARY KEY,
     building_name VARCHAR(100),
     floor_number VARCHAR(10),
-    room_number VARCHAR(10),
+    flat_number VARCHAR(10),
     address TEXT NOT NULL,
     latitude NUMERIC(10, 8) NOT NULL,
     longitude NUMERIC(11, 8) NOT NULL,
@@ -876,7 +876,8 @@ CREATE TABLE logistics.locations (
     landmark VARCHAR(255),
     contact_name VARCHAR(100),
     contact_phone VARCHAR(20),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_logistics_locations_location ON logistics.locations USING GIST (location);

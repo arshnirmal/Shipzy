@@ -14,22 +14,13 @@ class OrderService {
 
   Future<OrdersResponse> fetchOrders({
     int page = 1,
-
     int limit = 20,
-
     String? status, // 'active', 'completed', or null for all
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-        if (status != null) 'status': status,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit, if (status != null) 'status': status};
 
-      final response = await _apiClient.get<Map<String, dynamic>>(
-        '/orders',
-        queryParameters: queryParams,
-      );
+      final response = await _apiClient.get<Map<String, dynamic>>('/orders', queryParameters: queryParams);
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to fetch orders');
@@ -45,14 +36,10 @@ class OrderService {
 
   Future<OrderDetailResponse> getOrderDetails(int orderId) async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>(
-        '/orders/$orderId',
-      );
+      final response = await _apiClient.get<Map<String, dynamic>>('/orders/$orderId');
 
       if (response.data?['success'] != true) {
-        throw Exception(
-          response.data?['message'] ?? 'Failed to fetch order details',
-        );
+        throw Exception(response.data?['message'] ?? 'Failed to fetch order details');
       }
 
       return OrderDetailResponse.fromJson(response.data!);
@@ -65,10 +52,7 @@ class OrderService {
 
   Future<void> cancelOrder(int orderId, String reason) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/orders/$orderId/cancel',
-        data: {'reason': reason},
-      );
+      final response = await _apiClient.post<Map<String, dynamic>>('/orders/$orderId/cancel', data: {'reason': reason});
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to cancel order');
@@ -82,9 +66,7 @@ class OrderService {
     if (e.response != null) {
       final data = e.response!.data;
 
-      final message = data is Map<String, dynamic>
-          ? data['message'] ?? data['error']
-          : 'Unknown error';
+      final message = data is Map<String, dynamic> ? data['message'] ?? data['error'] : 'Unknown error';
 
       return Exception('$operation failed: $message');
     } else if (e.type == DioExceptionType.connectionTimeout) {

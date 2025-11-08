@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/auth_utils.dart';
+import '../../widgets/auth/auth_widgets.dart';
 import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
 
@@ -47,10 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authState = ref.read(authStateProvider.notifier);
-      final result = await authState.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      final result = await authState.login(email: _emailController.text.trim(), password: _passwordController.text);
 
       result.when(
         success: (user, {required bool isNewUser}) {
@@ -63,19 +62,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         },
         error: (message) {
           AppLogger.e('Login error: $message');
-          SnackbarUtils.showError(
-            context,
-            _getErrorMessage(message),
-            showDismiss: true,
-          );
+          SnackbarUtils.showError(context, AuthErrorParser.parseLoginError(message), showDismiss: true);
         },
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(
-          context,
-          'An unexpected error occurred. Please try again.',
-        );
+        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -93,9 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       result.when(
         success: (user, {required bool isNewUser}) {
-          final message = isNewUser
-              ? 'Welcome to Shipzy, ${user.fullName}!'
-              : 'Welcome back, ${user.fullName}!';
+          final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName}!' : 'Welcome back, ${user.fullName}!';
 
           // Dismiss keyboard and show success message
           FocusScope.of(context).unfocus();
@@ -103,37 +93,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context.go(AppRoutes.home);
         },
         error: (message) {
-          SnackbarUtils.showError(context, _getErrorMessage(message));
+          SnackbarUtils.showError(context, AuthErrorParser.parseLoginError(message));
         },
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(
-          context,
-          'Google sign-in failed. Please try again.',
-        );
+        SnackbarUtils.showError(context, 'Google sign-in failed. Please try again.');
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  String _getErrorMessage(String error) {
-    // Parse common error messages from backend
-    if (error.contains('Invalid credentials') ||
-        error.contains('Invalid email or password')) {
-      return 'Invalid email or password. Please try again.';
-    } else if (error.contains('User not found')) {
-      return 'No account found with this email.';
-    } else if (error.contains('Network error') ||
-        error.contains('Connection timeout')) {
-      return 'Network error. Please check your connection.';
-    } else if (error.contains('Server not responding')) {
-      return 'Server is not responding. Please try again later.';
-    }
-    return error;
   }
 
   @override
@@ -144,9 +115,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-          ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -158,10 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Center(
                   child: Text(
                     'Sign In',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                   ),
                 ),
 
@@ -170,10 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Email Field
                 Text(
                   'Email Address',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -181,20 +144,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Enter email address',
-                    prefixIcon: Icon(Icons.email_outlined),
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                    if (!emailRegex.hasMatch(value.trim())) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
+                  validator: AuthValidators.validateEmail,
                 ),
 
                 const SizedBox(height: 24),
@@ -202,10 +157,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Password Field
                 Text(
                   'Password',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -216,25 +168,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
                     hintText: 'Enter password',
+                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       onPressed: _togglePasswordVisibility,
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                      ),
+                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
+                  validator: AuthValidators.validatePassword,
                 ),
 
                 const SizedBox(height: 8),
@@ -248,25 +189,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : () {
                             // TODO(dev): Navigate to forgot password flow
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Forgot password feature coming soon!',
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                              ),
+                              const SnackBar(content: Text('Forgot password feature coming soon!'), behavior: SnackBarBehavior.floating),
                             );
                           },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     child: Text(
                       'Forgot password?',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ),
@@ -274,29 +203,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Sign In Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            'Sign In',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
+                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Sign In'),
 
                 const SizedBox(height: 16),
 
@@ -304,26 +211,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      "Don't have an account?",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                    Text("Don't have an account?", style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                     TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => context.push(AppRoutes.register),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: Size.zero,
-                      ),
+                      onPressed: _isLoading ? null : () => context.push(AppRoutes.register),
+                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
                       child: Text(
                         'Create Account',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.primary,
-                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
                       ),
                     ),
                   ],
@@ -332,7 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 24),
 
                 // Divider
-                const _AuthDivider(text: 'Or Sign in with'),
+                const AuthDivider(text: 'Or Sign in with'),
 
                 const SizedBox(height: 24),
 
@@ -340,25 +234,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _SocialButton(
+                      child: SocialButton(
                         label: 'Google',
-                        icon: SvgPicture.asset(
-                          'assets/icons/Google.svg',
-                          width: 20,
-                          height: 20,
-                        ),
+                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
                         onPressed: _isLoading ? null : _handleGoogleSignIn,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _SocialButton(
+                      child: SocialButton(
                         label: 'Apple',
-                        icon: SvgPicture.asset(
-                          'assets/icons/Apple.svg',
-                          width: 22,
-                          height: 22,
-                        ),
+                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
                         onPressed: null, // TODO(dev): Implement Apple sign-in
                       ),
                     ),
@@ -370,74 +256,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// Divider Widget
-class _AuthDivider extends StatelessWidget {
-  const _AuthDivider({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.outline.withValues(alpha: 0.2);
-
-    return Row(
-      children: [
-        Expanded(child: Divider(color: dividerColor, thickness: 1)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            text,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: dividerColor, thickness: 1)),
-      ],
-    );
-  }
-}
-
-// Social Button Widget
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final Widget icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: icon,
-      label: Text(
-        label,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w500,
-          color: theme.colorScheme.onSurface,
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(
-          color: theme.colorScheme.outline.withValues(alpha: 0.3),
-        ),
-        backgroundColor: theme.colorScheme.surface,
       ),
     );
   }
