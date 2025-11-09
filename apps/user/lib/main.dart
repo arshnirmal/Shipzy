@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,34 +11,60 @@ import 'app.dart';
 import 'utils/logger.dart';
 
 Future<void> main() async {
-  // Ensure Flutter bindings
-  WidgetsFlutterBinding.ensureInitialized();
+  // Run everything in a single zone to avoid zone mismatch issues
+  runZonedGuarded(
+    () async {
+      // Ensure Flutter bindings
+      WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await dotenv.load();
+      // Load environment variables
+      await dotenv.load();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+      // Initialize Firebase
+      await Firebase.initializeApp();
 
-  // Set preferred orientations
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+      // Set preferred orientations
+      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
 
-  // Set system UI overlay
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.white,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
+      // Set system UI overlay
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+      );
+
+      // Initialize logger
+      AppLogger.init();
+
+      // Set up global error handling
+      _setupErrorHandling();
+
+      // Run app with ProviderScope
+      runApp(const ProviderScope(child: ShipzyApp()));
+    },
+    (error, stackTrace) {
+      AppLogger.e('Uncaught Async Error: $error', error: error, stackTrace: stackTrace);
+    },
   );
+}
 
-  // Initialize logger
-  AppLogger.init();
+/// Sets up global error handling to catch and log all uncaught errors and exceptions.
+/// This ensures that errors are visible in the debug console during development.
+void _setupErrorHandling() {
+  // Catch Flutter framework errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    AppLogger.e('Flutter Error: ${details.exception}', error: details.exception, stackTrace: details.stack);
+    // Also print to console for immediate visibility
+    FlutterError.dumpErrorToConsole(details);
+  };
 
-  // Run app with ProviderScope
-  runApp(const ProviderScope(child: ShipzyApp()));
+  // Catch platform errors (Dart errors that occur outside of Flutter)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    AppLogger.e('Platform Error: $error', error: error, stackTrace: stack);
+    // Return false to allow the error to also be printed to console
+    return false;
+  };
 }

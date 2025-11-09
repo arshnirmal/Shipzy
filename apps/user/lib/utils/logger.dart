@@ -12,7 +12,10 @@ class AppLogger {
   /// Must be called before using any logging methods.
   static void init() {
     _logger = Logger(
-      printer: PrettyPrinter(methodCount: 0, errorMethodCount: 5),
+      printer: PrettyPrinter(
+        methodCount: 0,
+        errorMethodCount: 10, // Increased for better error debugging
+      ),
     );
   }
 
