@@ -35,10 +35,10 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'labelId', label_id,
-              'name', name,
-              'displayText', display_text,
-              'color', color,
-              'backgroundColor', background_color
+              'name', name::text,
+              'displayText', display_text::text,
+              'color', color::text,
+              'backgroundColor', background_color::text
             )
             ORDER BY display_order
           ) AS labels
@@ -63,7 +63,7 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'tierId', wt.tier_id,
-              'name', wt.name,
+              'name', wt.name::text,
               'minWeightKg', wt.min_weight_kg,
               'maxWeightKg', wt.max_weight_kg,
               'additionalCharge', wt.additional_charge
@@ -86,10 +86,10 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'categoryId', vwt.category_id,
-              'name', vwt.name,
-              'displayName', vwt.display_name,
+              'name', vwt.name::text,
+              'displayName', vwt.display_name::text,
               'maxWeightKg', vwt.max_weight_kg,
-              'iconUrl', vwt.icon_url,
+              'iconUrl', vwt.icon_url::text,
               'weightTiers', vwt.weight_tiers
             )
             ORDER BY vwt.max_weight_kg
@@ -102,10 +102,10 @@ export default {
         d.name,
         d.display_name AS "displayName",
         d.description,
-        d.base_rate AS "baseRate",
-        d.per_km_rate AS "perKmRate",
-        d.sort_order AS "sortOrder",
-        d.is_active AS "isActive",
+        COALESCE(d.base_rate, 0) AS "baseRate",
+        COALESCE(d.per_km_rate, 0) AS "perKmRate",
+        COALESCE(d.sort_order, 0) AS "sortOrder",
+        COALESCE(d.is_active, false) AS "isActive",
         COALESCE(lb.labels, '[]'::jsonb) AS labels,
         COALESCE(v.supported_vehicles, '[]'::jsonb) AS "supportedVehicles"
       FROM dt d
@@ -251,10 +251,10 @@ export default {
           dt.name,
           dt.display_name,
           dt.description,
-          dt.base_rate,
-          dt.per_km_rate,
-          dt.sort_order,
-          dt.is_active
+          COALESCE(dt.base_rate, 0) AS base_rate,
+          COALESCE(dt.per_km_rate, 0) AS per_km_rate,
+          COALESCE(dt.sort_order, 0) AS sort_order,
+          COALESCE(dt.is_active, false) AS is_active
         FROM public.delivery_types dt
         WHERE dt.is_active = TRUE
       ),
@@ -275,10 +275,10 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'labelId', label_id,
-              'name', name,
-              'displayText', display_text,
-              'color', color,
-              'backgroundColor', background_color
+              'name', name::text,
+              'displayText', display_text::text,
+              'color', color::text,
+              'backgroundColor', background_color::text
             )
             ORDER BY display_order
           ) AS labels
@@ -303,7 +303,7 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'tierId', wt.tier_id,
-              'name', wt.name,
+              'name', wt.name::text,
               'minWeightKg', wt.min_weight_kg,
               'maxWeightKg', wt.max_weight_kg,
               'additionalCharge', wt.additional_charge
@@ -326,10 +326,10 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'categoryId', vwt.category_id,
-              'name', vwt.name,
-              'displayName', vwt.display_name,
+              'name', vwt.name::text,
+              'displayName', vwt.display_name::text,
               'maxWeightKg', vwt.max_weight_kg,
-              'iconUrl', vwt.icon_url,
+              'iconUrl', vwt.icon_url::text,
               'weightTiers', vwt.weight_tiers
             )
             ORDER BY vwt.max_weight_kg
@@ -342,8 +342,8 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'packageTypeId', pt.package_type_id,
-              'name', pt.name,
-              'description', pt.description
+              'name', pt.name::text,
+              'description', pt.description::text
             )
             ORDER BY pt.name
           ) AS package_types
@@ -354,9 +354,9 @@ export default {
           jsonb_agg(
             jsonb_build_object(
               'methodId', pm.method_id,
-              'name', pm.name,
-              'displayName', pm.name,
-              'description', pm.description,
+              'name', pm.name::text,
+              'displayName', pm.name::text,
+              'description', pm.description::text,
               'isActive', pm.is_active
             )
             ORDER BY pm.method_id
@@ -370,9 +370,9 @@ export default {
           SELECT json_agg(
             jsonb_build_object(
               'deliveryTypeId', d.delivery_type_id,
-              'name', d.name,
-              'displayName', d.display_name,
-              'description', d.description,
+              'name', d.name::text,
+              'displayName', d.display_name::text,
+              'description', d.description::text,
               'baseRate', d.base_rate,
               'perKmRate', d.per_km_rate,
               'sortOrder', d.sort_order,
