@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../models/orders/order.dart';
+import '../../../models/orders/order.dart';
 
 class OrderStatusBadge extends StatelessWidget {
   const OrderStatusBadge({required this.status, this.size = OrderStatusBadgeSize.medium, super.key});

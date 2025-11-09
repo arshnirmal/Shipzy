@@ -8,12 +8,12 @@ import '../providers/auth_state_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/placeholder/create_order_screen.dart';
-import '../screens/placeholder/order_details_screen.dart';
-import '../screens/placeholder/orders_list_screen.dart';
+import '../screens/new_order/new_order_screen.dart';
+import '../screens/orders/order_details_screen.dart';
+import '../screens/orders/order_list_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
-import '../widgets/navigation/app_bottom_nav_bar.dart';
+import '../widgets/app_bottom_nav_bar.dart';
 import 'app_routes.dart';
 
 part 'app_router.g.dart';
@@ -81,12 +81,12 @@ GoRouter router(Ref ref) {
           GoRoute(
             path: AppRoutes.createOrder,
             name: 'createOrder',
-            pageBuilder: (context, state) => const CustomTransitionPage(child: CreateOrderScreen(), transitionsBuilder: _fadeTransition),
+            pageBuilder: (context, state) => const CustomTransitionPage(child: NewOrderScreen(), transitionsBuilder: _fadeTransition),
           ),
           GoRoute(
             path: AppRoutes.orderList,
             name: 'orderList',
-            pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersListScreen(), transitionsBuilder: _fadeTransition),
+            pageBuilder: (context, state) => const CustomTransitionPage(child: OrderListScreen(), transitionsBuilder: _fadeTransition),
           ),
           GoRoute(
             path: AppRoutes.profile,

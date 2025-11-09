@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../providers/location_provider.dart';
+import '../../../providers/location_provider.dart';
 import 'location_sector_bottomsheet.dart';
 
 class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {

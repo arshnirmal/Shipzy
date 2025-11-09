@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../models/orders/order.dart';
-import 'animations/slide_in_animation.dart';
+import '../../../models/orders/order.dart';
+import '../../../utils/slide_in_animation.dart';
 
 class RecentActivitySection extends StatelessWidget {
   const RecentActivitySection({required this.orders, required this.onViewAll, super.key});

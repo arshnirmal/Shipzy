@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/auth_utils.dart';
-import '../../widgets/auth/auth_widgets.dart';
+import 'widgets/auth_widgets.dart';
 import '../../utils/snackbar_utils.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {

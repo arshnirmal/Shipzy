@@ -6,10 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/orders_provider.dart';
 import '../../utils/app_routes.dart';
-import '../../widgets/home/active_deliveries_section.dart';
-import '../../widgets/home/cta_card.dart';
-import '../../widgets/home/home_app_bar.dart';
-import '../../widgets/home/recent_activity_section.dart';
+import 'widgets/active_deliveries_section.dart';
+import 'widgets/cta_card.dart';
+import 'widgets/home_app_bar.dart';
+import 'widgets/recent_activity_section.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

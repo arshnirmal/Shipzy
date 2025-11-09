@@ -2,10 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../models/saved_address.dart';
-import '../../providers/address_provider.dart';
-import '../../providers/location_provider.dart';
+import '../../../models/saved_address.dart';
+import '../../../providers/address_provider.dart';
+import '../../../providers/location_provider.dart';
 
 class LocationSelectorSheet extends ConsumerWidget {
   const LocationSelectorSheet({super.key});
@@ -43,7 +44,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Text('Select Location', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                   const Spacer(),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close), iconSize: 24),
+                  IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.close), iconSize: 24),
                 ],
               ),
             ),
@@ -74,7 +75,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                             ),
                           );
                       if (context.mounted) {
-                        Navigator.pop(context);
+                        context.pop();
                       }
                     },
                   );
@@ -135,7 +136,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                         isSelected: isSelected,
                         onTap: () {
                           ref.read(locationNotifierProvider.notifier).selectAddress(address);
-                          Navigator.pop(context);
+                          context.pop();
                         },
                       );
                     },
@@ -162,7 +163,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    Navigator.pop(context);
+                    context.pop();
                     // TODO: Navigate to add address screen
                   },
                   icon: const Icon(Icons.add_location_outlined),

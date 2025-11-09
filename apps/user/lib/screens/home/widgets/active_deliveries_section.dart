@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/orders/order.dart';
-import '../../utils/app_routes.dart';
-import 'animations/slide_in_animation.dart';
+import '../../../models/orders/order.dart';
+import '../../../utils/app_routes.dart';
+import '../../../utils/slide_in_animation.dart';
 import 'order_status_badge.dart';
 
 class ActiveDeliveriesSection extends StatelessWidget {

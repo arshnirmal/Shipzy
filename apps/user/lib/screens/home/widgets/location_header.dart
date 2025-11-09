@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../providers/location_provider.dart';
+import '../../../providers/location_provider.dart';
 
 class LocationHeader extends ConsumerWidget {
   const LocationHeader({super.key});
