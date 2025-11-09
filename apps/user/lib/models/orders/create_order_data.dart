@@ -8,15 +8,10 @@ part 'create_order_data.g.dart';
 /// Response for create order data endpoint
 @freezed
 abstract class CreateOrderDataResponse with _$CreateOrderDataResponse {
-  const factory CreateOrderDataResponse({
-    required bool success,
-    required String message,
-    required CreateOrderData data,
-    required String timestamp,
-  }) = _CreateOrderDataResponse;
+  const factory CreateOrderDataResponse({required bool success, required String message, required CreateOrderData data, required String timestamp}) =
+      _CreateOrderDataResponse;
 
-  factory CreateOrderDataResponse.fromJson(Map<String, dynamic> json) =>
-      _$CreateOrderDataResponseFromJson(json);
+  factory CreateOrderDataResponse.fromJson(Map<String, dynamic> json) => _$CreateOrderDataResponseFromJson(json);
 }
 
 /// Main data structure for create order data
@@ -28,8 +23,7 @@ abstract class CreateOrderData with _$CreateOrderData {
     required List<PaymentMethod> paymentMethods,
   }) = _CreateOrderData;
 
-  factory CreateOrderData.fromJson(Map<String, dynamic> json) =>
-      _$CreateOrderDataFromJson(json);
+  factory CreateOrderData.fromJson(Map<String, dynamic> json) => _$CreateOrderDataFromJson(json);
 }
 
 /// Delivery type model
@@ -48,8 +42,7 @@ abstract class DeliveryType with _$DeliveryType {
     required List<Vehicle> supportedVehicles,
   }) = _DeliveryType;
 
-  factory DeliveryType.fromJson(Map<String, dynamic> json) =>
-      _$DeliveryTypeFromJson(json);
+  factory DeliveryType.fromJson(Map<String, dynamic> json) => _$DeliveryTypeFromJson(json);
 }
 
 /// Label for delivery types (like "NEW", "Fastest", etc.)
@@ -70,16 +63,15 @@ abstract class Label with _$Label {
 @freezed
 abstract class Vehicle with _$Vehicle {
   const factory Vehicle({
-    String? iconUrl,
     required int categoryId,
     required String displayName,
     required double maxWeightKg,
     required List<WeightTier> weightTiers,
     required String name,
+    String? iconUrl,
   }) = _Vehicle;
 
-  factory Vehicle.fromJson(Map<String, dynamic> json) =>
-      _$VehicleFromJson(json);
+  factory Vehicle.fromJson(Map<String, dynamic> json) => _$VehicleFromJson(json);
 }
 
 /// Weight tier for pricing
@@ -93,21 +85,15 @@ abstract class WeightTier with _$WeightTier {
     required double additionalCharge,
   }) = _WeightTier;
 
-  factory WeightTier.fromJson(Map<String, dynamic> json) =>
-      _$WeightTierFromJson(json);
+  factory WeightTier.fromJson(Map<String, dynamic> json) => _$WeightTierFromJson(json);
 }
 
 /// Package type model
 @freezed
 abstract class PackageType with _$PackageType {
-  const factory PackageType({
-    required String name,
-    required String description,
-    required int packageTypeId,
-  }) = _PackageType;
+  const factory PackageType({required String name, required String description, required int packageTypeId}) = _PackageType;
 
-  factory PackageType.fromJson(Map<String, dynamic> json) =>
-      _$PackageTypeFromJson(json);
+  factory PackageType.fromJson(Map<String, dynamic> json) => _$PackageTypeFromJson(json);
 }
 
 /// Payment method model
@@ -121,6 +107,5 @@ abstract class PaymentMethod with _$PaymentMethod {
     required String displayName,
   }) = _PaymentMethod;
 
-  factory PaymentMethod.fromJson(Map<String, dynamic> json) =>
-      _$PaymentMethodFromJson(json);
+  factory PaymentMethod.fromJson(Map<String, dynamic> json) => _$PaymentMethodFromJson(json);
 }

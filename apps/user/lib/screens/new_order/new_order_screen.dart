@@ -120,10 +120,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                         onWeightChanged: (w) => notifier.setPackageDetails(weight: w),
                         onCategoryChanged: notifier.selectPackageType,
                         onDescriptionChanged: (desc) => notifier.setPackageDetails(description: desc),
-                        onDeclaredValueChanged: (v) => notifier.setSpecialInstructions(
-                          // Store declared value in special instructions for now
-                          'Declared value: ₹${v.toStringAsFixed(2)}',
-                        ),
+                        onDeclaredValueChanged: notifier.setDeclaredValue,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -147,22 +144,23 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
             bottom: 0,
             child: PriceActionBar(
               onCreate: () async {
+                // trigger
                 await notifier.createOrder();
-                if (!mounted) {
+                // read fresh state after await
+                final current = ref.read(newOrderProvider);
+                // guard all context usages
+                if (!context.mounted) {
                   return;
                 }
-
-                final currentState = ref.read(newOrderProvider);
-                if (currentState.createOrderError == null && currentState.createdOrder != null) {
-                  if (mounted) {
-                    context.pop();
-                    SnackbarUtils.showSuccess(context, 'Order created successfully');
-                    notifier.resetAfterOrderCreation();
+                if (current.createOrderError == null && current.createdOrder != null) {
+                  context.pop();
+                  if (!context.mounted) {
+                    return;
                   }
-                } else if (currentState.createOrderError != null) {
-                  if (mounted) {
-                    SnackbarUtils.showError(context, 'Failed to create order: ${currentState.createOrderError}');
-                  }
+                  SnackbarUtils.showSuccess(context, 'Order created successfully');
+                  notifier.resetAfterOrderCreation();
+                } else {
+                  SnackbarUtils.showError(context, 'Failed to create order: ${current.createOrderError}');
                 }
               },
             ),

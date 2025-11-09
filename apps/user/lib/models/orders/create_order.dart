@@ -24,6 +24,7 @@ abstract class CreateOrderRequest with _$CreateOrderRequest {
     required String packageDescription,
     required String deliveryType,
     required String paymentMethod,
+    double? declaredValue,
     String? specialInstructions,
   }) = _CreateOrderRequest;
 

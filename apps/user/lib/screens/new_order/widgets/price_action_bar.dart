@@ -20,7 +20,7 @@ class PriceActionBar extends ConsumerWidget {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -34,9 +34,9 @@ class PriceActionBar extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(isDark ? 0.12 : 0.06),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: isDark ? 0.12 : 0.06),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.25)),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
               ),
               child: state.isCalculatingFare
                   ? const SizedBox(

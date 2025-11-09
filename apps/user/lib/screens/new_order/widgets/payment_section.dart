@@ -29,7 +29,7 @@ class PaymentSection extends ConsumerWidget {
               label: Text(m.displayName),
               selected: isSel,
               onSelected: (_) => onChanged?.call(m),
-              selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
             );
           }).toList(),
         ),

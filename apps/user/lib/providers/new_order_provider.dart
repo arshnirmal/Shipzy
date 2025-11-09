@@ -31,6 +31,7 @@ class NewOrderState {
     this.deliveryContactPhone,
     this.packageWeight,
     this.packageDescription,
+    this.declaredValue,
     this.specialInstructions,
     this.fareData,
     this.isCalculatingFare = false,
@@ -65,6 +66,7 @@ class NewOrderState {
   // Package data
   final double? packageWeight;
   final String? packageDescription;
+  final double? declaredValue;
   final String? specialInstructions;
 
   // Fare calculation
@@ -97,6 +99,7 @@ class NewOrderState {
     String? deliveryContactPhone,
     double? packageWeight,
     String? packageDescription,
+    double? declaredValue,
     String? specialInstructions,
     FareData? fareData,
     bool? isCalculatingFare,
@@ -124,6 +127,7 @@ class NewOrderState {
     deliveryContactPhone: deliveryContactPhone ?? this.deliveryContactPhone,
     packageWeight: packageWeight ?? this.packageWeight,
     packageDescription: packageDescription ?? this.packageDescription,
+    declaredValue: declaredValue ?? this.declaredValue,
     specialInstructions: specialInstructions ?? this.specialInstructions,
     fareData: fareData ?? this.fareData,
     isCalculatingFare: isCalculatingFare ?? this.isCalculatingFare,
@@ -252,6 +256,11 @@ class NewOrder extends _$NewOrder {
     state = state.copyWith(packageWeight: weight ?? state.packageWeight, packageDescription: description ?? state.packageDescription);
   }
 
+  /// Set declared value
+  void setDeclaredValue(double? value) {
+    state = state.copyWith(declaredValue: value);
+  }
+
   /// Set special instructions
   void setSpecialInstructions(String? instructions) {
     state = state.copyWith(specialInstructions: instructions);
@@ -310,6 +319,7 @@ class NewOrder extends _$NewOrder {
         packageDescription: state.packageDescription!,
         deliveryType: state.selectedDeliveryType!.name,
         paymentMethod: state.selectedPaymentMethod!.name,
+        declaredValue: state.declaredValue,
         specialInstructions: state.specialInstructions,
       );
 

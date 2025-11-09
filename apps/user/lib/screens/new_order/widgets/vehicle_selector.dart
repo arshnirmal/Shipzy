@@ -39,7 +39,7 @@ class VehicleSelector extends ConsumerWidget {
               ),
               selected: isSel,
               onSelected: (_) => onChanged?.call(v),
-              selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
             );
           }).toList(),
         ),

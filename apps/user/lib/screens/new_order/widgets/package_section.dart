@@ -72,7 +72,7 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
               label: Text(p.name),
               selected: isSel,
               onSelected: (_) => widget.onCategoryChanged(p),
-              selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.18),
+              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
             );
           }).toList(),
         ),
