@@ -13,6 +13,7 @@ import '../screens/orders/order_details_screen.dart';
 import '../screens/orders/order_list_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/new_order/address_form_screen.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import 'app_routes.dart';
 
@@ -117,8 +118,13 @@ GoRouter router(Ref ref) {
         path: AppRoutes.addressForm,
         name: 'addressForm',
         builder: (context, state) {
-          final addressId = state.uri.queryParameters['id'];
-          return Scaffold(body: Center(child: Text('Address Form - ${addressId ?? 'New'}')));
+          final extra = state.extra as Map<String, dynamic>?;
+          final purpose = extra?['purpose'] as String?;
+          final initialAddress = extra?['initialAddress'] as String?;
+          return AddressFormScreen(
+            purpose: purpose,
+            initialAddress: initialAddress,
+          );
         },
       ),
 

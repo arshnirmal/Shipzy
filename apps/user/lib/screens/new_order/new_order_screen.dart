@@ -137,35 +137,23 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                 ],
               ),
             ),
-          // Bottom price + action
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: PriceActionBar(
-              onCreate: () async {
-                // trigger
-                await notifier.createOrder();
-                // read fresh state after await
-                final current = ref.read(newOrderProvider);
-                // guard all context usages
-                if (!context.mounted) {
-                  return;
-                }
-                if (current.createOrderError == null && current.createdOrder != null) {
-                  context.pop();
-                  if (!context.mounted) {
-                    return;
-                  }
-                  SnackbarUtils.showSuccess(context, 'Order created successfully');
-                  notifier.resetAfterOrderCreation();
-                } else {
-                  SnackbarUtils.showError(context, 'Failed to create order: ${current.createOrderError}');
-                }
-              },
-            ),
-          ),
         ],
+      ),
+      bottomNavigationBar: PriceActionBar(
+        onCreate: () async {
+          await notifier.createOrder();
+          final current = ref.read(newOrderProvider);
+          if (!context.mounted) {
+            return;
+          }
+          if (current.createOrderError == null && current.createdOrder != null) {
+            context.pop();
+            SnackbarUtils.showSuccess(context, 'Order created successfully');
+            notifier.resetAfterOrderCreation();
+          } else {
+            SnackbarUtils.showError(context, 'Failed to create order: ${current.createOrderError}');
+          }
+        },
       ),
     );
   }

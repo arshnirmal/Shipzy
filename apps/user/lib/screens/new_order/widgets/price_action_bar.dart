@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/new_order_provider.dart';
 
 class PriceActionBar extends ConsumerWidget {
-  const PriceActionBar({super.key, required this.onCreate});
+  const PriceActionBar({required this.onCreate, super.key});
 
   final Future<void> Function() onCreate;
 
@@ -39,19 +39,14 @@ class PriceActionBar extends ConsumerWidget {
                 border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
               ),
               child: state.isCalculatingFare
-                  ? const SizedBox(
-                      width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.currency_rupee, size: 18, color: Theme.of(context).colorScheme.primary),
                         Text(
                           showPrice ? total.toStringAsFixed(0) : '--',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                          ),
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700, fontSize: 18),
                         ),
                       ],
                     ),
@@ -68,7 +63,10 @@ class PriceActionBar extends ConsumerWidget {
                 ),
                 child: state.isCreatingOrder
                     ? SizedBox(
-                        width: 20, height: 20, child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary, strokeWidth: 2))
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary, strokeWidth: 2),
+                      )
                     : const Text('Create Order'),
               ),
             ),

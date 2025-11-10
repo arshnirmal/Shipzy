@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-typedef AddressChanged = void Function(
-  String address,
-  double latitude,
-  double longitude,
-  String contactName,
-  String contactPhone,
-);
+import '../../../utils/app_routes.dart';
+
+typedef AddressChanged = void Function(String address, double latitude, double longitude, String contactName, String contactPhone);
 
 class LocationSection extends ConsumerStatefulWidget {
-  const LocationSection({
-    super.key,
-    required this.onPickupChanged,
-    required this.onDeliveryChanged,
-  });
+  const LocationSection({required this.onPickupChanged, required this.onDeliveryChanged, super.key});
 
   final AddressChanged onPickupChanged;
   final AddressChanged onDeliveryChanged;
@@ -43,99 +36,147 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Locations', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        _SectionHeader(index: 1, title: 'Pickup point'),
-        const SizedBox(height: 8),
-        _addressField(_pickAddr, hint: 'Pickup address', onTapMap: () async {
-          // Hook your place picker here, then call:
-          // widget.onPickupChanged(address, lat, lng, _pickName.text, _pickPhone.text);
-        }),
-        const SizedBox(height: 8),
-        _namePhoneRow(_pickName, _pickPhone),
-        const SizedBox(height: 16),
-        _SectionHeader(index: 2, title: 'Delivery point'),
-        const SizedBox(height: 8),
-        _addressField(_delAddr, hint: 'Delivery address', onTapMap: () async {
-          // Hook your place picker here, then call onDeliveryChanged
-        }),
-        const SizedBox(height: 8),
-        _namePhoneRow(_delName, _delPhone),
-        const SizedBox(height: 8),
-        // Apply to provider on any change (basic)
-        ElevatedButton.icon(
-          onPressed: () {
-            if (_pickAddr.text.isEmpty || _delAddr.text.isEmpty) return;
-            widget.onPickupChanged(_pickAddr.text, 0, 0, _pickName.text, _pickPhone.text);
-            widget.onDeliveryChanged(_delAddr.text, 0, 0, _delName.text, _delPhone.text);
-          },
-          icon: const Icon(Icons.check_circle_outline),
-          label: const Text('Confirm addresses'),
-        ),
-      ],
-    );
-  }
-
-  Widget _addressField(TextEditingController c, {required String hint, VoidCallback? onTapMap}) {
-    return TextField(
-      controller: c,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: const Icon(Icons.location_on_outlined),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.map_outlined),
-          onPressed: onTapMap,
-        ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const StepRailHeader(step: 1, title: 'Pickup point'),
+      const SizedBox(height: 8),
+      ShipzyAddressField(
+        controller: _pickAddr,
+        hint: 'Pickup address',
+        onPick: () async => _openPicker(context, purpose: 'pickup'),
       ),
-    );
-  }
+      const SizedBox(height: 8),
+      _namePhoneRow(_pickName, _pickPhone),
+      const SizedBox(height: 18),
+      const StepRailHeader(step: 2, title: 'Delivery point'),
+      const SizedBox(height: 8),
+      ShipzyAddressField(
+        controller: _delAddr,
+        hint: 'Delivery address',
+        onPick: () async => _openPicker(context, purpose: 'delivery'),
+      ),
+      const SizedBox(height: 8),
+      _namePhoneRow(_delName, _delPhone),
+    ],
+  );
 
-  Widget _namePhoneRow(TextEditingController name, TextEditingController phone) {
+  Future<void> _openPicker(BuildContext context, {required String purpose}) async {
+    final result = await context.push(
+      AppRoutes.addressForm,
+      extra: {'purpose': purpose, 'initialAddress': (purpose == 'pickup') ? _pickAddr.text : _delAddr.text},
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+    final sel = result as SelectedAddress;
+    if (purpose == 'pickup') {
+      _pickAddr.text = sel.fullAddress;
+      widget.onPickupChanged(sel.fullAddress, sel.latitude, sel.longitude, _pickName.text, _pickPhone.text);
+    } else {
+      _delAddr.text = sel.fullAddress;
+      widget.onDeliveryChanged(sel.fullAddress, sel.latitude, sel.longitude, _delName.text, _delPhone.text);
+    }
+  }
+}
+
+Widget _namePhoneRow(TextEditingController name, TextEditingController phone) => Row(
+  children: [
+    Expanded(
+      child: TextField(
+        controller: name,
+        decoration: const InputDecoration(hintText: 'Contact name', prefixIcon: Icon(Icons.person_outline)),
+      ),
+    ),
+    const SizedBox(width: 10),
+    Expanded(
+      child: TextField(
+        controller: phone,
+        keyboardType: TextInputType.phone,
+        decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.call_outlined)),
+      ),
+    ),
+  ],
+);
+
+// Fancy step header with a vertical rail
+
+class StepRailHeader extends StatelessWidget {
+  const StepRailHeader({required this.step, required this.title, super.key});
+
+  final int step;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Expanded(
-          child: TextField(
-            controller: name,
-            decoration: const InputDecoration(
-              hintText: 'Contact name',
-              prefixIcon: Icon(Icons.person_outline),
+        Column(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: cs.primary.withValues(alpha: 0.20),
+              child: Text(
+                '$step',
+                style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
+            Container(
+              width: 2,
+              height: 24,
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
+            ),
+          ],
         ),
         const SizedBox(width: 10),
-        Expanded(
-          child: TextField(
-            controller: phone,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              hintText: 'Phone number',
-              prefixIcon: Icon(Icons.call_outlined),
-            ),
-          ),
-        ),
+        Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
       ],
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.index, required this.title});
+// ReadOnly address field that routes to picker on tap or on suffix icon
 
-  final int index;
-  final String title;
+class ShipzyAddressField extends StatelessWidget {
+  const ShipzyAddressField({required this.controller, required this.hint, required this.onPick, super.key});
+
+  final TextEditingController controller;
+  final String hint;
+  final Future<void> Function() onPick;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text('$index', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(width: 6),
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => TextField(
+    controller: controller,
+    readOnly: true,
+    onTap: onPick,
+    decoration: InputDecoration(
+      hintText: hint,
+      prefixIcon: const Icon(Icons.location_on_outlined),
+      suffixIcon: IconButton(icon: const Icon(Icons.map_outlined), onPressed: onPick),
+    ),
+  );
+}
+
+// Returned object from address picker
+
+class SelectedAddress {
+  SelectedAddress({
+    required this.fullAddress,
+    required this.latitude,
+    required this.longitude,
+    this.building,
+    this.floor,
+    this.flat,
+    this.howToReach,
+  });
+
+  final String fullAddress;
+  final double latitude;
+  final double longitude;
+  final String? building;
+  final String? floor;
+  final String? flat;
+  final String? howToReach;
 }

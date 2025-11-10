@@ -15,6 +15,10 @@ class VehicleSelector extends ConsumerWidget {
     final vehicles = state.selectedDeliveryType?.supportedVehicles ?? [];
     final selected = state.selectedVehicle?.categoryId;
 
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedBg = isDark ? Color.alphaBlend(cs.primary.withValues(alpha: 0.16), cs.surface) : cs.primary.withValues(alpha: 0.10);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -29,17 +33,22 @@ class VehicleSelector extends ConsumerWidget {
               label: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(_getVehicleIcon(v.name), size: 16),
-                  const SizedBox(width: 6),
                   Text(v.displayName),
                   const SizedBox(width: 6),
-                  Text('• up to ${v.maxWeightKg.toStringAsFixed(0)} kg',
-                      style: const TextStyle(fontSize: 12)),
+                  Text('• up to ${v.maxWeightKg.toStringAsFixed(0)} kg', style: const TextStyle(fontSize: 12)),
                 ],
               ),
               selected: isSel,
               onSelected: (_) => onChanged?.call(v),
-              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
+              selectedColor: selectedBg,
+              backgroundColor: cs.surface,
+              side: BorderSide(color: isSel ? cs.primary : cs.outlineVariant, width: isSel ? 2 : 1),
+              labelStyle: TextStyle(
+                color: isSel ? cs.onSurface : cs.onSurface.withValues(alpha: 0.90),
+                fontWeight: isSel ? FontWeight.w600 : FontWeight.w500,
+              ),
+              avatar: Icon(_getVehicleIcon(v.name), size: 16, color: cs.primary),
+              showCheckmark: false,
             );
           }).toList(),
         ),

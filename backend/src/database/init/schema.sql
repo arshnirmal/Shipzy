@@ -617,19 +617,21 @@ WHERE
 INSERT INTO
     public.labels (name, display_text, color, background_color)
 VALUES
-    ('new', 'NEW', '#FFFFFF', '#10B981'),
+    ('new', 'NEW', '#12B76A', '#12B76A'),
     -- Green badge
-    ('discount_40', '40% OFF', '#FFFFFF', '#EF4444'),
+    ('discount_40', '40% OFF', '#EF4444', '#EF4444'),
     -- Red badge
-    ('popular', 'Popular', '#FFFFFF', '#3B82F6'),
+    ('popular', 'Popular', '#3B82F6', '#3B82F6'),
     -- Blue badge
-    ('fastest', 'Fastest', '#FFFFFF', '#F59E0B');
+    ('fastest', 'Fastest', '#F79009', '#F79009'),
+    -- Orange badge
+    ('eco', 'Eco', '#16A34A', '#22C55E');
+    -- Eco badge
 
--- Orange badge
 -- ============================================================
 -- 6. ATTACH LABELS TO DELIVERY TYPES
 -- ============================================================
--- "Deliver Now" is NEW and FASTEST
+-- "Deliver Now" is FASTEST
 INSERT INTO
     public.delivery_type_labels (delivery_type_id, label_id, display_order)
 SELECT
@@ -641,22 +643,23 @@ FROM
     public.labels l
 WHERE
     dt.name = 'deliver_now'
-    AND l.name = 'new';
+    AND l.name = 'fastest';
 
+-- "End of Day" has 40% OFF
 INSERT INTO
     public.delivery_type_labels (delivery_type_id, label_id, display_order)
 SELECT
     dt.delivery_type_id,
     l.label_id,
-    2
+    1
 FROM
     public.delivery_types dt,
     public.labels l
 WHERE
-    dt.name = 'deliver_now'
-    AND l.name = 'fastest';
+    dt.name = 'end_of_day'
+    AND l.name = 'discount_40';
 
--- "Scheduled" has 40% OFF
+-- "Scheduled" is ECO and NEW
 INSERT INTO
     public.delivery_type_labels (delivery_type_id, label_id, display_order)
 SELECT
@@ -668,7 +671,20 @@ FROM
     public.labels l
 WHERE
     dt.name = 'scheduled'
-    AND l.name = 'discount_40';
+    AND l.name = 'eco';
+
+INSERT INTO
+    public.delivery_type_labels (delivery_type_id, label_id, display_order)
+SELECT
+    dt.delivery_type_id,
+    l.label_id,
+    2
+FROM
+    public.delivery_types dt,
+    public.labels l
+WHERE
+    dt.name = 'scheduled'
+    AND l.name = 'new';
 
 -- ===================================================================
 -- SECTION 5: USERS SCHEMA
