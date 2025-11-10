@@ -49,6 +49,8 @@
 		<string>We need your location to provide accurate delivery services</string>
 		<key>NSLocationAlwaysUsageDescription</key>
 		<string>We need your location to provide accurate delivery services</string>
+		<key>MGLMapboxAccessToken</key>
+		<string>pk.eyJ1IjoiYXNobmlybWFsIiwiYSI6ImNtaDZyczN3YTBrNXYya3IwYWEyNTE1MGoifQ.XedI8cqZ0eJn7Bwhyf0bag</string>
 
 	</dict>
 </plist>

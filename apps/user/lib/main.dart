@@ -6,19 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import 'app.dart';
 import 'utils/logger.dart';
 
 Future<void> main() async {
   // Run everything in a single zone to avoid zone mismatch issues
-  runZonedGuarded(
+  await runZonedGuarded(
     () async {
       // Ensure Flutter bindings
       WidgetsFlutterBinding.ensureInitialized();
 
       // Load environment variables
       await dotenv.load();
+
+      // Set Mapbox access token
+      MapboxOptions.setAccessToken(dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '');
 
       // Initialize Firebase
       await Firebase.initializeApp();

@@ -1,15 +1,19 @@
+// lib/screens/new_order/address_form_screen.dart
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' as geo;
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
-import '../../screens/new_order/widgets/location_section.dart';
+import 'widgets/location_section.dart';
 
 class AddressFormScreen extends ConsumerStatefulWidget {
-  const AddressFormScreen({this.addressId, super.key, this.purpose, this.initialAddress});
+  const AddressFormScreen({this.addressId, this.purpose, this.initialAddress, super.key});
 
-  final String? addressId; // unused for now; keep for future edit flow
-  final String? purpose;
+  final String? addressId;
+  final String? purpose; // 'pickup' or 'delivery'
   final String? initialAddress;
 
   @override
@@ -17,6 +21,7 @@ class AddressFormScreen extends ConsumerStatefulWidget {
 }
 
 class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
+  // Text controllers
   final _search = TextEditingController();
   final _building = TextEditingController();
   final _floor = TextEditingController();
@@ -24,17 +29,23 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   final _directions = TextEditingController();
   final _searchFocus = FocusNode();
 
-  // map state
+  // Map state
+  MapboxMap? _mapboxMap;
   LatLng? _center;
-  final bool _dragging = false;
-  Timer? _debounce;
+  bool _dragging = false;
+
+  // Debounce timers
+  Timer? _searchDebounce;
+  Timer? _reverseDebounce;
+
+  // Suggestions
+  List<dynamic> _suggestions = [];
+  bool _loadingSuggestions = false;
 
   @override
   void initState() {
     super.initState();
-    // autofocus search when page opens
     WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
-    // Set initial address if provided
     if (widget.initialAddress?.isNotEmpty ?? false) {
       _search.text = widget.initialAddress!;
     }
@@ -42,78 +53,93 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _reverseDebounce?.cancel();
     _search.dispose();
     _building.dispose();
     _floor.dispose();
     _flat.dispose();
     _directions.dispose();
     _searchFocus.dispose();
-    _debounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final title = widget.purpose == 'delivery' ? 'To' : 'From';
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.purpose == 'delivery' ? 'To' : 'From')),
+      appBar: AppBar(title: Text(title)),
       body: Stack(
         children: [
-          // TODO: plug in mapbox_gl or mapbox_maps_flutter
-          // Map widget should support onCameraIdle / onCameraMove
-          Container(
-            color: cs.surfaceContainerHighest,
-            child: const Center(
-              child: Text('Map Integration\nComing Soon', textAlign: TextAlign.center),
+          // Map with widget-level listeners
+          MapWidget(
+            key: const ValueKey('shipzy_address_map'),
+            cameraOptions: CameraOptions(
+              center: Point(coordinates: Position(72.8777, 19.0760)), // lon, lat
+              zoom: 14,
             ),
+            onMapCreated: _onMapCreated,
+            onCameraChangeListener: _onCameraChanged,
+            onMapIdleListener: (_) => _onMapIdle(),
           ),
+
           // Center pin
           IgnorePointer(
             child: Center(
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 120),
-                scale: _dragging ? 1.1 : 1.0,
-                child: Icon(Icons.location_on_rounded, size: 36, color: cs.primary),
+                scale: _dragging ? 1.15 : 1.0,
+                child: Icon(
+                  Icons.location_on_rounded,
+                  size: 38,
+                  color: cs.primary,
+                  shadows: [Shadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6)],
+                ),
               ),
             ),
           ),
-          // Current location FAB
+
+          // My location button
           Positioned(
-            right: 16, bottom: 180,
-            child: FloatingActionButton.small(
-              onPressed: _jumpToMyLocation,
-              child: const Icon(Icons.my_location_rounded),
-            ),
+            right: 16,
+            bottom: 200,
+            child: FloatingActionButton.small(heroTag: 'my_location_btn', onPressed: _jumpToMyLocation, child: const Icon(Icons.my_location_rounded)),
           ),
-          // Bottom sheet with search + details
+
+          // Bottom sheet
           DraggableScrollableSheet(
-            initialChildSize: 0.34, minChildSize: 0.25, maxChildSize: 0.66,
+            initialChildSize: 0.36,
+            minChildSize: 0.28,
+            maxChildSize: 0.70,
             builder: (context, controller) => Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 18)],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 20, offset: const Offset(0, -2))],
               ),
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               child: ListView(
                 controller: controller,
                 children: [
-                  Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(
-                    color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)))),
-                  const SizedBox(height: 10),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      Text(widget.purpose == 'delivery' ? 'To' : 'From',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                       const Spacer(),
-                      TextButton.icon(
-                        onPressed: _openMapOnly,
-                        icon: const Icon(Icons.map_rounded, size: 18),
-                        label: const Text('Map'),
-                      ),
+                      TextButton.icon(onPressed: _collapseSheet, icon: const Icon(Icons.map_rounded, size: 18), label: const Text('Map')),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
+
                   // Search box
                   TextField(
                     controller: _search,
@@ -121,34 +147,52 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
                       hintText: 'Locality and Society Name',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => _search.clear()),
+                      prefixIcon: _loadingSuggestions
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                            )
+                          : const Icon(Icons.search_rounded),
+                      suffixIcon: _search.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.close_rounded),
+                              onPressed: () {
+                                _search.clear();
+                                setState(() => _suggestions = []);
+                              },
+                            )
+                          : null,
                     ),
                     onChanged: _debouncedSearch,
                     onSubmitted: (_) => _triggerSearch(),
                   ),
-                  const SizedBox(height: 12),
-                  // TODO: Build suggestions list from /addresses/search
-                  const SizedBox(height: 12),
+
+                  const SizedBox(height: 10),
+
+                  // Suggestions list
+                  if (_suggestions.isNotEmpty) ...[
+                    ..._suggestions.map((sug) => _SuggestionTile(suggestion: sug, onTap: () => _selectSuggestion(sug))),
+                    const Divider(height: 24),
+                  ],
+
+                  // Details
                   Row(
                     children: [
                       Expanded(child: _miniField(_building, 'Building')),
                       const SizedBox(width: 8),
                       Expanded(child: _miniField(_floor, 'Floor')),
                       const SizedBox(width: 8),
-                      Expanded(child: _miniField(_flat, 'Flat/Unit No.')),
+                      Expanded(child: _miniField(_flat, 'Flat/Unit')),
                     ],
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _directions,
+                    maxLines: 2,
                     decoration: const InputDecoration(hintText: 'How to reach'),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _confirm,
-                    child: const Text('Confirm'),
-                  ),
+                  ElevatedButton(onPressed: _confirm, child: const Text('Confirm')),
                 ],
               ),
             ),
@@ -158,51 +202,177 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     );
   }
 
-  Widget _miniField(TextEditingController c, String hint) =>
-      TextField(controller: c, decoration: InputDecoration(hintText: hint));
+  // Map lifecycle
+  Future<void> _onMapCreated(MapboxMap map) async {
+    _mapboxMap = map;
+    // Read camera center after created (works across platforms)
+    final cam = await map.getCameraState();
+    _updateCenterFromCamera(cam);
+  }
 
+  // Camera changed continuously
+  void _onCameraChanged(CameraChangedEventData data) async {
+    if (!_dragging) {
+      setState(() => _dragging = true);
+    }
+    // Prefer event.cameraState if present; fallback to querying the map
+    final cam = data.cameraState ?? await _mapboxMap?.getCameraState();
+    if (cam != null) {
+      _updateCenterFromCamera(cam);
+    }
+  }
+
+  // Map idle once after movement
+  void _onMapIdle() {
+    if (_dragging) {
+      setState(() => _dragging = false);
+    }
+    _reverseDebounce?.cancel();
+    _reverseDebounce = Timer(const Duration(milliseconds: 350), _reverseGeocodeCenter);
+  }
+
+  void _updateCenterFromCamera(CameraState cam) {
+    final coords = cam.center.coordinates;
+    if (coords.length >= 2) {
+      _center = LatLng(coords[1]?.toDouble() ?? 0.0, coords[0]?.toDouble() ?? 0.0);
+    }
+  }
+
+  // Search
   void _debouncedSearch(String _) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () => _triggerSearch());
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), _triggerSearch);
   }
 
   Future<void> _triggerSearch() async {
     final q = _search.text.trim();
-    if (q.isEmpty) return;
+    if (q.isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    setState(() => _loadingSuggestions = true);
 
-    // Call POST /addresses/search with session token and proximity
-    // Display suggestions in the sheet, and on tap:
-    // - Call POST /addresses/retrieve, move map to result bbox, and update _center
-    return;
+    // TODO(you): Call your address service search (POST /addresses/search) and map to _suggestions
+    // Use proximity: '${_center?.longitude},${_center?.latitude}' if available.
+
+    await Future.delayed(const Duration(milliseconds: 400));
+    setState(() {
+      _suggestions = [
+        {'id': 'mock-1', 'name': 'Mock Place 1', 'fullAddress': 'Mock Address 1'},
+        {'id': 'mock-2', 'name': 'Mock Place 2', 'fullAddress': 'Mock Address 2'},
+      ];
+      _loadingSuggestions = false;
+    });
   }
 
+  Future<void> _selectSuggestion(dynamic suggestion) async {
+    // TODO(you): Call POST /addresses/retrieve with suggestion['id'], then flyTo returned coordinates and set _search.text to fullAddress
+
+    _search.text = suggestion['fullAddress'] ?? suggestion['name'] ?? '';
+    setState(() => _suggestions = []);
+    _searchFocus.unfocus();
+  }
+
+  // Reverse geocode on idle
+  Future<void> _reverseGeocodeCenter() async {
+    if (_center == null) {
+      return;
+    }
+
+    // TODO(you): Call POST /addresses/reverse-geocode for (_center!.latitude, _center!.longitude) and update _search.text with best result
+  }
+
+  // My location
   Future<void> _jumpToMyLocation() async {
-    // Get device location and animate the camera
-    return;
+    try {
+      final permission = await geo.Geolocator.checkPermission();
+      if (permission == geo.LocationPermission.denied || permission == geo.LocationPermission.deniedForever) {
+        await geo.Geolocator.requestPermission();
+      }
+      final pos = await geo.Geolocator.getCurrentPosition();
+      await _mapboxMap?.flyTo(
+        CameraOptions(center: Point(coordinates: Position(pos.longitude, pos.latitude)), zoom: 15),
+        MapAnimationOptions(duration: 800),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not get location: $e')));
+    }
   }
 
+  // Confirm and return
   Future<void> _confirm() async {
-    // Reverse geocode current camera center if needed
-    // Then pop with a SelectedAddress
-    final sel = SelectedAddress(
+    if (_search.text.trim().isEmpty && _center != null) {
+      await _reverseGeocodeCenter();
+    }
+    final selected = SelectedAddress(
       fullAddress: _search.text.trim().isEmpty ? 'Pinned location' : _search.text.trim(),
-      latitude: _center?.latitude ?? 0,
-      longitude: _center?.longitude ?? 0,
-      building: _building.text,
-      floor: _floor.text,
-      flat: _flat.text,
-      howToReach: _directions.text,
+      latitude: _center?.latitude ?? 0.0,
+      longitude: _center?.longitude ?? 0.0,
+      building: _building.text.trim(),
+      floor: _floor.text.trim(),
+      flat: _flat.text.trim(),
+      howToReach: _directions.text.trim(),
     );
     if (!mounted) {
       return;
     }
-    Navigator.of(context).pop(sel);
+    Navigator.of(context).pop(selected);
   }
 
-  void _openMapOnly() {/* optional: collapse sheet */}
+  void _collapseSheet() {
+    _searchFocus.unfocus();
+  }
+
+  // Small input helper
+  Widget _miniField(TextEditingController c, String hint) => TextField(
+    controller: c,
+    decoration: const InputDecoration().copyWith(hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+  );
 }
 
-// LatLng class for map coordinates (placeholder until map integration)
+class _SuggestionTile extends StatelessWidget {
+  const _SuggestionTile({required this.suggestion, required this.onTap});
+  final dynamic suggestion;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = suggestion['name'] ?? '';
+    final address = suggestion['fullAddress'] ?? '';
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Icon(Icons.location_on_outlined, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                  if (address.isNotEmpty && address != name)
+                    Text(
+                      address,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.70)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class LatLng {
   const LatLng(this.latitude, this.longitude);
   final double latitude;
