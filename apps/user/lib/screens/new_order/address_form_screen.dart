@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
+import '../../models/address_location.dart';
+import '../../providers/address_service_provider.dart';
 import 'widgets/location_section.dart';
 
 class AddressFormScreen extends ConsumerStatefulWidget {
@@ -39,8 +41,9 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   Timer? _reverseDebounce;
 
   // Suggestions
-  List<dynamic> _suggestions = [];
+  List<PlaceSuggestion> _suggestions = [];
   bool _loadingSuggestions = false;
+  String? _sessionToken;
 
   @override
   void initState() {
@@ -216,10 +219,8 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       setState(() => _dragging = true);
     }
     // Prefer event.cameraState if present; fallback to querying the map
-    final cam = data.cameraState ?? await _mapboxMap?.getCameraState();
-    if (cam != null) {
-      _updateCenterFromCamera(cam);
-    }
+    final cam = data.cameraState;
+    _updateCenterFromCamera(cam);
   }
 
   // Map idle once after movement
@@ -252,25 +253,58 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     }
     setState(() => _loadingSuggestions = true);
 
-    // TODO(you): Call your address service search (POST /addresses/search) and map to _suggestions
-    // Use proximity: '${_center?.longitude},${_center?.latitude}' if available.
+    try {
+      final addressService = ref.read(addressServiceProvider);
+      final proximity = _center != null ? '${_center!.longitude},${_center!.latitude}' : null;
 
-    await Future.delayed(const Duration(milliseconds: 400));
-    setState(() {
-      _suggestions = [
-        {'id': 'mock-1', 'name': 'Mock Place 1', 'fullAddress': 'Mock Address 1'},
-        {'id': 'mock-2', 'name': 'Mock Place 2', 'fullAddress': 'Mock Address 2'},
-      ];
-      _loadingSuggestions = false;
-    });
+      final suggestions = await addressService.searchPlaces(query: q, proximity: proximity, limit: 5);
+
+      if (mounted) {
+        setState(() {
+          _suggestions = suggestions;
+          _sessionToken = suggestions.isNotEmpty ? suggestions.first.sessionToken : null;
+          _loadingSuggestions = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingSuggestions = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to search places: $e')));
+      }
+    }
   }
 
-  Future<void> _selectSuggestion(dynamic suggestion) async {
-    // TODO(you): Call POST /addresses/retrieve with suggestion['id'], then flyTo returned coordinates and set _search.text to fullAddress
+  Future<void> _selectSuggestion(PlaceSuggestion suggestion) async {
+    if (_sessionToken == null) {
+      _search.text = suggestion.fullAddress;
+      setState(() => _suggestions = []);
+      _searchFocus.unfocus();
+      return;
+    }
 
-    _search.text = suggestion['fullAddress'] ?? suggestion['name'] ?? '';
-    setState(() => _suggestions = []);
-    _searchFocus.unfocus();
+    try {
+      final addressService = ref.read(addressServiceProvider);
+      final placeDetails = await addressService.retrievePlaceDetails(mapboxId: suggestion.id, sessionToken: _sessionToken!);
+
+      // Fly to the retrieved coordinates
+      await _mapboxMap?.flyTo(
+        CameraOptions(center: Point(coordinates: Position(placeDetails.coordinates.longitude, placeDetails.coordinates.latitude)), zoom: 15),
+        MapAnimationOptions(duration: 800),
+      );
+
+      _search.text = placeDetails.fullAddress;
+      setState(() => _suggestions = []);
+      _searchFocus.unfocus();
+    } catch (e) {
+      // Fallback to using suggestion data if retrieve fails
+      _search.text = suggestion.fullAddress;
+      setState(() => _suggestions = []);
+      _searchFocus.unfocus();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to retrieve place details: $e')));
+      }
+    }
   }
 
   // Reverse geocode on idle
@@ -279,7 +313,19 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       return;
     }
 
-    // TODO(you): Call POST /addresses/reverse-geocode for (_center!.latitude, _center!.longitude) and update _search.text with best result
+    try {
+      final addressService = ref.read(addressServiceProvider);
+      final result = await addressService.reverseGeocode(latitude: _center!.latitude, longitude: _center!.longitude);
+
+      if (result.results.isNotEmpty && mounted) {
+        // Use the first (most relevant) result
+        final bestResult = result.results.first;
+        _search.text = bestResult.fullAddress;
+      }
+    } catch (e) {
+      // Silently fail for reverse geocoding - it's not critical
+      // User can still manually enter address
+    }
   }
 
   // My location
@@ -335,13 +381,13 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
 class _SuggestionTile extends StatelessWidget {
   const _SuggestionTile({required this.suggestion, required this.onTap});
-  final dynamic suggestion;
+  final PlaceSuggestion suggestion;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final name = suggestion['name'] ?? '';
-    final address = suggestion['fullAddress'] ?? '';
+    final name = suggestion.name;
+    final address = suggestion.fullAddress;
     return InkWell(
       onTap: onTap,
       child: Padding(
