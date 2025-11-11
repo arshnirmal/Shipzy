@@ -46,7 +46,7 @@ class AddressesController {
    */
   async searchAddresses(
     request: FastifyRequest<{ Body: SearchAddressesBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { query, proximity, limit } = request.body;
@@ -79,7 +79,11 @@ class AddressesController {
         error: (error as Error).message,
         query: request.body?.query,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -89,7 +93,7 @@ class AddressesController {
    */
   async retrievePlace(
     request: FastifyRequest<{ Body: RetrievePlaceBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { mapboxId, sessionToken } = request.body;
@@ -124,7 +128,11 @@ class AddressesController {
         error: (error as Error).message,
         mapboxId: request.body?.mapboxId,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -134,7 +142,7 @@ class AddressesController {
    */
   async reverseGeocode(
     request: FastifyRequest<{ Body: ReverseGeocodeBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { latitude, longitude } = request.body;
@@ -165,7 +173,11 @@ class AddressesController {
         error: (error as Error).message,
         coordinates: request.body,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -175,7 +187,7 @@ class AddressesController {
    */
   async getDirections(
     request: FastifyRequest<{ Body: DirectionsBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { origin, destination, profile } = request.body;
@@ -210,7 +222,11 @@ class AddressesController {
         origin: request.body?.origin,
         destination: request.body?.destination,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -220,12 +236,17 @@ class AddressesController {
    */
   async calculateDistance(
     request: FastifyRequest<{ Body: DistanceBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const { lat1, lon1, lat2, lon2 } = request.body;
 
-      if ([lat1, lon1, lat2, lon2].some((coord) => coord === undefined)) {
+      if (
+        lat1 === undefined ||
+        lon1 === undefined ||
+        lat2 === undefined ||
+        lon2 === undefined
+      ) {
         return errorResponse(
           reply,
           "lat1, lon1, lat2, lon2 are all required",
@@ -251,7 +272,11 @@ class AddressesController {
         error: (error as Error).message,
         coordinates: request.body,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 }

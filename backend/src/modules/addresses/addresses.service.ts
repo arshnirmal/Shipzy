@@ -44,6 +44,12 @@ class AddressesService {
   constructor() {
     this.baseUrl = process.env.MAPBOX_BASE_URL || "https://api.mapbox.com";
     this.mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN || "";
+
+    if (!this.mapboxAccessToken) {
+      logger.warn(
+        "MAPBOX_ACCESS_TOKEN not configured - Mapbox API calls will fail",
+      );
+    }
   }
 
   /**
@@ -194,26 +200,61 @@ class AddressesService {
   }
 
   /**
-   * Reverse geocode coordinates to address using Mapbox Geocoding API
+   * Reverse geocode coordinates to address using Mapbox Geocoding v6 API
    */
   async reverseGeocode(geocodeParams: GeocodeParams) {
     try {
-      const { longitude, latitude, types } = geocodeParams;
+      if (!this.mapboxAccessToken) {
+        throw new ValidationError("Mapbox API key not configured");
+      }
 
-      // Build reverse geocoding parameters
+      let { longitude, latitude, types } = geocodeParams;
+
+      // Validate and round coordinates to 7 decimal places (centimeter precision)
+      if (typeof latitude !== "number" || typeof longitude !== "number") {
+        throw new ValidationError("Invalid coordinate format");
+      }
+
+      if (latitude < -90 || latitude > 90) {
+        throw new ValidationError("Latitude must be between -90 and 90");
+      }
+
+      if (longitude < -180 || longitude > 180) {
+        throw new ValidationError("Longitude must be between -180 and 180");
+      }
+
+      // Round to 7 decimal places to avoid precision issues
+      latitude = Math.round(latitude * 10000000) / 10000000;
+      longitude = Math.round(longitude * 10000000) / 10000000;
+
+      // Build reverse geocoding parameters for Mapbox Geocoding v6
+      const defaultTypes = "address,poi";
+      const requestTypes = types ? types.join(",") : defaultTypes;
+
       const params = new URLSearchParams({
+        longitude: longitude.toString(),
+        latitude: latitude.toString(),
         access_token: this.mapboxAccessToken,
-        types: types
-          ? types.join(",")
-          : "address,poi,place,neighborhood,locality",
+        types: requestTypes,
         limit: "5",
         language: "en",
       });
 
-      const url = `${this.baseUrl}/geocoding/v5/mapbox.places/${longitude},${latitude}.json?${params.toString()}`;
+      // Log the exact parameters being sent
+      logger.info({
+        msg: "Reverse geocoding parameters (v6 API)",
+        longitude,
+        latitude,
+        types: requestTypes,
+        limit: 5,
+        language: "en",
+      });
+
+      // Use Mapbox Geocoding v6 endpoint
+      const url = `${this.baseUrl}/search/geocode/v6/reverse?${params.toString()}`;
 
       logger.info({
-        msg: "Making Mapbox Reverse Geocoding API request",
+        msg: "Making Mapbox Reverse Geocoding v6 API request",
         url: url.replace(this.mapboxAccessToken, "***"),
         coordinates: { longitude, latitude },
         types,
@@ -257,26 +298,60 @@ class AddressesService {
         total: results.length,
       };
     } catch (error) {
+      const axiosError = error as any;
+      const status = axiosError.response?.status;
+      const responseData = axiosError.response?.data;
+      const errorMessage = axiosError.message;
+
+      // Try to extract meaningful error message from response
+      let mapboxErrorMessage = errorMessage;
+      if (responseData) {
+        if (typeof responseData === "string") {
+          mapboxErrorMessage = responseData;
+        } else if (responseData.message) {
+          mapboxErrorMessage = responseData.message;
+        } else if (responseData.error) {
+          mapboxErrorMessage = responseData.error;
+        }
+      }
+
       logger.error({
         msg: "Mapbox reverse geocoding failed",
-        error: (error as Error).message,
+        error: errorMessage,
+        mapboxError: mapboxErrorMessage,
         coordinates: {
           longitude: geocodeParams.longitude,
           latitude: geocodeParams.latitude,
         },
-        status: (error as any).response?.status,
+        status,
+        responseData,
+        url: axiosError.config?.url?.replace(this.mapboxAccessToken, "***"),
       });
 
-      if ((error as any).response?.status === 401) {
-        throw new ValidationError("Invalid Mapbox API key");
+      if (status === 401) {
+        throw new ValidationError(
+          "Invalid Mapbox API key - check if Geocoding API is enabled",
+        );
       }
 
-      if ((error as any).response?.status === 429) {
+      if (status === 403) {
+        throw new ValidationError(
+          "Mapbox API access forbidden - check API key permissions",
+        );
+      }
+
+      if (status === 429) {
         throw new ValidationError("Mapbox API rate limit exceeded");
       }
 
+      if (status === 422) {
+        throw new ValidationError(
+          `Invalid coordinates or parameters for reverse geocoding: ${mapboxErrorMessage}`,
+        );
+      }
+
       throw new ValidationError(
-        `Reverse geocoding failed: ${(error as Error).message}`,
+        `Reverse geocoding failed: ${mapboxErrorMessage}`,
       );
     }
   }
