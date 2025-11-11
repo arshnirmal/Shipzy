@@ -1,12 +1,13 @@
 // services/backend/src/modules/orders/orders.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger";
+import "../../middleware/auth.middleware";
 import {
   errorResponse,
   paginatedResponse,
   successResponse,
 } from "../../utils/response.util";
-import ordersService from "./orders.service";
+import ordersService, { OrderData } from "./orders.service";
 
 interface CalculateFareBody {
   deliveryTypeId: number;
@@ -29,14 +30,24 @@ interface OrderParams {
   id: string;
 }
 
-interface ListOrdersQuery {
-  page?: number;
-  limit?: number;
-  status?: string;
-}
-
 interface CancelOrderBody {
   cancellationReason: string;
+}
+
+type ListOrdersQuery = {
+  page?: string;
+  limit?: string;
+};
+
+interface GetAvailableOrdersQuery {
+  latitude?: string;
+  longitude?: string;
+  radius?: string;
+  limit?: string;
+}
+
+interface UpdateOrderStatusBody {
+  status: string;
 }
 
 class OrdersController {
@@ -46,7 +57,7 @@ class OrdersController {
    */
   async calculateFare(
     request: FastifyRequest<{ Body: CalculateFareBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
       const fareData = request.body;
@@ -57,9 +68,13 @@ class OrdersController {
     } catch (error) {
       logger.error({
         msg: "Calculate fare controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -67,9 +82,12 @@ class OrdersController {
    * POST /api/v1/orders
    * Create new order
    */
-  async createOrder(request, reply) {
+  async createOrder(
+    request: FastifyRequest<{ Body: OrderData }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
       const orderData = request.body;
 
       const result = await ordersService.createOrder(userId, orderData);
@@ -78,9 +96,13 @@ class OrdersController {
     } catch (error) {
       logger.error({
         msg: "Create order controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -88,13 +110,16 @@ class OrdersController {
    * GET /api/v1/orders/:id
    * Get order details
    */
-  async getOrderById(request, reply) {
+  async getOrderById(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId, role } = request.user;
+      const { userId, role } = request.user!;
       const { id } = request.params;
 
       const order = await ordersService.getOrderById(
-        parseInt(id),
+        Number.parseFloat(id),
         userId,
         role,
       );
@@ -103,9 +128,13 @@ class OrdersController {
     } catch (error) {
       logger.error({
         msg: "Get order controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -113,24 +142,29 @@ class OrdersController {
    * GET /api/v1/orders
    * List user's orders
    */
-  async listOrders(request, reply) {
+  async listOrders(
+    request: FastifyRequest<{ Querystring: ListOrdersQuery }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.user;
-      const { page = 1, limit = 20 } = request.query;
+      const { userId } = request.user!;
+      const { page = "1", limit = "20" } = request.query;
+      const pageNum = Number.parseFloat(page) || 1;
+      const limitNum = Number.parseFloat(limit) || 20;
 
-      const result = await ordersService.listOrders(
-        userId,
-        parseInt(page),
-        parseInt(limit),
-      );
+      const result = await ordersService.listOrders(userId, pageNum, limitNum);
 
       return paginatedResponse(reply, result.orders, result.pagination);
     } catch (error) {
       logger.error({
         msg: "List orders controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -138,19 +172,27 @@ class OrdersController {
    * GET /api/v1/orders/available
    * Get available orders for drivers
    */
-  async getAvailableOrders(request, reply) {
+  async getAvailableOrders(
+    request: FastifyRequest<{ Querystring: GetAvailableOrdersQuery }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { latitude, longitude, radius = 10, limit = 20 } = request.query;
+      const {
+        latitude,
+        longitude,
+        radius = "10",
+        limit = "20",
+      } = request.query;
 
       if (!latitude || !longitude) {
         return errorResponse(reply, "Latitude and longitude are required", 400);
       }
 
       const orders = await ordersService.getAvailableOrders(
-        parseFloat(latitude),
-        parseFloat(longitude),
-        parseFloat(radius),
-        parseInt(limit),
+        Number.parseFloat(latitude),
+        Number.parseFloat(longitude),
+        Number.parseFloat(radius),
+        Number.parseFloat(limit),
       );
 
       return successResponse(
@@ -159,10 +201,15 @@ class OrdersController {
         "Available orders retrieved successfully",
       );
     } catch (error) {
-      logger.error("Get available orders controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Get available orders controller error",
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -170,14 +217,17 @@ class OrdersController {
    * POST /api/v1/orders/:id/cancel
    * Cancel order
    */
-  async cancelOrder(request, reply) {
+  async cancelOrder(
+    request: FastifyRequest<{ Params: OrderParams; Body: CancelOrderBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId, role } = request.user;
+      const { userId, role } = request.user!;
       const { id } = request.params;
       const { cancellationReason } = request.body;
 
       const result = await ordersService.cancelOrder(
-        parseInt(id),
+        Number.parseFloat(id),
         userId,
         role,
         cancellationReason,
@@ -187,9 +237,13 @@ class OrdersController {
     } catch (error) {
       logger.error({
         msg: "Cancel order controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -197,20 +251,30 @@ class OrdersController {
    * POST /api/v1/orders/:id/accept
    * Driver accepts order
    */
-  async acceptOrder(request, reply) {
+  async acceptOrder(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
       const { id } = request.params;
 
-      const result = await ordersService.acceptOrder(parseInt(id), userId);
+      const result = await ordersService.acceptOrder(
+        Number.parseInt(id),
+        userId,
+      );
 
       return successResponse(reply, result, "Order accepted successfully");
     } catch (error) {
       logger.error({
         msg: "Accept order controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -218,14 +282,20 @@ class OrdersController {
    * PUT /api/v1/orders/:id/status
    * Update order status
    */
-  async updateOrderStatus(request, reply) {
+  async updateOrderStatus(
+    request: FastifyRequest<{
+      Params: OrderParams;
+      Body: UpdateOrderStatusBody;
+    }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
       const { id } = request.params;
       const { status } = request.body;
 
       const result = await ordersService.updateOrderStatus(
-        parseInt(id),
+        Number.parseFloat(id),
         status,
         userId,
       );
@@ -236,10 +306,15 @@ class OrdersController {
         "Order status updated successfully",
       );
     } catch (error) {
-      logger.error("Update order status controller error", {
-        error: error.message,
+      logger.error({
+        msg: "Update order status controller error",
+        error: (error as Error).message,
       });
-      return errorResponse(reply, error.message, error.statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 }

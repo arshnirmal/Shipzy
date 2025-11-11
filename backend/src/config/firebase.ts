@@ -1,12 +1,14 @@
 // services/backend/src/config/firebase.ts
 import admin from "firebase-admin";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import logger from "./logger";
 
 // Initialize Firebase Admin SDK using service account key file
+// eslint-disable-next-line import/no-mutable-exports
 let firebaseApp: admin.app.App | undefined;
+// eslint-disable-next-line import/no-mutable-exports
 let firebaseAuth: admin.auth.Auth | undefined;
 
 try {
@@ -43,14 +45,12 @@ try {
     ),
   ];
 
-  let serviceAccountPath = null;
   let serviceAccount = null;
 
   // Try each possible path
   for (const testPath of possiblePaths) {
     logger.info(`Checking Firebase service account path: ${testPath}`);
     if (fs.existsSync(testPath)) {
-      serviceAccountPath = testPath;
       serviceAccount = JSON.parse(fs.readFileSync(testPath, "utf8"));
       logger.info(`Found Firebase service account at: ${testPath}`);
       break;
@@ -71,14 +71,16 @@ try {
       "Firebase service account key file not found - authentication features will be disabled",
     );
     logger.warn("Tried the following paths:");
-    possiblePaths.forEach((path) => logger.warn(`  - ${path}`));
+    for (const path of possiblePaths) {
+      logger.warn(`  - ${path}`);
+    }
     logger.warn(`Current working directory: ${process.cwd()}`);
   }
 } catch (error) {
-    logger.error({
-      msg: "Failed to initialize Firebase Admin SDK",
-      error: (error as Error).message,
-    });
+  logger.error({
+    msg: "Failed to initialize Firebase Admin SDK",
+    error: (error as Error).message,
+  });
   logger.warn("Authentication features will be disabled");
 }
 
@@ -90,7 +92,9 @@ export { firebaseAuth };
  * @param idToken - Firebase ID token
  * @returns Decoded token
  */
-export const verifyFirebaseToken = async (idToken: string): Promise<admin.auth.DecodedIdToken> => {
+export const verifyFirebaseToken = async (
+  idToken: string,
+): Promise<admin.auth.DecodedIdToken> => {
   if (!firebaseAuth) {
     throw new Error("Firebase authentication is not available");
   }

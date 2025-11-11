@@ -26,9 +26,12 @@ class DriversController {
    * GET /api/v1/drivers/me
    * Get driver profile
    */
-  async getDriverProfile(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getDriverProfile(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<any> {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
 
       const driver = await driversService.getDriverProfile(userId);
 
@@ -42,7 +45,11 @@ class DriversController {
         msg: "Get driver profile controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -52,10 +59,10 @@ class DriversController {
    */
   async updateProfile(
     request: FastifyRequest<{ Body: UpdateProfileBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
       const updateData = request.body;
 
       const updatedDriver = await driversService.updateProfile(
@@ -73,7 +80,11 @@ class DriversController {
         msg: "Update driver profile controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -83,10 +94,10 @@ class DriversController {
    */
   async updateAvailability(
     request: FastifyRequest<{ Body: UpdateAvailabilityBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
       const availabilityData = request.body;
 
       const result = await driversService.updateAvailability(
@@ -104,7 +115,11 @@ class DriversController {
         msg: "Update availability controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -114,10 +129,10 @@ class DriversController {
    */
   async updateLocation(
     request: FastifyRequest<{ Body: UpdateLocationBody }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
       const locationData = request.body;
 
       const result = await driversService.updateLocation(userId, locationData);
@@ -128,7 +143,11 @@ class DriversController {
         msg: "Update location controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -136,9 +155,12 @@ class DriversController {
    * GET /api/v1/drivers/me/assignments
    * Get active assignments
    */
-  async getActiveAssignments(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getActiveAssignments(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<any> {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
 
       const assignments = await driversService.getActiveAssignments(userId);
 
@@ -152,7 +174,11 @@ class DriversController {
         msg: "Get assignments controller error",
         error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 
@@ -160,9 +186,12 @@ class DriversController {
    * GET /api/v1/drivers/me/earnings
    * Get earnings summary
    */
-  async getEarnings(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getEarnings(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<any> {
     try {
-      const { userId } = request.user;
+      const { userId } = request.user!;
 
       const earnings = await driversService.getEarningsSummary(userId);
 
@@ -174,9 +203,13 @@ class DriversController {
     } catch (error) {
       logger.error({
         msg: "Get earnings controller error",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
-      return errorResponse(reply, (error as Error).message, (error as any).statusCode || 500);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
     }
   }
 }

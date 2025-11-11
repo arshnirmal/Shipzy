@@ -7,7 +7,7 @@ class OrdersRepository {
   /**
    * Calculate fare using stored function
    */
-  async calculateFare(deliveryTypeId, distanceKm, weightKg) {
+  async calculateFare(deliveryTypeId: number, distanceKm: number, weightKg: number) {
     try {
       const result = await db.query(ordersQueries.CALL_CALCULATE_FARE, [
         deliveryTypeId,
@@ -28,7 +28,7 @@ class OrdersRepository {
   /**
    * Create order using stored function
    */
-  async createOrder(orderData) {
+  async createOrder(orderData: Record<string, any>) {
     try {
       const result = await db.query(ordersQueries.CALL_CREATE_ORDER, [
         JSON.stringify(orderData),
@@ -47,7 +47,7 @@ class OrdersRepository {
   /**
    * Find order by ID
    */
-  async findById(orderId) {
+  async findById(orderId: number) {
     try {
       const result = await db.query(ordersQueries.FIND_ORDER_BY_ID, [orderId]);
       return result.rows[0] || null;
@@ -63,7 +63,7 @@ class OrdersRepository {
   /**
    * Find orders by client with pagination
    */
-  async findByClient(clientId, limit, offset) {
+  async findByClient(clientId: number, limit: number, offset: number) {
     try {
       const [ordersResult, countResult] = await Promise.all([
         db.query(ordersQueries.FIND_ORDERS_BY_CLIENT, [
@@ -90,7 +90,7 @@ class OrdersRepository {
   /**
    * Find available orders for courier
    */
-  async findAvailableOrders(latitude, longitude, radiusKm, limit) {
+  async findAvailableOrders(latitude: number, longitude: number, radiusKm: number, limit: number) {
     try {
       const result = await db.query(
         ordersQueries.FIND_AVAILABLE_ORDERS_FOR_COURIER,
@@ -116,7 +116,7 @@ class OrdersRepository {
   /**
    * Cancel order using stored function
    */
-  async cancelOrder(orderId, cancellationReason, cancelledByUserId) {
+  async cancelOrder(orderId: number, cancellationReason: string, cancelledByUserId: number) {
     try {
       const result = await db.query(
         ordersQueries.CALL_CANCEL_ORDER_WITH_REFUND,
@@ -136,7 +136,7 @@ class OrdersRepository {
   /**
    * Accept order (driver accepts)
    */
-  async acceptOrder(orderId, courierId) {
+  async acceptOrder(orderId: number, courierId: number) {
     const client = await db.getClient();
 
     try {
@@ -180,7 +180,7 @@ class OrdersRepository {
   /**
    * Update order status (picked up / delivered)
    */
-  async updateOrderStatus(orderId, status) {
+  async updateOrderStatus(orderId: number, status: string) {
     try {
       let result;
 

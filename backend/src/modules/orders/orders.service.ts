@@ -14,7 +14,7 @@ interface FareData {
   weightKg?: number;
 }
 
-interface OrderData {
+export interface OrderData {
   deliveryTypeId: number;
   vehicleCategoryId: number;
   paymentMethodId: number;
@@ -273,7 +273,7 @@ class OrdersService {
           status: order.status_name,
           deliveryType: order.delivery_type,
           packageDescription: order.package_description,
-          totalPrice: parseFloat(order.total_price),
+          totalPrice: Number.parseFloat(order.total_price),
           createdAt: order.created_at,
           pickup: {
             address: order.pickup_address,
@@ -326,21 +326,23 @@ class OrdersService {
         orderUuid: order.order_uuid,
         orderNumber: order.order_number,
         deliveryType: order.delivery_type,
-        totalPrice: parseFloat(order.total_price),
+        totalPrice: Number.parseFloat(order.total_price),
         packageDescription: order.package_description,
-        packageWeightKg: parseFloat(order.package_weight_kg),
+        packageWeightKg: Number.parseFloat(order.package_weight_kg),
         createdAt: order.created_at,
         pickup: {
           address: order.pickup_address,
           landmark: order.pickup_landmark,
-          latitude: parseFloat(order.pickup_latitude),
-          longitude: parseFloat(order.pickup_longitude),
+          latitude: Number.parseFloat(order.pickup_latitude),
+          longitude: Number.parseFloat(order.pickup_longitude),
         },
         delivery: {
           address: order.delivery_address,
         },
-        distanceFromCourierKm: parseFloat(order.distance_from_courier_km),
-        estimatedDistanceKm: parseFloat(order.estimated_distance_km),
+        distanceFromCourierKm: Number.parseFloat(
+          order.distance_from_courier_km,
+        ),
+        estimatedDistanceKm: Number.parseFloat(order.estimated_distance_km),
       }));
     } catch (error) {
       logger.error({
@@ -523,8 +525,8 @@ class OrdersService {
         city: order.pickup_city,
         state: order.pickup_state,
         postalCode: order.pickup_postal_code,
-        latitude: parseFloat(order.pickup_latitude),
-        longitude: parseFloat(order.pickup_longitude),
+        latitude: Number.parseFloat(order.pickup_latitude),
+        longitude: Number.parseFloat(order.pickup_longitude),
         contactName: order.pickup_contact_name,
         contactPhone: order.pickup_contact_phone,
       },
@@ -538,23 +540,23 @@ class OrdersService {
         city: order.delivery_city,
         state: order.delivery_state,
         postalCode: order.delivery_postal_code,
-        latitude: parseFloat(order.delivery_latitude),
-        longitude: parseFloat(order.delivery_longitude),
+        latitude: Number.parseFloat(order.delivery_latitude),
+        longitude: Number.parseFloat(order.delivery_longitude),
         contactName: order.delivery_contact_name,
         contactPhone: order.delivery_contact_phone,
       },
       package: {
         description: order.package_description,
-        weightKg: parseFloat(order.package_weight_kg),
+        weightKg: Number.parseFloat(order.package_weight_kg),
         dimensions: order.package_dimensions,
-        declaredValue: parseFloat(order.declared_value),
+        declaredValue: Number.parseFloat(order.declared_value),
       },
       specialInstructions: order.special_instructions,
       pricing: {
-        basePrice: parseFloat(order.base_price),
-        distancePrice: parseFloat(order.distance_price),
-        weightSurcharge: parseFloat(order.weight_surcharge),
-        totalPrice: parseFloat(order.total_price),
+        basePrice: Number.parseFloat(order.base_price),
+        distancePrice: Number.parseFloat(order.distance_price),
+        weightSurcharge: Number.parseFloat(order.weight_surcharge),
+        totalPrice: Number.parseFloat(order.total_price),
       },
       paymentMethod: order.payment_method,
       courier: order.courier_id
@@ -569,8 +571,10 @@ class OrdersService {
             currentLocation:
               order.courier_current_latitude && order.courier_current_longitude
                 ? {
-                    latitude: parseFloat(order.courier_current_latitude),
-                    longitude: parseFloat(order.courier_current_longitude),
+                    latitude: Number.parseFloat(order.courier_current_latitude),
+                    longitude: Number.parseFloat(
+                      order.courier_current_longitude,
+                    ),
                   }
                 : null,
           }

@@ -1,4 +1,5 @@
-// services/backend/src/modules/orders/orders.routes.js
+// services/backend/src/modules/orders/orders.routes.ts
+import { FastifyInstance } from "fastify";
 import { authorize } from "../../middleware/auth.middleware";
 import ordersController from "./orders.controller";
 import {
@@ -12,7 +13,7 @@ import {
   updateOrderStatusSchema,
 } from "./orders.schema";
 
-async function ordersRoutes(fastify, options) {
+async function ordersRoutes(fastify: FastifyInstance, options: any) {
   // All routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 
@@ -30,7 +31,7 @@ async function ordersRoutes(fastify, options) {
       schema: createOrderSchema,
       onRequest: [authorize("client")],
     },
-    ordersController.createOrder.bind(ordersController),
+    ordersController.createOrder.bind(ordersController) as any,
   );
 
   // GET /api/v1/orders - List user's orders (clients only)
@@ -40,7 +41,7 @@ async function ordersRoutes(fastify, options) {
       schema: listOrdersSchema,
       onRequest: [authorize("client")],
     },
-    ordersController.listOrders.bind(ordersController),
+    ordersController.listOrders.bind(ordersController) as any,
   );
 
   // GET /api/v1/orders/available - Get available orders (couriers only)
@@ -50,7 +51,7 @@ async function ordersRoutes(fastify, options) {
       schema: getAvailableOrdersSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.getAvailableOrders.bind(ordersController),
+    ordersController.getAvailableOrders.bind(ordersController) as any,
   );
 
   // GET /api/v1/orders/:id - Get order details
@@ -74,7 +75,7 @@ async function ordersRoutes(fastify, options) {
       schema: acceptOrderSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.acceptOrder.bind(ordersController),
+    ordersController.acceptOrder.bind(ordersController) as any,
   );
 
   // PUT /api/v1/orders/:id/status - Update order status (couriers only)
@@ -84,7 +85,7 @@ async function ordersRoutes(fastify, options) {
       schema: updateOrderStatusSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.updateOrderStatus.bind(ordersController),
+    ordersController.updateOrderStatus.bind(ordersController) as any,
   );
 }
 

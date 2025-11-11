@@ -34,6 +34,8 @@ export default {
           cv.year AS vehicle_year,
           vc.name AS vehicle_category,
           vc.max_weight_kg AS vehicle_max_weight
+          cs.created_at,
+          cs.updated_at
       FROM users.profiles u
       LEFT JOIN logistics.courier_status cs ON u.user_id = cs.courier_id
       LEFT JOIN logistics.courier_vehicles cv ON u.user_id = cv.courier_id AND cv.is_active = true
@@ -71,58 +73,6 @@ export default {
   `,
 
   /**
-   * Find courier's active assignments
-   */
-  FIND_COURIER_ACTIVE_ASSIGNMENTS: `
-      SELECT
-          ca.assignment_id,
-          ca.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.status_id,
-          os.name AS order_status,
-          ca.assignment_status_id,
-          ast.name AS assignment_status,
-
-          -- Pickup location
-          pl.address AS pickup_address,
-          pl.building AS pickup_building,
-          pl.landmark AS pickup_landmark,
-          ST_Y(pl.location::geometry) AS pickup_latitude,
-          ST_X(pl.location::geometry) AS pickup_longitude,
-          o.pickup_contact_name,
-          o.pickup_contact_phone,
-
-          -- Delivery location
-          dl.address AS delivery_address,
-          dl.building AS delivery_building,
-          dl.landmark AS delivery_landmark,
-          ST_Y(dl.location::geometry) AS delivery_latitude,
-          ST_X(dl.location::geometry) AS delivery_longitude,
-          o.delivery_contact_name,
-          o.delivery_contact_phone,
-
-          o.package_description,
-          o.package_weight_kg,
-          o.total_price,
-          o.special_instructions,
-          ca.assigned_at,
-          ca.accepted_at
-      FROM orders.courier_assignments ca
-      JOIN orders.requests o ON ca.order_id = o.order_id
-      JOIN public.order_statuses os ON o.status_id = os.status_id
-      JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
-      WHERE ca.courier_id = $1
-          AND ca.assignment_status_id NOT IN (
-              SELECT status_id FROM public.assignment_statuses
-              WHERE name IN ('delivered', 'cancelled', 'rejected')
-          )
-      ORDER BY ca.assigned_at DESC
-  `,
-
-  /**
    * Get courier earnings summary
    */
   GET_COURIER_EARNINGS_SUMMARY: `
@@ -156,18 +106,6 @@ export default {
           updated_at = NOW()
       WHERE courier_id = $1
       RETURNING courier_id, is_available, is_online, updated_at
-  `,
-
-  /**
-   * Toggle courier online/offline
-   */
-  TOGGLE_COURIER_ONLINE_STATUS: `
-      UPDATE logistics.courier_status
-      SET 
-          is_online = NOT is_online,
-          updated_at = NOW()
-      WHERE courier_id = $1
-      RETURNING courier_id, is_online, updated_at
   `,
 
   // ============ COURIER LOCATION ============

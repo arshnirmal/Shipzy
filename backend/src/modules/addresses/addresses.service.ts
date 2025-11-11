@@ -18,16 +18,32 @@ interface Coordinates {
   longitude: number;
 }
 
+interface GeocodeParams {
+  latitude: number;
+  longitude: number;
+  types?: string[];
+}
+
+interface DirectionsOrigin {
+  latitude: number;
+  longitude: number;
+}
+
+interface DirectionsDestination {
+  latitude: number;
+  longitude: number;
+}
+
 // Cache for 1 hour (reduce API calls)
 const searchCache = new NodeCache({ stdTTL: 3600 });
 
 class AddressesService {
-  private baseUrl: string;
-  private mapboxAccessToken: string;
+  private readonly baseUrl: string;
+  private readonly mapboxAccessToken: string;
 
   constructor() {
-    this.baseUrl = "https://api.mapbox.com";
-    this.mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN || ""; // Validated at startup
+    this.baseUrl = process.env.MAPBOX_BASE_URL || "https://api.mapbox.com";
+    this.mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN || "";
   }
 
   /**
@@ -49,7 +65,7 @@ class AddressesService {
       const cacheKey = `search:${query}:${proximity}`;
       const cached = searchCache.get(cacheKey);
       if (cached) {
-        logger.info("Returning cached search results", { query });
+        logger.info({ msg: "Returning cached search results", query });
         return cached;
       }
 
@@ -77,7 +93,7 @@ class AddressesService {
         },
       );
 
-      const suggestions = response.data.suggestions.map((item) => ({
+      const suggestions = response.data.suggestions.map((item: any) => ({
         id: item.mapbox_id,
         name: item.name,
         fullAddress: item.full_address || item.place_formatted,
@@ -93,35 +109,39 @@ class AddressesService {
       // Cache results
       searchCache.set(cacheKey, suggestions);
 
-      logger.info("Mapbox search completed", {
+      logger.info({
+        msg: "Mapbox search completed",
         query,
         resultCount: suggestions.length,
       });
 
       return suggestions;
     } catch (error) {
-      logger.error("Mapbox search error", {
-        error: error.message,
+      logger.error({
+        msg: "Mapbox search error",
+        error: (error as Error).message,
         query: searchParams.query,
-        status: error.response?.status,
+        status: (error as any).response?.status,
       });
 
-      if (error.response?.status === 401) {
+      if ((error as any).response?.status === 401) {
         throw new ValidationError("Invalid Mapbox API key");
       }
 
-      if (error.response?.status === 429) {
+      if ((error as any).response?.status === 429) {
         throw new ValidationError("Mapbox API rate limit exceeded");
       }
 
-      throw new ValidationError(`Address search failed: ${error.message}`);
+      throw new ValidationError(
+        `Address search failed: ${(error as Error).message}`,
+      );
     }
   }
 
   /**
    * Retrieve full details for a selected place
    */
-  async retrievePlace(mapboxId, sessionToken) {
+  async retrievePlace(mapboxId: string, sessionToken: string) {
     try {
       const response = await axios.get(
         `${this.baseUrl}/search/searchbox/v1/retrieve/${mapboxId}`,
@@ -152,22 +172,23 @@ class AddressesService {
         bbox: feature.bbox,
       };
     } catch (error) {
-      logger.error("Mapbox retrieve error", {
-        error: error.message,
+      logger.error({
+        msg: "Mapbox retrieve error",
+        error: (error as Error).message,
         mapboxId,
-        status: error.response?.status,
+        status: (error as any).response?.status,
       });
 
-      if (error.response?.status === 401) {
+      if ((error as any).response?.status === 401) {
         throw new ValidationError("Invalid Mapbox API key");
       }
 
-      if (error.response?.status === 429) {
+      if ((error as any).response?.status === 429) {
         throw new ValidationError("Mapbox API rate limit exceeded");
       }
 
       throw new ValidationError(
-        `Failed to retrieve place details: ${error.message}`,
+        `Failed to retrieve place details: ${(error as Error).message}`,
       );
     }
   }
@@ -175,7 +196,7 @@ class AddressesService {
   /**
    * Reverse geocode coordinates to address using Mapbox Geocoding API
    */
-  async reverseGeocode(geocodeParams) {
+  async reverseGeocode(geocodeParams: GeocodeParams) {
     try {
       const { longitude, latitude, types } = geocodeParams;
 
@@ -191,7 +212,8 @@ class AddressesService {
 
       const url = `${this.baseUrl}/geocoding/v5/mapbox.places/${longitude},${latitude}.json?${params.toString()}`;
 
-      logger.info("Making Mapbox Reverse Geocoding API request", {
+      logger.info({
+        msg: "Making Mapbox Reverse Geocoding API request",
         url: url.replace(this.mapboxAccessToken, "***"),
         coordinates: { longitude, latitude },
         types,
@@ -207,7 +229,7 @@ class AddressesService {
       // Transform Mapbox response to our format
       const features = response.data.features || [];
 
-      const results = features.map((feature) => ({
+      const results = features.map((feature: any) => ({
         id: feature.id,
         name: feature.text,
         fullAddress: feature.place_name,
@@ -223,7 +245,8 @@ class AddressesService {
         relevance: feature.relevance,
       }));
 
-      logger.info("Mapbox reverse geocoding completed", {
+      logger.info({
+        msg: "Mapbox reverse geocoding completed",
         coordinates: { longitude, latitude },
         resultsCount: results.length,
       });
@@ -234,31 +257,38 @@ class AddressesService {
         total: results.length,
       };
     } catch (error) {
-      logger.error("Mapbox reverse geocoding failed", {
-        error: error.message,
+      logger.error({
+        msg: "Mapbox reverse geocoding failed",
+        error: (error as Error).message,
         coordinates: {
           longitude: geocodeParams.longitude,
           latitude: geocodeParams.latitude,
         },
-        status: error.response?.status,
+        status: (error as any).response?.status,
       });
 
-      if (error.response?.status === 401) {
+      if ((error as any).response?.status === 401) {
         throw new ValidationError("Invalid Mapbox API key");
       }
 
-      if (error.response?.status === 429) {
+      if ((error as any).response?.status === 429) {
         throw new ValidationError("Mapbox API rate limit exceeded");
       }
 
-      throw new ValidationError(`Reverse geocoding failed: ${error.message}`);
+      throw new ValidationError(
+        `Reverse geocoding failed: ${(error as Error).message}`,
+      );
     }
   }
 
   /**
    * Get directions between two points using Mapbox Directions API
    */
-  async getDirections(origin, destination, profile = "driving") {
+  async getDirections(
+    origin: DirectionsOrigin,
+    destination: DirectionsDestination,
+    profile: "driving" | "walking" | "cycling" = "driving",
+  ) {
     try {
       const coords = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
 
@@ -301,29 +331,32 @@ class AddressesService {
         },
       };
     } catch (error) {
-      logger.error("Directions error", {
-        error: error.message,
+      logger.error({
+        msg: "Directions error",
+        error: (error as Error).message,
         origin,
         destination,
-        status: error.response?.status,
+        status: (error as any).response?.status,
       });
 
-      if (error.response?.status === 401) {
+      if ((error as any).response?.status === 401) {
         throw new ValidationError("Invalid Mapbox API key");
       }
 
-      if (error.response?.status === 429) {
+      if ((error as any).response?.status === 429) {
         throw new ValidationError("Mapbox API rate limit exceeded");
       }
 
-      throw new ValidationError(`Failed to get directions: ${error.message}`);
+      throw new ValidationError(
+        `Failed to get directions: ${(error as Error).message}`,
+      );
     }
   }
 
   /**
    * Calculate distance between two coordinates (Haversine formula)
    */
-  calculateDistance(lat1, lon1, lat2, lon2) {
+  calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Earth's radius in km
     const dLat = this._toRad(lat2 - lat1);
     const dLon = this._toRad(lon2 - lon1);
@@ -346,15 +379,15 @@ class AddressesService {
     return `${Date.now()}_${Math.random().toString(36).substring(7)}`;
   }
 
-  _toRad(degrees) {
+  _toRad(degrees: number) {
     return degrees * (Math.PI / 180);
   }
 
-  _parseContext(context) {
-    if (!context) return {};
+  _parseContext(context: any) {
+    if (!context || !Array.isArray(context)) return {};
 
-    const parsed = {};
-    context.forEach((item) => {
+    const parsed: Record<string, string> = {};
+    context.forEach((item: any) => {
       const [type] = item.id.split(".");
       parsed[type] = item.text;
     });

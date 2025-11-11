@@ -97,8 +97,9 @@ class DriversRepository {
 
       return result.rows[0];
     } catch (error) {
-      logger.error("Error updating courier availability", {
-        error: error.message,
+      logger.error({
+        msg: "Error updating courier availability",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -140,8 +141,9 @@ class DriversRepository {
       );
       return result.rows;
     } catch (error) {
-      logger.error("Error getting courier assignments", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting courier assignments",
+        error: (error as Error).message,
       });
       throw error;
     }

@@ -35,9 +35,12 @@ interface DriverProfile {
     capacity: number;
   } | null;
   earnings: {
+    total: number;
     today: number;
     thisWeek: number;
     thisMonth: number;
+    averageOrderValue: number;
+    totalDistanceKm: number;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -78,7 +81,7 @@ class DriversService {
         userUuid: driver.user_uuid,
         phoneNumber: driver.phone_number,
         fullName: driver.full_name,
-        email: driver.email,
+        email: driver.email || "",
         profilePictureUrl: driver.profile_picture_url,
         isVerified: driver.is_verified,
         isActive: driver.is_active,
@@ -90,26 +93,36 @@ class DriversService {
           currentLocation:
             driver.current_latitude && driver.current_longitude
               ? {
-                  latitude: parseFloat(driver.current_latitude),
-                  longitude: parseFloat(driver.current_longitude),
+                  latitude: Number.parseFloat(driver.current_latitude),
+                  longitude: Number.parseFloat(driver.current_longitude),
                 }
               : null,
         },
         vehicle: driver.vehicle_id
           ? {
               vehicleId: driver.vehicle_id,
-              vehicleNumber: driver.vehicle_number,
-              model: driver.vehicle_model,
-              year: driver.vehicle_year,
-              category: driver.vehicle_category,
-              maxWeightKg: parseFloat(driver.vehicle_max_weight),
+              vehicleNumber: driver.vehicle_number || "",
+              model: driver.vehicle_model || "",
+              year: driver.vehicle_year || 0,
+              category: driver.vehicle_category || "",
+              capacity: Number.parseFloat(driver.vehicle_max_weight || "0"),
             }
           : null,
+        earnings: {
+          total: 0,
+          today: 0,
+          thisWeek: 0,
+          thisMonth: 0,
+          averageOrderValue: 0,
+          totalDistanceKm: 0,
+        },
+        createdAt: driver.created_at,
+        updatedAt: driver.updated_at,
       };
     } catch (error) {
       logger.error({
         msg: "Error getting driver profile",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -120,7 +133,7 @@ class DriversService {
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData
+    updateData: UpdateProfileData,
   ): Promise<any> {
     try {
       // Validate role is courier
@@ -144,7 +157,7 @@ class DriversService {
     } catch (error) {
       logger.error({
         msg: "Error updating driver profile",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -155,10 +168,10 @@ class DriversService {
    */
   async updateAvailability(
     userId: number,
-    availabilityData: UpdateAvailabilityData
+    availabilityData: UpdateAvailabilityData,
   ): Promise<any> {
     try {
-      const { isAvailable, isOnline } = availabilityData;
+      const { isAvailable, isOnline = false } = availabilityData;
 
       const result = await driversRepository.updateAvailability(
         userId,
@@ -173,8 +186,9 @@ class DriversService {
         updatedAt: result.updated_at,
       };
     } catch (error) {
-      logger.error("Error updating driver availability", {
-        error: error.message,
+      logger.error({
+        msg: "Error updating driver availability",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -185,7 +199,7 @@ class DriversService {
    */
   async updateLocation(
     userId: number,
-    locationData: LocationData
+    locationData: LocationData,
   ): Promise<any> {
     try {
       const { latitude, longitude } = locationData;
@@ -206,14 +220,14 @@ class DriversService {
 
       return {
         courierId: result.courier_id,
-        latitude: parseFloat(result.latitude),
-        longitude: parseFloat(result.longitude),
+        latitude: Number.parseFloat(result.latitude),
+        longitude: Number.parseFloat(result.longitude),
         lastLocationUpdate: result.last_location_update,
       };
     } catch (error) {
       logger.error({
         msg: "Error updating driver location",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -237,8 +251,8 @@ class DriversService {
           address: assignment.pickup_address,
           building: assignment.pickup_building,
           landmark: assignment.pickup_landmark,
-          latitude: parseFloat(assignment.pickup_latitude),
-          longitude: parseFloat(assignment.pickup_longitude),
+          latitude: Number.parseFloat(assignment.pickup_latitude),
+          longitude: Number.parseFloat(assignment.pickup_longitude),
           contactName: assignment.pickup_contact_name,
           contactPhone: assignment.pickup_contact_phone,
         },
@@ -246,21 +260,22 @@ class DriversService {
           address: assignment.delivery_address,
           building: assignment.delivery_building,
           landmark: assignment.delivery_landmark,
-          latitude: parseFloat(assignment.delivery_latitude),
-          longitude: parseFloat(assignment.delivery_longitude),
+          latitude: Number.parseFloat(assignment.delivery_latitude),
+          longitude: Number.parseFloat(assignment.delivery_longitude),
           contactName: assignment.delivery_contact_name,
           contactPhone: assignment.delivery_contact_phone,
         },
         packageDescription: assignment.package_description,
-        packageWeightKg: parseFloat(assignment.package_weight_kg),
-        totalPrice: parseFloat(assignment.total_price),
+        packageWeightKg: Number.parseFloat(assignment.package_weight_kg),
+        totalPrice: Number.parseFloat(assignment.total_price),
         specialInstructions: assignment.special_instructions,
         assignedAt: assignment.assigned_at,
         acceptedAt: assignment.accepted_at,
       }));
     } catch (error) {
-      logger.error("Error getting driver assignments", {
-        error: error.message,
+      logger.error({
+        msg: "Error getting driver assignments",
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -275,24 +290,24 @@ class DriversService {
 
       return {
         deliveries: {
-          total: parseInt(earnings.total_deliveries),
-          today: parseInt(earnings.today_deliveries),
-          thisWeek: parseInt(earnings.week_deliveries),
-          thisMonth: parseInt(earnings.month_deliveries),
+          total: Number.parseInt(earnings.total_deliveries),
+          today: Number.parseInt(earnings.today_deliveries),
+          thisWeek: Number.parseInt(earnings.week_deliveries),
+          thisMonth: Number.parseInt(earnings.month_deliveries),
         },
         earnings: {
-          total: parseFloat(earnings.total_earnings),
-          today: parseFloat(earnings.today_earnings),
-          thisWeek: parseFloat(earnings.week_earnings),
-          thisMonth: parseFloat(earnings.month_earnings),
-          averageOrderValue: parseFloat(earnings.avg_order_value),
+          total: Number.parseFloat(earnings.total_earnings),
+          today: Number.parseFloat(earnings.today_earnings),
+          thisWeek: Number.parseFloat(earnings.week_earnings),
+          thisMonth: Number.parseFloat(earnings.month_earnings),
+          averageOrderValue: Number.parseFloat(earnings.avg_order_value),
         },
-        totalDistanceKm: parseFloat(earnings.total_distance_km),
+        totalDistanceKm: Number.parseFloat(earnings.total_distance_km),
       };
     } catch (error) {
       logger.error({
         msg: "Error getting driver earnings",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
