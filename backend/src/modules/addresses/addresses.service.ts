@@ -1,5 +1,6 @@
 // services/backend/src/modules/addresses/addresses.service.ts
 import axios from "axios";
+import crypto from "node:crypto";
 import NodeCache from "node-cache";
 import logger from "../../config/logger";
 import { ValidationError } from "../../utils/error.util";
@@ -34,8 +35,12 @@ interface DirectionsDestination {
   longitude: number;
 }
 
-// Cache for 1 hour (reduce API calls)
-const searchCache = new NodeCache({ stdTTL: 3600 });
+// Cache for 1 hour with size limits to prevent DoS attacks
+const searchCache = new NodeCache({
+  stdTTL: 3600, // 1 hour
+  maxKeys: 1000, // Maximum 1000 cached entries
+  checkperiod: 600, // Check for expired keys every 10 minutes
+});
 
 class AddressesService {
   private readonly baseUrl: string;
@@ -53,10 +58,45 @@ class AddressesService {
   }
 
   /**
+   * Sanitize URLs for logging by removing sensitive information
+   */
+  private _sanitizeUrl(url: string): string {
+    if (!url) return url;
+    // Remove access_token and session_token parameters
+    return url
+      .replaceAll(/access_token=[^&]*/g, "access_token=***")
+      .replaceAll(/session_token=[^&]*/g, "session_token=***");
+  }
+
+  /**
+   * Sanitize user input strings to prevent injection attacks
+   */
+  private _sanitizeInput(input: string): string {
+    if (typeof input !== "string") return "";
+
+    // Remove potentially dangerous characters
+    return (
+      input
+        .trim()
+        // Remove null bytes and other control characters
+        .replaceAll(/[\x00-\x1F\x7F-\x9F]/g, "")
+        // Basic XSS prevention - remove script tags
+        .replaceAll(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        .replaceAll(/<[^>]*>/g, "")
+        // Limit length to prevent DoS
+        .substring(0, 1000)
+    );
+  }
+
+  /**
    * Search for places/addresses using Mapbox Search Box API
    * Returns suggestions (first step of two-step process)
    */
   async searchAddresses(searchParams: SearchParams): Promise<any> {
+    // Sanitize and validate input first
+    let sanitizedQuery = "";
+    let sanitizedProximity: string | undefined;
+
     try {
       const {
         query,
@@ -67,11 +107,29 @@ class AddressesService {
         language = "en",
       } = searchParams;
 
-      // Check cache
-      const cacheKey = `search:${query}:${proximity}`;
+      // Sanitize and validate input
+      sanitizedQuery = this._sanitizeInput(query);
+      if (sanitizedQuery.length < 3) {
+        throw new ValidationError("Query too short after sanitization");
+      }
+      if (sanitizedQuery.length > 256) {
+        throw new ValidationError("Query too long for caching");
+      }
+
+      if (proximity) {
+        sanitizedProximity = this._sanitizeInput(proximity);
+        if (sanitizedProximity.length > 50) {
+          throw new ValidationError("Proximity parameter too long");
+        }
+      }
+
+      const cacheKey = `search:${sanitizedQuery}:${sanitizedProximity || "default"}`;
       const cached = searchCache.get(cacheKey);
       if (cached) {
-        logger.info({ msg: "Returning cached search results", query });
+        logger.info({
+          msg: "Returning cached search results",
+          query: sanitizedQuery,
+        });
         return cached;
       }
 
@@ -83,10 +141,10 @@ class AddressesService {
         `${this.baseUrl}/search/searchbox/v1/suggest`,
         {
           params: {
-            q: query,
+            q: sanitizedQuery,
             access_token: this.mapboxAccessToken,
             session_token: sessionToken,
-            proximity,
+            proximity: sanitizedProximity,
             limit,
             types,
             country,
@@ -117,7 +175,7 @@ class AddressesService {
 
       logger.info({
         msg: "Mapbox search completed",
-        query,
+        query: sanitizedQuery,
         resultCount: suggestions.length,
       });
 
@@ -126,7 +184,7 @@ class AddressesService {
       logger.error({
         msg: "Mapbox search error",
         error: (error as Error).message,
-        query: searchParams.query,
+        query: sanitizedQuery || searchParams.query,
         status: (error as any).response?.status,
       });
 
@@ -181,7 +239,7 @@ class AddressesService {
       logger.error({
         msg: "Mapbox retrieve error",
         error: (error as Error).message,
-        mapboxId,
+        // Don't log mapboxId for security
         status: (error as any).response?.status,
       });
 
@@ -255,7 +313,7 @@ class AddressesService {
 
       logger.info({
         msg: "Making Mapbox Reverse Geocoding v6 API request",
-        url: url.replace(this.mapboxAccessToken, "***"),
+        url: this._sanitizeUrl(url),
         coordinates: { longitude, latitude },
         types,
       });
@@ -319,13 +377,9 @@ class AddressesService {
         msg: "Mapbox reverse geocoding failed",
         error: errorMessage,
         mapboxError: mapboxErrorMessage,
-        coordinates: {
-          longitude: geocodeParams.longitude,
-          latitude: geocodeParams.latitude,
-        },
+        // Don't log coordinates in errors for privacy
         status,
-        responseData,
-        url: axiosError.config?.url?.replace(this.mapboxAccessToken, "***"),
+        url: this._sanitizeUrl(axiosError.config?.url),
       });
 
       if (status === 401) {
@@ -409,8 +463,7 @@ class AddressesService {
       logger.error({
         msg: "Directions error",
         error: (error as Error).message,
-        origin,
-        destination,
+        // Don't log coordinate data for privacy
         status: (error as any).response?.status,
       });
 
@@ -446,12 +499,16 @@ class AddressesService {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
 
-    return parseFloat(distance.toFixed(2));
+    return Number.parseFloat(distance.toFixed(2));
   }
 
   // Helper methods
   _generateSessionToken() {
-    return `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // Generate cryptographically secure random token
+    const randomBytes = crypto.randomBytes(16);
+    const timestamp = Date.now().toString(36);
+    const randomPart = randomBytes.toString("hex");
+    return `${timestamp}_${randomPart}`;
   }
 
   _toRad(degrees: number) {
@@ -462,10 +519,10 @@ class AddressesService {
     if (!context || !Array.isArray(context)) return {};
 
     const parsed: Record<string, string> = {};
-    context.forEach((item: any) => {
+    for (const item of context) {
       const [type] = item.id.split(".");
       parsed[type] = item.text;
-    });
+    }
     return parsed;
   }
 }

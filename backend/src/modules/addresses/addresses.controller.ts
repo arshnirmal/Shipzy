@@ -51,8 +51,45 @@ class AddressesController {
     try {
       const { query, proximity, limit } = request.body;
 
-      if (!query || query.length < 3) {
+      // Validate query
+      if (!query || typeof query !== "string") {
+        return errorResponse(
+          reply,
+          "Query is required and must be a string",
+          400,
+        );
+      }
+
+      if (query.length < 3) {
         return errorResponse(reply, "Query must be at least 3 characters", 400);
+      }
+
+      if (query.length > 256) {
+        return errorResponse(
+          reply,
+          "Query must be less than 256 characters",
+          400,
+        );
+      }
+
+      // Validate proximity if provided
+      if (proximity && typeof proximity !== "string") {
+        return errorResponse(reply, "Proximity must be a string", 400);
+      }
+
+      if (proximity && proximity.length > 50) {
+        return errorResponse(reply, "Proximity parameter too long", 400);
+      }
+
+      // Validate limit if provided
+      if (limit !== undefined) {
+        if (typeof limit !== "number" || limit < 1 || limit > 10) {
+          return errorResponse(
+            reply,
+            "Limit must be a number between 1 and 10",
+            400,
+          );
+        }
       }
 
       logger.info({
@@ -77,11 +114,20 @@ class AddressesController {
       logger.error({
         msg: "Address search controller error",
         error: (error as Error).message,
-        query: request.body?.query,
+        // Don't log sensitive query data in errors
       });
+
+      // Return generic error message to avoid leaking internal details
+      const isValidationError =
+        (error as any).message.includes("ValidationError") ||
+        (error as any).statusCode === 400;
+      const userMessage = isValidationError
+        ? (error as Error).message
+        : "An error occurred while searching for addresses";
+
       return errorResponse(
         reply,
-        (error as Error).message,
+        userMessage,
         (error as any).statusCode || 500,
       );
     }
@@ -98,12 +144,30 @@ class AddressesController {
     try {
       const { mapboxId, sessionToken } = request.body;
 
-      if (!mapboxId || !sessionToken) {
+      // Validate required parameters
+      if (!mapboxId || typeof mapboxId !== "string") {
         return errorResponse(
           reply,
-          "mapboxId and sessionToken are required",
+          "mapboxId is required and must be a string",
           400,
         );
+      }
+
+      if (!sessionToken || typeof sessionToken !== "string") {
+        return errorResponse(
+          reply,
+          "sessionToken is required and must be a string",
+          400,
+        );
+      }
+
+      // Validate parameter lengths
+      if (mapboxId.length > 100) {
+        return errorResponse(reply, "mapboxId parameter too long", 400);
+      }
+
+      if (sessionToken.length > 100) {
+        return errorResponse(reply, "sessionToken parameter too long", 400);
       }
 
       logger.info({
@@ -126,11 +190,20 @@ class AddressesController {
       logger.error({
         msg: "Place retrieve controller error",
         error: (error as Error).message,
-        mapboxId: request.body?.mapboxId,
+        // Don't log mapboxId in errors for security
       });
+
+      // Return generic error message to avoid leaking internal details
+      const isValidationError =
+        (error as any).message.includes("ValidationError") ||
+        (error as any).statusCode === 400;
+      const userMessage = isValidationError
+        ? (error as Error).message
+        : "An error occurred while retrieving place details";
+
       return errorResponse(
         reply,
-        (error as Error).message,
+        userMessage,
         (error as any).statusCode || 500,
       );
     }
@@ -147,8 +220,30 @@ class AddressesController {
     try {
       const { latitude, longitude } = request.body;
 
+      // Validate required parameters
       if (latitude === undefined || longitude === undefined) {
         return errorResponse(reply, "latitude and longitude are required", 400);
+      }
+
+      // Validate coordinate types and ranges
+      if (typeof latitude !== "number" || typeof longitude !== "number") {
+        return errorResponse(
+          reply,
+          "latitude and longitude must be numbers",
+          400,
+        );
+      }
+
+      if (latitude < -90 || latitude > 90) {
+        return errorResponse(reply, "latitude must be between -90 and 90", 400);
+      }
+
+      if (longitude < -180 || longitude > 180) {
+        return errorResponse(
+          reply,
+          "longitude must be between -180 and 180",
+          400,
+        );
       }
 
       logger.info({
@@ -171,11 +266,20 @@ class AddressesController {
       logger.error({
         msg: "Reverse geocoding controller error",
         error: (error as Error).message,
-        coordinates: request.body,
+        // Don't log sensitive coordinate data in errors
       });
+
+      // Return generic error message to avoid leaking internal details
+      const isValidationError =
+        (error as any).message.includes("ValidationError") ||
+        (error as any).statusCode === 400;
+      const userMessage = isValidationError
+        ? (error as Error).message
+        : "An error occurred while converting coordinates to address";
+
       return errorResponse(
         reply,
-        (error as Error).message,
+        userMessage,
         (error as any).statusCode || 500,
       );
     }
@@ -192,8 +296,68 @@ class AddressesController {
     try {
       const { origin, destination, profile } = request.body;
 
-      if (!origin || !destination) {
-        return errorResponse(reply, "origin and destination are required", 400);
+      // Validate required parameters
+      if (!origin || typeof origin !== "object") {
+        return errorResponse(
+          reply,
+          "origin is required and must be an object",
+          400,
+        );
+      }
+
+      if (!destination || typeof destination !== "object") {
+        return errorResponse(
+          reply,
+          "destination is required and must be an object",
+          400,
+        );
+      }
+
+      // Validate coordinate values
+      const { latitude: originLat, longitude: originLng } = origin;
+      const { latitude: destLat, longitude: destLng } = destination;
+
+      if (typeof originLat !== "number" || typeof originLng !== "number") {
+        return errorResponse(reply, "origin coordinates must be numbers", 400);
+      }
+
+      if (typeof destLat !== "number" || typeof destLng !== "number") {
+        return errorResponse(
+          reply,
+          "destination coordinates must be numbers",
+          400,
+        );
+      }
+
+      // Validate coordinate ranges
+      if (
+        originLat < -90 ||
+        originLat > 90 ||
+        originLng < -180 ||
+        originLng > 180
+      ) {
+        return errorResponse(
+          reply,
+          "origin coordinates out of valid range",
+          400,
+        );
+      }
+
+      if (destLat < -90 || destLat > 90 || destLng < -180 || destLng > 180) {
+        return errorResponse(
+          reply,
+          "destination coordinates out of valid range",
+          400,
+        );
+      }
+
+      // Validate profile if provided
+      if (profile && !["driving", "walking", "cycling"].includes(profile)) {
+        return errorResponse(
+          reply,
+          "profile must be one of: driving, walking, cycling",
+          400,
+        );
       }
 
       logger.info({
@@ -219,12 +383,20 @@ class AddressesController {
       logger.error({
         msg: "Directions controller error",
         error: (error as Error).message,
-        origin: request.body?.origin,
-        destination: request.body?.destination,
+        // Don't log coordinate data in errors for security
       });
+
+      // Return generic error message to avoid leaking internal details
+      const isValidationError =
+        (error as any).message.includes("ValidationError") ||
+        (error as any).statusCode === 400;
+      const userMessage = isValidationError
+        ? (error as Error).message
+        : "An error occurred while calculating directions";
+
       return errorResponse(
         reply,
-        (error as Error).message,
+        userMessage,
         (error as any).statusCode || 500,
       );
     }
@@ -241,6 +413,7 @@ class AddressesController {
     try {
       const { lat1, lon1, lat2, lon2 } = request.body;
 
+      // Validate all required parameters
       if (
         lat1 === undefined ||
         lon1 === undefined ||
@@ -250,6 +423,33 @@ class AddressesController {
         return errorResponse(
           reply,
           "lat1, lon1, lat2, lon2 are all required",
+          400,
+        );
+      }
+
+      // Validate parameter types
+      if (
+        typeof lat1 !== "number" ||
+        typeof lon1 !== "number" ||
+        typeof lat2 !== "number" ||
+        typeof lon2 !== "number"
+      ) {
+        return errorResponse(reply, "All coordinates must be numbers", 400);
+      }
+
+      // Validate coordinate ranges
+      if (lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90) {
+        return errorResponse(
+          reply,
+          "Latitude values must be between -90 and 90",
+          400,
+        );
+      }
+
+      if (lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180) {
+        return errorResponse(
+          reply,
+          "Longitude values must be between -180 and 180",
           400,
         );
       }
@@ -270,11 +470,20 @@ class AddressesController {
       logger.error({
         msg: "Distance calculation error",
         error: (error as Error).message,
-        coordinates: request.body,
+        // Don't log coordinate data in errors for security
       });
+
+      // Return generic error message to avoid leaking internal details
+      const isValidationError =
+        (error as any).message.includes("ValidationError") ||
+        (error as any).statusCode === 400;
+      const userMessage = isValidationError
+        ? (error as Error).message
+        : "An error occurred while calculating distance";
+
       return errorResponse(
         reply,
-        (error as Error).message,
+        userMessage,
         (error as any).statusCode || 500,
       );
     }
