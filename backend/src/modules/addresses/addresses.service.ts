@@ -23,6 +23,7 @@ interface GeocodeParams {
   latitude: number;
   longitude: number;
   types?: string[];
+  limit?: number;
 }
 
 interface DirectionsOrigin {
@@ -266,7 +267,7 @@ class AddressesService {
         throw new ValidationError("Mapbox API key not configured");
       }
 
-      let { longitude, latitude, types } = geocodeParams;
+      let { longitude, latitude, types, limit = 5 } = geocodeParams;
 
       // Validate and round coordinates to 7 decimal places (centimeter precision)
       if (typeof latitude !== "number" || typeof longitude !== "number") {
@@ -281,21 +282,46 @@ class AddressesService {
         throw new ValidationError("Longitude must be between -180 and 180");
       }
 
+      // Validate limit
+      if (limit !== undefined && (limit < 1 || limit > 5)) {
+        throw new ValidationError("Limit must be between 1 and 5");
+      }
+
       // Round to 7 decimal places to avoid precision issues
       latitude = Math.round(latitude * 10000000) / 10000000;
       longitude = Math.round(longitude * 10000000) / 10000000;
 
       // Build reverse geocoding parameters for Mapbox Geocoding v6
-      const defaultTypes = "address,poi";
-      const requestTypes = types ? types.join(",") : defaultTypes;
+      // According to Mapbox v6 docs:
+      // - types can be comma-separated (e.g., "address,street,neighborhood")
+      // - When limit > 1, exactly ONE type must be specified
+      // - When limit = 1 (default), multiple types can be comma-separated
+      // - proximity parameter is NOT supported for reverse geocoding (only forward)
+      let requestTypes: string;
+      if (types && types.length > 0) {
+        if (limit > 1) {
+          // When limit > 1, Mapbox requires exactly one type
+          requestTypes = types[0] || "address";
+        } else {
+          // When limit = 1, multiple types can be comma-separated
+          requestTypes = types.join(",");
+        }
+      } else if (limit > 1) {
+        // Default: single type for limit > 1
+        requestTypes = "address";
+      } else {
+        // Default: multiple types for limit = 1
+        requestTypes = "address,street,neighborhood";
+      }
 
       const params = new URLSearchParams({
         longitude: longitude.toString(),
         latitude: latitude.toString(),
         access_token: this.mapboxAccessToken,
         types: requestTypes,
-        limit: "5",
+        limit: limit.toString(),
         language: "en",
+        // Note: proximity is NOT supported for reverse geocoding in Mapbox v6
       });
 
       // Log the exact parameters being sent
@@ -315,7 +341,7 @@ class AddressesService {
         msg: "Making Mapbox Reverse Geocoding v6 API request",
         url: this._sanitizeUrl(url),
         coordinates: { longitude, latitude },
-        types,
+        types: requestTypes,
       });
 
       const response = await axios.get(url, {
@@ -325,24 +351,79 @@ class AddressesService {
         },
       });
 
-      // Transform Mapbox response to our format
+      // Transform Mapbox v6 response to our format
       const features = response.data.features || [];
 
-      const results = features.map((feature: any) => ({
-        id: feature.id,
-        name: feature.text,
-        fullAddress: feature.place_name,
-        placeName: feature.place_name,
-        coordinates: {
-          longitude: feature.center[0],
-          latitude: feature.center[1],
-        },
-        featureType: feature.place_type[0],
-        properties: feature.properties,
-        context: feature.context,
-        bbox: feature.bbox,
-        relevance: feature.relevance,
-      }));
+      const results = features.map((feature: any) => {
+        // Mapbox v6: coordinates are in properties.coordinates object OR geometry.coordinates array
+        let featureLatitude: number;
+        let featureLongitude: number;
+
+        if (feature.properties?.coordinates) {
+          // v6 format: properties.coordinates = { longitude, latitude }
+          featureLatitude = feature.properties.coordinates.latitude;
+          featureLongitude = feature.properties.coordinates.longitude;
+        } else if (
+          feature.geometry?.coordinates &&
+          Array.isArray(feature.geometry.coordinates)
+        ) {
+          // Fallback: geometry.coordinates = [longitude, latitude]
+          featureLongitude = feature.geometry.coordinates[0];
+          featureLatitude = feature.geometry.coordinates[1];
+        } else {
+          // Fallback to query coordinates if feature doesn't have coordinates
+          featureLatitude = latitude;
+          featureLongitude = longitude;
+        }
+
+        // Transform context object to array format - only include relevant context items
+        // Mapbox v6 context is an object with keys like 'address', 'street', 'neighborhood', etc.
+        const contextArray = feature.properties?.context
+          ? Object.entries(feature.properties.context)
+              .filter(([key]) => {
+                // Only include relevant context types
+                const relevantTypes = [
+                  "address",
+                  "street",
+                  "neighborhood",
+                  "locality",
+                  "place",
+                  "region",
+                  "country",
+                ];
+                return relevantTypes.includes(key);
+              })
+              .map(([key, ctx]: [string, any]) => ({
+                id: ctx?.mapbox_id || key,
+                text: ctx?.name || key,
+              }))
+          : null;
+
+        return {
+          id: feature.id || feature.properties?.mapbox_id,
+          name:
+            feature.properties?.name ||
+            feature.properties?.name_preferred ||
+            "",
+          fullAddress:
+            feature.properties?.full_address ||
+            feature.properties?.place_formatted ||
+            "",
+          placeName: feature.properties?.place_formatted || null,
+          coordinates: {
+            latitude: featureLatitude,
+            longitude: featureLongitude,
+          },
+          featureType: feature.properties?.feature_type || "address",
+          // Only include essential properties, not the entire raw object
+          properties: feature.properties?.coordinates?.accuracy
+            ? { accuracy: feature.properties.coordinates.accuracy }
+            : null,
+          context: contextArray,
+          bbox: feature.bbox || null,
+          relevance: feature.properties?.relevance || null,
+        };
+      });
 
       logger.info({
         msg: "Mapbox reverse geocoding completed",
@@ -351,7 +432,7 @@ class AddressesService {
       });
 
       return {
-        coordinates: { longitude, latitude },
+        coordinates: { latitude, longitude },
         results,
         total: results.length,
       };

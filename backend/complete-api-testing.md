@@ -970,8 +970,8 @@ curl -X POST "$BASE_URL/addresses/reverse-geocode" \
   "message": "Reverse geocode completed for (77.2167, 28.6139)",
   "data": {
     "coordinates": {
-      "longitude": 77.2167,
-      "latitude": 28.6139
+      "latitude": 28.6139,
+      "longitude": 77.2167
     },
     "results": [
       {
@@ -980,8 +980,8 @@ curl -X POST "$BASE_URL/addresses/reverse-geocode" \
         "fullAddress": "Connaught Place, New Delhi, Delhi 110001, India",
         "placeName": "Connaught Place, New Delhi, Delhi 110001, India",
         "coordinates": {
-          "longitude": 77.2167,
-          "latitude": 28.6139
+          "latitude": 28.6139,
+          "longitude": 77.2167
         },
         "featureType": "address",
         "properties": {},

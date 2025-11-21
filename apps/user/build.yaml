@@ -12,7 +12,6 @@ targets:
           - lib/**/*.dart
         options:
           explicit_to_json: true
-          field_rename: snake
 
       retrofit_generator:
         generate_for:

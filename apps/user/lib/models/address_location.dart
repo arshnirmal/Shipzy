@@ -27,11 +27,11 @@ abstract class PlaceSuggestion with _$PlaceSuggestion {
   const factory PlaceSuggestion({
     required String id,
     required String name,
-    required String fullAddress,
-    required String placeType,
+    @JsonKey(name: 'fullAddress') required String fullAddress,
+    @JsonKey(name: 'placeType') required String placeType,
     required Coordinates coordinates,
     PlaceContext? context,
-    String? sessionToken,
+    @JsonKey(name: 'sessionToken') String? sessionToken,
   }) = _PlaceSuggestion;
 
   factory PlaceSuggestion.fromJson(Map<String, dynamic> json) => _$PlaceSuggestionFromJson(json);
@@ -43,9 +43,9 @@ abstract class PlaceDetails with _$PlaceDetails {
   const factory PlaceDetails({
     required String id,
     required String name,
-    required String fullAddress,
+    @JsonKey(name: 'fullAddress') required String fullAddress,
     required Coordinates coordinates,
-    required String featureType,
+    @JsonKey(name: 'featureType') required String featureType,
     required List<double> bbox,
     PlaceContext? context,
   }) = _PlaceDetails;
@@ -67,10 +67,10 @@ abstract class ReverseGeocodeResultItem with _$ReverseGeocodeResultItem {
   const factory ReverseGeocodeResultItem({
     required String id,
     required String name,
-    required String fullAddress,
+    @JsonKey(name: 'fullAddress') required String fullAddress,
     required Coordinates coordinates,
-    required String featureType,
-    String? placeName,
+    @JsonKey(name: 'featureType') required String featureType,
+    @JsonKey(name: 'placeName') String? placeName,
     Map<String, dynamic>? properties,
     List<ReverseGeocodeContext>? context,
     List<double>? bbox,
@@ -130,7 +130,10 @@ abstract class SearchPlacesRequest with _$SearchPlacesRequest {
 // Retrieve place details request
 @freezed
 abstract class RetrievePlaceRequest with _$RetrievePlaceRequest {
-  const factory RetrievePlaceRequest({required String mapboxId, required String sessionToken}) = _RetrievePlaceRequest;
+  const factory RetrievePlaceRequest({
+    @JsonKey(name: 'mapboxId') required String mapboxId,
+    @JsonKey(name: 'sessionToken') required String sessionToken,
+  }) = _RetrievePlaceRequest;
 
   factory RetrievePlaceRequest.fromJson(Map<String, dynamic> json) => _$RetrievePlaceRequestFromJson(json);
 }

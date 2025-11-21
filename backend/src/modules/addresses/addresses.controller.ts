@@ -255,6 +255,7 @@ class AddressesController {
       const result = await addressesService.reverseGeocode({
         latitude,
         longitude,
+        types: ["street", "neighborhood"],
       });
 
       return successResponse(

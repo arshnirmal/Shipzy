@@ -92,8 +92,8 @@ describe("Addresses API", () => {
       const response = await request(app)
         .post("/api/v1/addresses/reverse-geocode")
         .send({
-          longitude: -122.4194,
           latitude: 37.7749,
+          longitude: -122.4194,
         });
 
       expect(response.status).toBe(401);
