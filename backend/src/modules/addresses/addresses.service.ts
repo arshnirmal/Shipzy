@@ -227,15 +227,67 @@ class AddressesService {
 
       const feature = response.data.features[0];
 
+      // Parse context to get detailed address components
+      const context = this._parseContext(feature.properties.context);
+
+      // Construct a more complete address string
+      // Format: [Address/Name], [Neighborhood], [Locality], [Place], [Postcode], [Region], [Country]
+      const addressComponents: string[] = [];
+
+      // 1. Start with the specific address or name
+      if (feature.properties.address) {
+        addressComponents.push(feature.properties.address);
+      } else if (feature.properties.name) {
+        addressComponents.push(feature.properties.name);
+      }
+
+      // 2. Add Neighborhood
+      if (context.neighborhood) {
+        addressComponents.push(context.neighborhood);
+      }
+
+      // 3. Add Locality (often same as city/place, but sometimes more specific)
+      if (context.locality && context.locality !== context.place) {
+        addressComponents.push(context.locality);
+      }
+
+      // 4. Add Place (City)
+      if (context.place) {
+        addressComponents.push(context.place);
+      }
+
+      // 5. Add Postcode
+      if (context.postcode) {
+        addressComponents.push(context.postcode);
+      }
+
+      // 6. Add Region (State) - Optional, can be verbose
+      // if (context.region) addressComponents.push(context.region);
+
+      // 7. Add Country - Optional if app is local only, but good for completeness
+      // if (context.country) addressComponents.push(context.country);
+
+      // Filter out duplicates and empty strings
+      const uniqueComponents = [...new Set(addressComponents)].filter(Boolean);
+
+      // Fallback to Mapbox's full_address if our construction fails or is too short
+      let fullAddress = uniqueComponents.join(", ");
+      if (!fullAddress || fullAddress.length < 10) {
+        fullAddress =
+          feature.properties.full_address ||
+          feature.properties.place_formatted ||
+          "";
+      }
+
       return {
         id: feature.properties.mapbox_id,
         name: feature.properties.name,
-        fullAddress: feature.properties.full_address,
+        fullAddress: fullAddress,
         coordinates: {
           latitude: feature.geometry.coordinates[1],
           longitude: feature.geometry.coordinates[0],
         },
-        context: this._parseContext(feature.properties.context),
+        context: context,
         featureType: feature.geometry.type,
         bbox: feature.bbox,
       };
@@ -600,12 +652,22 @@ class AddressesService {
   }
 
   _parseContext(context: any) {
-    if (!context || !Array.isArray(context)) return {};
+    if (!context) return {};
 
     const parsed: Record<string, string> = {};
-    for (const item of context) {
-      const [type] = item.id.split(".");
-      parsed[type] = item.text;
+
+    if (Array.isArray(context)) {
+      for (const item of context) {
+        const [type] = item.id.split(".");
+        parsed[type] = item.text;
+      }
+    } else if (typeof context === "object") {
+      // Handle object format (e.g. from Retrieve API)
+      for (const [key, value] of Object.entries(context)) {
+        if (value && typeof value === "object" && "name" in value) {
+          parsed[key] = (value as any).name;
+        }
+      }
     }
     return parsed;
   }

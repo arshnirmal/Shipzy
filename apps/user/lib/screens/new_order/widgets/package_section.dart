@@ -6,11 +6,11 @@ import '../../../providers/new_order_provider.dart';
 
 class PackageSection extends ConsumerStatefulWidget {
   const PackageSection({
-    super.key,
     required this.onWeightChanged,
     required this.onCategoryChanged,
     required this.onDescriptionChanged,
     required this.onDeclaredValueChanged,
+    super.key,
   });
 
   final void Function(double) onWeightChanged;
@@ -50,10 +50,7 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
         TextField(
           controller: _weight,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.scale_outlined),
-            hintText: 'Weight (kg)',
-          ),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.scale_outlined), hintText: 'Weight (kg)'),
           onChanged: (v) {
             final w = double.tryParse(v);
             if (w != null) widget.onWeightChanged(w);
@@ -81,10 +78,7 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
         TextField(
           controller: _desc,
           maxLines: 2,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.notes_outlined),
-            hintText: 'Instruction for the courier / description',
-          ),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.notes_outlined), hintText: 'Instruction for the courier / description'),
           onChanged: widget.onDescriptionChanged,
         ),
         const SizedBox(height: 12),
@@ -92,20 +86,14 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
         TextField(
           controller: _declared,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.verified_outlined),
-            hintText: 'Parcel value (optional)',
-          ),
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.verified_outlined), hintText: 'Parcel value (optional)'),
           onChanged: (v) {
             final d = double.tryParse(v);
             if (d != null) widget.onDeclaredValueChanged(d);
           },
         ),
         const SizedBox(height: 6),
-        Text(
-          'We compensate declared value for verified loss/damage; fee is policy-based.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text('We compensate declared value for verified loss/damage; fee is policy-based.', style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }

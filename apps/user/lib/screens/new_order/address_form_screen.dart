@@ -452,7 +452,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
           return;
         }
 
-        _search.text = suggestion.fullAddress;
+        _search.text = '${suggestion.name}, ${suggestion.fullAddress}';
         _searchFocus.unfocus(); // This will trigger the focus listener
 
         _skipNextReverseGeocode = true; // Skip reverse geocode after programmatic flyTo
@@ -464,7 +464,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       }
 
       final newCoords = details.coordinates;
-      _search.text = details.fullAddress;
+      _search.text = '${details.name}, ${details.fullAddress}';
       _searchFocus.unfocus(); // This will trigger the focus listener
 
       _skipNextReverseGeocode = true; // Skip reverse geocode after programmatic flyTo

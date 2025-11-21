@@ -8,9 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/auth_utils.dart';
-import 'widgets/auth_widgets.dart';
 import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
+import 'widgets/auth_widgets.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
