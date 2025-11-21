@@ -9,6 +9,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 import '../../models/address_location.dart';
 import '../../providers/address_service_provider.dart';
+import '../../utils/snackbar_utils.dart';
 import 'widgets/location_section.dart'; // For SelectedAddress
 
 class AddressFormScreen extends ConsumerStatefulWidget {
@@ -81,125 +82,133 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent flutter from resizing on keyboard
-      body: Stack(
-        children: [
-          // --- Map ---
-          MapWidget(
-            key: const ValueKey('shipzy_address_map'),
-            cameraOptions: CameraOptions(
-              center: Point(coordinates: Position(72.8777, 19.0760)), // Default to Mumbai
-              zoom: 12,
+    return GestureDetector(
+      onTap: () {
+        // Unfocus search bar when tapping outside
+        if (_searchFocus.hasFocus) {
+          _searchFocus.unfocus();
+        }
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false, // Prevent flutter from resizing on keyboard
+        body: Stack(
+          children: [
+            // --- Map ---
+            MapWidget(
+              key: const ValueKey('shipzy_address_map'),
+              cameraOptions: CameraOptions(
+                center: Point(coordinates: Position(72.8777, 19.0760)), // Default to Mumbai
+                zoom: 12,
+              ),
+              styleUri: isDarkMode(context) ? MapboxStyles.DARK : MapboxStyles.LIGHT,
+              onMapCreated: _onMapCreated,
+              onCameraChangeListener: _onCameraChanged,
+              onMapIdleListener: (_) => _onMapIdle(),
             ),
-            styleUri: isDarkMode(context) ? MapboxStyles.DARK : MapboxStyles.LIGHT,
-            onMapCreated: _onMapCreated,
-            onCameraChangeListener: _onCameraChanged,
-            onMapIdleListener: (_) => _onMapIdle(),
-          ),
 
-          // --- Center Marker ---
-          if (!_isSearchFocused)
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: MediaQuery.of(context).size.height * sheetInitialSize,
-              child: IgnorePointer(
-                child: Center(
-                  child: AnimatedScale(
-                    duration: const Duration(milliseconds: 150),
-                    scale: _isDragging ? 1.2 : 1.0,
-                    child: Image.asset(
-                      'assets/mapbox/marker.png',
-                      height: 40,
-                      width: 40,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Icon(Icons.location_on, size: 40, color: cs.primary),
+            // --- Center Marker ---
+            if (!_isSearchFocused)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: MediaQuery.of(context).size.height * sheetInitialSize,
+                child: IgnorePointer(
+                  child: Center(
+                    child: AnimatedScale(
+                      duration: const Duration(milliseconds: 150),
+                      scale: _isDragging ? 1.2 : 1.0,
+                      child: Image.asset(
+                        'assets/mapbox/marker.png',
+                        height: 40,
+                        width: 40,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Icon(Icons.location_on, size: 40, color: cs.primary),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-          // --- Floating Back Button ---
-          Positioned(
-            top: 40,
-            left: 16,
-            child: FloatingActionButton.small(
-              heroTag: 'back_btn',
-              onPressed: () => Navigator.of(context).pop(),
-              backgroundColor: cs.surface,
-              child: Icon(Icons.arrow_back, color: cs.onSurface),
-            ),
-          ),
-
-          // --- My Location FAB ---
-          if (!_isSearchFocused)
+            // --- Floating Back Button ---
             Positioned(
-              right: 16,
-              bottom: MediaQuery.of(context).size.height * sheetInitialSize + 20,
-              child: FloatingActionButton.small(heroTag: 'my_location_btn', onPressed: _jumpToMyLocation, child: const Icon(Icons.my_location)),
-            ),
-
-          // --- Bottom Sheet ---
-          DraggableScrollableSheet(
-            controller: _sheetController,
-            initialChildSize: sheetInitialSize,
-            minChildSize: 0.35,
-            maxChildSize: sheetMaxSize,
-            builder: (context, scrollController) => Container(
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 15)],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  // Handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(color: cs.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)),
-                  ),
-
-                  // Search Field
-                  TextField(
-                    controller: _search,
-                    focusNode: _searchFocus,
-                    decoration: InputDecoration(
-                      hintText: 'Search for society or locality',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _search.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _search.clear();
-                                setState(() => _suggestions = []);
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: _debouncedSearch,
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Main Content (Suggestions or Detail Form)
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      child: _isSearchFocused ? _buildSuggestionsList(scrollController) : _buildDetailForm(scrollController),
-                    ),
-                  ),
-                ],
+              top: 40,
+              left: 16,
+              child: FloatingActionButton.small(
+                heroTag: 'back_btn',
+                onPressed: () => Navigator.of(context).pop(),
+                backgroundColor: cs.surface,
+                child: Icon(Icons.arrow_back, color: cs.onSurface),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+
+            // --- My Location FAB ---
+            if (!_isSearchFocused)
+              Positioned(
+                right: 16,
+                bottom: MediaQuery.of(context).size.height * sheetInitialSize + 20,
+                child: FloatingActionButton.small(heroTag: 'my_location_btn', onPressed: _jumpToMyLocation, child: const Icon(Icons.my_location)),
+              ),
+
+            // --- Bottom Sheet ---
+            DraggableScrollableSheet(
+              controller: _sheetController,
+              initialChildSize: sheetInitialSize,
+              minChildSize: 0.35,
+              maxChildSize: sheetMaxSize,
+              builder: (context, scrollController) => Container(
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 15)],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    // Handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(color: cs.onSurface.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2)),
+                    ),
+
+                    // Search Field
+                    TextField(
+                      controller: _search,
+                      focusNode: _searchFocus,
+                      decoration: InputDecoration(
+                        hintText: 'Search for society or locality',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _search.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _search.clear();
+                                  setState(() => _suggestions = []);
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: _debouncedSearch,
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Main Content (Suggestions or Detail Form)
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: _isSearchFocused ? _buildSuggestionsList(scrollController) : _buildDetailForm(scrollController),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ), // Close Scaffold
+    ); // Close GestureDetector
   }
 
   // --- Widgets ---
@@ -250,8 +259,76 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     decoration: InputDecoration(hintText: hint, isDense: true),
   );
 
-  Widget _suggestionItem({required PlaceSuggestion suggestion, required VoidCallback onTap}) =>
-      ListTile(title: Text(suggestion.name), subtitle: Text(suggestion.fullAddress), onTap: onTap, leading: const Icon(Icons.location_on_outlined));
+  Widget _suggestionItem({required PlaceSuggestion suggestion, required VoidCallback onTap}) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    IconData icon;
+    Color iconColor;
+
+    // Determine icon based on place type
+    if (suggestion.placeType == 'poi') {
+      icon = Icons.store_mall_directory_outlined;
+      iconColor = Colors.orange;
+    } else if (suggestion.placeType == 'street') {
+      icon = Icons.add_road;
+      iconColor = Colors.blue;
+    } else {
+      icon = Icons.location_on_outlined;
+      iconColor = cs.primary;
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: Icon(icon, color: iconColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        suggestion.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        suggestion.fullAddress,
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.north_west, size: 16, color: cs.outline),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   // --- Logic & Handlers ---
   void _onFocusChange() {
@@ -272,8 +349,16 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   void _onCameraChanged(CameraChangedEventData data) {
     if (!_isDragging) {
       setState(() => _isDragging = true);
+
+      // Unfocus search bar when user starts dragging the map
+      if (_searchFocus.hasFocus) {
+        _searchFocus.unfocus();
+      }
     }
   }
+
+  bool _ignoreFirstReverseGeocode = true;
+  bool _skipNextReverseGeocode = false;
 
   void _onMapIdle() async {
     if (_isDragging) {
@@ -281,6 +366,18 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       final cam = await _mapboxMap?.getCameraState();
       if (cam != null) {
         _updateCenterFromCamera(cam);
+
+        if (_ignoreFirstReverseGeocode) {
+          _ignoreFirstReverseGeocode = false;
+          return;
+        }
+
+        // Skip reverse geocoding if we just programmatically moved the map
+        if (_skipNextReverseGeocode) {
+          _skipNextReverseGeocode = false;
+          return;
+        }
+
         _reverseDebounce?.cancel();
         _reverseDebounce = Timer(const Duration(milliseconds: 750), _reverseGeocodeCenter);
       }
@@ -296,7 +393,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
   void _debouncedSearch(String query) {
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 400), () => _triggerSearch(query));
+    _searchDebounce = Timer(const Duration(milliseconds: 800), () => _triggerSearch(query));
   }
 
   Future<void> _triggerSearch(String query) async {
@@ -327,7 +424,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
           _suggestions = [];
           _loadingSuggestions = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to search addresses: ${e.toString()}')));
+        SnackbarUtils.showError(context, 'Failed to search addresses: ${e.toString()}');
       }
     }
   }
@@ -348,11 +445,19 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       if (details == null) {
         // If no session token or retrieve failed, use coordinates from suggestion directly
         final newCoords = suggestion.coordinates;
+        if (newCoords.latitude == null || newCoords.longitude == null) {
+          if (mounted) {
+            SnackbarUtils.showError(context, 'Location details not available. Please select another result.');
+          }
+          return;
+        }
+
         _search.text = suggestion.fullAddress;
         _searchFocus.unfocus(); // This will trigger the focus listener
 
+        _skipNextReverseGeocode = true; // Skip reverse geocode after programmatic flyTo
         await _mapboxMap?.flyTo(
-          CameraOptions(center: Point(coordinates: Position(newCoords.longitude, newCoords.latitude)), zoom: 16),
+          CameraOptions(center: Point(coordinates: Position(newCoords.longitude!, newCoords.latitude!)), zoom: 16),
           MapAnimationOptions(duration: 800),
         );
         return;
@@ -362,13 +467,16 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       _search.text = details.fullAddress;
       _searchFocus.unfocus(); // This will trigger the focus listener
 
-      await _mapboxMap?.flyTo(
-        CameraOptions(center: Point(coordinates: Position(newCoords.longitude, newCoords.latitude)), zoom: 16),
-        MapAnimationOptions(duration: 800),
-      );
+      _skipNextReverseGeocode = true; // Skip reverse geocode after programmatic flyTo
+      if (newCoords.longitude != null && newCoords.latitude != null) {
+        await _mapboxMap?.flyTo(
+          CameraOptions(center: Point(coordinates: Position(newCoords.longitude ?? 0, newCoords.latitude ?? 0)), zoom: 16),
+          MapAnimationOptions(duration: 800),
+        );
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to retrieve address details: ${e.toString()}')));
+        SnackbarUtils.showError(context, 'Failed to retrieve address details: ${e.toString()}');
       }
     }
   }
@@ -380,7 +488,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
     try {
       final addressService = ref.read(addressServiceProvider);
-      final result = await addressService.reverseGeocode(latitude: _center!.latitude, longitude: _center!.longitude);
+      final result = await addressService.reverseGeocode(latitude: _center!.latitude ?? 0, longitude: _center!.longitude ?? 0);
 
       if (result.results.isNotEmpty && mounted) {
         final firstResult = result.results.first;
@@ -402,11 +510,14 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
         return;
       }
 
-      final pos = await geo.Geolocator.getCurrentPosition();
-      await _mapboxMap?.flyTo(
-        CameraOptions(center: Point(coordinates: Position(pos.longitude, pos.latitude)), zoom: 16),
-        MapAnimationOptions(duration: 1000),
-      );
+      final position = await geo.Geolocator.getCurrentPosition();
+      final mapboxMap = _mapboxMap;
+      if (mapboxMap != null) {
+        await mapboxMap.flyTo(
+          CameraOptions(center: Point(coordinates: Position(position.longitude, position.latitude)), zoom: 16),
+          MapAnimationOptions(duration: 800, startDelay: 0),
+        );
+      }
     } catch (e) {
       // Handle error
     }

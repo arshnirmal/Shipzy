@@ -101,8 +101,8 @@ class AddressesService {
     try {
       const {
         query,
-        proximity = "72.8777,19.0760", // Mumbai coordinates as default
-        limit = 10,
+        proximity = "72.8321,18.9582", // Mumbai coordinates as default
+        limit = 7,
         types = "address,poi",
         country = "IN",
         language = "en",
@@ -163,6 +163,9 @@ class AddressesService {
         name: item.name,
         fullAddress: item.full_address || item.place_formatted,
         placeType: item.feature_type,
+        // Note: Mapbox Search Box 'suggest' API does NOT return coordinates.
+        // Coordinates are only available via the 'retrieve' endpoint using the session token.
+        // We return empty/undefined coordinates here, which the frontend must handle.
         coordinates: {
           latitude: item.coordinates?.latitude,
           longitude: item.coordinates?.longitude,

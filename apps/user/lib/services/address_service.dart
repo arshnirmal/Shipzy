@@ -66,8 +66,8 @@ class AddressService {
         throw Exception(response.data?['message'] ?? 'Failed to search places');
       }
 
-      final data = response.data!['data'] as List<dynamic>;
-      return data.map((json) => PlaceSuggestion.fromJson(json as Map<String, dynamic>)).toList();
+      final results = response.data!['data'] as List<dynamic>;
+      return results.map((json) => PlaceSuggestion.fromJson(json as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
       throw _handleDioError(e, 'search places');
     }

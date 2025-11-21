@@ -70,13 +70,35 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
       return;
     }
     final sel = result as SelectedAddress;
+    final formattedAddress = _formatAddress(sel);
+
     if (purpose == 'pickup') {
-      _pickAddr.text = sel.fullAddress;
-      widget.onPickupChanged(sel.fullAddress, sel.latitude, sel.longitude, _pickName.text, _pickPhone.text);
+      _pickAddr.text = formattedAddress;
+      widget.onPickupChanged(formattedAddress, sel.latitude, sel.longitude, _pickName.text, _pickPhone.text);
     } else {
-      _delAddr.text = sel.fullAddress;
-      widget.onDeliveryChanged(sel.fullAddress, sel.latitude, sel.longitude, _delName.text, _delPhone.text);
+      _delAddr.text = formattedAddress;
+      widget.onDeliveryChanged(formattedAddress, sel.latitude, sel.longitude, _delName.text, _delPhone.text);
     }
+  }
+
+  /// Formats address as: Flat, Floor, Building, Searched Address (skipping empty fields)
+  String _formatAddress(SelectedAddress sel) {
+    final parts = <String>[];
+
+    if (sel.flat != null && sel.flat!.trim().isNotEmpty) {
+      parts.add(sel.flat!.trim());
+    }
+    if (sel.floor != null && sel.floor!.trim().isNotEmpty) {
+      parts.add(sel.floor!.trim());
+    }
+    if (sel.building != null && sel.building!.trim().isNotEmpty) {
+      parts.add(sel.building!.trim());
+    }
+
+    // Add the main address
+    parts.add(sel.fullAddress);
+
+    return parts.join(', ');
   }
 }
 

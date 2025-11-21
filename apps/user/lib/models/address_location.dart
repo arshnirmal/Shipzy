@@ -8,7 +8,7 @@ part 'address_location.g.dart';
 // Coordinates model
 @freezed
 abstract class Coordinates with _$Coordinates {
-  const factory Coordinates({required double latitude, required double longitude}) = _Coordinates;
+  const factory Coordinates({double? latitude, double? longitude}) = _Coordinates;
 
   factory Coordinates.fromJson(Map<String, dynamic> json) => _$CoordinatesFromJson(json);
 }
@@ -46,7 +46,7 @@ abstract class PlaceDetails with _$PlaceDetails {
     @JsonKey(name: 'fullAddress') required String fullAddress,
     required Coordinates coordinates,
     @JsonKey(name: 'featureType') required String featureType,
-    required List<double> bbox,
+    List<double>? bbox,
     PlaceContext? context,
   }) = _PlaceDetails;
 
