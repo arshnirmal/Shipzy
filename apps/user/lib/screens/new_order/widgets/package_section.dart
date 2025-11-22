@@ -47,31 +47,41 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
         Text('Package', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         // Weight
-        TextField(
-          controller: _weight,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(prefixIcon: Icon(Icons.scale_outlined), hintText: 'Weight (kg)'),
+        // Weight
+        DropdownButtonFormField<double>(
+          initialValue: state.packageWeight,
+          decoration: const InputDecoration(prefixIcon: Icon(Icons.scale_outlined), hintText: 'Select Weight'),
+          items:
+              state.selectedVehicle?.weightTiers
+                  .map((tier) => DropdownMenuItem<double>(value: tier.maxWeightKg, child: Text('Up to ${tier.maxWeightKg} kg')))
+                  .toList() ??
+              [],
           onChanged: (v) {
-            final w = double.tryParse(v);
-            if (w != null) widget.onWeightChanged(w);
+            if (v != null) {
+              widget.onWeightChanged(v);
+            }
           },
         ),
         const SizedBox(height: 12),
         // Categories
         Text('What are you sending?', style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: packages.map((p) {
-            final isSel = p.packageTypeId == selected;
-            return ChoiceChip(
-              label: Text(p.name),
-              selected: isSel,
-              onSelected: (_) => widget.onCategoryChanged(p),
-              selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
-            );
-          }).toList(),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: packages.map((p) {
+              final isSel = p.packageTypeId == selected;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(p.name),
+                  selected: isSel,
+                  onSelected: (_) => widget.onCategoryChanged(p),
+                  selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.18),
+                ),
+              );
+            }).toList(),
+          ),
         ),
         const SizedBox(height: 12),
         // Description
@@ -89,7 +99,9 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
           decoration: const InputDecoration(prefixIcon: Icon(Icons.verified_outlined), hintText: 'Parcel value (optional)'),
           onChanged: (v) {
             final d = double.tryParse(v);
-            if (d != null) widget.onDeclaredValueChanged(d);
+            if (d != null) {
+              widget.onDeclaredValueChanged(d);
+            }
           },
         ),
         const SizedBox(height: 6),

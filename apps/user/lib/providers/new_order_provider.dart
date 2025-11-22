@@ -20,15 +20,25 @@ class NewOrderState {
     this.selectedPackageType,
     this.selectedPaymentMethod,
     this.pickupAddress,
+    this.pickupBaseAddress,
     this.pickupLatitude,
     this.pickupLongitude,
     this.pickupContactName,
     this.pickupContactPhone,
+    this.pickupBuilding,
+    this.pickupFloor,
+    this.pickupFlat,
+    this.pickupHowToReach,
     this.deliveryAddress,
+    this.deliveryBaseAddress,
     this.deliveryLatitude,
     this.deliveryLongitude,
     this.deliveryContactName,
     this.deliveryContactPhone,
+    this.deliveryBuilding,
+    this.deliveryFloor,
+    this.deliveryFlat,
+    this.deliveryHowToReach,
     this.packageWeight,
     this.packageDescription,
     this.declaredValue,
@@ -52,16 +62,26 @@ class NewOrderState {
 
   // Address data
   final String? pickupAddress;
+  final String? pickupBaseAddress;
   final double? pickupLatitude;
   final double? pickupLongitude;
   final String? pickupContactName;
   final String? pickupContactPhone;
+  final String? pickupBuilding;
+  final String? pickupFloor;
+  final String? pickupFlat;
+  final String? pickupHowToReach;
 
   final String? deliveryAddress;
+  final String? deliveryBaseAddress;
   final double? deliveryLatitude;
   final double? deliveryLongitude;
   final String? deliveryContactName;
   final String? deliveryContactPhone;
+  final String? deliveryBuilding;
+  final String? deliveryFloor;
+  final String? deliveryFlat;
+  final String? deliveryHowToReach;
 
   // Package data
   final double? packageWeight;
@@ -88,15 +108,25 @@ class NewOrderState {
     PackageType? selectedPackageType,
     PaymentMethod? selectedPaymentMethod,
     String? pickupAddress,
+    String? pickupBaseAddress,
     double? pickupLatitude,
     double? pickupLongitude,
     String? pickupContactName,
     String? pickupContactPhone,
+    String? pickupBuilding,
+    String? pickupFloor,
+    String? pickupFlat,
+    String? pickupHowToReach,
     String? deliveryAddress,
+    String? deliveryBaseAddress,
     double? deliveryLatitude,
     double? deliveryLongitude,
     String? deliveryContactName,
     String? deliveryContactPhone,
+    String? deliveryBuilding,
+    String? deliveryFloor,
+    String? deliveryFlat,
+    String? deliveryHowToReach,
     double? packageWeight,
     String? packageDescription,
     double? declaredValue,
@@ -116,15 +146,22 @@ class NewOrderState {
     selectedPackageType: selectedPackageType ?? this.selectedPackageType,
     selectedPaymentMethod: selectedPaymentMethod ?? this.selectedPaymentMethod,
     pickupAddress: pickupAddress ?? this.pickupAddress,
+    pickupBaseAddress: pickupBaseAddress ?? this.pickupBaseAddress,
     pickupLatitude: pickupLatitude ?? this.pickupLatitude,
     pickupLongitude: pickupLongitude ?? this.pickupLongitude,
     pickupContactName: pickupContactName ?? this.pickupContactName,
     pickupContactPhone: pickupContactPhone ?? this.pickupContactPhone,
+    pickupBuilding: pickupBuilding ?? this.pickupBuilding,
+    pickupFloor: pickupFloor ?? this.pickupFloor,
+    pickupFlat: pickupFlat ?? this.pickupFlat,
+    pickupHowToReach: pickupHowToReach ?? this.pickupHowToReach,
     deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+    deliveryBaseAddress: deliveryBaseAddress ?? this.deliveryBaseAddress,
     deliveryLatitude: deliveryLatitude ?? this.deliveryLatitude,
     deliveryLongitude: deliveryLongitude ?? this.deliveryLongitude,
-    deliveryContactName: deliveryContactName ?? this.deliveryContactName,
-    deliveryContactPhone: deliveryContactPhone ?? this.deliveryContactPhone,
+    deliveryFloor: deliveryFloor ?? this.deliveryFloor,
+    deliveryFlat: deliveryFlat ?? this.deliveryFlat,
+    deliveryHowToReach: deliveryHowToReach ?? this.deliveryHowToReach,
     packageWeight: packageWeight ?? this.packageWeight,
     packageDescription: packageDescription ?? this.packageDescription,
     declaredValue: declaredValue ?? this.declaredValue,
@@ -172,14 +209,8 @@ class NewOrderState {
     );
   }
 
-  /// Calculate total fare including weight charges
-  double get totalFareWithWeight {
-    if (fareData == null) {
-      return 0;
-    }
-    final weightCharge = selectedWeightTier?.additionalCharge ?? 0.0;
-    return fareData!.totalFare + weightCharge;
-  }
+  /// Get total fare (already includes all charges from API)
+  double get totalFare => fareData?.totalPrice ?? 0.0;
 }
 
 @riverpod
@@ -230,24 +261,56 @@ class NewOrder extends _$NewOrder {
   }
 
   /// Set pickup address details
-  void setPickupAddress({String? address, double? latitude, double? longitude, String? contactName, String? contactPhone}) {
+  void setPickupAddress({
+    String? address,
+    String? baseAddress,
+    double? latitude,
+    double? longitude,
+    String? contactName,
+    String? contactPhone,
+    String? building,
+    String? floor,
+    String? flat,
+    String? howToReach,
+  }) {
     state = state.copyWith(
       pickupAddress: address ?? state.pickupAddress,
+      pickupBaseAddress: baseAddress ?? state.pickupBaseAddress,
       pickupLatitude: latitude ?? state.pickupLatitude,
       pickupLongitude: longitude ?? state.pickupLongitude,
       pickupContactName: contactName ?? state.pickupContactName,
       pickupContactPhone: contactPhone ?? state.pickupContactPhone,
+      pickupBuilding: building ?? state.pickupBuilding,
+      pickupFloor: floor ?? state.pickupFloor,
+      pickupFlat: flat ?? state.pickupFlat,
+      pickupHowToReach: howToReach ?? state.pickupHowToReach,
     );
   }
 
   /// Set delivery address details
-  void setDeliveryAddress({String? address, double? latitude, double? longitude, String? contactName, String? contactPhone}) {
+  void setDeliveryAddress({
+    String? address,
+    String? baseAddress,
+    double? latitude,
+    double? longitude,
+    String? contactName,
+    String? contactPhone,
+    String? building,
+    String? floor,
+    String? flat,
+    String? howToReach,
+  }) {
     state = state.copyWith(
       deliveryAddress: address ?? state.deliveryAddress,
+      deliveryBaseAddress: baseAddress ?? state.deliveryBaseAddress,
       deliveryLatitude: latitude ?? state.deliveryLatitude,
       deliveryLongitude: longitude ?? state.deliveryLongitude,
       deliveryContactName: contactName ?? state.deliveryContactName,
       deliveryContactPhone: contactPhone ?? state.deliveryContactPhone,
+      deliveryBuilding: building ?? state.deliveryBuilding,
+      deliveryFloor: floor ?? state.deliveryFloor,
+      deliveryFlat: flat ?? state.deliveryFlat,
+      deliveryHowToReach: howToReach ?? state.deliveryHowToReach,
     );
   }
 
@@ -272,18 +335,25 @@ class NewOrder extends _$NewOrder {
       return;
     }
 
+    // Get the weight tier for the current package weight
+    final weightTier = state.selectedWeightTier;
+    if (weightTier == null) {
+      state = state.copyWith(fareError: 'Unable to determine weight tier for package weight');
+      return;
+    }
+
     state = state.copyWith(isCalculatingFare: true);
 
     try {
       final orderService = ref.read(orderServiceProvider);
       final request = CalculateFareRequest(
-        pickupLatitude: state.pickupLatitude!,
-        pickupLongitude: state.pickupLongitude!,
-        deliveryLatitude: state.deliveryLatitude!,
-        deliveryLongitude: state.deliveryLongitude!,
-        packageWeight: state.packageWeight!,
-        packageType: state.selectedPackageType!.name,
-        deliveryType: state.selectedDeliveryType!.name,
+        deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
+        vehicleCategoryId: state.selectedVehicle!.categoryId,
+        weightTierId: weightTier.tierId,
+        pickupLat: state.pickupLatitude!,
+        pickupLng: state.pickupLongitude!,
+        dropLat: state.deliveryLatitude!,
+        dropLng: state.deliveryLongitude!,
       );
 
       final response = await orderService.calculateFare(request);
@@ -293,8 +363,49 @@ class NewOrder extends _$NewOrder {
     }
   }
 
+  /// Validate order details
+  String? validateOrder() {
+    if (state.pickupAddress == null) {
+      return 'Please select pickup address';
+    }
+    if (state.pickupContactName == null || state.pickupContactName!.trim().isEmpty) {
+      return 'Please enter pickup contact name';
+    }
+    if (state.pickupContactPhone == null || state.pickupContactPhone!.trim().length < 10) {
+      return 'Please enter valid 10-digit pickup phone';
+    }
+
+    if (state.deliveryAddress == null) {
+      return 'Please select delivery address';
+    }
+    if (state.deliveryContactName == null || state.deliveryContactName!.trim().isEmpty) {
+      return 'Please enter delivery contact name';
+    }
+    if (state.deliveryContactPhone == null || state.deliveryContactPhone!.trim().length < 10) {
+      return 'Please enter valid 10-digit delivery phone';
+    }
+
+    if (state.packageWeight == null || state.packageWeight! <= 0) {
+      return 'Please enter valid package weight';
+    }
+    if (state.selectedPackageType == null) {
+      return 'Please select package type';
+    }
+    if (state.selectedPaymentMethod == null) {
+      return 'Please select payment method';
+    }
+
+    return null;
+  }
+
   /// Create order
   Future<void> createOrder() async {
+    final validationError = validateOrder();
+    if (validationError != null) {
+      state = state.copyWith(createOrderError: validationError);
+      return;
+    }
+
     if (!state.canCreateOrder) {
       return;
     }
@@ -316,7 +427,7 @@ class NewOrder extends _$NewOrder {
         deliveryContactPhone: state.deliveryContactPhone!,
         packageType: state.selectedPackageType!.name,
         packageWeight: state.packageWeight!,
-        packageDescription: state.packageDescription!,
+        packageDescription: state.packageDescription ?? '',
         deliveryType: state.selectedDeliveryType!.name,
         paymentMethod: state.selectedPaymentMethod!.name,
         declaredValue: state.declaredValue,

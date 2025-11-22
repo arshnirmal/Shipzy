@@ -1,16 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../providers/new_order_provider.dart';
 import '../../../utils/app_routes.dart';
 
-typedef AddressChanged = void Function(String address, double latitude, double longitude, String contactName, String contactPhone);
+typedef AddressChanged =
+    void Function(
+      String address,
+      String baseAddress,
+      double latitude,
+      double longitude,
+      String contactName,
+      String contactPhone,
+      String? building,
+      String? floor,
+      String? flat,
+      String? howToReach,
+    );
+typedef ContactChanged = void Function(String name, String phone);
 
 class LocationSection extends ConsumerStatefulWidget {
-  const LocationSection({required this.onPickupChanged, required this.onDeliveryChanged, super.key});
+  const LocationSection({
+    required this.onPickupChanged,
+    required this.onDeliveryChanged,
+    required this.onPickupContactChanged,
+    required this.onDeliveryContactChanged,
+    super.key,
+  });
 
   final AddressChanged onPickupChanged;
   final AddressChanged onDeliveryChanged;
+  final ContactChanged onPickupContactChanged;
+  final ContactChanged onDeliveryContactChanged;
 
   @override
   ConsumerState<LocationSection> createState() => _LocationSectionState();
@@ -47,7 +70,8 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
         onPick: () async => _openPicker(context, purpose: 'pickup'),
       ),
       const SizedBox(height: 8),
-      _namePhoneRow(_pickName, _pickPhone),
+      const SizedBox(height: 8),
+      _namePhoneRow(_pickName, _pickPhone, () => widget.onPickupContactChanged(_pickName.text, _pickPhone.text)),
       const SizedBox(height: 18),
       const StepRailHeader(step: 2, title: 'Delivery point'),
       const SizedBox(height: 8),
@@ -57,15 +81,24 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
         onPick: () async => _openPicker(context, purpose: 'delivery'),
       ),
       const SizedBox(height: 8),
-      _namePhoneRow(_delName, _delPhone),
+      _namePhoneRow(_delName, _delPhone, () => widget.onDeliveryContactChanged(_delName.text, _delPhone.text)),
     ],
   );
 
   Future<void> _openPicker(BuildContext context, {required String purpose}) async {
-    final result = await context.push(
-      AppRoutes.addressForm,
-      extra: {'purpose': purpose, 'initialAddress': (purpose == 'pickup') ? _pickAddr.text : _delAddr.text},
-    );
+    final state = ref.read(newOrderProvider);
+    final extra = {
+      'purpose': purpose,
+      'initialAddress': (purpose == 'pickup') ? state.pickupBaseAddress : state.deliveryBaseAddress,
+      'latitude': (purpose == 'pickup') ? state.pickupLatitude : state.deliveryLatitude,
+      'longitude': (purpose == 'pickup') ? state.pickupLongitude : state.deliveryLongitude,
+      'building': (purpose == 'pickup') ? state.pickupBuilding : state.deliveryBuilding,
+      'floor': (purpose == 'pickup') ? state.pickupFloor : state.deliveryFloor,
+      'flat': (purpose == 'pickup') ? state.pickupFlat : state.deliveryFlat,
+      'howToReach': (purpose == 'pickup') ? state.pickupHowToReach : state.deliveryHowToReach,
+    };
+
+    final result = await context.push(AppRoutes.addressForm, extra: extra);
     if (!mounted || result == null) {
       return;
     }
@@ -74,10 +107,32 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
 
     if (purpose == 'pickup') {
       _pickAddr.text = formattedAddress;
-      widget.onPickupChanged(formattedAddress, sel.latitude, sel.longitude, _pickName.text, _pickPhone.text);
+      widget.onPickupChanged(
+        formattedAddress,
+        sel.fullAddress,
+        sel.latitude,
+        sel.longitude,
+        _pickName.text,
+        _pickPhone.text,
+        sel.building,
+        sel.floor,
+        sel.flat,
+        sel.howToReach,
+      );
     } else {
       _delAddr.text = formattedAddress;
-      widget.onDeliveryChanged(formattedAddress, sel.latitude, sel.longitude, _delName.text, _delPhone.text);
+      widget.onDeliveryChanged(
+        formattedAddress,
+        sel.fullAddress,
+        sel.latitude,
+        sel.longitude,
+        _delName.text,
+        _delPhone.text,
+        sel.building,
+        sel.floor,
+        sel.flat,
+        sel.howToReach,
+      );
     }
   }
 
@@ -102,12 +157,13 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
   }
 }
 
-Widget _namePhoneRow(TextEditingController name, TextEditingController phone) => Row(
+Widget _namePhoneRow(TextEditingController name, TextEditingController phone, VoidCallback onChanged) => Row(
   children: [
     Expanded(
       child: TextField(
         controller: name,
         decoration: const InputDecoration(hintText: 'Contact name', prefixIcon: Icon(Icons.person_outline)),
+        onChanged: (_) => onChanged(),
       ),
     ),
     const SizedBox(width: 10),
@@ -115,7 +171,10 @@ Widget _namePhoneRow(TextEditingController name, TextEditingController phone) =>
       child: TextField(
         controller: phone,
         keyboardType: TextInputType.phone,
-        decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.call_outlined)),
+        maxLength: 10,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: const InputDecoration(hintText: 'Phone number', prefixIcon: Icon(Icons.call_outlined), counterText: ''),
+        onChanged: (_) => onChanged(),
       ),
     ),
   ],

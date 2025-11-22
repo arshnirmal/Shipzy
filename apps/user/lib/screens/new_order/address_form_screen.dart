@@ -13,10 +13,26 @@ import '../../utils/snackbar_utils.dart';
 import 'widgets/location_section.dart'; // For SelectedAddress
 
 class AddressFormScreen extends ConsumerStatefulWidget {
-  const AddressFormScreen({this.purpose, this.initialAddress, super.key});
+  const AddressFormScreen({
+    this.purpose,
+    this.initialAddress,
+    this.initialLatitude,
+    this.initialLongitude,
+    this.initialBuilding,
+    this.initialFloor,
+    this.initialFlat,
+    this.initialHowToReach,
+    super.key,
+  });
 
   final String? purpose;
   final String? initialAddress;
+  final double? initialLatitude;
+  final double? initialLongitude;
+  final String? initialBuilding;
+  final String? initialFloor;
+  final String? initialFlat;
+  final String? initialHowToReach;
 
   @override
   ConsumerState<AddressFormScreen> createState() => _AddressFormScreenState();
@@ -52,9 +68,29 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocus.requestFocus();
     });
+
+    // Initialize fields
     if (widget.initialAddress?.isNotEmpty ?? false) {
       _search.text = widget.initialAddress!;
     }
+    if (widget.initialBuilding?.isNotEmpty ?? false) {
+      _building.text = widget.initialBuilding!;
+    }
+    if (widget.initialFloor?.isNotEmpty ?? false) {
+      _floor.text = widget.initialFloor!;
+    }
+    if (widget.initialFlat?.isNotEmpty ?? false) {
+      _flat.text = widget.initialFlat!;
+    }
+    if (widget.initialHowToReach?.isNotEmpty ?? false) {
+      _directions.text = widget.initialHowToReach!;
+    }
+
+    // Initialize center if coordinates provided
+    if (widget.initialLatitude != null && widget.initialLongitude != null) {
+      _center = Coordinates(latitude: widget.initialLatitude, longitude: widget.initialLongitude);
+    }
+
     _searchFocus.addListener(_onFocusChange);
   }
 
@@ -97,8 +133,11 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
             MapWidget(
               key: const ValueKey('shipzy_address_map'),
               cameraOptions: CameraOptions(
-                center: Point(coordinates: Position(72.8777, 19.0760)), // Default to Mumbai
+                center: _center != null
+                    ? Point(coordinates: Position(_center!.longitude ?? 0, _center!.latitude ?? 0))
+                    : Point(coordinates: Position(72.8777, 19.0760)), // Default to Mumbai
                 zoom: 12,
+                padding: MbxEdgeInsets(top: 0, left: 0, bottom: MediaQuery.of(context).size.height * sheetInitialSize, right: 0),
               ),
               styleUri: isDarkMode(context) ? MapboxStyles.DARK : MapboxStyles.LIGHT,
               onMapCreated: _onMapCreated,
@@ -115,15 +154,18 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
                 bottom: MediaQuery.of(context).size.height * sheetInitialSize,
                 child: IgnorePointer(
                   child: Center(
-                    child: AnimatedScale(
-                      duration: const Duration(milliseconds: 150),
-                      scale: _isDragging ? 1.2 : 1.0,
-                      child: Image.asset(
-                        'assets/mapbox/marker.png',
-                        height: 40,
-                        width: 40,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Icon(Icons.location_on, size: 40, color: cs.primary),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 40), // Align pin tip to center (height is 40)
+                      child: AnimatedScale(
+                        duration: const Duration(milliseconds: 150),
+                        scale: _isDragging ? 1.2 : 1.0,
+                        child: Image.asset(
+                          'assets/mapbox/marker.png',
+                          height: 40,
+                          width: 40,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Icon(Icons.location_on, size: 40, color: cs.primary),
+                        ),
                       ),
                     ),
                   ),

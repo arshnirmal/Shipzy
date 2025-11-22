@@ -194,11 +194,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+                  maxLength: 10,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
                     hintText: '9876543210',
                     hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                     prefixIcon: const Icon(Icons.phone_outlined),
+                    counterText: '', // Hide counter if preferred, or keep it. I'll hide it to keep UI clean as per typical design
                   ),
                   validator: AuthValidators.validatePhoneNumber,
                 ),

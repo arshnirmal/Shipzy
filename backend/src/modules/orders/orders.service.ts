@@ -10,8 +10,16 @@ import ordersRepository from "./orders.repository";
 
 interface FareData {
   deliveryTypeId: number;
-  distanceKm: number;
-  weightKg?: number;
+  vehicleCategoryId: number;
+  weightTierId: number;
+  pickup: {
+    lat: number;
+    lng: number;
+  };
+  drop: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface OrderData {
@@ -72,32 +80,81 @@ interface Location {
 
 class OrdersService {
   /**
-   * Calculate fare estimate
+   * Calculate fare estimate using real-time distance from Mapbox
    */
   async calculateFare(fareData: FareData): Promise<any> {
     try {
-      const { deliveryTypeId, distanceKm, weightKg } = fareData;
+      const { deliveryTypeId, vehicleCategoryId, weightTierId, pickup, drop } =
+        fareData;
 
       // Validate inputs
-      if (!deliveryTypeId || !distanceKm) {
-        throw new ValidationError("Delivery type and distance are required");
+      if (
+        !deliveryTypeId ||
+        !vehicleCategoryId ||
+        !weightTierId ||
+        !pickup ||
+        !drop
+      ) {
+        throw new ValidationError(
+          "Delivery type, vehicle category, weight tier, pickup, and drop locations are required",
+        );
       }
 
-      if (distanceKm <= 0) {
-        throw new ValidationError("Distance must be greater than 0");
+      // Lazy import addresses service to avoid circular dependencies
+      const addressesService = await import(
+        "../addresses/addresses.service"
+      ).then((m) => m.default);
+
+      const estimatedDistanceKm = addressesService.calculateDistance(
+        pickup.lat,
+        pickup.lng,
+        drop.lat,
+        drop.lng,
+      );
+
+      if (estimatedDistanceKm <= 0.5) {
+        throw new ValidationError("Distance must be greater than 0.5");
       }
 
+      // Get distance from Mapbox Matrix API
+      logger.info({
+        msg: "Calculating distance using Mapbox Matrix API",
+        deliveryTypeId,
+        vehicleCategoryId,
+        weightTierId,
+        pickup,
+        drop,
+      });
+
+      const distanceData = await addressesService.getDistanceMatrix(
+        pickup,
+        drop,
+      );
+
+      const distanceKm = distanceData.distanceKm;
+
+      logger.info({
+        msg: "Distance calculation successful",
+        distanceKm,
+      });
+
+      // Calculate fare using the distance and weight tier
       const fareResult = await ordersRepository.calculateFare(
         deliveryTypeId,
+        vehicleCategoryId,
         distanceKm,
-        weightKg || 0,
+        weightTierId,
       );
 
       if (!fareResult.success) {
         throw new AppError(fareResult.error, 400);
       }
 
-      return fareResult.fare_breakdown;
+      // Include distance and duration in the response
+      return {
+        ...fareResult.fare_breakdown,
+        distanceKm,
+      };
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",
@@ -255,6 +312,7 @@ class OrdersService {
     clientId: number,
     page: number = 1,
     limit: number = 20,
+    status?: string,
   ): Promise<any> {
     try {
       const offset = (page - 1) * limit;
@@ -263,6 +321,7 @@ class OrdersService {
         clientId,
         limit,
         offset,
+        status,
       );
 
       return {

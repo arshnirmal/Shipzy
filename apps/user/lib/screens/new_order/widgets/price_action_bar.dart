@@ -13,7 +13,7 @@ class PriceActionBar extends ConsumerWidget {
     final state = ref.watch(newOrderProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showPrice = state.fareData != null;
-    final total = state.totalFareWithWeight;
+    final total = state.totalFare;
 
     return Container(
       decoration: BoxDecoration(

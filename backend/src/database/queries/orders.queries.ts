@@ -376,4 +376,151 @@ export default {
           )
       ORDER BY ca.assigned_at DESC
   `,
+
+  /**
+   * Find active orders by client (pending, accepted, picked_up)
+   */
+  FIND_ACTIVE_ORDERS_BY_CLIENT: `
+      SELECT
+          o.order_id,
+          o.order_uuid,
+          o.order_number,
+          o.status_id,
+          os.name AS status_name,
+          o.delivery_type_id,
+          dt.name AS delivery_type,
+          o.vehicle_category_id,
+          vc.name AS vehicle_category,
+          o.package_description,
+          o.total_price,
+          o.created_at,
+          pl.address AS pickup_address,
+          dl.address AS delivery_address,
+          ca.courier_id,
+          cu.full_name AS courier_name,
+          cu.profile_picture_url AS courier_photo
+      FROM orders.requests o
+      JOIN public.order_statuses os ON o.status_id = os.status_id
+      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
+      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
+      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
+      LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
+      LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      WHERE o.client_id = $1
+          AND o.deleted_at IS NULL
+          AND os.name IN ('pending', 'accepted', 'picked_up')
+      ORDER BY o.created_at DESC
+      LIMIT $2 OFFSET $3
+  `,
+
+  /**
+   * Count active orders for client
+   */
+  COUNT_ACTIVE_ORDERS_BY_CLIENT: `
+      SELECT COUNT(*) AS total
+      FROM orders.requests o
+      JOIN public.order_statuses os ON o.status_id = os.status_id
+      WHERE o.client_id = $1
+          AND o.deleted_at IS NULL
+          AND os.name IN ('pending', 'accepted', 'picked_up')
+  `,
+
+  /**
+   * Find completed orders by client (delivered)
+   */
+  FIND_COMPLETED_ORDERS_BY_CLIENT: `
+      SELECT
+          o.order_id,
+          o.order_uuid,
+          o.order_number,
+          o.status_id,
+          os.name AS status_name,
+          o.delivery_type_id,
+          dt.name AS delivery_type,
+          o.vehicle_category_id,
+          vc.name AS vehicle_category,
+          o.package_description,
+          o.total_price,
+          o.created_at,
+          pl.address AS pickup_address,
+          dl.address AS delivery_address,
+          ca.courier_id,
+          cu.full_name AS courier_name,
+          cu.profile_picture_url AS courier_photo
+      FROM orders.requests o
+      JOIN public.order_statuses os ON o.status_id = os.status_id
+      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
+      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
+      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
+      LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
+      LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      WHERE o.client_id = $1
+          AND o.deleted_at IS NULL
+          AND os.name = 'delivered'
+      ORDER BY o.created_at DESC
+      LIMIT $2 OFFSET $3
+  `,
+
+  /**
+   * Count completed orders for client
+   */
+  COUNT_COMPLETED_ORDERS_BY_CLIENT: `
+      SELECT COUNT(*) AS total
+      FROM orders.requests o
+      JOIN public.order_statuses os ON o.status_id = os.status_id
+      WHERE o.client_id = $1
+          AND o.deleted_at IS NULL
+          AND os.name = 'delivered'
+  `,
+
+  /**
+   * Find cancelled orders by client (cancelled, failed)
+   */
+  FIND_CANCELLED_ORDERS_BY_CLIENT: `
+      SELECT
+          o.order_id,
+          o.order_uuid,
+          o.order_number,
+          o.status_id,
+          os.name AS status_name,
+          o.delivery_type_id,
+          dt.name AS delivery_type,
+          o.vehicle_category_id,
+          vc.name AS vehicle_category,
+          o.package_description,
+          o.total_price,
+          o.created_at,
+          pl.address AS pickup_address,
+          dl.address AS delivery_address,
+          ca.courier_id,
+          cu.full_name AS courier_name,
+          cu.profile_picture_url AS courier_photo
+      FROM orders.requests o
+      JOIN public.order_statuses os ON o.status_id = os.status_id
+      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
+      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
+      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
+      LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
+      LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      WHERE o.client_id = $1
+          AND o.deleted_at IS NULL
+          AND os.name IN ('cancelled', 'failed')
+      ORDER BY o.created_at DESC
+      LIMIT $2 OFFSET $3
+  `,
+
+  /**
+   * Count cancelled orders for client
+   */
+  COUNT_CANCELLED_ORDERS_BY_CLIENT: `
+      SELECT COUNT(*) AS total
+      FROM orders.requests o
+      JOIN public.order_statuses os ON o.status_id = os.status_id
+      WHERE o.client_id = $1
+          AND o.deleted_at IS NULL
+          AND os.name IN ('cancelled', 'failed')
+  `,
 };

@@ -12,7 +12,7 @@ CREATE OR REPLACE FUNCTION orders.calculate_fare(
     p_delivery_type_id INT,
     p_vehicle_category_id INT,
     p_distance_km NUMERIC,
-    p_weight_kg NUMERIC
+    p_weight_tier_id INT
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -25,46 +25,28 @@ DECLARE
     v_base_price NUMERIC;
     v_distance_price NUMERIC;
     v_total_price NUMERIC;
-    v_max_weight NUMERIC;
     result JSON;
 BEGIN
     -- ============================================================
-    -- STEP 1: Validate vehicle category supports this delivery type
+    -- STEP 1: Validate that this combination is supported
     -- ============================================================
     IF NOT EXISTS (
         SELECT 1 
         FROM public.delivery_type_capabilities dtc
         WHERE dtc.delivery_type_id = p_delivery_type_id
           AND dtc.vehicle_category_id = p_vehicle_category_id
+          AND dtc.weight_tier_id = p_weight_tier_id
           AND dtc.is_active = TRUE
-        LIMIT 1
     ) THEN
         RETURN json_build_object(
             'success', FALSE,
-            'error', 'Vehicle category not supported for this delivery type',
-            'error_code', 'INVALID_VEHICLE_DELIVERY_COMBO'
+            'error', 'Invalid combination: delivery type, vehicle category, and weight tier',
+            'error_code', 'INVALID_COMBINATION'
         );
     END IF;
     
     -- ============================================================
-    -- STEP 2: Check if weight exceeds vehicle capacity
-    -- ============================================================
-    SELECT max_weight_kg INTO v_max_weight
-    FROM public.vehicle_categories
-    WHERE category_id = p_vehicle_category_id
-      AND is_active = TRUE;
-    
-    IF p_weight_kg > v_max_weight THEN
-        RETURN json_build_object(
-            'success', FALSE,
-            'error', 'Weight exceeds vehicle capacity',
-            'error_code', 'WEIGHT_EXCEEDS_CAPACITY',
-            'max_weight_kg', v_max_weight
-        );
-    END IF;
-    
-    -- ============================================================
-    -- STEP 3: Get base and per-km rates (with override support)
+    -- STEP 2: Get base and per-km rates (with override support)
     -- ============================================================
     SELECT 
         COALESCE(dtc.base_rate_override, dt.base_rate),
@@ -74,6 +56,7 @@ BEGIN
     LEFT JOIN public.delivery_type_capabilities dtc 
         ON dt.delivery_type_id = dtc.delivery_type_id
         AND dtc.vehicle_category_id = p_vehicle_category_id
+        AND dtc.weight_tier_id = p_weight_tier_id
         AND dtc.is_active = TRUE
     WHERE dt.delivery_type_id = p_delivery_type_id
       AND dt.is_active = TRUE
@@ -88,40 +71,32 @@ BEGIN
     END IF;
     
     -- ============================================================
-    -- STEP 4: Get weight tier surcharge
-    -- IMPORTANT: Only from tiers supported by this delivery+vehicle combo
+    -- STEP 3: Get weight tier surcharge and info
     -- ============================================================
-    SELECT wt.additional_charge
-    INTO v_weight_surcharge
+    SELECT 
+        wt.additional_charge
+    INTO 
+        v_weight_surcharge
     FROM public.weight_tiers wt
-    JOIN public.delivery_type_capabilities dtc 
-        ON wt.tier_id = dtc.weight_tier_id
-    WHERE dtc.delivery_type_id = p_delivery_type_id
-      AND dtc.vehicle_category_id = p_vehicle_category_id
-      AND dtc.is_active = TRUE
-      AND p_weight_kg > wt.min_weight_kg 
-      AND p_weight_kg <= wt.max_weight_kg
-    LIMIT 1;
+    WHERE wt.tier_id = p_weight_tier_id;
     
-    -- If no exact tier found, weight might be invalid
-    IF v_weight_surcharge IS NULL THEN
+    IF NOT FOUND THEN
         RETURN json_build_object(
             'success', FALSE,
-            'error', 'No pricing available for this weight',
-            'error_code', 'INVALID_WEIGHT_FOR_COMBO',
-            'weight_kg', p_weight_kg
+            'error', 'Invalid weight tier',
+            'error_code', 'INVALID_WEIGHT_TIER'
         );
     END IF;
     
     -- ============================================================
-    -- STEP 5: Calculate final price
+    -- STEP 4: Calculate final price
     -- ============================================================
     v_base_price := v_base_rate;
     v_distance_price := ROUND(p_distance_km * v_per_km_rate, 2);
     v_total_price := v_base_price + v_distance_price + v_weight_surcharge;
     
     -- ============================================================
-    -- STEP 6: Return structured result
+    -- STEP 5: Return structured result
     -- ============================================================
     result := json_build_object(
         'success', TRUE,
@@ -129,7 +104,6 @@ BEGIN
             'base_price', v_base_price,
             'distance_km', p_distance_km,
             'distance_price', v_distance_price,
-            'weight_kg', p_weight_kg,
             'weight_surcharge', v_weight_surcharge,
             'total_price', v_total_price,
             'currency', 'INR'
@@ -147,7 +121,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
-COMMENT ON FUNCTION orders.calculate_fare IS 'Calculate delivery fare based on distance, weight, and delivery type';
+COMMENT ON FUNCTION orders.calculate_fare IS 'Calculate delivery fare based on distance and weight tier ID';
 
 -- ========================================
 -- Function: create_order_with_locations
@@ -215,7 +189,7 @@ BEGIN
         v_delivery_type_id,
         v_vehicle_category_id,
         (p_order_data->>'estimatedDistanceKm')::NUMERIC,
-        (p_order_data->>'packageWeightKg')::NUMERIC
+        (p_order_data->>'weightTierId')::INT
     );
     
     -- Check if fare calculation was successful

@@ -11,8 +11,16 @@ import ordersService, { OrderData } from "./orders.service";
 
 interface CalculateFareBody {
   deliveryTypeId: number;
-  distanceKm: number;
-  weightKg?: number;
+  vehicleCategoryId: number;
+  weightTierId: number;
+  pickup: {
+    lat: number;
+    lng: number;
+  };
+  drop: {
+    lat: number;
+    lng: number;
+  };
 }
 
 interface CreateOrderBody {
@@ -37,6 +45,7 @@ interface CancelOrderBody {
 type ListOrdersQuery = {
   page?: string;
   limit?: string;
+  status?: string;
 };
 
 interface GetAvailableOrdersQuery {
@@ -148,11 +157,16 @@ class OrdersController {
   ) {
     try {
       const { userId } = request.user!;
-      const { page = "1", limit = "20" } = request.query;
+      const { page = "1", limit = "20", status } = request.query;
       const pageNum = Number.parseFloat(page) || 1;
       const limitNum = Number.parseFloat(limit) || 20;
 
-      const result = await ordersService.listOrders(userId, pageNum, limitNum);
+      const result = await ordersService.listOrders(
+        userId,
+        pageNum,
+        limitNum,
+        status,
+      );
 
       return paginatedResponse(reply, result.orders, result.pagination);
     } catch (error) {

@@ -230,15 +230,13 @@ class AddressesService {
       // Parse context to get detailed address components
       const context = this._parseContext(feature.properties.context);
 
-      // Construct a more complete address string
-      // Format: [Address/Name], [Neighborhood], [Locality], [Place], [Postcode], [Region], [Country]
+      // Build full address entirely from context components for consistency
+      // Format: [Address], [Neighborhood], [Locality], [Place], [Postcode]
       const addressComponents: string[] = [];
 
-      // 1. Start with the specific address or name
-      if (feature.properties.address) {
-        addressComponents.push(feature.properties.address);
-      } else if (feature.properties.name) {
-        addressComponents.push(feature.properties.name);
+      // 1. Start with the detailed address from context
+      if (context.address) {
+        addressComponents.push(context.address);
       }
 
       // 2. Add Neighborhood
@@ -261,21 +259,18 @@ class AddressesService {
         addressComponents.push(context.postcode);
       }
 
-      // 6. Add Region (State) - Optional, can be verbose
-      // if (context.region) addressComponents.push(context.region);
-
-      // 7. Add Country - Optional if app is local only, but good for completeness
-      // if (context.country) addressComponents.push(context.country);
-
       // Filter out duplicates and empty strings
       const uniqueComponents = [...new Set(addressComponents)].filter(Boolean);
 
-      // Fallback to Mapbox's full_address if our construction fails or is too short
+      // Build the full address from context components
       let fullAddress = uniqueComponents.join(", ");
-      if (!fullAddress || fullAddress.length < 10) {
+
+      // Fallback to Mapbox's full_address only if context is completely empty
+      if (!fullAddress) {
         fullAddress =
           feature.properties.full_address ||
           feature.properties.place_formatted ||
+          feature.properties.name ||
           "";
       }
 
@@ -618,7 +613,125 @@ class AddressesService {
   }
 
   /**
-   * Calculate distance between two coordinates (Haversine formula)
+   * Get distance matrix between two points using Mapbox Matrix API
+   * Returns distance in meters and duration in seconds
+   */
+  async getDistanceMatrix(
+    pickup: { lat: number; lng: number },
+    drop: { lat: number; lng: number },
+  ) {
+    try {
+      // Validate coordinates
+      if (
+        typeof pickup.lat !== "number" ||
+        typeof pickup.lng !== "number" ||
+        typeof drop.lat !== "number" ||
+        typeof drop.lng !== "number"
+      ) {
+        throw new ValidationError("Invalid coordinate format");
+      }
+
+      if (
+        pickup.lat < -90 ||
+        pickup.lat > 90 ||
+        drop.lat < -90 ||
+        drop.lat > 90
+      ) {
+        throw new ValidationError("Latitude must be between -90 and 90");
+      }
+
+      if (
+        pickup.lng < -180 ||
+        pickup.lng > 180 ||
+        drop.lng < -180 ||
+        drop.lng > 180
+      ) {
+        throw new ValidationError("Longitude must be between -180 and 180");
+      }
+
+      // Format coordinates as required by Mapbox Matrix API: "lng,lat;lng,lat"
+      const coordinates = `${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}`;
+
+      // Call Mapbox Directions Matrix API
+      const url = `${this.baseUrl}/directions-matrix/v1/mapbox/driving/${coordinates}`;
+
+      logger.info({
+        msg: "Calling Mapbox Matrix API",
+        url: this._sanitizeUrl(url),
+        pickup: { lat: pickup.lat, lng: pickup.lng },
+        drop: { lat: drop.lat, lng: drop.lng },
+      });
+
+      const response = await axios.get(url, {
+        params: {
+          access_token: this.mapboxAccessToken,
+          annotations: "distance",
+        },
+        timeout: 5000,
+        headers: {
+          "User-Agent": "Shipzy-Backend/1.0",
+        },
+      });
+
+      // Extract distance and duration from response
+      const distances = response.data.distances;
+
+      if (!distances?.[0]?.[1]) {
+        throw new ValidationError(
+          "No route found between the specified points",
+        );
+      }
+
+      const distanceInMeters = distances[0][1]; // Distance from point 0 to point 1
+
+      const result = {
+        distance: distanceInMeters, // meters
+        distanceKm: Number.parseFloat((distanceInMeters / 1000).toFixed(2)),
+        pickup: {
+          latitude: pickup.lat,
+          longitude: pickup.lng,
+        },
+        drop: {
+          latitude: drop.lat,
+          longitude: drop.lng,
+        },
+      };
+
+      logger.info({
+        msg: "Mapbox Matrix API call successful",
+        distanceKm: result.distanceKm,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error({
+        msg: "Mapbox Matrix API error",
+        error: (error as Error).message,
+        status: (error as any).response?.status,
+      });
+
+      if ((error as any).response?.status === 401) {
+        throw new ValidationError("Invalid Mapbox API key");
+      }
+
+      if ((error as any).response?.status === 429) {
+        throw new ValidationError("Mapbox API rate limit exceeded");
+      }
+
+      if ((error as any).response?.status === 422) {
+        throw new ValidationError(
+          "Invalid coordinates - points may be too far apart or unreachable",
+        );
+      }
+
+      throw new ValidationError(
+        `Failed to calculate distance: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Calculate distance between two coordinates (Haversine formula - for reference only)
    */
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371; // Earth's radius in km

@@ -105,10 +105,32 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                     SlideInAnimation(
                       index: 2,
                       child: LocationSection(
-                        onPickupChanged: (addr, lat, lng, name, phone) =>
-                            notifier.setPickupAddress(address: addr, latitude: lat, longitude: lng, contactName: name, contactPhone: phone),
-                        onDeliveryChanged: (addr, lat, lng, name, phone) =>
-                            notifier.setDeliveryAddress(address: addr, latitude: lat, longitude: lng, contactName: name, contactPhone: phone),
+                        onPickupChanged: (addr, baseAddr, lat, lng, name, phone, b, fl, ft, h) => notifier.setPickupAddress(
+                          address: addr,
+                          baseAddress: baseAddr,
+                          latitude: lat,
+                          longitude: lng,
+                          contactName: name,
+                          contactPhone: phone,
+                          building: b,
+                          floor: fl,
+                          flat: ft,
+                          howToReach: h,
+                        ),
+                        onDeliveryChanged: (addr, baseAddr, lat, lng, name, phone, b, fl, ft, h) => notifier.setDeliveryAddress(
+                          address: addr,
+                          baseAddress: baseAddr,
+                          latitude: lat,
+                          longitude: lng,
+                          contactName: name,
+                          contactPhone: phone,
+                          building: b,
+                          floor: fl,
+                          flat: ft,
+                          howToReach: h,
+                        ),
+                        onPickupContactChanged: (name, phone) => notifier.setPickupAddress(contactName: name, contactPhone: phone),
+                        onDeliveryContactChanged: (name, phone) => notifier.setDeliveryAddress(contactName: name, contactPhone: phone),
                       ),
                     ),
                     const SizedBox(height: 20),

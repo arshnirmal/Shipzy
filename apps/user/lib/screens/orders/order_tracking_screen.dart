@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
+  const OrderTrackingScreen({required this.orderId, super.key});
   final String orderId;
 
-  const OrderTrackingScreen({required this.orderId, super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(child: Text('Order Tracking Screen - $orderId')),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Order Tracking Screen - $orderId')));
 }

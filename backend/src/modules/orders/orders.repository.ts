@@ -7,19 +7,25 @@ class OrdersRepository {
   /**
    * Calculate fare using stored function
    */
-  async calculateFare(deliveryTypeId: number, distanceKm: number, weightKg: number) {
+  async calculateFare(
+    deliveryTypeId: number,
+    vehicleCategoryId: number,
+    distanceKm: number,
+    weightTierId: number,
+  ) {
     try {
       const result = await db.query(ordersQueries.CALL_CALCULATE_FARE, [
         deliveryTypeId,
+        vehicleCategoryId,
         distanceKm,
-        weightKg || 0,
+        weightTierId,
       ]);
 
       return result.rows[0].result;
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -38,7 +44,7 @@ class OrdersRepository {
     } catch (error) {
       logger.error({
         msg: "Error creating order",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -54,34 +60,59 @@ class OrdersRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding order by ID",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
   }
 
   /**
-   * Find orders by client with pagination
+   * Find orders by client with pagination and filtering
    */
-  async findByClient(clientId: number, limit: number, offset: number) {
+  async findByClient(
+    clientId: number,
+    limit: number,
+    offset: number,
+    status?: string,
+  ) {
     try {
+      // Determine which query to use based on status filter
+      let ordersQuery: string;
+      let countQuery: string;
+      let params: any[];
+
+      if (status === "active") {
+        ordersQuery = ordersQueries.FIND_ACTIVE_ORDERS_BY_CLIENT;
+        countQuery = ordersQueries.COUNT_ACTIVE_ORDERS_BY_CLIENT;
+        params = [clientId, limit, offset];
+      } else if (status === "completed") {
+        ordersQuery = ordersQueries.FIND_COMPLETED_ORDERS_BY_CLIENT;
+        countQuery = ordersQueries.COUNT_COMPLETED_ORDERS_BY_CLIENT;
+        params = [clientId, limit, offset];
+      } else if (status === "cancelled") {
+        ordersQuery = ordersQueries.FIND_CANCELLED_ORDERS_BY_CLIENT;
+        countQuery = ordersQueries.COUNT_CANCELLED_ORDERS_BY_CLIENT;
+        params = [clientId, limit, offset];
+      } else {
+        // No status filter - get all orders
+        ordersQuery = ordersQueries.FIND_ORDERS_BY_CLIENT;
+        countQuery = ordersQueries.COUNT_ORDERS_BY_CLIENT;
+        params = [clientId, limit, offset];
+      }
+
       const [ordersResult, countResult] = await Promise.all([
-        db.query(ordersQueries.FIND_ORDERS_BY_CLIENT, [
-          clientId,
-          limit,
-          offset,
-        ]),
-        db.query(ordersQueries.COUNT_ORDERS_BY_CLIENT, [clientId]),
+        db.query(ordersQuery, params),
+        db.query(countQuery, [clientId]),
       ]);
 
       return {
         orders: ordersResult.rows,
-        total: parseInt(countResult.rows[0].total),
+        total: Number.parseInt(countResult.rows[0].total),
       };
     } catch (error) {
       logger.error({
         msg: "Error finding orders by client",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -90,7 +121,12 @@ class OrdersRepository {
   /**
    * Find available orders for courier
    */
-  async findAvailableOrders(latitude: number, longitude: number, radiusKm: number, limit: number) {
+  async findAvailableOrders(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+    limit: number,
+  ) {
     try {
       const result = await db.query(
         ordersQueries.FIND_AVAILABLE_ORDERS_FOR_COURIER,
@@ -107,7 +143,7 @@ class OrdersRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding available orders",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -116,7 +152,11 @@ class OrdersRepository {
   /**
    * Cancel order using stored function
    */
-  async cancelOrder(orderId: number, cancellationReason: string, cancelledByUserId: number) {
+  async cancelOrder(
+    orderId: number,
+    cancellationReason: string,
+    cancelledByUserId: number,
+  ) {
     try {
       const result = await db.query(
         ordersQueries.CALL_CANCEL_ORDER_WITH_REFUND,
@@ -127,7 +167,7 @@ class OrdersRepository {
     } catch (error) {
       logger.error({
         msg: "Error cancelling order",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -169,7 +209,7 @@ class OrdersRepository {
       await client.query("ROLLBACK");
       logger.error({
         msg: "Error accepting order",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     } finally {
@@ -196,7 +236,7 @@ class OrdersRepository {
     } catch (error) {
       logger.error({
         msg: "Error updating order status",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }

@@ -8,12 +8,12 @@ import '../providers/auth_state_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/new_order/address_form_screen.dart';
 import '../screens/new_order/new_order_screen.dart';
 import '../screens/orders/order_details_screen.dart';
 import '../screens/orders/order_list_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
-import '../screens/new_order/address_form_screen.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import 'app_routes.dart';
 
@@ -87,7 +87,7 @@ GoRouter router(Ref ref) {
           GoRoute(
             path: AppRoutes.orderList,
             name: 'orderList',
-            pageBuilder: (context, state) => const CustomTransitionPage(child: OrderListScreen(), transitionsBuilder: _fadeTransition),
+            pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersScreen(), transitionsBuilder: _fadeTransition),
           ),
           GoRoute(
             path: AppRoutes.profile,
@@ -121,9 +121,22 @@ GoRouter router(Ref ref) {
           final extra = state.extra as Map<String, dynamic>?;
           final purpose = extra?['purpose'] as String?;
           final initialAddress = extra?['initialAddress'] as String?;
+          final latitude = extra?['latitude'] as double?;
+          final longitude = extra?['longitude'] as double?;
+          final building = extra?['building'] as String?;
+          final floor = extra?['floor'] as String?;
+          final flat = extra?['flat'] as String?;
+          final howToReach = extra?['howToReach'] as String?;
+
           return AddressFormScreen(
             purpose: purpose,
             initialAddress: initialAddress,
+            initialLatitude: latitude,
+            initialLongitude: longitude,
+            initialBuilding: building,
+            initialFloor: floor,
+            initialFlat: flat,
+            initialHowToReach: howToReach,
           );
         },
       ),

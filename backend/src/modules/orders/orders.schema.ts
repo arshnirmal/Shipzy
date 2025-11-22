@@ -4,11 +4,33 @@ import { FastifySchema } from "fastify";
 export const calculateFareSchema: FastifySchema = {
   body: {
     type: "object",
-    required: ["deliveryTypeId", "distanceKm"],
+    required: [
+      "deliveryTypeId",
+      "vehicleCategoryId",
+      "weightTierId",
+      "pickup",
+      "drop",
+    ],
     properties: {
       deliveryTypeId: { type: "integer", minimum: 1 },
-      distanceKm: { type: "number", minimum: 0.1, maximum: 1000 },
-      weightKg: { type: "number", minimum: 0, maximum: 1000 },
+      vehicleCategoryId: { type: "integer", minimum: 1 },
+      weightTierId: { type: "integer", minimum: 1 },
+      pickup: {
+        type: "object",
+        required: ["lat", "lng"],
+        properties: {
+          lat: { type: "number", minimum: -90, maximum: 90 },
+          lng: { type: "number", minimum: -180, maximum: 180 },
+        },
+      },
+      drop: {
+        type: "object",
+        required: ["lat", "lng"],
+        properties: {
+          lat: { type: "number", minimum: -90, maximum: 90 },
+          lng: { type: "number", minimum: -180, maximum: 180 },
+        },
+      },
     },
   },
 };
@@ -106,6 +128,7 @@ export const listOrdersSchema: FastifySchema = {
     properties: {
       page: { type: "integer", minimum: 1, default: 1 },
       limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+      status: { type: "string", enum: ["active", "completed", "cancelled"] },
     },
   },
 };
