@@ -183,30 +183,18 @@ BEGIN
     FROM public.order_statuses 
     WHERE name = 'pending';
     
-    -- Calculate fare
-    SELECT * INTO v_fare_calculation
-    FROM orders.calculate_fare(
-        v_delivery_type_id,
-        v_vehicle_category_id,
-        (p_order_data->>'estimatedDistanceKm')::NUMERIC,
-        (p_order_data->>'weightTierId')::INT
-    );
-    
-    -- Check if fare calculation was successful
-    IF NOT (v_fare_calculation->>'success')::BOOLEAN THEN
-        RETURN v_fare_calculation;  -- Return the error from calculate_fare
-    END IF;
-    
-    -- Extract fare components
-    v_base_price := (v_fare_calculation->'fare_breakdown'->>'base_price')::NUMERIC;
-    v_distance_price := (v_fare_calculation->'fare_breakdown'->>'distance_price')::NUMERIC;
-    v_weight_surcharge := (v_fare_calculation->'fare_breakdown'->>'weight_surcharge')::NUMERIC;
-    v_total_price := (v_fare_calculation->'fare_breakdown'->>'total_price')::NUMERIC;
+    -- Extract fare values from provided fareBreakdown
+    -- The service layer has already validated these values
+    v_base_price := (p_order_data->'fareBreakdown'->>'basePrice')::NUMERIC;
+    v_distance_price := (p_order_data->'fareBreakdown'->>'distancePrice')::NUMERIC;
+    v_weight_surcharge := (p_order_data->'fareBreakdown'->>'weightSurcharge')::NUMERIC;
+    v_total_price := (p_order_data->'fareBreakdown'->>'totalPrice')::NUMERIC;
     
     -- Create pickup location
     INSERT INTO logistics.locations (
         address, latitude, longitude, location,
         city, state, postal_code, landmark,
+        building_name, floor_number, room_number,
         contact_name, contact_phone
     ) VALUES (
         p_order_data->'pickup'->>'address',
@@ -222,7 +210,10 @@ BEGIN
         p_order_data->'pickup'->>'city',
         p_order_data->'pickup'->>'state',
         p_order_data->'pickup'->>'postalCode',
-        p_order_data->'pickup'->>'landmark',
+        p_order_data->'pickup'->>'howToReach',
+        p_order_data->'pickup'->>'building',
+        p_order_data->'pickup'->>'floor',
+        p_order_data->'pickup'->>'flatNumber',
         p_order_data->'pickup'->>'contactName',
         p_order_data->'pickup'->>'contactPhone'
     ) RETURNING location_id INTO v_pickup_location_id;
@@ -231,6 +222,7 @@ BEGIN
     INSERT INTO logistics.locations (
         address, latitude, longitude, location,
         city, state, postal_code, landmark,
+        building_name, floor_number, room_number,
         contact_name, contact_phone
     ) VALUES (
         p_order_data->'delivery'->>'address',
@@ -246,7 +238,10 @@ BEGIN
         p_order_data->'delivery'->>'city',
         p_order_data->'delivery'->>'state',
         p_order_data->'delivery'->>'postalCode',
-        p_order_data->'delivery'->>'landmark',
+        p_order_data->'delivery'->>'howToReach',
+        p_order_data->'delivery'->>'building',
+        p_order_data->'delivery'->>'floor',
+        p_order_data->'delivery'->>'flatNumber',
         p_order_data->'delivery'->>'contactName',
         p_order_data->'delivery'->>'contactPhone'
     ) RETURNING location_id INTO v_delivery_location_id;
@@ -264,16 +259,17 @@ BEGIN
         delivery_contact_name,
         delivery_contact_phone,
         package_description,
-        package_weight_kg,
-        package_dimensions,
+        package_type_id,
         special_instructions,
+        declared_value,
         estimated_distance_km,
         base_price,
         distance_price,
         weight_surcharge,
         total_price,
         payment_method_id,
-        scheduled_pickup_time
+        scheduled_pickup_time,
+        scheduled_delivery_time
     ) VALUES (
         v_client_id,
         v_delivery_type_id,
@@ -286,16 +282,17 @@ BEGIN
         p_order_data->'delivery'->>'contactName',
         p_order_data->'delivery'->>'contactPhone',
         p_order_data->>'packageDescription',
-        (p_order_data->>'packageWeightKg')::NUMERIC,
-        p_order_data->>'packageDimensions',
+        (p_order_data->>'packageTypeId')::INT,
         p_order_data->>'specialInstructions',
-        (p_order_data->>'estimatedDistanceKm')::NUMERIC,
+        (p_order_data->>'declaredValue')::NUMERIC,
+        (p_order_data->'fareBreakdown'->>'distanceKm')::NUMERIC,
         v_base_price,
         v_distance_price,
         v_weight_surcharge,
         v_total_price,
         v_payment_method_id,
-        (p_order_data->>'scheduledPickupTime')::TIMESTAMPTZ
+        (p_order_data->>'scheduledPickupTime')::TIMESTAMPTZ,
+        (p_order_data->>'scheduledDeliveryTime')::TIMESTAMPTZ
     ) RETURNING order_id, order_uuid INTO v_order_id, v_order_uuid;
     
     -- Build success response

@@ -23,6 +23,9 @@ class NewOrderState {
     this.pickupBaseAddress,
     this.pickupLatitude,
     this.pickupLongitude,
+    this.pickupCity,
+    this.pickupState,
+    this.pickupPostalCode,
     this.pickupContactName,
     this.pickupContactPhone,
     this.pickupBuilding,
@@ -33,6 +36,9 @@ class NewOrderState {
     this.deliveryBaseAddress,
     this.deliveryLatitude,
     this.deliveryLongitude,
+    this.deliveryCity,
+    this.deliveryState,
+    this.deliveryPostalCode,
     this.deliveryContactName,
     this.deliveryContactPhone,
     this.deliveryBuilding,
@@ -65,6 +71,9 @@ class NewOrderState {
   final String? pickupBaseAddress;
   final double? pickupLatitude;
   final double? pickupLongitude;
+  final String? pickupCity;
+  final String? pickupState;
+  final String? pickupPostalCode;
   final String? pickupContactName;
   final String? pickupContactPhone;
   final String? pickupBuilding;
@@ -76,6 +85,9 @@ class NewOrderState {
   final String? deliveryBaseAddress;
   final double? deliveryLatitude;
   final double? deliveryLongitude;
+  final String? deliveryCity;
+  final String? deliveryState;
+  final String? deliveryPostalCode;
   final String? deliveryContactName;
   final String? deliveryContactPhone;
   final String? deliveryBuilding;
@@ -111,6 +123,9 @@ class NewOrderState {
     String? pickupBaseAddress,
     double? pickupLatitude,
     double? pickupLongitude,
+    String? pickupCity,
+    String? pickupState,
+    String? pickupPostalCode,
     String? pickupContactName,
     String? pickupContactPhone,
     String? pickupBuilding,
@@ -121,6 +136,9 @@ class NewOrderState {
     String? deliveryBaseAddress,
     double? deliveryLatitude,
     double? deliveryLongitude,
+    String? deliveryCity,
+    String? deliveryState,
+    String? deliveryPostalCode,
     String? deliveryContactName,
     String? deliveryContactPhone,
     String? deliveryBuilding,
@@ -149,6 +167,9 @@ class NewOrderState {
     pickupBaseAddress: pickupBaseAddress ?? this.pickupBaseAddress,
     pickupLatitude: pickupLatitude ?? this.pickupLatitude,
     pickupLongitude: pickupLongitude ?? this.pickupLongitude,
+    pickupCity: pickupCity ?? this.pickupCity,
+    pickupState: pickupState ?? this.pickupState,
+    pickupPostalCode: pickupPostalCode ?? this.pickupPostalCode,
     pickupContactName: pickupContactName ?? this.pickupContactName,
     pickupContactPhone: pickupContactPhone ?? this.pickupContactPhone,
     pickupBuilding: pickupBuilding ?? this.pickupBuilding,
@@ -159,6 +180,11 @@ class NewOrderState {
     deliveryBaseAddress: deliveryBaseAddress ?? this.deliveryBaseAddress,
     deliveryLatitude: deliveryLatitude ?? this.deliveryLatitude,
     deliveryLongitude: deliveryLongitude ?? this.deliveryLongitude,
+    deliveryCity: deliveryCity ?? this.deliveryCity,
+    deliveryState: deliveryState ?? this.deliveryState,
+    deliveryPostalCode: deliveryPostalCode ?? this.deliveryPostalCode,
+    deliveryContactName: deliveryContactName ?? this.deliveryContactName,
+    deliveryContactPhone: deliveryContactPhone ?? this.deliveryContactPhone,
     deliveryFloor: deliveryFloor ?? this.deliveryFloor,
     deliveryFlat: deliveryFlat ?? this.deliveryFlat,
     deliveryHowToReach: deliveryHowToReach ?? this.deliveryHowToReach,
@@ -187,12 +213,10 @@ class NewOrderState {
   /// Check if all required fields are filled for order creation
   bool get canCreateOrder =>
       canCalculateFare &&
-      pickupAddress != null &&
-      pickupContactName != null &&
-      pickupContactPhone != null &&
-      deliveryAddress != null &&
       deliveryContactName != null &&
+      deliveryContactName!.trim().isNotEmpty &&
       deliveryContactPhone != null &&
+      deliveryContactPhone!.trim().length >= 10 &&
       selectedPaymentMethod != null;
 
   /// Get the weight tier for current package weight
@@ -264,6 +288,9 @@ class NewOrder extends _$NewOrder {
     String? baseAddress,
     double? latitude,
     double? longitude,
+    String? city,
+    String? stateOrProvince,
+    String? postalCode,
     String? contactName,
     String? contactPhone,
     String? building,
@@ -276,6 +303,9 @@ class NewOrder extends _$NewOrder {
       pickupBaseAddress: baseAddress ?? state.pickupBaseAddress,
       pickupLatitude: latitude ?? state.pickupLatitude,
       pickupLongitude: longitude ?? state.pickupLongitude,
+      pickupCity: city ?? state.pickupCity,
+      pickupState: stateOrProvince ?? state.pickupState,
+      pickupPostalCode: postalCode ?? state.pickupPostalCode,
       pickupContactName: contactName ?? state.pickupContactName,
       pickupContactPhone: contactPhone ?? state.pickupContactPhone,
       pickupBuilding: building ?? state.pickupBuilding,
@@ -291,6 +321,9 @@ class NewOrder extends _$NewOrder {
     String? baseAddress,
     double? latitude,
     double? longitude,
+    String? city,
+    String? stateOrProvince,
+    String? postalCode,
     String? contactName,
     String? contactPhone,
     String? building,
@@ -303,6 +336,9 @@ class NewOrder extends _$NewOrder {
       deliveryBaseAddress: baseAddress ?? state.deliveryBaseAddress,
       deliveryLatitude: latitude ?? state.deliveryLatitude,
       deliveryLongitude: longitude ?? state.deliveryLongitude,
+      deliveryCity: city ?? state.deliveryCity,
+      deliveryState: stateOrProvince ?? state.deliveryState,
+      deliveryPostalCode: postalCode ?? state.deliveryPostalCode,
       deliveryContactName: contactName ?? state.deliveryContactName,
       deliveryContactPhone: contactPhone ?? state.deliveryContactPhone,
       deliveryBuilding: building ?? state.deliveryBuilding,
@@ -348,14 +384,8 @@ class NewOrder extends _$NewOrder {
         deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
         vehicleCategoryId: state.selectedVehicle!.categoryId,
         weightTierId: weightTier.tierId,
-        pickup: Coordinate(
-          lat: state.pickupLatitude!,
-          lng: state.pickupLongitude!,
-        ),
-        drop: Coordinate(
-          lat: state.deliveryLatitude!,
-          lng: state.deliveryLongitude!,
-        ),
+        pickup: Coordinate(lat: state.pickupLatitude!, lng: state.pickupLongitude!),
+        drop: Coordinate(lat: state.deliveryLatitude!, lng: state.deliveryLongitude!),
       );
 
       final response = await orderService.calculateFare(request);
@@ -380,18 +410,16 @@ class NewOrder extends _$NewOrder {
     if (state.deliveryAddress == null) {
       return 'Please select delivery address';
     }
+    // Delivery contact details are optional - not required for order creation
+
+    if (state.packageWeight == null || state.packageWeight! <= 0) {
+      return 'Please enter valid package weight';
+    }
     if (state.deliveryContactName == null || state.deliveryContactName!.trim().isEmpty) {
       return 'Please enter delivery contact name';
     }
     if (state.deliveryContactPhone == null || state.deliveryContactPhone!.trim().length < 10) {
       return 'Please enter valid 10-digit delivery phone';
-    }
-
-    if (state.packageWeight == null || state.packageWeight! <= 0) {
-      return 'Please enter valid package weight';
-    }
-    if (state.selectedPackageType == null) {
-      return 'Please select package type';
     }
     if (state.selectedPaymentMethod == null) {
       return 'Please select payment method';
@@ -412,28 +440,68 @@ class NewOrder extends _$NewOrder {
       return;
     }
 
+    // Ensure we have fare data
+    if (state.fareData == null) {
+      state = state.copyWith(createOrderError: 'Please calculate fare before creating order');
+      return;
+    }
+
+    // Get weight tier
+    final weightTier = state.selectedWeightTier;
+    if (weightTier == null) {
+      state = state.copyWith(createOrderError: 'Unable to determine weight tier');
+      return;
+    }
+
     state = state.copyWith(isCreatingOrder: true);
 
     try {
       final orderService = ref.read(orderServiceProvider);
       final request = CreateOrderRequest(
-        pickupAddress: state.pickupAddress!,
-        pickupLatitude: state.pickupLatitude!,
-        pickupLongitude: state.pickupLongitude!,
-        pickupContactName: state.pickupContactName!,
-        pickupContactPhone: state.pickupContactPhone!,
-        deliveryAddress: state.deliveryAddress!,
-        deliveryLatitude: state.deliveryLatitude!,
-        deliveryLongitude: state.deliveryLongitude!,
-        deliveryContactName: state.deliveryContactName!,
-        deliveryContactPhone: state.deliveryContactPhone!,
-        packageType: state.selectedPackageType!.name,
-        packageWeight: state.packageWeight!,
-        packageDescription: state.packageDescription ?? '',
-        deliveryType: state.selectedDeliveryType!.name,
-        paymentMethod: state.selectedPaymentMethod!.name,
-        declaredValue: state.declaredValue,
+        deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
+        vehicleCategoryId: state.selectedVehicle!.categoryId,
+        weightTierId: weightTier.tierId,
+        paymentMethodId: state.selectedPaymentMethod!.methodId,
+        pickup: CreateOrderPickup(
+          address: state.pickupAddress!,
+          latitude: state.pickupLatitude!,
+          longitude: state.pickupLongitude!,
+          city: state.pickupCity ?? 'Unknown',
+          state: state.pickupState ?? 'Unknown',
+          postalCode: state.pickupPostalCode ?? '000000',
+          contactName: state.pickupContactName!,
+          contactPhone: state.pickupContactPhone!,
+          howToReach: state.pickupHowToReach,
+          building: state.pickupBuilding,
+          floor: state.pickupFloor,
+          flatNumber: state.pickupFlat,
+        ),
+        delivery: CreateOrderDelivery(
+          address: state.deliveryAddress!,
+          latitude: state.deliveryLatitude!,
+          longitude: state.deliveryLongitude!,
+          city: state.deliveryCity ?? 'Unknown',
+          state: state.deliveryState ?? 'Unknown',
+          postalCode: state.deliveryPostalCode ?? '000000',
+          contactName: state.deliveryContactName!,
+          contactPhone: state.deliveryContactPhone!,
+          howToReach: state.deliveryHowToReach,
+          building: state.deliveryBuilding,
+          floor: state.deliveryFloor,
+          flatNumber: state.deliveryFlat,
+        ),
+        fareBreakdown: FareBreakdown(
+          basePrice: state.fareData!.basePrice,
+          distanceKm: state.fareData!.distanceKm,
+          distancePrice: state.fareData!.distancePrice,
+          weightSurcharge: state.fareData!.weightSurcharge,
+          totalPrice: state.fareData!.totalPrice,
+          currency: state.fareData!.currency,
+        ),
+        packageTypeId: state.selectedPackageType?.packageTypeId,
+        packageDescription: state.packageDescription,
         specialInstructions: state.specialInstructions,
+        declaredValue: state.declaredValue,
       );
 
       final response = await orderService.createOrder(request);

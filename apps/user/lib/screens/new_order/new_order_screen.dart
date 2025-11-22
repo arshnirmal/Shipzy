@@ -145,7 +145,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                     ),
                     const SizedBox(height: 20),
                   ],
-                  if (state.selectedPackageType != null) ...[
+                  if (state.canCalculateFare) ...[
                     SlideInAnimation(index: 4, child: PaymentSection(onChanged: notifier.selectPaymentMethod)),
                     const SizedBox(height: 16),
                   ],
@@ -161,6 +161,42 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       ),
       bottomNavigationBar: PriceActionBar(
         onCreate: () async {
+          debugPrint('onCreate');
+          debugPrint('selectedDeliveryType: ${state.selectedDeliveryType?.name}');
+          debugPrint('selectedVehicle: ${state.selectedVehicle?.name}');
+          debugPrint('selectedPackageType: ${state.selectedPackageType?.name}');
+          debugPrint('selectedPaymentMethod: ${state.selectedPaymentMethod?.name}');
+          debugPrint('pickupAddress: ${state.pickupAddress}');
+          debugPrint('deliveryAddress: ${state.deliveryAddress}');
+          debugPrint('packageWeight: ${state.packageWeight.toString()}');
+          debugPrint('packageDescription: ${state.packageDescription}');
+          debugPrint('declaredValue: ${state.declaredValue.toString()}');
+          debugPrint('specialInstructions: ${state.specialInstructions}');
+          debugPrint('pickupLatitude: ${state.pickupLatitude.toString()}');
+          debugPrint('pickupLongitude: ${state.pickupLongitude.toString()}');
+          debugPrint('deliveryLatitude: ${state.deliveryLatitude.toString()}');
+          debugPrint('deliveryLongitude: ${state.deliveryLongitude.toString()}');
+          debugPrint('pickupContactName: ${state.pickupContactName}');
+          debugPrint('pickupContactPhone: ${state.pickupContactPhone}');
+          debugPrint('deliveryContactName: ${state.deliveryContactName}');
+          debugPrint('deliveryContactPhone: ${state.deliveryContactPhone}');
+          debugPrint('pickupBuilding: ${state.pickupBuilding}');
+          debugPrint('pickupFloor: ${state.pickupFloor}');
+          debugPrint('pickupFlat: ${state.pickupFlat}');
+          debugPrint('pickupHowToReach: ${state.pickupHowToReach}');
+          debugPrint('deliveryBuilding: ${state.deliveryBuilding}');
+          debugPrint('deliveryFloor: ${state.deliveryFloor}');
+          debugPrint('deliveryFlat: ${state.deliveryFlat}');
+          debugPrint('deliveryHowToReach: ${state.deliveryHowToReach}');
+          debugPrint('packageWeight: ${state.packageWeight.toString()}');
+          debugPrint('packageDescription: ${state.packageDescription}');
+          debugPrint('declaredValue: ${state.declaredValue.toString()}');
+          debugPrint('specialInstructions: ${state.specialInstructions}');
+          debugPrint('fareData: ${state.fareData?.toJson().toString()}');
+          debugPrint('fareError: ${state.fareError}');
+          debugPrint('isCreatingOrder: ${state.isCreatingOrder.toString()}');
+          debugPrint('createOrderError: ${state.createOrderError}');
+          debugPrint('createdOrder: ${state.createdOrder?.toJson().toString()}'                                                                                                                                               );
           await notifier.createOrder();
           final current = ref.read(newOrderProvider);
           if (!context.mounted) {

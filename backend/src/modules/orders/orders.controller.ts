@@ -23,17 +23,6 @@ interface CalculateFareBody {
   };
 }
 
-interface CreateOrderBody {
-  deliveryTypeId: number;
-  vehicleCategoryId: number;
-  paymentMethodId: number;
-  pickupAddressId: number;
-  deliveryAddressId: number;
-  packageDescription?: string;
-  weightKg?: number;
-  specialInstructions?: string;
-}
-
 interface OrderParams {
   id: string;
 }

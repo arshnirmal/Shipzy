@@ -48,6 +48,37 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
   final _delPhone = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize fields from provider state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = ref.read(newOrderProvider);
+
+      // Initialize pickup fields
+      if (state.pickupAddress?.isNotEmpty ?? false) {
+        _pickAddr.text = state.pickupAddress!;
+      }
+      if (state.pickupContactName?.isNotEmpty ?? false) {
+        _pickName.text = state.pickupContactName!;
+      }
+      if (state.pickupContactPhone?.isNotEmpty ?? false) {
+        _pickPhone.text = state.pickupContactPhone!;
+      }
+
+      // Initialize delivery fields
+      if (state.deliveryAddress?.isNotEmpty ?? false) {
+        _delAddr.text = state.deliveryAddress!;
+      }
+      if (state.deliveryContactName?.isNotEmpty ?? false) {
+        _delName.text = state.deliveryContactName!;
+      }
+      if (state.deliveryContactPhone?.isNotEmpty ?? false) {
+        _delPhone.text = state.deliveryContactPhone!;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _pickAddr.dispose();
     _pickName.dispose();

@@ -25,57 +25,42 @@ interface FareData {
 export interface OrderData {
   deliveryTypeId: number;
   vehicleCategoryId: number;
+  weightTierId: number;
+  packageTypeId?: number;
   paymentMethodId: number;
-  pickup: {
-    addressId: number;
-    address: string;
-    latitude: number;
-    longitude: number;
-    city: string;
-    state: string;
-    postalCode: string;
-    landmark?: string;
-    building?: string;
-    floor?: string;
-    flatNumber?: string;
-    contactName?: string;
-    contactPhone?: string;
-  };
-  delivery: {
-    addressId: number;
-    address: string;
-    latitude: number;
-    longitude: number;
-    city: string;
-    state: string;
-    postalCode: string;
-    landmark?: string;
-    building?: string;
-    floor?: string;
-    flatNumber?: string;
-    contactName?: string;
-    contactPhone?: string;
-  };
-  estimatedDistanceKm: number;
-  estimatedDurationMin?: number;
+  pickup: Location;
+  delivery: Location;
   packageDescription?: string;
-  weightKg?: number;
-  packageWeightKg?: number;
-  packageDimensions?: string;
   scheduledPickupTime?: string;
+  scheduledDeliveryTime?: string;
   specialInstructions?: string;
+  declaredValue?: number;
+  fareBreakdown: FareBreakdown;
 }
 
 interface Location {
   addressId?: number;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  contactName?: string;
-  contactPhone?: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  city: string;
+  state: string;
+  postalCode: string;
+  howToReach?: string;
+  building?: string;
+  floor?: string;
+  flatNumber?: string;
+  contactName: string;
+  contactPhone: string;
+}
+
+interface FareBreakdown {
+  basePrice: number;
+  distanceKm: number;
+  distancePrice: number;
+  weightSurcharge: number;
+  totalPrice: number;
+  currency: string;
 }
 
 class OrdersService {
@@ -170,10 +155,11 @@ class OrdersService {
       const requiredFields = [
         "deliveryTypeId",
         "vehicleCategoryId",
+        "weightTierId",
         "paymentMethodId",
         "pickup",
         "delivery",
-        "estimatedDistanceKm",
+        "fareBreakdown",
       ];
 
       const missingFields = requiredFields.filter(
@@ -189,7 +175,6 @@ class OrdersService {
       // Validate pickup and delivery locations
       const validateLocation = (location: any, type: string) => {
         const required = [
-          "addressId",
           "address",
           "latitude",
           "longitude",
@@ -210,40 +195,98 @@ class OrdersService {
       validateLocation(orderData.pickup, "pickup");
       validateLocation(orderData.delivery, "delivery");
 
+      // Validate fare breakdown - prevent price tampering
+      logger.info({
+        msg: "Validating fare breakdown",
+        providedFare: orderData.fareBreakdown.totalPrice,
+      });
+
+      const serverCalculatedFare = await ordersRepository.calculateFare(
+        orderData.deliveryTypeId,
+        orderData.vehicleCategoryId,
+        orderData.fareBreakdown.distanceKm,
+        orderData.weightTierId,
+      );
+
+      if (!serverCalculatedFare.success) {
+        throw new ValidationError("Invalid pricing parameters");
+      }
+
+      const serverPricing = serverCalculatedFare.fare_breakdown;
+
+      // Allow small tolerance for rounding differences
+      const tolerance = 0.01;
+      if (
+        Math.abs(
+          serverPricing.totalPrice - orderData.fareBreakdown.totalPrice,
+        ) > tolerance
+      ) {
+        logger.warn({
+          msg: "Pricing mismatch detected",
+          serverPrice: serverPricing.totalPrice,
+          clientPrice: orderData.fareBreakdown.totalPrice,
+          difference:
+            serverPricing.totalPrice - orderData.fareBreakdown.totalPrice,
+        });
+        throw new ValidationError("Pricing mismatch - please recalculate fare");
+      }
+
+      logger.info({
+        msg: "Fare validation successful",
+        totalPrice: orderData.fareBreakdown.totalPrice,
+      });
+
       // Prepare order data for stored function
       const orderPayload = {
         clientId: clientId,
         deliveryTypeId: orderData.deliveryTypeId,
-        vehicleCategoryId: orderData.vehicleCategoryId, // Missing this field
+        vehicleCategoryId: orderData.vehicleCategoryId,
+        weightTierId: orderData.weightTierId,
+        packageTypeId: orderData.packageTypeId || null,
         paymentMethodId: orderData.paymentMethodId,
         pickup: {
+          addressId: orderData.pickup.addressId || null,
           address: orderData.pickup.address,
           latitude: orderData.pickup.latitude,
           longitude: orderData.pickup.longitude,
           city: orderData.pickup.city,
           state: orderData.pickup.state,
           postalCode: orderData.pickup.postalCode,
-          landmark: orderData.pickup.landmark || null,
+          howToReach: orderData.pickup.howToReach || null,
+          building: orderData.pickup.building || null,
+          floor: orderData.pickup.floor || null,
+          flatNumber: orderData.pickup.flatNumber || null,
           contactName: orderData.pickup.contactName,
           contactPhone: orderData.pickup.contactPhone,
         },
         delivery: {
+          addressId: orderData.delivery.addressId || null,
           address: orderData.delivery.address,
           latitude: orderData.delivery.latitude,
           longitude: orderData.delivery.longitude,
           city: orderData.delivery.city,
           state: orderData.delivery.state,
           postalCode: orderData.delivery.postalCode,
-          landmark: orderData.delivery.landmark || null,
+          howToReach: orderData.delivery.howToReach || null,
+          building: orderData.delivery.building || null,
+          floor: orderData.delivery.floor || null,
+          flatNumber: orderData.delivery.flatNumber || null,
           contactName: orderData.delivery.contactName,
           contactPhone: orderData.delivery.contactPhone,
         },
         packageDescription: orderData.packageDescription || null,
-        packageWeightKg: orderData.packageWeightKg || 0,
-        packageDimensions: orderData.packageDimensions || null,
         specialInstructions: orderData.specialInstructions || null,
-        estimatedDistanceKm: orderData.estimatedDistanceKm,
+        declaredValue: orderData.declaredValue || null,
         scheduledPickupTime: orderData.scheduledPickupTime || null,
+        scheduledDeliveryTime: orderData.scheduledDeliveryTime || null,
+        fareBreakdown: {
+          basePrice: orderData.fareBreakdown.basePrice,
+          distanceKm: orderData.fareBreakdown.distanceKm,
+          distancePrice: orderData.fareBreakdown.distancePrice,
+          weightSurcharge: orderData.fareBreakdown.weightSurcharge,
+          totalPrice: orderData.fareBreakdown.totalPrice,
+          currency: orderData.fareBreakdown.currency,
+        },
       };
 
       const result = await ordersRepository.createOrder(orderPayload);
