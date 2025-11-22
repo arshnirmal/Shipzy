@@ -42,7 +42,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
 
   void _debouncedFareCalc() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
+    _debounce = Timer(const Duration(milliseconds: 500), () {
       ref.read(newOrderProvider.notifier).calculateFare();
     });
   }
@@ -61,8 +61,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           prev?.pickupLongitude != next.pickupLongitude ||
           prev?.deliveryLatitude != next.deliveryLatitude ||
           prev?.deliveryLongitude != next.deliveryLongitude ||
-          prev?.packageWeight != next.packageWeight ||
-          prev?.selectedPackageType?.name != next.selectedPackageType?.name;
+          prev?.packageWeight != next.packageWeight;
 
       if (keyChanged && next.canCalculateFare) {
         _debouncedFareCalc();
@@ -72,7 +71,6 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
         title: const Text('New Order'),
         actions: [
           TextButton(

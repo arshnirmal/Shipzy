@@ -182,8 +182,7 @@ class NewOrderState {
       pickupLongitude != null &&
       deliveryLatitude != null &&
       deliveryLongitude != null &&
-      packageWeight != null &&
-      selectedPackageType != null;
+      packageWeight != null;
 
   /// Check if all required fields are filled for order creation
   bool get canCreateOrder =>
@@ -194,8 +193,7 @@ class NewOrderState {
       deliveryAddress != null &&
       deliveryContactName != null &&
       deliveryContactPhone != null &&
-      selectedPaymentMethod != null &&
-      packageDescription != null;
+      selectedPaymentMethod != null;
 
   /// Get the weight tier for current package weight
   WeightTier? get selectedWeightTier {
@@ -350,10 +348,14 @@ class NewOrder extends _$NewOrder {
         deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
         vehicleCategoryId: state.selectedVehicle!.categoryId,
         weightTierId: weightTier.tierId,
-        pickupLat: state.pickupLatitude!,
-        pickupLng: state.pickupLongitude!,
-        dropLat: state.deliveryLatitude!,
-        dropLng: state.deliveryLongitude!,
+        pickup: Coordinate(
+          lat: state.pickupLatitude!,
+          lng: state.pickupLongitude!,
+        ),
+        drop: Coordinate(
+          lat: state.deliveryLatitude!,
+          lng: state.deliveryLongitude!,
+        ),
       );
 
       final response = await orderService.calculateFare(request);
@@ -443,7 +445,7 @@ class NewOrder extends _$NewOrder {
 
   /// Clear all form data
   void clearForm() {
-    state = const NewOrderState();
+    state = NewOrderState(createOrderData: state.createOrderData);
   }
 
   /// Reset order creation state (after successful creation)

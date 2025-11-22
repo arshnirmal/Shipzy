@@ -101,11 +101,11 @@ BEGIN
     result := json_build_object(
         'success', TRUE,
         'fare_breakdown', json_build_object(
-            'base_price', v_base_price,
-            'distance_km', p_distance_km,
-            'distance_price', v_distance_price,
-            'weight_surcharge', v_weight_surcharge,
-            'total_price', v_total_price,
+            'basePrice', v_base_price,
+            'distanceKm', p_distance_km,
+            'distancePrice', v_distance_price,
+            'weightSurcharge', v_weight_surcharge,
+            'totalPrice', v_total_price,
             'currency', 'INR'
         )
     );

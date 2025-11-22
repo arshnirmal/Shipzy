@@ -357,9 +357,9 @@ VALUES
 INSERT INTO
     public.payment_methods (name, description)
 VALUES
-    ('cod', 'Cash on Delivery'),
-    ('prepaid_upi', 'Prepaid via UPI'),
-    ('prepaid_card', 'Prepaid via Credit/Debit Card');
+    ('Cash on Delivery', 'Cash on Delivery'),
+    ('Prepaid via UPI', 'Prepaid via UPI'),
+    ('Prepaid via Credit/Debit Card', 'Prepaid via Credit/Debit Card');
 
 INSERT INTO
     public.payment_statuses (name, description)

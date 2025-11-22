@@ -150,11 +150,8 @@ class OrdersService {
         throw new AppError(fareResult.error, 400);
       }
 
-      // Include distance and duration in the response
-      return {
-        ...fareResult.fare_breakdown,
-        distanceKm,
-      };
+      // Return the fare breakdown with camelCase keys
+      return fareResult.fare_breakdown;
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",

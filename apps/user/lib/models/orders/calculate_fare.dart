@@ -5,6 +5,14 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'calculate_fare.freezed.dart';
 part 'calculate_fare.g.dart';
 
+/// Coordinate model for latitude and longitude
+@freezed
+abstract class Coordinate with _$Coordinate {
+  const factory Coordinate({required double lat, required double lng}) = _Coordinate;
+
+  factory Coordinate.fromJson(Map<String, dynamic> json) => _$CoordinateFromJson(json);
+}
+
 ///Request for calculate fare endpoint
 @freezed
 abstract class CalculateFareRequest with _$CalculateFareRequest {
@@ -12,10 +20,8 @@ abstract class CalculateFareRequest with _$CalculateFareRequest {
     required int deliveryTypeId,
     required int vehicleCategoryId,
     required int weightTierId,
-    required double pickupLat,
-    required double pickupLng,
-    required double dropLat,
-    required double dropLng,
+    required Coordinate pickup,
+    required Coordinate drop,
   }) = _CalculateFareRequest;
 
   factory CalculateFareRequest.fromJson(Map<String, dynamic> json) => _$CalculateFareRequestFromJson(json);
@@ -33,24 +39,13 @@ abstract class CalculateFareResponse with _$CalculateFareResponse {
 @freezed
 abstract class FareData with _$FareData {
   const factory FareData({
-    @JsonKey(name: 'base_price') required double basePrice,
-    @JsonKey(name: 'distance_km') required double distanceKm,
-    @JsonKey(name: 'distance_price') required double distancePrice,
-    @JsonKey(name: 'weight_tier_id') required int weightTierId,
-    @JsonKey(name: 'weight_tier_name') required String weightTierName,
-    @JsonKey(name: 'weight_range_kg') required WeightRange weightRangeKg,
-    @JsonKey(name: 'weight_surcharge') required double weightSurcharge,
-    @JsonKey(name: 'total_price') required double totalPrice,
+    @JsonKey(name: 'basePrice') required double basePrice,
+    @JsonKey(name: 'distanceKm') required double distanceKm,
+    @JsonKey(name: 'distancePrice') required double distancePrice,
+    @JsonKey(name: 'weightSurcharge') required double weightSurcharge,
+    @JsonKey(name: 'totalPrice') required double totalPrice,
     required String currency,
   }) = _FareData;
 
   factory FareData.fromJson(Map<String, dynamic> json) => _$FareDataFromJson(json);
-}
-
-/// Weight range from API
-@freezed
-abstract class WeightRange with _$WeightRange {
-  const factory WeightRange({required double min, required double max}) = _WeightRange;
-
-  factory WeightRange.fromJson(Map<String, dynamic> json) => _$WeightRangeFromJson(json);
 }
