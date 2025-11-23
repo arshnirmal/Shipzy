@@ -923,7 +923,7 @@ CREATE TABLE orders.requests (
     scheduled_delivery_time TIMESTAMPTZ,
     actual_delivery_time TIMESTAMPTZ,
     -- Package details
-    package_type_id INT NOT NULL REFERENCES public.package_types (package_type_id),
+    package_type_id INT REFERENCES public.package_types (package_type_id),
     package_description TEXT,
     package_weight_kg NUMERIC(10, 2),
     package_dimensions JSONB,

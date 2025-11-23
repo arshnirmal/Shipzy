@@ -194,7 +194,7 @@ BEGIN
     INSERT INTO logistics.locations (
         address, latitude, longitude, location,
         city, state, postal_code, landmark,
-        building_name, floor_number, room_number,
+        building_name, floor_number, flat_number,
         contact_name, contact_phone
     ) VALUES (
         p_order_data->'pickup'->>'address',
@@ -222,7 +222,7 @@ BEGIN
     INSERT INTO logistics.locations (
         address, latitude, longitude, location,
         city, state, postal_code, landmark,
-        building_name, floor_number, room_number,
+        building_name, floor_number, flat_number,
         contact_name, contact_phone
     ) VALUES (
         p_order_data->'delivery'->>'address',

@@ -99,13 +99,10 @@ abstract class CreateOrderResponse with _$CreateOrderResponse {
 abstract class CreatedOrderData with _$CreatedOrderData {
   const factory CreatedOrderData({
     required int orderId,
+    required String orderUuid,
     required String orderNumber,
     required String status,
-    required String pickupAddress,
-    required String deliveryAddress,
-    required double totalFare,
-    required double estimatedDistance,
-    required int estimatedDuration,
+    required double totalPrice,
     required DateTime createdAt,
   }) = _CreatedOrderData;
 
