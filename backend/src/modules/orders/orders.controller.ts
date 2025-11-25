@@ -84,18 +84,88 @@ class OrdersController {
     request: FastifyRequest<{ Body: OrderData }>,
     reply: FastifyReply,
   ) {
+    const startTime = Date.now();
+    let requestId: string | undefined;
+
     try {
-      const { userId } = request.user!;
+      const { userId, role } = request.user!;
       const orderData = request.body;
+      requestId = request.id;
+
+      // Log incoming request with full payload
+      logger.info({
+        msg: "[CREATE-ORDER] Incoming request",
+        requestId,
+        userId,
+        userRole: role,
+        payload: {
+          deliveryTypeId: orderData.deliveryTypeId,
+          vehicleCategoryId: orderData.vehicleCategoryId,
+          weightTierId: orderData.weightTierId,
+          packageTypeId: orderData.packageTypeId,
+          paymentMethodId: orderData.paymentMethodId,
+          pickup: {
+            addressId: orderData.pickup.addressId,
+            address: orderData.pickup.address,
+            city: orderData.pickup.city,
+            state: orderData.pickup.state,
+            postalCode: orderData.pickup.postalCode,
+            latitude: orderData.pickup.latitude,
+            longitude: orderData.pickup.longitude,
+            contactName: orderData.pickup.contactName,
+            contactPhone: orderData.pickup.contactPhone,
+          },
+          delivery: {
+            addressId: orderData.delivery.addressId,
+            address: orderData.delivery.address,
+            city: orderData.delivery.city,
+            state: orderData.delivery.state,
+            postalCode: orderData.delivery.postalCode,
+            latitude: orderData.delivery.latitude,
+            longitude: orderData.delivery.longitude,
+            contactName: orderData.delivery.contactName,
+            contactPhone: orderData.delivery.contactPhone,
+          },
+          fareBreakdown: orderData.fareBreakdown,
+          packageDescription: orderData.packageDescription,
+          specialInstructions: orderData.specialInstructions,
+          declaredValue: orderData.declaredValue,
+          scheduledPickupTime: orderData.scheduledPickupTime,
+          scheduledDeliveryTime: orderData.scheduledDeliveryTime,
+        },
+      });
 
       const result = await ordersService.createOrder(userId, orderData);
 
+      const responseTime = Date.now() - startTime;
+
+      // Log successful response
+      logger.info({
+        msg: "[CREATE-ORDER] Order created successfully",
+        requestId,
+        userId,
+        orderId: result.orderId,
+        orderUuid: result.orderUuid,
+        orderNumber: result.orderNumber,
+        totalPrice: result.pricing?.totalPrice,
+        responseTimeMs: responseTime,
+        response: result,
+      });
+
       return successResponse(reply, result, "Order created successfully", 201);
     } catch (error) {
+      const responseTime = Date.now() - startTime;
+
       logger.error({
-        msg: "Create order controller error",
+        msg: "[CREATE-ORDER] Error creating order",
+        requestId,
+        userId: request.user?.userId,
         error: (error as Error).message,
+        errorStack: (error as Error).stack,
+        statusCode: (error as any).statusCode || 500,
+        responseTimeMs: responseTime,
       });
+
       return errorResponse(
         reply,
         (error as Error).message,

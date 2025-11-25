@@ -46,12 +46,11 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          dt.display_name AS delivery_type_display,
           o.vehicle_category_id,
           vc.name AS vehicle_category, 
           vc.display_name AS vehicle_category_display,
           o.package_description,
-          o.package_weight_kg,
-          o.package_dimensions,
           o.special_instructions,
           o.base_price,
           o.distance_price,
@@ -135,16 +134,29 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          dt.display_name AS delivery_type_display,
           o.vehicle_category_id,
           vc.name AS vehicle_category,
+          vc.display_name AS vehicle_category_display,
           o.package_description,
+          o.estimated_distance_km,
+          o.actual_distance_km,
           o.total_price,
           o.created_at,
+          o.actual_pickup_time,
+          o.actual_delivery_time,
+          o.accepted_at,
+          o.picked_up_at,
+          o.delivered_at,
           pl.address AS pickup_address,
           dl.address AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo
+          cu.profile_picture_url AS courier_photo,
+          wt.tier_id AS weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -153,6 +165,7 @@ export default {
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE o.client_id = $1
           AND o.deleted_at IS NULL
       ORDER BY o.created_at DESC
@@ -179,9 +192,9 @@ export default {
           o.order_number,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          dt.display_name AS delivery_type_display,
           o.total_price,
           o.package_description,
-          o.package_weight_kg,
           o.created_at,
 
           -- Pickup location
@@ -389,16 +402,29 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          dt.display_name AS delivery_type_display,
           o.vehicle_category_id,
           vc.name AS vehicle_category,
+          vc.display_name AS vehicle_category_display,
           o.package_description,
+          o.estimated_distance_km,
+          o.actual_distance_km,
           o.total_price,
           o.created_at,
+          o.actual_pickup_time,
+          o.actual_delivery_time,
+          o.accepted_at,
+          o.picked_up_at,
+          o.delivered_at,
           pl.address AS pickup_address,
           dl.address AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo
+          cu.profile_picture_url AS courier_photo,
+          wt.tier_id AS weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -407,6 +433,7 @@ export default {
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE o.client_id = $1
           AND o.deleted_at IS NULL
           AND os.name IN ('pending', 'accepted', 'picked_up')
@@ -438,16 +465,29 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          dt.display_name AS delivery_type_display,
           o.vehicle_category_id,
           vc.name AS vehicle_category,
+          vc.display_name AS vehicle_category_display,
           o.package_description,
+          o.estimated_distance_km,
+          o.actual_distance_km,
           o.total_price,
           o.created_at,
+          o.actual_pickup_time,
+          o.actual_delivery_time,
+          o.accepted_at,
+          o.picked_up_at,
+          o.delivered_at,
           pl.address AS pickup_address,
           dl.address AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo
+          cu.profile_picture_url AS courier_photo,
+          wt.tier_id AS weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -456,6 +496,7 @@ export default {
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE o.client_id = $1
           AND o.deleted_at IS NULL
           AND os.name = 'delivered'
@@ -487,16 +528,29 @@ export default {
           os.name AS status_name,
           o.delivery_type_id,
           dt.name AS delivery_type,
+          dt.display_name AS delivery_type_display,
           o.vehicle_category_id,
           vc.name AS vehicle_category,
+          vc.display_name AS vehicle_category_display,
           o.package_description,
+          o.estimated_distance_km,
+          o.actual_distance_km,
           o.total_price,
           o.created_at,
+          o.actual_pickup_time,
+          o.actual_delivery_time,
+          o.accepted_at,
+          o.picked_up_at,
+          o.delivered_at,
           pl.address AS pickup_address,
           dl.address AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo
+          cu.profile_picture_url AS courier_photo,
+          wt.tier_id AS weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -505,6 +559,7 @@ export default {
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE o.client_id = $1
           AND o.deleted_at IS NULL
           AND os.name IN ('cancelled', 'failed')

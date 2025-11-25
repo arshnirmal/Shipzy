@@ -2,6 +2,8 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'order_status.dart';
+
 part 'order.freezed.dart';
 part 'order.g.dart';
 
@@ -9,80 +11,49 @@ part 'order.g.dart';
 abstract class Order with _$Order {
   const factory Order({
     required int orderId,
+    required String orderUuid,
     required String orderNumber,
     required OrderStatus status,
-    required String pickupAddress,
-    required String deliveryAddress,
-    required double pickupLatitude,
-    required double pickupLongitude,
-    required double deliveryLatitude,
-    required double deliveryLongitude,
-    required String pickupContactName,
-    required String pickupContactPhone,
-    required String deliveryContactName,
-    required String deliveryContactPhone,
-    required String packageType,
-    required double packageWeight,
-    required double totalFare,
-    required double estimatedDistance,
-    required int estimatedDuration,
+    required int statusId,
+    required int deliveryTypeId,
+    required int vehicleCategoryId,
+    required double totalPrice,
     required DateTime createdAt,
+    required OrderLocation pickup,
+    required OrderLocation delivery,
+    String? deliveryTypeDisplay,
+    String? vehicleCategoryDisplay,
     String? packageDescription,
-    String? deliveryType,
-    String? specialInstructions,
-    int? driverId,
-    String? driverName,
-    String? driverPhone,
-    String? driverVehicle,
-    DateTime? acceptedAt,
-    DateTime? pickedUpAt,
-    DateTime? deliveredAt,
-    DateTime? cancelledAt,
-    String? cancellationReason,
-    DateTime? estimatedDeliveryTime,
+    int? weightTierId,
+    String? weightTierDisplay,
+    double? estimatedDistanceKm,
+    double? actualDistanceKm,
+    int? actualDurationMins,
+    DateTime? statusTimestamp,
+    OrderCourier? courier,
   }) = _Order;
 
+  const Order._();
+
   factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
+
+  // Convenience getters for UI compatibility
+  String get pickupAddress => pickup.address;
+  String get deliveryAddress => delivery.address;
+  String get packageType => packageDescription ?? 'Package';
+  double get totalFare => totalPrice;
 }
 
-/// Order status enum
+@freezed
+abstract class OrderLocation with _$OrderLocation {
+  const factory OrderLocation({required String address}) = _OrderLocation;
 
-enum OrderStatus {
-  pending,
-  accepted,
-  @JsonValue('picked_up')
-  pickedUp,
-  @JsonValue('in_transit')
-  inTransit,
-  delivered,
-  cancelled;
+  factory OrderLocation.fromJson(Map<String, dynamic> json) => _$OrderLocationFromJson(json);
+}
 
-  /// Check if order is active (in progress)
-  bool get isActive =>
-      this == OrderStatus.pending ||
-      this == OrderStatus.accepted ||
-      this == OrderStatus.pickedUp ||
-      this == OrderStatus.inTransit;
+@freezed
+abstract class OrderCourier with _$OrderCourier {
+  const factory OrderCourier({required String name, String? photo}) = _OrderCourier;
 
-  /// Check if order is completed
-  bool get isCompleted =>
-      this == OrderStatus.delivered || this == OrderStatus.cancelled;
-
-  /// Get display label
-  String get label {
-    switch (this) {
-      case OrderStatus.pending:
-        return 'Pending';
-      case OrderStatus.accepted:
-        return 'Accepted';
-      case OrderStatus.pickedUp:
-        return 'Picked Up';
-      case OrderStatus.inTransit:
-        return 'In Transit';
-      case OrderStatus.delivered:
-        return 'Delivered';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-    }
-  }
+  factory OrderCourier.fromJson(Map<String, dynamic> json) => _$OrderCourierFromJson(json);
 }

@@ -18,6 +18,9 @@ typedef AddressChanged =
       String? floor,
       String? flat,
       String? howToReach,
+      String? city,
+      String? state,
+      String? postalCode,
     );
 typedef ContactChanged = void Function(String name, String phone);
 
@@ -149,6 +152,9 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
         sel.floor,
         sel.flat,
         sel.howToReach,
+        sel.city,
+        sel.state,
+        sel.postalCode,
       );
     } else {
       _delAddr.text = formattedAddress;
@@ -163,6 +169,9 @@ class _LocationSectionState extends ConsumerState<LocationSection> {
         sel.floor,
         sel.flat,
         sel.howToReach,
+        sel.city,
+        sel.state,
+        sel.postalCode,
       );
     }
   }
@@ -278,6 +287,9 @@ class SelectedAddress {
     required this.fullAddress,
     required this.latitude,
     required this.longitude,
+    this.city,
+    this.state,
+    this.postalCode,
     this.building,
     this.floor,
     this.flat,
@@ -287,6 +299,9 @@ class SelectedAddress {
   final String fullAddress;
   final double latitude;
   final double longitude;
+  final String? city;
+  final String? state;
+  final String? postalCode;
   final String? building;
   final String? floor;
   final String? flat;

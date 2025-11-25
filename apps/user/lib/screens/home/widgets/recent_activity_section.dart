@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/orders/order.dart';
+import '../../../models/orders/order_status.dart';
 import '../../../utils/slide_in_animation.dart';
 
 class RecentActivitySection extends StatelessWidget {
@@ -117,7 +118,7 @@ class _RecentActivityItem extends StatelessWidget {
               ),
             ),
             Text(
-              _formatDate(isDelivered ? order.deliveredAt : (isCancelled ? order.cancelledAt : order.createdAt)),
+              _formatDate(order.statusTimestamp ?? order.createdAt),
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(width: 8),

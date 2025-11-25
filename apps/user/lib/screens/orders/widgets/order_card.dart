@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/orders/order.dart';
+import '../../../models/orders/order_status.dart';
 import '../../home/widgets/order_status_badge.dart';
 
 class OrderCard extends StatelessWidget {
@@ -71,7 +72,7 @@ class OrderCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _buildMetadataItem(context, icon: Icons.local_shipping_outlined, text: order.deliveryType ?? order.packageType),
+                    child: _buildMetadataItem(context, icon: Icons.local_shipping_outlined, text: order.deliveryTypeDisplay ?? order.packageType),
                   ),
                   Expanded(
                     child: _buildMetadataItem(context, icon: Icons.access_time, text: _formatDate(order.createdAt)),

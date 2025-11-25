@@ -103,7 +103,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                     SlideInAnimation(
                       index: 2,
                       child: LocationSection(
-                        onPickupChanged: (addr, baseAddr, lat, lng, name, phone, b, fl, ft, h) => notifier.setPickupAddress(
+                        onPickupChanged: (addr, baseAddr, lat, lng, name, phone, b, fl, ft, h, city, state, postal) => notifier.setPickupAddress(
                           address: addr,
                           baseAddress: baseAddr,
                           latitude: lat,
@@ -114,8 +114,11 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                           floor: fl,
                           flat: ft,
                           howToReach: h,
+                          city: city,
+                          stateOrProvince: state,
+                          postalCode: postal,
                         ),
-                        onDeliveryChanged: (addr, baseAddr, lat, lng, name, phone, b, fl, ft, h) => notifier.setDeliveryAddress(
+                        onDeliveryChanged: (addr, baseAddr, lat, lng, name, phone, b, fl, ft, h, city, state, postal) => notifier.setDeliveryAddress(
                           address: addr,
                           baseAddress: baseAddr,
                           latitude: lat,
@@ -126,6 +129,9 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                           floor: fl,
                           flat: ft,
                           howToReach: h,
+                          city: city,
+                          stateOrProvince: state,
+                          postalCode: postal,
                         ),
                         onPickupContactChanged: (name, phone) => notifier.setPickupAddress(contactName: name, contactPhone: phone),
                         onDeliveryContactChanged: (name, phone) => notifier.setDeliveryAddress(contactName: name, contactPhone: phone),
@@ -161,49 +167,18 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       ),
       bottomNavigationBar: PriceActionBar(
         onCreate: () async {
-          debugPrint('onCreate');
-          debugPrint('selectedDeliveryType: ${state.selectedDeliveryType?.name}');
-          debugPrint('selectedVehicle: ${state.selectedVehicle?.name}');
-          debugPrint('selectedPackageType: ${state.selectedPackageType?.name}');
-          debugPrint('selectedPaymentMethod: ${state.selectedPaymentMethod?.name}');
-          debugPrint('pickupAddress: ${state.pickupAddress}');
-          debugPrint('deliveryAddress: ${state.deliveryAddress}');
-          debugPrint('packageWeight: ${state.packageWeight.toString()}');
-          debugPrint('packageDescription: ${state.packageDescription}');
-          debugPrint('declaredValue: ${state.declaredValue.toString()}');
-          debugPrint('specialInstructions: ${state.specialInstructions}');
-          debugPrint('pickupLatitude: ${state.pickupLatitude.toString()}');
-          debugPrint('pickupLongitude: ${state.pickupLongitude.toString()}');
-          debugPrint('deliveryLatitude: ${state.deliveryLatitude.toString()}');
-          debugPrint('deliveryLongitude: ${state.deliveryLongitude.toString()}');
-          debugPrint('pickupContactName: ${state.pickupContactName}');
-          debugPrint('pickupContactPhone: ${state.pickupContactPhone}');
-          debugPrint('deliveryContactName: ${state.deliveryContactName}');
-          debugPrint('deliveryContactPhone: ${state.deliveryContactPhone}');
-          debugPrint('pickupBuilding: ${state.pickupBuilding}');
-          debugPrint('pickupFloor: ${state.pickupFloor}');
-          debugPrint('pickupFlat: ${state.pickupFlat}');
-          debugPrint('pickupHowToReach: ${state.pickupHowToReach}');
-          debugPrint('deliveryBuilding: ${state.deliveryBuilding}');
-          debugPrint('deliveryFloor: ${state.deliveryFloor}');
-          debugPrint('deliveryFlat: ${state.deliveryFlat}');
-          debugPrint('deliveryHowToReach: ${state.deliveryHowToReach}');
-          debugPrint('packageWeight: ${state.packageWeight.toString()}');
-          debugPrint('packageDescription: ${state.packageDescription}');
-          debugPrint('declaredValue: ${state.declaredValue.toString()}');
-          debugPrint('specialInstructions: ${state.specialInstructions}');
-          debugPrint('fareData: ${state.fareData?.toJson().toString()}');
-          debugPrint('fareError: ${state.fareError}');
-          debugPrint('isCreatingOrder: ${state.isCreatingOrder.toString()}');
-          debugPrint('createOrderError: ${state.createOrderError}');
-          debugPrint('createdOrder: ${state.createdOrder?.toJson().toString()}'                                                                                                                                               );
           await notifier.createOrder();
           final current = ref.read(newOrderProvider);
           if (!context.mounted) {
             return;
           }
           if (current.createOrderError == null && current.createdOrder != null) {
-            context.pop();
+            // Check if we can pop, otherwise navigate to home
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
             SnackbarUtils.showSuccess(context, 'Order created successfully');
             notifier.resetAfterOrderCreation();
           } else {

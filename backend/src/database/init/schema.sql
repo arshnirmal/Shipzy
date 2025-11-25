@@ -910,6 +910,7 @@ CREATE TABLE orders.requests (
     delivery_type_id INT NOT NULL REFERENCES public.delivery_types (delivery_type_id),
     status_id INT NOT NULL REFERENCES public.order_statuses (status_id),
     vehicle_category_id INT NOT NULL REFERENCES public.vehicle_categories(category_id),
+    weight_tier_id INT REFERENCES public.weight_tiers (tier_id),
     -- Pickup details
     pickup_location_id INT NOT NULL REFERENCES logistics.locations (location_id),
     pickup_contact_name VARCHAR(100) NOT NULL,
@@ -925,9 +926,6 @@ CREATE TABLE orders.requests (
     -- Package details
     package_type_id INT REFERENCES public.package_types (package_type_id),
     package_description TEXT,
-    package_weight_kg NUMERIC(10, 2),
-    package_dimensions JSONB,
-    -- {length, width, height, unit}
     special_instructions TEXT,
     declared_value NUMERIC(10, 2) DEFAULT 0.00,
     -- Pricing
@@ -974,6 +972,10 @@ INSERT
     ON orders.requests FOR EACH ROW EXECUTE FUNCTION orders.set_order_number();
 
 CREATE INDEX idx_orders_vehicle_category_id ON orders.requests(vehicle_category_id)
+WHERE
+    deleted_at IS NULL;
+
+CREATE INDEX idx_orders_requests_weight_tier_id ON orders.requests(weight_tier_id)
 WHERE
     deleted_at IS NULL;
 

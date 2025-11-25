@@ -61,6 +61,11 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
   bool _loadingSuggestions = false;
   String? _sessionToken;
 
+  // Location metadata from Mapbox API
+  String? _city;
+  String? _state;
+  String? _postalCode;
+
   // --- Lifecycle ---
   @override
   void initState() {
@@ -509,6 +514,28 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       _search.text = '${details.name}, ${details.fullAddress}';
       _searchFocus.unfocus(); // This will trigger the focus listener
 
+      // Extract location metadata from context and fullAddress
+      setState(() {
+        // Extract from PlaceContext if available
+        final context = details?.context;
+        if (context != null) {
+          _city = context.locality ?? context.country;
+          _state = context.region;
+        }
+
+        // Extract postal code from fullAddress (pattern: 6 digits for Indian postal codes)
+        final address = details?.fullAddress;
+        if (address != null) {
+          final postalCodeMatch = RegExp(r'\b\d{6}\b').firstMatch(address);
+          if (postalCodeMatch != null) {
+            _postalCode = postalCodeMatch.group(0);
+          }
+
+          // Extract state from fullAddress if not found in context
+          _state ??= _extractStateFromAddress(address);
+        }
+      });
+
       _skipNextReverseGeocode = true; // Skip reverse geocode after programmatic flyTo
       if (newCoords.longitude != null && newCoords.latitude != null) {
         await _mapboxMap?.flyTo(
@@ -535,6 +562,29 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       if (result.results.isNotEmpty && mounted) {
         final firstResult = result.results.first;
         _search.text = firstResult.fullAddress;
+
+        // Extract location metadata from context if available
+        setState(() {
+          // Parse context from result list to extract location data
+          if (firstResult.context != null && firstResult.context!.isNotEmpty) {
+            for (final ctx in firstResult.context!) {
+              // The context text values usually contain city/state info
+              // We can identify them by their structure or hierarchy
+              final text = ctx.text;
+              if (_city == null && text.length > 2) {
+                // Heuristic: First substantial text is usually the city/locality
+                _city = text;
+              }
+            }
+          }
+          // Try to extract postal code from full address (pattern: 6 digits)
+          final postalCodeMatch = RegExp(r'\b\d{6}\b').firstMatch(firstResult.fullAddress);
+          if (postalCodeMatch != null) {
+            _postalCode = postalCodeMatch.group(0);
+          }
+          // Extract state from full address
+          _state = _extractStateFromAddress(firstResult.fullAddress);
+        });
       }
     } catch (e) {
       // Silently fail for reverse geocoding - it's not critical
@@ -570,11 +620,48 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       fullAddress: _search.text.trim(),
       latitude: _center?.latitude ?? 0.0,
       longitude: _center?.longitude ?? 0.0,
+      city: _city,
+      state: _state,
+      postalCode: _postalCode,
       building: _building.text.trim(),
       floor: _floor.text.trim(),
       flat: _flat.text.trim(),
       howToReach: _directions.text.trim(),
     );
     Navigator.of(context).pop(address);
+  }
+
+  /// Extract state/region name from full address
+  /// Common Indian states that might appear in addresses
+  String? _extractStateFromAddress(String fullAddress) {
+    const indianStates = [
+      'Maharashtra',
+      'Karnataka',
+      'Tamil Nadu',
+      'Gujarat',
+      'Delhi',
+      'Uttar Pradesh',
+      'West Bengal',
+      'Rajasthan',
+      'Madhya Pradesh',
+      'Haryana',
+      'Punjab',
+      'Kerala',
+      'Andhra Pradesh',
+      'Telangana',
+      'Odisha',
+      'Bihar',
+      'Assam',
+      'Jharkhand',
+      'Goa',
+      'Chhattisgarh',
+    ];
+
+    for (final state in indianStates) {
+      if (fullAddress.contains(state)) {
+        return state;
+      }
+    }
+    return null;
   }
 }

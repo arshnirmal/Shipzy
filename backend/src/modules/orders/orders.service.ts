@@ -150,8 +150,23 @@ class OrdersService {
    * Create new order
    */
   async createOrder(clientId: number, orderData: OrderData): Promise<any> {
+    const operationId = `create-order-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     try {
-      // Validate required fields
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Starting order creation",
+        operationId,
+        clientId,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Step 1: Validate required fields
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Step 1: Validating required fields",
+        operationId,
+        clientId,
+      });
+
       const requiredFields = [
         "deliveryTypeId",
         "vehicleCategoryId",
@@ -167,12 +182,42 @@ class OrdersService {
       );
 
       if (missingFields.length > 0) {
+        logger.error({
+          msg: "[CREATE-ORDER-SERVICE] Validation failed: Missing required fields",
+          operationId,
+          clientId,
+          missingFields,
+        });
         throw new ValidationError(
           `Missing required fields: ${missingFields.join(", ")}`,
         );
       }
 
-      // Validate pickup and delivery locations
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Required fields validation passed",
+        operationId,
+        clientId,
+      });
+
+      // Step 2: Validate pickup and delivery locations
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Step 2: Validating pickup and delivery locations",
+        operationId,
+        clientId,
+        pickup: {
+          address: orderData.pickup.address,
+          city: orderData.pickup.city,
+          latitude: orderData.pickup.latitude,
+          longitude: orderData.pickup.longitude,
+        },
+        delivery: {
+          address: orderData.delivery.address,
+          city: orderData.delivery.city,
+          latitude: orderData.delivery.latitude,
+          longitude: orderData.delivery.longitude,
+        },
+      });
+
       const validateLocation = (location: any, type: string) => {
         const required = [
           "address",
@@ -186,6 +231,13 @@ class OrdersService {
         ];
         const missing = required.filter((field: string) => !location[field]);
         if (missing.length > 0) {
+          logger.error({
+            msg: `[CREATE-ORDER-SERVICE] ${type} location validation failed`,
+            operationId,
+            clientId,
+            locationType: type,
+            missingFields: missing,
+          });
           throw new ValidationError(
             `Missing ${type} location fields: ${missing.join(", ")}`,
           );
@@ -195,10 +247,18 @@ class OrdersService {
       validateLocation(orderData.pickup, "pickup");
       validateLocation(orderData.delivery, "delivery");
 
-      // Validate fare breakdown - prevent price tampering
       logger.info({
-        msg: "Validating fare breakdown",
-        providedFare: orderData.fareBreakdown.totalPrice,
+        msg: "[CREATE-ORDER-SERVICE] Location validation passed",
+        operationId,
+        clientId,
+      });
+
+      // Step 3: Validate fare breakdown - prevent price tampering
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Step 3: Validating fare breakdown",
+        operationId,
+        clientId,
+        providedFare: orderData.fareBreakdown,
       });
 
       const serverCalculatedFare = await ordersRepository.calculateFare(
@@ -208,7 +268,20 @@ class OrdersService {
         orderData.weightTierId,
       );
 
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Server fare calculation completed",
+        operationId,
+        clientId,
+        serverCalculatedFare: serverCalculatedFare.fare_breakdown,
+      });
+
       if (!serverCalculatedFare.success) {
+        logger.error({
+          msg: "[CREATE-ORDER-SERVICE] Invalid pricing parameters",
+          operationId,
+          clientId,
+          error: serverCalculatedFare.error,
+        });
         throw new ValidationError("Invalid pricing parameters");
       }
 
@@ -216,27 +289,43 @@ class OrdersService {
 
       // Allow small tolerance for rounding differences
       const tolerance = 0.01;
-      if (
-        Math.abs(
-          serverPricing.totalPrice - orderData.fareBreakdown.totalPrice,
-        ) > tolerance
-      ) {
+      const priceDifference = Math.abs(
+        serverPricing.totalPrice - orderData.fareBreakdown.totalPrice,
+      );
+
+      if (priceDifference > tolerance) {
         logger.warn({
-          msg: "Pricing mismatch detected",
+          msg: "[CREATE-ORDER-SERVICE] Pricing mismatch detected",
+          operationId,
+          clientId,
           serverPrice: serverPricing.totalPrice,
           clientPrice: orderData.fareBreakdown.totalPrice,
           difference:
             serverPricing.totalPrice - orderData.fareBreakdown.totalPrice,
+          tolerance,
+          priceDifference,
         });
         throw new ValidationError("Pricing mismatch - please recalculate fare");
       }
 
       logger.info({
-        msg: "Fare validation successful",
+        msg: "[CREATE-ORDER-SERVICE] Fare validation successful",
+        operationId,
+        clientId,
         totalPrice: orderData.fareBreakdown.totalPrice,
+        basePrice: orderData.fareBreakdown.basePrice,
+        distanceKm: orderData.fareBreakdown.distanceKm,
+        distancePrice: orderData.fareBreakdown.distancePrice,
+        weightSurcharge: orderData.fareBreakdown.weightSurcharge,
       });
 
-      // Prepare order data for stored function
+      // Step 4: Prepare order data for stored function
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Step 4: Preparing order payload",
+        operationId,
+        clientId,
+      });
+
       const orderPayload = {
         clientId: clientId,
         deliveryTypeId: orderData.deliveryTypeId,
@@ -289,17 +378,61 @@ class OrdersService {
         },
       };
 
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Order payload prepared",
+        operationId,
+        clientId,
+        payload: orderPayload,
+      });
+
+      // Step 5: Call repository to create order in database
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Step 5: Creating order in database",
+        operationId,
+        clientId,
+      });
+
       const result = await ordersRepository.createOrder(orderPayload);
 
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Repository response received",
+        operationId,
+        clientId,
+        success: result.success,
+        hasOrder: !!result.order,
+      });
+
       if (!result.success) {
+        logger.error({
+          msg: "[CREATE-ORDER-SERVICE] Order creation failed in repository",
+          operationId,
+          clientId,
+          error: result.error,
+        });
         throw new AppError(result.error, 400);
       }
+
+      // Step 6: Return successful result
+      logger.info({
+        msg: "[CREATE-ORDER-SERVICE] Order created successfully",
+        operationId,
+        clientId,
+        orderId: result.order.orderId,
+        orderUuid: result.order.orderUuid,
+        orderNumber: result.order.orderNumber,
+        totalPrice: result.order.pricing?.totalPrice,
+        response: result.order,
+      });
 
       return result.order;
     } catch (error) {
       logger.error({
-        msg: "Error creating order",
+        msg: "[CREATE-ORDER-SERVICE] Error creating order",
+        operationId: operationId,
+        clientId,
         error: (error as Error).message,
+        errorStack: (error as Error).stack,
+        errorType: (error as Error).constructor.name,
       });
       throw error;
     }
@@ -365,28 +498,73 @@ class OrdersService {
       );
 
       return {
-        orders: orders.map((order) => ({
-          orderId: order.order_id,
-          orderUuid: order.order_uuid,
-          orderNumber: order.order_number,
-          status: order.status_name,
-          deliveryType: order.delivery_type,
-          packageDescription: order.package_description,
-          totalPrice: Number.parseFloat(order.total_price),
-          createdAt: order.created_at,
-          pickup: {
-            address: order.pickup_address,
-          },
-          delivery: {
-            address: order.delivery_address,
-          },
-          courier: order.courier_id
-            ? {
-                name: order.courier_name,
-                photo: order.courier_photo,
-              }
-            : null,
-        })),
+        orders: orders.map((order) => {
+          // Compute actual delivery duration (only if picked up)
+          let actualDurationMins = null;
+          if (order.actual_pickup_time && order.actual_delivery_time) {
+            const pickupTime = new Date(order.actual_pickup_time).getTime();
+            const deliveryTime = new Date(order.actual_delivery_time).getTime();
+            actualDurationMins = Math.round(
+              (deliveryTime - pickupTime) / (1000 * 60),
+            );
+          } else if (order.actual_pickup_time && !order.actual_delivery_time) {
+            // Order in progress - show elapsed time since pickup
+            const pickupTime = new Date(order.actual_pickup_time).getTime();
+            actualDurationMins = Math.round(
+              (Date.now() - pickupTime) / (1000 * 60),
+            );
+          }
+
+          // Compute status-specific timestamp for "X mins ago" display
+          let statusTimestamp = order.created_at;
+          if (order.delivered_at) statusTimestamp = order.delivered_at;
+          else if (order.picked_up_at) statusTimestamp = order.picked_up_at;
+          else if (order.accepted_at) statusTimestamp = order.accepted_at;
+
+          // Format weight tier display (e.g., "1-5 kg", "5-10 kg")
+          const weightTierDisplay =
+            order.weight_tier_name ||
+            (order.weight_tier_min != null && order.weight_tier_max != null
+              ? `${order.weight_tier_min}-${order.weight_tier_max} kg`
+              : null);
+
+          return {
+            orderId: order.order_id,
+            orderUuid: order.order_uuid,
+            orderNumber: order.order_number,
+            status: order.status_name,
+            statusId: order.status_id,
+            deliveryTypeId: order.delivery_type_id,
+            deliveryTypeDisplay: order.delivery_type_display,
+            vehicleCategoryId: order.vehicle_category_id,
+            vehicleCategoryDisplay: order.vehicle_category_display,
+            packageDescription: order.package_description,
+            weightTierId: order.weight_tier_id,
+            weightTierDisplay,
+            estimatedDistanceKm: order.estimated_distance_km
+              ? Number.parseFloat(order.estimated_distance_km)
+              : null,
+            actualDistanceKm: order.actual_distance_km
+              ? Number.parseFloat(order.actual_distance_km)
+              : null,
+            actualDurationMins,
+            totalPrice: Number.parseFloat(order.total_price),
+            createdAt: order.created_at,
+            statusTimestamp,
+            pickup: {
+              address: order.pickup_address,
+            },
+            delivery: {
+              address: order.delivery_address,
+            },
+            courier: order.courier_id
+              ? {
+                  name: order.courier_name,
+                  photo: order.courier_photo,
+                }
+              : null,
+          };
+        }),
         pagination: {
           page,
           limit,
@@ -646,8 +824,6 @@ class OrdersService {
       },
       package: {
         description: order.package_description,
-        weightKg: Number.parseFloat(order.package_weight_kg),
-        dimensions: order.package_dimensions,
         declaredValue: Number.parseFloat(order.declared_value),
       },
       specialInstructions: order.special_instructions,

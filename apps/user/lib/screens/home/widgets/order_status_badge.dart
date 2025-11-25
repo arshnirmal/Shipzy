@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../models/orders/order.dart';
+import '../../../models/orders/order_status.dart';
 
 class OrderStatusBadge extends StatelessWidget {
   const OrderStatusBadge({required this.status, this.size = OrderStatusBadgeSize.medium, super.key});
@@ -89,6 +89,14 @@ class OrderStatusBadge extends StatelessWidget {
         );
 
       case OrderStatus.cancelled:
+        return _StatusColors(
+          background: theme.colorScheme.error.withValues(alpha: 0.1),
+          border: theme.colorScheme.error.withValues(alpha: 0.3),
+          dot: theme.colorScheme.error,
+          text: theme.colorScheme.error,
+        );
+
+      case OrderStatus.rejected:
         return _StatusColors(
           background: theme.colorScheme.error.withValues(alpha: 0.1),
           border: theme.colorScheme.error.withValues(alpha: 0.3),
