@@ -2,11 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../models/orders/order.dart';
-import '../../../models/orders/order_status.dart';
 import '../../../utils/slide_in_animation.dart';
+import '../../orders/widgets/order_card.dart';
 
 class RecentActivitySection extends StatelessWidget {
   const RecentActivitySection({required this.orders, required this.onViewAll, super.key});
@@ -57,94 +56,10 @@ class RecentActivitySection extends StatelessWidget {
           itemCount: orders.length > 5 ? 5 : orders.length,
           itemBuilder: (context, index) => SlideInAnimation(
             index: index,
-            child: _RecentActivityItem(order: orders[index], onTap: () => context.push('/order/${orders[index].orderId}')),
+            child: OrderCard(order: orders[index], onTap: () => context.push('/order/${orders[index].orderId}')),
           ),
         ),
       ],
     );
-  }
-}
-
-class _RecentActivityItem extends StatelessWidget {
-  const _RecentActivityItem({required this.order, required this.onTap});
-
-  final Order order;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDelivered = order.status == OrderStatus.delivered;
-    final isCancelled = order.status == OrderStatus.cancelled;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: isDelivered ? theme.colorScheme.secondary : theme.colorScheme.error, width: 3)),
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isDelivered ? Icons.check_circle : Icons.cancel,
-              color: isDelivered ? theme.colorScheme.secondary : theme.colorScheme.error,
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.packageDescription ?? order.packageType,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isCancelled ? 'Cancelled' : 'Delivered',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isDelivered ? theme.colorScheme.secondary : theme.colorScheme.error,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              _formatDate(order.statusTimestamp ?? order.createdAt),
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime? date) {
-    if (date == null) {
-      return '';
-    }
-
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Today';
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return DateFormat('MMM dd').format(date);
-    }
   }
 }

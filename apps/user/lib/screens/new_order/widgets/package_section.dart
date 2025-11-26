@@ -48,7 +48,6 @@ class _PackageSectionState extends ConsumerState<PackageSection> {
         Text('Package', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         // Weight
-        // Weight
         DropdownButtonFormField<double>(
           initialValue: state.packageWeight,
           decoration: const InputDecoration(prefixIcon: Icon(Icons.scale_outlined), hintText: 'Select Weight'),
