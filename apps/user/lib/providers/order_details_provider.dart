@@ -54,7 +54,10 @@ class OrderDetails extends _$OrderDetails {
         return const Duration(seconds: 10);
       case OrderStatus.pickedUp:
         return const Duration(seconds: 5);
-      default:
+      case OrderStatus.inTransit:
+      case OrderStatus.delivered:
+      case OrderStatus.cancelled:
+      case OrderStatus.rejected:
         return Duration.zero; // No auto-refresh for completed/cancelled/failed
     }
   }

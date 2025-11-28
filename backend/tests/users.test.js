@@ -244,7 +244,7 @@ describe("Users API", () => {
       const addressQuery = `
         INSERT INTO users.addresses (
           user_id, address_type, label, full_address, city, state,
-          latitude, longitude, building_name, floor_number, room_number
+          latitude, longitude, building_name, floor_number, flat_number
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;
 
       await testDb.query(addressQuery, [
@@ -395,7 +395,7 @@ describe("Users API", () => {
         longitude: newAddress.longitude,
         building_name: newAddress.building,
         floor_number: newAddress.floor,
-        room_number: newAddress.flatNumber,
+        flat_number: newAddress.flatNumber,
         landmark: newAddress.landmark,
       });
     });

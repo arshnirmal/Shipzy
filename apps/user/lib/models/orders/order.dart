@@ -64,8 +64,8 @@ abstract class Order with _$Order {
 @freezed
 abstract class OrderLocation with _$OrderLocation {
   const factory OrderLocation({
-    required int locationId,
     required String address,
+    int? locationId,
     String? building,
     String? floor,
     String? flat,

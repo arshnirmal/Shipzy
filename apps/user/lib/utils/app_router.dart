@@ -102,7 +102,7 @@ GoRouter router(Ref ref) {
         path: AppRoutes.orderDetailsPath,
         name: 'orderDetails',
         builder: (context, state) {
-          final orderId = state.pathParameters['orderId']!;
+          final orderId = int.parse(state.pathParameters['orderId']!);
           return OrderDetailsScreen(orderId: orderId);
         },
       ),
