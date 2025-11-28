@@ -782,16 +782,73 @@ class OrdersService {
    * Format order details
    */
   _formatOrderDetails(order: any): any {
+    // Compute actual delivery duration (only if picked up)
+    let actualDurationMins = null;
+    if (order.actual_pickup_time && order.actual_delivery_time) {
+      const pickupTime = new Date(order.actual_pickup_time).getTime();
+      const deliveryTime = new Date(order.actual_delivery_time).getTime();
+      actualDurationMins = Math.round(
+        (deliveryTime - pickupTime) / (1000 * 60),
+      );
+    } else if (order.actual_pickup_time && !order.actual_delivery_time) {
+      // Order in progress - show elapsed time since pickup
+      const pickupTime = new Date(order.actual_pickup_time).getTime();
+      actualDurationMins = Math.round((Date.now() - pickupTime) / (1000 * 60));
+    }
+
+    // Compute status-specific timestamp for "X mins ago" display
+    let statusTimestamp = order.created_at;
+    if (order.delivered_at) statusTimestamp = order.delivered_at;
+    else if (order.picked_up_at) statusTimestamp = order.picked_up_at;
+    else if (order.accepted_at) statusTimestamp = order.accepted_at;
+
+    // Format weight tier display (e.g., "1-5 kg", "5-10 kg")
+    const weightTierDisplay =
+      order.weight_tier_name ||
+      (order.weight_tier_min != null && order.weight_tier_max != null
+        ? `${order.weight_tier_min}-${order.weight_tier_max} kg`
+        : null);
+
     return {
+      // Base identifiers
       orderId: order.order_id,
       orderUuid: order.order_uuid,
       orderNumber: order.order_number,
+
+      // Status fields (aligned with list)
       status: order.status_name,
-      deliveryType: order.delivery_type,
-      client: {
-        name: order.client_name,
-        phone: order.client_phone,
-      },
+      statusId: order.status_id,
+
+      // Delivery configuration (aligned with list)
+      deliveryTypeId: order.delivery_type_id,
+      deliveryTypeDisplay: order.delivery_type_display,
+      vehicleCategoryId: order.vehicle_category_id,
+      vehicleCategoryDisplay: order.vehicle_category_display,
+
+      // Package details
+      packageDescription: order.package_description,
+      packageTypeId: order.package_type_id || null,
+      weightTierId: order.weight_tier_id,
+      weightTierDisplay,
+
+      // Distance and duration (aligned with list)
+      estimatedDistanceKm: order.estimated_distance_km
+        ? Number.parseFloat(order.estimated_distance_km)
+        : null,
+      actualDistanceKm: order.actual_distance_km
+        ? Number.parseFloat(order.actual_distance_km)
+        : null,
+      actualDurationMins,
+
+      // Timestamps (flattened for easy access)
+      createdAt: order.created_at,
+      statusTimestamp,
+      acceptedAt: order.accepted_at,
+      pickedUpAt: order.picked_up_at,
+      deliveredAt: order.delivered_at,
+      cancelledAt: order.cancelled_at,
+
+      // Pickup location (enhanced with all details)
       pickup: {
         locationId: order.pickup_location_id,
         address: order.pickup_address,
@@ -807,6 +864,8 @@ class OrdersService {
         contactName: order.pickup_contact_name,
         contactPhone: order.pickup_contact_phone,
       },
+
+      // Delivery location (enhanced with all details)
       delivery: {
         locationId: order.delivery_location_id,
         address: order.delivery_address,
@@ -822,18 +881,32 @@ class OrdersService {
         contactName: order.delivery_contact_name,
         contactPhone: order.delivery_contact_phone,
       },
-      package: {
-        description: order.package_description,
-        declaredValue: Number.parseFloat(order.declared_value),
+
+      // Payment information (new section)
+      payment: {
+        paymentMethod: order.payment_method,
+        fareBreakdown: {
+          basePrice: Number.parseFloat(order.base_price),
+          distancePrice: Number.parseFloat(order.distance_price),
+          weightSurcharge: Number.parseFloat(order.weight_surcharge),
+          totalPrice: Number.parseFloat(order.total_price),
+        },
       },
+
+      // Total price (for backward compatibility and quick access)
+      totalPrice: Number.parseFloat(order.total_price),
+
+      // Client details (additional info not in list view)
+      client: {
+        name: order.client_name,
+        phone: order.client_phone,
+      },
+
+      // Additional details
       specialInstructions: order.special_instructions,
-      pricing: {
-        basePrice: Number.parseFloat(order.base_price),
-        distancePrice: Number.parseFloat(order.distance_price),
-        weightSurcharge: Number.parseFloat(order.weight_surcharge),
-        totalPrice: Number.parseFloat(order.total_price),
-      },
-      paymentMethod: order.payment_method,
+      cancellationReason: order.cancellation_reason,
+
+      // Courier details (enhanced with more info)
       courier: order.courier_id
         ? {
             id: order.courier_id,
@@ -843,25 +916,8 @@ class OrdersService {
             assignmentStatus: order.assignment_status,
             assignedAt: order.assigned_at,
             acceptedAt: order.courier_accepted_at,
-            currentLocation:
-              order.courier_current_latitude && order.courier_current_longitude
-                ? {
-                    latitude: Number.parseFloat(order.courier_current_latitude),
-                    longitude: Number.parseFloat(
-                      order.courier_current_longitude,
-                    ),
-                  }
-                : null,
           }
         : null,
-      timestamps: {
-        createdAt: order.created_at,
-        acceptedAt: order.accepted_at,
-        pickedUpAt: order.picked_up_at,
-        deliveredAt: order.delivered_at,
-        cancelledAt: order.cancelled_at,
-      },
-      cancellationReason: order.cancellation_reason,
     };
   }
 }

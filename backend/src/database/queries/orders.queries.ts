@@ -51,11 +51,16 @@ export default {
           vc.name AS vehicle_category, 
           vc.display_name AS vehicle_category_display,
           o.package_description,
+          o.package_type_id,
           o.special_instructions,
           o.base_price,
           o.distance_price,
           o.weight_surcharge,
           o.total_price,
+          o.estimated_distance_km,
+          o.actual_distance_km,
+          o.actual_pickup_time,
+          o.actual_delivery_time,
           o.payment_method_id,
           pm.name AS payment_method,
           o.created_at,
@@ -64,6 +69,12 @@ export default {
           o.delivered_at,
           o.cancelled_at,
           o.cancellation_reason,
+          
+          -- Weight tier details
+          wt.tier_id AS weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max,
           
           -- Pickup details
           pl.location_id AS pickup_location_id,
@@ -117,6 +128,7 @@ export default {
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
       LEFT JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE o.order_id = $1
       AND o.deleted_at IS NULL
 

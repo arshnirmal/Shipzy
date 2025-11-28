@@ -2,10 +2,10 @@
 
 import 'package:dio/dio.dart';
 
-import '../models/orders/order_response.dart';
-import '../models/orders/create_order_data.dart';
 import '../models/orders/calculate_fare.dart';
 import '../models/orders/create_order.dart';
+import '../models/orders/create_order_data.dart';
+import '../models/orders/order_response.dart';
 import 'dio/api_client.dart';
 
 class OrderService {
