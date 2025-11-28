@@ -40,14 +40,7 @@ class OrderSummaryCard extends StatelessWidget {
           _SummaryRow(icon: Icons.local_shipping, label: 'Vehicle', value: vehicleType),
           const Divider(height: 24),
 
-          _SummaryRow(icon: Icons.inventory_2_outlined, label: 'Package', value: packageType),
-          if (weight != null) ...[
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.only(left: 36),
-              child: Text('Weight: $weight', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
-            ),
-          ],
+          _SummaryRow(icon: Icons.inventory_2_outlined, label: 'Package', value: packageType, subtitle: weight != null ? 'Weight: $weight' : null),
           if (distance != null) ...[const Divider(height: 24), _SummaryRow(icon: Icons.straighten, label: 'Distance', value: distance!)],
           const Divider(height: 24),
 
@@ -68,11 +61,12 @@ class OrderSummaryCard extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.icon, required this.label, required this.value, this.valueStyle});
+  const _SummaryRow({required this.icon, required this.label, required this.value, this.subtitle, this.valueStyle});
 
   final IconData icon;
   final String label;
   final String value;
+  final String? subtitle;
   final TextStyle? valueStyle;
 
   @override
@@ -80,11 +74,19 @@ class _SummaryRow extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+              if (subtitle != null)
+                Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+            ],
+          ),
         ),
         Text(value, style: valueStyle ?? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ],

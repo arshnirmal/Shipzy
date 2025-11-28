@@ -50,89 +50,99 @@ class TimelineCard extends StatelessWidget {
   List<Widget> _buildTimelineSteps(ThemeData theme) {
     final steps = <Widget>[];
 
-    // Order Placed
-    if (orderPlacedAt != null) {
+    // 1. Order Confirmed (Always first)
+    steps.add(
+      _buildStep(
+        title: 'Order Confirmed',
+        time: orderPlacedAt != null ? _formatTime(orderPlacedAt!) : null,
+        isCompleted: true, // Always completed if we are viewing details
+        isCurrent: status == OrderStatus.pending,
+      ),
+    );
+
+    // If cancelled/rejected immediately
+    if ((status == OrderStatus.cancelled || status == OrderStatus.rejected) && driverAssignedAt == null) {
       steps.add(
-        _TimelineStep(
-          title: 'Order Confirmed',
-          time: _formatTime(orderPlacedAt!),
+        _buildStep(
+          title: status == OrderStatus.rejected ? 'Order Rejected' : 'Order Cancelled',
+          time: cancelledAt != null ? _formatTime(cancelledAt!) : null,
           isCompleted: true,
-          isLast: status == OrderStatus.pending && cancelledAt == null,
+          isCancelled: true,
+          isLast: true,
         ),
       );
-    }
-
-    // Cancelled early
-    if (cancelledAt != null && driverAssignedAt == null) {
-      steps.add(_TimelineStep(title: 'Cancelled', time: _formatTime(cancelledAt!), isCompleted: true, isCancelled: true, isLast: true));
       return steps;
     }
 
-    // Driver Assigned
-    if (driverAssignedAt != null) {
+    // 2. Driver Assigned
+    final isDriverAssigned =
+        driverAssignedAt != null || status == OrderStatus.pickedUp || status == OrderStatus.inTransit || status == OrderStatus.delivered;
+
+    steps.add(
+      _buildStep(
+        title: 'Driver Assigned',
+        time: driverAssignedAt != null ? _formatTime(driverAssignedAt!) : null,
+        isCompleted: isDriverAssigned,
+        isCurrent: status == OrderStatus.accepted,
+      ),
+    );
+
+    // If cancelled/rejected after driver assigned but before pickup
+    if ((status == OrderStatus.cancelled || status == OrderStatus.rejected) && pickedUpAt == null) {
       steps.add(
-        _TimelineStep(
-          title: 'Driver Assigned',
-          time: _formatTime(driverAssignedAt!),
+        _buildStep(
+          title: status == OrderStatus.rejected ? 'Order Rejected' : 'Order Cancelled',
+          time: cancelledAt != null ? _formatTime(cancelledAt!) : null,
           isCompleted: true,
-          isLast: status == OrderStatus.accepted && cancelledAt == null && failedAt == null,
+          isCancelled: true,
+          isLast: true,
         ),
       );
-    } else if (status != OrderStatus.pending) {
-      steps.add(const _TimelineStep(title: 'Driver Assigned', isLast: true));
       return steps;
     }
 
-    // Cancelled after driver assigned
-    if (cancelledAt != null && pickedUpAt == null) {
-      steps.add(_TimelineStep(title: 'Cancelled', time: _formatTime(cancelledAt!), isCompleted: true, isCancelled: true, isLast: true));
-      return steps;
-    }
+    // 3. Package Picked Up
+    final isPickedUp = pickedUpAt != null || status == OrderStatus.inTransit || status == OrderStatus.delivered;
 
-    // Package Picked Up
-    if (pickedUpAt != null) {
+    steps.add(
+      _buildStep(
+        title: 'Package Picked Up',
+        time: pickedUpAt != null ? _formatTime(pickedUpAt!) : null,
+        isCompleted: isPickedUp,
+        isCurrent: status == OrderStatus.pickedUp,
+      ),
+    );
+
+    // If cancelled/rejected after pickup (rare but possible)
+    if ((status == OrderStatus.cancelled || status == OrderStatus.rejected) && deliveredAt == null) {
       steps.add(
-        _TimelineStep(
-          title: 'Package Picked Up',
-          time: _formatTime(pickedUpAt!),
+        _buildStep(
+          title: status == OrderStatus.rejected ? 'Order Rejected' : 'Order Cancelled',
+          time: cancelledAt != null ? _formatTime(cancelledAt!) : null,
           isCompleted: true,
-          isLast: status == OrderStatus.pickedUp && cancelledAt == null && failedAt == null,
+          isCancelled: true,
+          isLast: true,
         ),
       );
-    } else if (status == OrderStatus.accepted || status == OrderStatus.pickedUp) {
-      steps.add(const _TimelineStep(title: 'Pickup pending', isLast: true));
       return steps;
     }
 
-    // In Transit
-    if (status == OrderStatus.pickedUp || deliveredAt != null || failedAt != null) {
-      final isInTransit = status == OrderStatus.pickedUp;
-      steps.add(
-        _TimelineStep(
-          title: isInTransit ? 'In Transit' : 'In Transit',
-          time: isInTransit ? 'Now' : null,
-          isCompleted: deliveredAt != null || failedAt != null,
-          isCurrent: isInTransit,
-          isLast: isInTransit && failedAt == null && deliveredAt == null,
-        ),
-      );
-    }
+    // 4. Delivered
+    final isDelivered = deliveredAt != null || status == OrderStatus.delivered;
 
-    // Failed
-    if (failedAt != null) {
-      steps.add(_TimelineStep(title: 'Delivery Failed', time: _formatTime(failedAt!), isCompleted: true, isFailed: true, isLast: true));
-      return steps;
-    }
-
-    // Delivered
-    if (deliveredAt != null) {
-      steps.add(_TimelineStep(title: 'Delivered', time: _formatTime(deliveredAt!), isCompleted: true, isLast: true));
-    } else if (status != OrderStatus.delivered) {
-      steps.add(const _TimelineStep(title: 'Delivery pending', isLast: true));
-    }
+    steps.add(_buildStep(title: 'Delivered', time: deliveredAt != null ? _formatTime(deliveredAt!) : null, isCompleted: isDelivered, isLast: true));
 
     return steps;
   }
+
+  Widget _buildStep({
+    required String title,
+    String? time,
+    bool isCompleted = false,
+    bool isCurrent = false,
+    bool isCancelled = false,
+    bool isLast = false,
+  }) => _TimelineStep(title: title, time: time, isCompleted: isCompleted, isCurrent: isCurrent, isCancelled: isCancelled, isLast: isLast);
 
   String _formatTime(DateTime dateTime) => DateFormat('h:mm a').format(dateTime);
 }
@@ -144,7 +154,6 @@ class _TimelineStep extends StatelessWidget {
     this.isCompleted = false,
     this.isCurrent = false,
     this.isCancelled = false,
-    this.isFailed = false,
     this.isLast = false,
   });
 
@@ -153,7 +162,6 @@ class _TimelineStep extends StatelessWidget {
   final bool isCompleted;
   final bool isCurrent;
   final bool isCancelled;
-  final bool isFailed;
   final bool isLast;
 
   @override
@@ -165,9 +173,6 @@ class _TimelineStep extends StatelessWidget {
     if (isCancelled) {
       indicatorColor = Colors.orange;
       icon = Icons.cancel;
-    } else if (isFailed) {
-      indicatorColor = theme.colorScheme.error;
-      icon = Icons.error;
     } else if (isCompleted) {
       indicatorColor = Colors.green;
       icon = Icons.check_circle;
@@ -187,14 +192,14 @@ class _TimelineStep extends StatelessWidget {
           Column(
             children: [
               Container(
-                width: 24,
-                height: 24,
+                width: 16,
+                height: 16,
                 decoration: BoxDecoration(
                   color: isCompleted || isCurrent ? indicatorColor : Colors.transparent,
                   shape: BoxShape.circle,
                   border: Border.all(color: indicatorColor, width: 2),
                 ),
-                child: Icon(icon, size: 14, color: isCompleted || isCurrent ? Colors.white : indicatorColor),
+                child: Icon(icon, size: 12, color: isCompleted || isCurrent ? Colors.white : indicatorColor),
               ),
               if (!isLast)
                 Expanded(
@@ -207,7 +212,7 @@ class _TimelineStep extends StatelessWidget {
           // Content
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

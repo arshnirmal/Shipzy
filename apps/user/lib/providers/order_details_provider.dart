@@ -63,7 +63,6 @@ class OrderDetails extends _$OrderDetails {
   }
 
   Future<void> refresh() async {
-    state = const AsyncLoading();
     final orderId = state.value?.orderId;
     if (orderId != null) {
       state = await AsyncValue.guard(() async {
