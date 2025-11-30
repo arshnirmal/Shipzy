@@ -233,6 +233,8 @@ export default {
           o.declared_value,
           o.estimated_distance_km,
           o.actual_distance_km,
+          -- Delivery type (needed for earnings calculation)
+          dt.name AS delivery_type,
           -- Complete pricing breakdown
           o.base_price,
           o.distance_price,
@@ -240,7 +242,7 @@ export default {
           o.platform_fee,
           o.special_handling_fee,
           o.gst_amount,
-          o.total_before_tax,
+          o.subtotal_before_tax,
           o.total_price,
 
           ca.customer_tip,
@@ -252,6 +254,7 @@ export default {
       JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
+      LEFT JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id

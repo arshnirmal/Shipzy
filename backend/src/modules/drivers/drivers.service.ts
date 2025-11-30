@@ -242,71 +242,76 @@ class DriversService {
 
       // Calculate earnings for all assignments
       const assignmentsWithEarnings = await Promise.all(
-        assignments.map(async (assignment) => ({
-          assignmentId: assignment.assignment_id,
-          orderId: assignment.order_id,
-          orderUuid: assignment.order_uuid,
-          orderNumber: assignment.order_number,
-          orderStatus: assignment.order_status,
-          assignmentStatus: assignment.assignment_status,
-          vehicleCategory: assignment.vehicle_category,
-          vehicleCategoryDisplay: assignment.vehicle_category_display,
-          packageType: assignment.package_type,
-          weightTier: assignment.weight_tier_name
-            ? {
-                id: assignment.weight_tier_id,
-                name: assignment.weight_tier_name,
-                minWeightKg: Number.parseFloat(
-                  assignment.weight_tier_min || "0",
-                ),
-                maxWeightKg: Number.parseFloat(
-                  assignment.weight_tier_max || "0",
-                ),
-              }
-            : null,
-          pickup: {
-            address: assignment.pickup_address,
-            building: assignment.pickup_building,
-            landmark: assignment.pickup_landmark,
-            city: assignment.pickup_city,
-            state: assignment.pickup_state,
-            postalCode: assignment.pickup_postal_code,
-            latitude: Number.parseFloat(assignment.pickup_latitude),
-            longitude: Number.parseFloat(assignment.pickup_longitude),
-            contactName: assignment.pickup_contact_name,
-            contactPhone: assignment.pickup_contact_phone,
-          },
-          delivery: {
-            address: assignment.delivery_address,
-            building: assignment.delivery_building,
-            landmark: assignment.delivery_landmark,
-            city: assignment.delivery_city,
-            state: assignment.delivery_state,
-            postalCode: assignment.delivery_postal_code,
-            latitude: Number.parseFloat(assignment.delivery_latitude),
-            longitude: Number.parseFloat(assignment.delivery_longitude),
-            contactName: assignment.delivery_contact_name,
-            contactPhone: assignment.delivery_contact_phone,
-          },
-          packageDescription: assignment.package_description,
-          specialInstructions: assignment.special_instructions,
-          declaredValue: assignment.declared_value
-            ? Number.parseFloat(assignment.declared_value)
-            : null,
-          estimatedDistanceKm: assignment.estimated_distance_km
-            ? Number.parseFloat(assignment.estimated_distance_km)
-            : null,
-          actualDistanceKm: assignment.actual_distance_km
-            ? Number.parseFloat(assignment.actual_distance_km)
-            : null,
-          driverEarnings: await this.calculateDriverEarnings(assignment),
-          estimatedDeliveryTime: Math.ceil(
-            (Number.parseFloat(assignment.estimated_distance_km || "10") / 25) *
-              60,
-          ), // Estimate based on 25km/h average speed
-          assignedAt: assignment.assigned_at,
-          acceptedAt: assignment.accepted_at,
-        })),
+        assignments.map(async (assignment) => {
+          const earnings = await this.calculateDriverEarnings(assignment);
+          return {
+            assignmentId: assignment.assignment_id,
+            orderId: assignment.order_id,
+            orderUuid: assignment.order_uuid,
+            orderNumber: assignment.order_number,
+            orderStatus: assignment.order_status,
+            assignmentStatus: assignment.assignment_status,
+            vehicleCategory: assignment.vehicle_category,
+            vehicleCategoryDisplay: assignment.vehicle_category_display,
+            packageType: assignment.package_type,
+            weightTier: assignment.weight_tier_name
+              ? {
+                  id: assignment.weight_tier_id,
+                  name: assignment.weight_tier_name,
+                  minWeightKg: Number.parseFloat(
+                    assignment.weight_tier_min || "0",
+                  ),
+                  maxWeightKg: Number.parseFloat(
+                    assignment.weight_tier_max || "0",
+                  ),
+                }
+              : null,
+            pickup: {
+              address: assignment.pickup_address,
+              building: assignment.pickup_building,
+              landmark: assignment.pickup_landmark,
+              city: assignment.pickup_city,
+              state: assignment.pickup_state,
+              postalCode: assignment.pickup_postal_code,
+              latitude: Number.parseFloat(assignment.pickup_latitude),
+              longitude: Number.parseFloat(assignment.pickup_longitude),
+              contactName: assignment.pickup_contact_name,
+              contactPhone: assignment.pickup_contact_phone,
+            },
+            delivery: {
+              address: assignment.delivery_address,
+              building: assignment.delivery_building,
+              landmark: assignment.delivery_landmark,
+              city: assignment.delivery_city,
+              state: assignment.delivery_state,
+              postalCode: assignment.delivery_postal_code,
+              latitude: Number.parseFloat(assignment.delivery_latitude),
+              longitude: Number.parseFloat(assignment.delivery_longitude),
+              contactName: assignment.delivery_contact_name,
+              contactPhone: assignment.delivery_contact_phone,
+            },
+            packageDescription: assignment.package_description,
+            specialInstructions: assignment.special_instructions,
+            declaredValue: assignment.declared_value
+              ? Number.parseFloat(assignment.declared_value)
+              : null,
+            estimatedDistanceKm: assignment.estimated_distance_km
+              ? Number.parseFloat(assignment.estimated_distance_km)
+              : null,
+            actualDistanceKm: assignment.actual_distance_km
+              ? Number.parseFloat(assignment.actual_distance_km)
+              : null,
+            driverEarnings: earnings.netEarning,
+            earningsBreakdown: earnings.earningsBreakdown,
+            estimatedDeliveryTime: Math.ceil(
+              (Number.parseFloat(assignment.estimated_distance_km || "10") /
+                25) *
+                60,
+            ), // Estimate based on 25km/h average speed
+            assignedAt: assignment.assigned_at,
+            acceptedAt: assignment.accepted_at,
+          };
+        }),
       );
 
       return assignmentsWithEarnings;
@@ -321,8 +326,24 @@ class DriversService {
 
   /**
    * Calculate driver earnings for an assignment
+   * Returns both net earning and detailed breakdown
    */
-  private async calculateDriverEarnings(assignment: any): Promise<number> {
+  private async calculateDriverEarnings(assignment: any): Promise<{
+    netEarning: number;
+    earningsBreakdown: {
+      basePayout: number;
+      distanceEarning: number;
+      weightCompensation: number;
+      peakHourBonus: number;
+      urgencyBonus: number;
+      onTimeBonus: number;
+      qualityBonus: number;
+      platformCommission: number;
+      customerTip: number;
+      grossEarning: number;
+      netEarning: number;
+    };
+  }> {
     try {
       // Import pricing repository for configurable rates
       const pricingRepo = await import("../pricing/pricing.repository").then(
@@ -401,7 +422,22 @@ class DriversService {
         grossEarning - platformCommission + customerTip,
       );
 
-      return netEarning;
+      return {
+        netEarning,
+        earningsBreakdown: {
+          basePayout: Math.round(basePayout),
+          distanceEarning: Math.round(distanceEarning),
+          weightCompensation: Math.round(weightCompensation),
+          peakHourBonus: Math.round(peakHourBonus),
+          urgencyBonus: Math.round(urgencyBonus),
+          onTimeBonus: Math.round(onTimeBonus),
+          qualityBonus: Math.round(qualityBonus),
+          platformCommission: Math.round(platformCommission),
+          customerTip: Math.round(customerTip),
+          grossEarning: Math.round(grossEarning),
+          netEarning,
+        },
+      };
     } catch (error) {
       logger.error({
         msg: "Error calculating driver earnings",
@@ -409,7 +445,25 @@ class DriversService {
         error: (error as Error).message,
       });
       // Fallback to simple calculation
-      return Math.round(Number.parseFloat(assignment.total_price) * 0.7);
+      const fallbackNetEarning = Math.round(
+        Number.parseFloat(assignment.total_price) * 0.7,
+      );
+      return {
+        netEarning: fallbackNetEarning,
+        earningsBreakdown: {
+          basePayout: 0,
+          distanceEarning: 0,
+          weightCompensation: 0,
+          peakHourBonus: 0,
+          urgencyBonus: 0,
+          onTimeBonus: 0,
+          qualityBonus: 0,
+          platformCommission: 0,
+          customerTip: 0,
+          grossEarning: fallbackNetEarning,
+          netEarning: fallbackNetEarning,
+        },
+      };
     }
   }
 

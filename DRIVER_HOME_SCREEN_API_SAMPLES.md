@@ -267,7 +267,16 @@ Authorization: Bearer <jwt_token>
         "minWeightKg": 0.0,
         "maxWeightKg": 1.0
       },
-      "totalPrice": 95.0,
+      "pricing": {
+        "basePrice": 40.0,
+        "distancePrice": 47.6,
+        "weightSurcharge": 0.0,
+        "platformFee": 10.0,
+        "specialHandlingFee": 15.0,
+        "gstAmount": 20.27,
+        "subtotalBeforeTax": 112.6,
+        "totalPrice": 132.87
+      },
       "packageDescription": "Food delivery",
       "specialInstructions": null,
       "estimatedDistanceKm": 6.8,
@@ -366,16 +375,6 @@ Authorization: Bearer <jwt_token>
       "declaredValue": 5000.0,
       "estimatedDistanceKm": 12.5,
       "actualDistanceKm": null,
-      "pricing": {
-        "basePrice": 50.0,
-        "distancePrice": 100.0,
-        "weightSurcharge": 0.0,
-        "platformFee": 10.0,
-        "specialHandlingFee": 0.0,
-        "gstAmount": 22.0,
-        "subtotalBeforeTax": 160.0,
-        "totalPrice": 182.0
-      },
       "driverEarnings": 85.0,
       "earningsBreakdown": {
         "basePayout": 35,
