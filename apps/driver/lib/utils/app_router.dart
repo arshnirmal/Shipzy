@@ -19,28 +19,36 @@ part 'app_router.g.dart';
 
 @riverpod
 GoRouter router(Ref ref) {
-  final authState = ref.watch(authProvider);
-
   return GoRouter(
-    initialLocation: '/',
-
+    initialLocation: '/login', // Changed initialLocation
     redirect: (context, state) {
-      final isLoggedIn = authState.value != null;
-      final isLoggingIn = state.uri.path == '/login';
-      final isRegistering = state.uri.path == '/register';
+      final authState = ref.watch(authProvider);
 
-      if (!isLoggedIn && !isLoggingIn && !isRegistering) {
-        return '/login';
-      }
-
-      if (isLoggedIn && (isLoggingIn || isRegistering)) {
-        return '/home';
-      }
-
-      return null;
+      return authState.when(
+        data: (auth) {
+          return auth.maybeWhen(
+            authenticated: (user, {required isNewUser}) {
+              // User is authenticated
+              if (state.matchedLocation == '/login' || state.matchedLocation == '/register') {
+                return '/home'; // Redirect to home if trying to access auth screens
+              }
+              return null; // Allow access
+            },
+            unauthenticated: () {
+              // User is not authenticated
+              if (state.matchedLocation != '/login' && state.matchedLocation != '/register') {
+                return '/login'; // Redirect to login if trying to access protected screens
+              }
+              return null; // Allow access
+            },
+            orElse: () => null,
+          );
+        },
+        loading: () => null, // Wait while loading
+        error: (_, __) => '/login', // Redirect to login on error
+      );
     },
     routes: [
-      GoRoute(path: '/', redirect: (_, __) => '/home'),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
