@@ -60,6 +60,10 @@ interface FareBreakdown {
   distanceKm: number;
   distancePrice: number;
   weightSurcharge: number;
+  platformFee?: number;
+  specialHandlingFee?: number;
+  subtotalBeforeTax?: number;
+  gstAmount?: number;
   totalPrice: number;
   currency: string;
 }
@@ -70,8 +74,14 @@ class OrdersService {
    */
   async calculateFare(fareData: FareData): Promise<any> {
     try {
-      const { deliveryTypeId, vehicleCategoryId, weightTierId, packageTypeId, pickup, drop } =
-        fareData;
+      const {
+        deliveryTypeId,
+        vehicleCategoryId,
+        weightTierId,
+        packageTypeId,
+        pickup,
+        drop,
+      } = fareData;
 
       // Validate inputs
       if (
@@ -375,6 +385,16 @@ class OrdersService {
           distanceKm: orderData.fareBreakdown.distanceKm,
           distancePrice: orderData.fareBreakdown.distancePrice,
           weightSurcharge: orderData.fareBreakdown.weightSurcharge,
+          platformFee: orderData.fareBreakdown.platformFee || 10.0,
+          specialHandlingFee: orderData.fareBreakdown.specialHandlingFee || 0.0,
+          subtotalBeforeTax:
+            orderData.fareBreakdown.subtotalBeforeTax ||
+            orderData.fareBreakdown.basePrice +
+              orderData.fareBreakdown.distancePrice +
+              orderData.fareBreakdown.weightSurcharge +
+              (orderData.fareBreakdown.platformFee || 10.0) +
+              (orderData.fareBreakdown.specialHandlingFee || 0.0),
+          gstAmount: orderData.fareBreakdown.gstAmount,
           totalPrice: orderData.fareBreakdown.totalPrice,
           currency: orderData.fareBreakdown.currency,
         },
@@ -623,9 +643,13 @@ class OrdersService {
           distancePrice: Number.parseFloat(order.distance_price || "0"),
           weightSurcharge: Number.parseFloat(order.weight_surcharge || "0"),
           platformFee: Number.parseFloat(order.platform_fee || "0"),
-          specialHandlingFee: Number.parseFloat(order.special_handling_fee || "0"),
+          specialHandlingFee: Number.parseFloat(
+            order.special_handling_fee || "0",
+          ),
           gstAmount: Number.parseFloat(order.gst_amount || "0"),
-          subtotalBeforeTax: Number.parseFloat(order.subtotal_before_tax || "0"),
+          subtotalBeforeTax: Number.parseFloat(
+            order.subtotal_before_tax || "0",
+          ),
           totalPrice: Number.parseFloat(order.total_price),
         },
         packageDescription: order.package_description,
@@ -920,9 +944,13 @@ class OrdersService {
           distancePrice: Number.parseFloat(order.distance_price),
           weightSurcharge: Number.parseFloat(order.weight_surcharge),
           platformFee: Number.parseFloat(order.platform_fee || 0),
-          specialHandlingFee: Number.parseFloat(order.special_handling_fee || 0),
+          specialHandlingFee: Number.parseFloat(
+            order.special_handling_fee || 0,
+          ),
           gstAmount: Number.parseFloat(order.gst_amount || 0),
-          subtotalBeforeTax: Number.parseFloat(order.subtotal_before_tax || order.total_price),
+          subtotalBeforeTax: Number.parseFloat(
+            order.subtotal_before_tax || order.total_price,
+          ),
           totalPrice: Number.parseFloat(order.total_price),
         },
       },
@@ -934,8 +962,10 @@ class OrdersService {
       platformFee: Number.parseFloat(order.platform_fee || 0),
       specialHandlingFee: Number.parseFloat(order.special_handling_fee || 0),
       gstAmount: Number.parseFloat(order.gst_amount || 0),
-      subtotalBeforeTax: Number.parseFloat(order.subtotal_before_tax || order.total_price),
-      currency: 'INR',
+      subtotalBeforeTax: Number.parseFloat(
+        order.subtotal_before_tax || order.total_price,
+      ),
+      currency: "INR",
 
       // Total price (for backward compatibility and quick access)
       totalPrice: Number.parseFloat(order.total_price),

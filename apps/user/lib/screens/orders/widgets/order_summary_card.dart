@@ -109,23 +109,23 @@ class OrderSummaryCard extends StatelessWidget {
     // Try to create FareBreakdown from Order first
     if (order != null) {
       final dist = order!.actualDistanceKm ?? order!.estimatedDistanceKm;
-      if (order!.basePrice != null &&
-          order!.distancePrice != null &&
-          order!.weightSurcharge != null &&
-          order!.platformFee != null &&
-          order!.specialHandlingFee != null &&
-          order!.gstAmount != null &&
-          order!.subtotalBeforeTax != null &&
-          dist != null) {
+      if (order!.basePrice != null && order!.distancePrice != null && order!.weightSurcharge != null && dist != null) {
+        // Calculate missing values if needed
+        final platformFee = order!.platformFee ?? 10.0;
+        final specialHandlingFee = order!.specialHandlingFee ?? 0.0;
+        final subtotalBeforeTax =
+            order!.subtotalBeforeTax ?? (order!.basePrice! + order!.distancePrice! + order!.weightSurcharge! + platformFee + specialHandlingFee);
+        final gstAmount = order!.gstAmount ?? (subtotalBeforeTax * 0.18);
+
         return FareBreakdown(
           basePrice: order!.basePrice!,
           distanceKm: dist,
           distancePrice: order!.distancePrice!,
           weightSurcharge: order!.weightSurcharge!,
-          platformFee: order!.platformFee!,
-          specialHandlingFee: order!.specialHandlingFee!,
-          subtotalBeforeTax: order!.subtotalBeforeTax!,
-          gstAmount: order!.gstAmount!,
+          platformFee: platformFee,
+          specialHandlingFee: specialHandlingFee,
+          subtotalBeforeTax: subtotalBeforeTax,
+          gstAmount: gstAmount,
           totalPrice: order!.totalPrice,
           currency: order!.currency ?? 'INR',
         );

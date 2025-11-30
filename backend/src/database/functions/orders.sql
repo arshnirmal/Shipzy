@@ -229,8 +229,11 @@ BEGIN
     v_weight_surcharge := (p_order_data->'fareBreakdown'->>'weightSurcharge')::NUMERIC;
     v_platform_fee := COALESCE((p_order_data->'fareBreakdown'->>'platformFee')::NUMERIC, 10.00);
     v_special_handling_fee := COALESCE((p_order_data->'fareBreakdown'->>'specialHandlingFee')::NUMERIC, 0.00);
-    v_gst_amount := (p_order_data->'fareBreakdown'->>'gstAmount')::NUMERIC;
+    -- Calculate subtotal before tax
     v_subtotal_before_tax := COALESCE((p_order_data->'fareBreakdown'->>'subtotalBeforeTax')::NUMERIC, v_base_price + v_distance_price + v_weight_surcharge + v_platform_fee + v_special_handling_fee);
+
+    -- Extract GST amount with fallback calculation (18% of subtotal if not provided)
+    v_gst_amount := COALESCE((p_order_data->'fareBreakdown'->>'gstAmount')::NUMERIC, ROUND(v_subtotal_before_tax * 0.18, 2));
     v_total_price := (p_order_data->'fareBreakdown'->>'totalPrice')::NUMERIC;
     
     -- Create pickup location
