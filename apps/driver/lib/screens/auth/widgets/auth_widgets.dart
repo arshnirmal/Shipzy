@@ -1,4 +1,4 @@
-// lib/screens/auth/widgets/auth_widgets.dart
+// lib/utils/auth_widgets.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -145,6 +145,7 @@ class AuthTextField extends StatelessWidget {
           onFieldSubmitted: onFieldSubmitted,
           inputFormatters: inputFormatters,
           autovalidateMode: autovalidateMode,
+          style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),

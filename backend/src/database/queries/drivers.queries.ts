@@ -195,10 +195,22 @@ export default {
           ca.assignment_status_id,
           ast.name AS assignment_status,
 
+          -- Vehicle and package info
+          vc.name AS vehicle_category,
+          vc.display_name AS vehicle_category_display,
+          pt.name AS package_type,
+          wt.tier_id AS weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max,
+
           -- Pickup location
           pl.address AS pickup_address,
-          pl.building AS pickup_building,
+          pl.building_name AS pickup_building,
           pl.landmark AS pickup_landmark,
+          pl.city AS pickup_city,
+          pl.state AS pickup_state,
+          pl.postal_code AS pickup_postal_code,
           ST_Y(pl.location::geometry) AS pickup_latitude,
           ST_X(pl.location::geometry) AS pickup_longitude,
           o.pickup_contact_name,
@@ -206,17 +218,32 @@ export default {
 
           -- Delivery location
           dl.address AS delivery_address,
-          dl.building AS delivery_building,
+          dl.building_name AS delivery_building,
           dl.landmark AS delivery_landmark,
+          dl.city AS delivery_city,
+          dl.state AS delivery_state,
+          dl.postal_code AS delivery_postal_code,
           ST_Y(dl.location::geometry) AS delivery_latitude,
           ST_X(dl.location::geometry) AS delivery_longitude,
           o.delivery_contact_name,
           o.delivery_contact_phone,
 
           o.package_description,
-          o.package_weight_kg,
-          o.total_price,
           o.special_instructions,
+          o.declared_value,
+          o.estimated_distance_km,
+          o.actual_distance_km,
+          -- Complete pricing breakdown
+          o.base_price,
+          o.distance_price,
+          o.weight_surcharge,
+          o.platform_fee,
+          o.special_handling_fee,
+          o.gst_amount,
+          o.total_before_tax,
+          o.total_price,
+
+          ca.customer_tip,
           ca.assigned_at,
           ca.accepted_at
       FROM orders.courier_assignments ca
@@ -225,6 +252,9 @@ export default {
       JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
+      LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
+      LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE ca.courier_id = $1
           AND ca.assignment_status_id NOT IN (
               SELECT status_id FROM public.assignment_statuses

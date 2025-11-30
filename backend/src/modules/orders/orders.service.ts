@@ -12,6 +12,7 @@ interface FareData {
   deliveryTypeId: number;
   vehicleCategoryId: number;
   weightTierId: number;
+  packageTypeId?: number;
   pickup: {
     lat: number;
     lng: number;
@@ -69,7 +70,7 @@ class OrdersService {
    */
   async calculateFare(fareData: FareData): Promise<any> {
     try {
-      const { deliveryTypeId, vehicleCategoryId, weightTierId, pickup, drop } =
+      const { deliveryTypeId, vehicleCategoryId, weightTierId, packageTypeId, pickup, drop } =
         fareData;
 
       // Validate inputs
@@ -123,12 +124,13 @@ class OrdersService {
         distanceKm,
       });
 
-      // Calculate fare using the distance and weight tier
+      // Calculate fare using the distance, weight tier, and package type
       const fareResult = await ordersRepository.calculateFare(
         deliveryTypeId,
         vehicleCategoryId,
         distanceKm,
         weightTierId,
+        packageTypeId,
       );
 
       if (!fareResult.success) {
@@ -603,23 +605,51 @@ class OrdersService {
         orderUuid: order.order_uuid,
         orderNumber: order.order_number,
         deliveryType: order.delivery_type,
-        totalPrice: Number.parseFloat(order.total_price),
+        deliveryTypeDisplay: order.delivery_type_display,
+        vehicleCategory: order.vehicle_category,
+        vehicleCategoryDisplay: order.vehicle_category_display,
+        packageType: order.package_type,
+        weightTier: order.weight_tier_name
+          ? {
+              id: order.weight_tier_id,
+              name: order.weight_tier_name,
+              minWeightKg: Number.parseFloat(order.weight_tier_min || "0"),
+              maxWeightKg: Number.parseFloat(order.weight_tier_max || "0"),
+            }
+          : null,
+        // Enhanced pricing breakdown
+        pricing: {
+          basePrice: Number.parseFloat(order.base_price || "0"),
+          distancePrice: Number.parseFloat(order.distance_price || "0"),
+          weightSurcharge: Number.parseFloat(order.weight_surcharge || "0"),
+          platformFee: Number.parseFloat(order.platform_fee || "0"),
+          specialHandlingFee: Number.parseFloat(order.special_handling_fee || "0"),
+          gstAmount: Number.parseFloat(order.gst_amount || "0"),
+          subtotalBeforeTax: Number.parseFloat(order.subtotal_before_tax || "0"),
+          totalPrice: Number.parseFloat(order.total_price),
+        },
         packageDescription: order.package_description,
-        packageWeightKg: Number.parseFloat(order.package_weight_kg),
+        specialInstructions: order.special_instructions,
+        estimatedDistanceKm: order.estimated_distance_km
+          ? Number.parseFloat(order.estimated_distance_km)
+          : null,
         createdAt: order.created_at,
         pickup: {
           address: order.pickup_address,
           landmark: order.pickup_landmark,
+          city: order.pickup_city,
+          state: order.pickup_state,
           latitude: Number.parseFloat(order.pickup_latitude),
           longitude: Number.parseFloat(order.pickup_longitude),
         },
         delivery: {
           address: order.delivery_address,
+          city: order.delivery_city,
+          state: order.delivery_state,
         },
         distanceFromCourierKm: Number.parseFloat(
           order.distance_from_courier_km,
         ),
-        estimatedDistanceKm: Number.parseFloat(order.estimated_distance_km),
       }));
     } catch (error) {
       logger.error({
@@ -889,9 +919,23 @@ class OrdersService {
           basePrice: Number.parseFloat(order.base_price),
           distancePrice: Number.parseFloat(order.distance_price),
           weightSurcharge: Number.parseFloat(order.weight_surcharge),
+          platformFee: Number.parseFloat(order.platform_fee || 0),
+          specialHandlingFee: Number.parseFloat(order.special_handling_fee || 0),
+          gstAmount: Number.parseFloat(order.gst_amount || 0),
+          subtotalBeforeTax: Number.parseFloat(order.subtotal_before_tax || order.total_price),
           totalPrice: Number.parseFloat(order.total_price),
         },
       },
+
+      // Enhanced pricing breakdown (direct fields for frontend Order model)
+      basePrice: Number.parseFloat(order.base_price),
+      distancePrice: Number.parseFloat(order.distance_price),
+      weightSurcharge: Number.parseFloat(order.weight_surcharge),
+      platformFee: Number.parseFloat(order.platform_fee || 0),
+      specialHandlingFee: Number.parseFloat(order.special_handling_fee || 0),
+      gstAmount: Number.parseFloat(order.gst_amount || 0),
+      subtotalBeforeTax: Number.parseFloat(order.subtotal_before_tax || order.total_price),
+      currency: 'INR',
 
       // Total price (for backward compatibility and quick access)
       totalPrice: Number.parseFloat(order.total_price),

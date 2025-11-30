@@ -207,6 +207,9 @@ CREATE TABLE public.package_types (
     package_type_id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
+    special_handling_fee NUMERIC(10, 2) DEFAULT 0.00,
+    requires_special_handling BOOLEAN DEFAULT FALSE,
+    handling_description TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -477,17 +480,18 @@ VALUES
     );
 
 INSERT INTO
-    public.package_types (name, description)
+    public.package_types (name, description, special_handling_fee, requires_special_handling, handling_description)
 VALUES
-    ('Document', 'Document package'),
-    ('Food', 'Food package'),
-    ('Clothes', 'Clothes package'),
-    ('Electronics', 'Electronics package'),
-    ('Medicine', 'Medicine package'),
-    ('Gift', 'Gift package'),
-    ('Grocery', 'Grocery package'),
-    ('Pet Supplies', 'Pet Supplies package'),
-    ('Other', 'Other package');
+    ('Document', 'Document package', 0.00, FALSE, NULL),
+    ('Food', 'Food package', 15.00, TRUE, 'Perishable items - maintain temperature'),
+    ('Clothes', 'Clothes package', 0.00, FALSE, NULL),
+    ('Electronics', 'Electronics package', 25.00, TRUE, 'Fragile electronics - handle with extra care'),
+    ('Medicine', 'Medicine package', 20.00, TRUE, 'Medical supplies - urgent delivery required'),
+    ('Gift', 'Gift package', 20.00, TRUE, 'Special occasion items - careful packaging'),
+    ('Grocery', 'Grocery package', 0.00, FALSE, NULL),
+    ('Pet Supplies', 'Pet Supplies package', 0.00, FALSE, NULL),
+    ('Other', 'Other package', 0.00, FALSE, NULL);
+
 
 -- ============================================================
 -- 4. DELIVERY TYPE CAPABILITIES
@@ -821,6 +825,39 @@ CREATE TRIGGER set_timestamp_users_business_accounts BEFORE
 UPDATE
     ON users.business_accounts FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
 
+-- ============================================================
+-- PRICING CONFIGURATION
+-- ============================================================
+
+CREATE TABLE public.pricing_config (
+    config_id SERIAL PRIMARY KEY,
+    config_key VARCHAR(50) UNIQUE NOT NULL,
+    -- 'platform_fee', 'gst_rate', 'driver_commission_rate', etc.
+    config_value NUMERIC(10, 4) NOT NULL,
+    -- Store as decimal (e.g., 0.18 for 18%)
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    updated_by INT REFERENCES users.profiles(user_id),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TRIGGER set_timestamp_pricing_config
+    BEFORE UPDATE ON public.pricing_config
+    FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+-- Insert default pricing configuration
+INSERT INTO public.pricing_config (config_key, config_value, description) VALUES
+    ('platform_fee', 10.00, 'Fixed platform fee added to all orders'),
+    ('gst_rate', 0.18, 'GST rate applied to taxable amount (18%)'),
+    ('driver_commission_rate', 0.70, 'Driver commission rate (70% of base fare)'),
+    ('driver_distance_rate', 0.65, 'Driver earnings rate for distance charges'),
+    ('driver_weight_rate', 0.60, 'Driver earnings rate for weight surcharges'),
+    ('peak_hour_bonus_rate', 0.15, 'Peak hour bonus as percentage of base payout'),
+    ('urgency_bonus_amount', 15.00, 'Fixed bonus for urgent deliveries'),
+    ('on_time_bonus_rate', 0.05, 'On-time delivery bonus rate'),
+    ('quality_bonus_amount', 5.00, 'Quality bonus for good ratings');
+
 -- ===================================================================
 -- SECTION 6: LOGISTICS SCHEMA
 -- ===================================================================
@@ -934,6 +971,10 @@ CREATE TABLE orders.requests (
     base_price NUMERIC(10, 2) NOT NULL,
     distance_price NUMERIC(10, 2) DEFAULT 0.00,
     weight_surcharge NUMERIC(10, 2) DEFAULT 0.00,
+    platform_fee NUMERIC(10, 2) DEFAULT 10.00,
+    special_handling_fee NUMERIC(10, 2) DEFAULT 0.00,
+    subtotal_before_tax NUMERIC(10, 2) DEFAULT 0.00,
+    gst_amount NUMERIC(10, 2) DEFAULT 0.00,
     total_price NUMERIC(10, 2) NOT NULL,
     -- Payment
     payment_method_id INT NOT NULL REFERENCES public.payment_methods (method_id),

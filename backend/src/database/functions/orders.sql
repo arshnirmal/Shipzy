@@ -12,26 +12,54 @@ CREATE OR REPLACE FUNCTION orders.calculate_fare(
     p_delivery_type_id INT,
     p_vehicle_category_id INT,
     p_distance_km NUMERIC,
-    p_weight_tier_id INT
+    p_weight_tier_id INT,
+    p_package_type_id INT DEFAULT NULL
 )
 RETURNS JSON
 LANGUAGE plpgsql
 STABLE
 AS $$
 DECLARE
+    -- Pricing configuration variables
+    v_platform_fee NUMERIC;
+    v_gst_rate NUMERIC;
+    v_special_handling_fee NUMERIC := 0;
+
+    -- Base calculation variables
     v_base_rate NUMERIC;
     v_per_km_rate NUMERIC;
     v_weight_surcharge NUMERIC := 0;
     v_base_price NUMERIC;
     v_distance_price NUMERIC;
+    v_subtotal_before_tax NUMERIC;
+    v_gst_amount NUMERIC;
     v_total_price NUMERIC;
     result JSON;
 BEGIN
     -- ============================================================
-    -- STEP 1: Validate that this combination is supported
+    -- STEP 1: Load pricing configuration
+    -- ============================================================
+
+    SELECT config_value INTO v_platform_fee
+    FROM public.pricing_config
+    WHERE config_key = 'platform_fee' AND is_active = TRUE;
+
+    SELECT config_value INTO v_gst_rate
+    FROM public.pricing_config
+    WHERE config_key = 'gst_rate' AND is_active = TRUE;
+
+    -- Get special handling fee from package type
+    IF p_package_type_id IS NOT NULL THEN
+        SELECT special_handling_fee INTO v_special_handling_fee
+        FROM public.package_types
+        WHERE package_type_id = p_package_type_id;
+    END IF;
+
+    -- ============================================================
+    -- STEP 2: Validate that this combination is supported
     -- ============================================================
     IF NOT EXISTS (
-        SELECT 1 
+        SELECT 1
         FROM public.delivery_type_capabilities dtc
         WHERE dtc.delivery_type_id = p_delivery_type_id
           AND dtc.vehicle_category_id = p_vehicle_category_id
@@ -44,16 +72,16 @@ BEGIN
             'error_code', 'INVALID_COMBINATION'
         );
     END IF;
-    
+
     -- ============================================================
-    -- STEP 2: Get base and per-km rates (with override support)
+    -- STEP 3: Get base and per-km rates (with override support)
     -- ============================================================
-    SELECT 
+    SELECT
         COALESCE(dtc.base_rate_override, dt.base_rate),
         COALESCE(dtc.per_km_rate_override, dt.per_km_rate)
     INTO v_base_rate, v_per_km_rate
     FROM public.delivery_types dt
-    LEFT JOIN public.delivery_type_capabilities dtc 
+    LEFT JOIN public.delivery_type_capabilities dtc
         ON dt.delivery_type_id = dtc.delivery_type_id
         AND dtc.vehicle_category_id = p_vehicle_category_id
         AND dtc.weight_tier_id = p_weight_tier_id
@@ -61,7 +89,7 @@ BEGIN
     WHERE dt.delivery_type_id = p_delivery_type_id
       AND dt.is_active = TRUE
     LIMIT 1;
-    
+
     IF NOT FOUND THEN
         RETURN json_build_object(
             'success', FALSE,
@@ -69,17 +97,17 @@ BEGIN
             'error_code', 'INVALID_DELIVERY_TYPE'
         );
     END IF;
-    
+
     -- ============================================================
-    -- STEP 3: Get weight tier surcharge and info
+    -- STEP 4: Get weight tier surcharge and info
     -- ============================================================
-    SELECT 
+    SELECT
         wt.additional_charge
-    INTO 
+    INTO
         v_weight_surcharge
     FROM public.weight_tiers wt
     WHERE wt.tier_id = p_weight_tier_id;
-    
+
     IF NOT FOUND THEN
         RETURN json_build_object(
             'success', FALSE,
@@ -87,16 +115,18 @@ BEGIN
             'error_code', 'INVALID_WEIGHT_TIER'
         );
     END IF;
-    
+
     -- ============================================================
-    -- STEP 4: Calculate final price
+    -- STEP 5: Calculate final price with configurable fees
     -- ============================================================
     v_base_price := v_base_rate;
     v_distance_price := ROUND(p_distance_km * v_per_km_rate, 2);
-    v_total_price := v_base_price + v_distance_price + v_weight_surcharge;
-    
+    v_subtotal_before_tax := v_base_price + v_distance_price + v_weight_surcharge + v_platform_fee + v_special_handling_fee;
+    v_gst_amount := ROUND(v_subtotal_before_tax * v_gst_rate, 2);
+    v_total_price := v_subtotal_before_tax + v_gst_amount;
+
     -- ============================================================
-    -- STEP 5: Return structured result
+    -- STEP 6: Return enhanced structured result
     -- ============================================================
     result := json_build_object(
         'success', TRUE,
@@ -105,13 +135,18 @@ BEGIN
             'distanceKm', p_distance_km,
             'distancePrice', v_distance_price,
             'weightSurcharge', v_weight_surcharge,
+            'platformFee', v_platform_fee,
+            'specialHandlingFee', v_special_handling_fee,
+            'subtotalBeforeTax', v_subtotal_before_tax,
+            'gstAmount', v_gst_amount,
             'totalPrice', v_total_price,
-            'currency', 'INR'
+            'currency', 'INR',
+            'gstRate', v_gst_rate
         )
     );
-    
+
     RETURN result;
-    
+
 EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object(
         'success', FALSE,
@@ -147,6 +182,10 @@ DECLARE
     v_base_price NUMERIC;
     v_distance_price NUMERIC;
     v_weight_surcharge NUMERIC;
+    v_platform_fee NUMERIC;
+    v_special_handling_fee NUMERIC;
+    v_gst_amount NUMERIC;
+    v_subtotal_before_tax NUMERIC;
     v_total_price NUMERIC;
     v_status_id INT;
     result JSON;
@@ -188,6 +227,10 @@ BEGIN
     v_base_price := (p_order_data->'fareBreakdown'->>'basePrice')::NUMERIC;
     v_distance_price := (p_order_data->'fareBreakdown'->>'distancePrice')::NUMERIC;
     v_weight_surcharge := (p_order_data->'fareBreakdown'->>'weightSurcharge')::NUMERIC;
+    v_platform_fee := COALESCE((p_order_data->'fareBreakdown'->>'platformFee')::NUMERIC, 10.00);
+    v_special_handling_fee := COALESCE((p_order_data->'fareBreakdown'->>'specialHandlingFee')::NUMERIC, 0.00);
+    v_gst_amount := (p_order_data->'fareBreakdown'->>'gstAmount')::NUMERIC;
+    v_subtotal_before_tax := COALESCE((p_order_data->'fareBreakdown'->>'subtotalBeforeTax')::NUMERIC, v_base_price + v_distance_price + v_weight_surcharge + v_platform_fee + v_special_handling_fee);
     v_total_price := (p_order_data->'fareBreakdown'->>'totalPrice')::NUMERIC;
     
     -- Create pickup location
@@ -267,6 +310,10 @@ BEGIN
         base_price,
         distance_price,
         weight_surcharge,
+        platform_fee,
+        special_handling_fee,
+        gst_amount,
+        subtotal_before_tax,
         total_price,
         payment_method_id,
         scheduled_pickup_time,
@@ -291,13 +338,17 @@ BEGIN
         v_base_price,
         v_distance_price,
         v_weight_surcharge,
+        v_platform_fee,
+        v_special_handling_fee,
+        v_gst_amount,
+        v_subtotal_before_tax,
         v_total_price,
         v_payment_method_id,
         (p_order_data->>'scheduledPickupTime')::TIMESTAMPTZ,
         (p_order_data->>'scheduledDeliveryTime')::TIMESTAMPTZ
     ) RETURNING order_id, order_uuid INTO v_order_id, v_order_uuid;
     
-    -- Build success response
+    -- Build success response with enhanced pricing details
     result := json_build_object(
         'success', true,
         'order', json_build_object(
@@ -305,7 +356,18 @@ BEGIN
             'orderUuid', v_order_uuid,
             'orderNumber', (SELECT order_number FROM orders.requests WHERE order_id = v_order_id),
             'status', 'pending',
-            'totalPrice', v_total_price,
+            'pricing', json_build_object(
+                'basePrice', v_base_price,
+                'distanceKm', (p_order_data->'fareBreakdown'->>'distanceKm')::NUMERIC,
+                'distancePrice', v_distance_price,
+                'weightSurcharge', v_weight_surcharge,
+                'platformFee', v_platform_fee,
+                'specialHandlingFee', v_special_handling_fee,
+                'subtotalBeforeTax', v_subtotal_before_tax,
+                'gstAmount', v_gst_amount,
+                'totalPrice', v_total_price,
+                'currency', 'INR'
+            ),
             'createdAt', NOW()
         )
     );

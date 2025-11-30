@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shipzy_driver/providers/auth_provider.dart';
-import 'package:shipzy_driver/screens/auth/widgets/auth_widgets.dart';
+
+import '../../providers/auth_provider.dart';
+import 'widgets/auth_widgets.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -100,21 +102,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Email Address Field
-                Text(
-                  'Email Address',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _emailController,
+                  label: 'Email Address',
+                  hintText: 'Enter email address',
                   keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'Enter email address',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.email_outlined),
-                  ),
+                  // autofocus: true, // Let's try autofocus
+                  prefixIcon: const Icon(Icons.email_outlined),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -126,25 +121,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 24),
 
                 // Password Field
-                Text(
-                  'Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _passwordController,
+                  label: 'Password',
+                  hintText: 'Enter password',
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
-                  enabled: !_isLoading,
                   onFieldSubmitted: (_) => _login(),
-                  decoration: InputDecoration(
-                    hintText: 'Enter password',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      onPressed: _togglePasswordVisibility,
-                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                    ),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    onPressed: _togglePasswordVisibility,
+                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -211,7 +198,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: SocialButton(
                         label: 'Google',
-                        icon: const Icon(Icons.g_mobiledata, size: 28),
+                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
                         onPressed: _isLoading ? null : _googleLogin,
                       ),
                     ),
@@ -219,7 +206,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Expanded(
                       child: SocialButton(
                         label: 'Apple',
-                        icon: const Icon(Icons.apple, size: 24),
+                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
                         onPressed: null, // TODO: Implement Apple sign-in
                       ),
                     ),

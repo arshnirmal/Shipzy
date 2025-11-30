@@ -134,46 +134,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Email Field
-                Text(
-                  'Email Address',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _emailController,
+                  label: 'Email Address',
+                  hintText: 'Enter email address',
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'Enter email address',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.email_outlined),
-                  ),
+                  prefixIcon: const Icon(Icons.email_outlined),
                   validator: AuthValidators.validateEmail,
                 ),
 
                 const SizedBox(height: 24),
 
                 // Password Field
-                Text(
-                  'Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _passwordController,
+                  label: 'Password',
+                  hintText: 'Enter password',
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   enabled: !_isLoading,
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(
-                    hintText: 'Enter password',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      onPressed: _togglePasswordVisibility,
-                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                    ),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    onPressed: _togglePasswordVisibility,
+                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                   ),
                   validator: AuthValidators.validatePassword,
                 ),

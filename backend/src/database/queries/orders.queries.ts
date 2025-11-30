@@ -12,7 +12,7 @@ export default {
    * Call stored function: Calculate fare
    */
   CALL_CALCULATE_FARE: `
-      SELECT orders.calculate_fare($1, $2, $3, $4) AS result
+      SELECT orders.calculate_fare($1, $2, $3, $4, $5) AS result
   `,
 
   /**
@@ -56,6 +56,10 @@ export default {
           o.base_price,
           o.distance_price,
           o.weight_surcharge,
+          o.platform_fee,
+          o.special_handling_fee,
+          o.gst_amount,
+          o.subtotal_before_tax,
           o.total_price,
           o.estimated_distance_km,
           o.actual_distance_km,
@@ -205,18 +209,42 @@ export default {
           o.delivery_type_id,
           dt.name AS delivery_type,
           dt.display_name AS delivery_type_display,
+          o.vehicle_category_id,
+          vc.name AS vehicle_category,
+          vc.display_name AS vehicle_category_display,
+          o.package_type_id,
+          pt.name AS package_type,
+          o.weight_tier_id,
+          wt.name AS weight_tier_name,
+          wt.min_weight_kg AS weight_tier_min,
+          wt.max_weight_kg AS weight_tier_max,
+          -- Pricing details
+          o.base_price,
+          o.distance_price,
+          o.weight_surcharge,
+          o.platform_fee,
+          o.special_handling_fee,
+          o.gst_amount,
+          o.subtotal_before_tax,
           o.total_price,
+
           o.package_description,
+          o.special_instructions,
+          o.estimated_distance_km,
           o.created_at,
 
           -- Pickup location
           pl.address AS pickup_address,
           pl.landmark AS pickup_landmark,
+          pl.city AS pickup_city,
+          pl.state AS pickup_state,
           ST_Y(pl.location::geometry) AS pickup_latitude,
           ST_X(pl.location::geometry) AS pickup_longitude,
 
           -- Delivery location
           dl.address AS delivery_address,
+          dl.city AS delivery_city,
+          dl.state AS delivery_state,
 
           -- Distance from courier
           ROUND(
@@ -224,13 +252,13 @@ export default {
                   pl.location,
                   ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
               )::numeric / 1000, 2
-          ) AS distance_from_courier_km,
-
-          -- Estimated distance between pickup and delivery
-          o.estimated_distance_km
+          ) AS distance_from_courier_km
 
       FROM orders.requests o
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
+      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
+      LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
+      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       WHERE o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'pending')

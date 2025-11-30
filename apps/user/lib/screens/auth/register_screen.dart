@@ -142,90 +142,59 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 32),
 
                 // Full Name Field
-                Text(
-                  'Full Name',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _fullNameController,
+                  label: 'Full Name',
+                  hintText: 'Enter full name',
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    hintText: 'Enter full name',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.person_outline),
-                  ),
+                  prefixIcon: const Icon(Icons.person_outline),
                   validator: AuthValidators.validateFullName,
                 ),
 
                 const SizedBox(height: 24),
 
                 // Email Field
-                Text(
-                  'Email Address',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _emailController,
+                  label: 'Email Address',
+                  hintText: 'Enter email address',
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'Enter email address',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.email_outlined),
-                  ),
+                  prefixIcon: const Icon(Icons.email_outlined),
                   validator: AuthValidators.validateEmail,
                 ),
 
                 const SizedBox(height: 24),
 
                 // Phone Number Field
-                Text(
-                  'Phone Number',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _phoneController,
+                  label: 'Phone Number',
+                  hintText: '9876543210',
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  maxLength: 10,
+                  prefixIcon: const Icon(Icons.phone_outlined),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    hintText: '9876543210',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.phone_outlined),
-                    counterText: '', // Hide counter if preferred, or keep it. I'll hide it to keep UI clean as per typical design
-                  ),
                   validator: AuthValidators.validatePhoneNumber,
                 ),
 
                 const SizedBox(height: 24),
 
                 // Password Field
-                Text(
-                  'Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _passwordController,
+                  label: 'Password',
+                  hintText: 'Enter password',
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'Enter password',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                    ),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                   ),
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (value) => AuthValidators.validatePassword(value, minLength: 8),
@@ -234,25 +203,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 24),
 
                 // Confirm Password Field
-                Text(
-                  'Confirm Password',
-                  style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
+                AuthTextField(
                   controller: _confirmPasswordController,
+                  label: 'Confirm Password',
+                  hintText: 'Re-enter password',
                   obscureText: _obscureConfirmPassword,
                   textInputAction: TextInputAction.done,
                   enabled: !_isLoading,
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(
-                    hintText: 'Re-enter password',
-                    hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                      icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                    ),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                    icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                   ),
                   validator: (value) => AuthValidators.validateConfirmPassword(value, _passwordController.text),
                 ),

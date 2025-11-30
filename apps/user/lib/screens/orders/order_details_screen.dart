@@ -102,6 +102,7 @@ class OrderDetailsScreen extends ConsumerWidget {
             deliveryType: order.deliveryTypeDisplay ?? 'N/A',
             distance: order.distance != null ? '${order.distance!.toStringAsFixed(1)} km' : null,
             weight: order.packageWeight != null ? '${order.packageWeight}' : null,
+            order: order,
             fare: '₹${order.totalFare}',
           ),
           const SizedBox(height: 16),
@@ -257,7 +258,6 @@ class OrderDetailsScreen extends ConsumerWidget {
   Widget _buildPaymentDetails(BuildContext context, Order order) {
     final theme = Theme.of(context);
     final payment = order.payment;
-    final breakdown = payment?.fareBreakdown;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -271,12 +271,28 @@ class OrderDetailsScreen extends ConsumerWidget {
         children: [
           Text('Payment Details', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          if (breakdown != null) ...[
-            _PaymentRow(label: 'Base Fare', value: '₹${breakdown.basePrice ?? 0}'),
+          if (order.basePrice != null) ...[
+            _PaymentRow(label: 'Base Fare', value: '₹${order.basePrice}'),
             const SizedBox(height: 8),
-            _PaymentRow(label: 'Distance Charge', value: '₹${breakdown.distancePrice ?? 0}'),
+          ],
+          if (order.distancePrice != null) ...[
+            _PaymentRow(label: 'Distance Charge', value: '₹${order.distancePrice}'),
             const SizedBox(height: 8),
-            _PaymentRow(label: 'Weight Surcharge', value: '₹${breakdown.weightSurcharge ?? 0}'),
+          ],
+          if (order.weightSurcharge != null && order.weightSurcharge! > 0) ...[
+            _PaymentRow(label: 'Weight Surcharge', value: '₹${order.weightSurcharge}'),
+            const SizedBox(height: 8),
+          ],
+          if (order.platformFee != null && order.platformFee! > 0) ...[
+            _PaymentRow(label: 'Platform Fee', value: '₹${order.platformFee}'),
+            const SizedBox(height: 8),
+          ],
+          if (order.specialHandlingFee != null && order.specialHandlingFee! > 0) ...[
+            _PaymentRow(label: 'Special Handling', value: '₹${order.specialHandlingFee}'),
+            const SizedBox(height: 8),
+          ],
+          if (order.gstAmount != null && order.gstAmount! > 0) ...[
+            _PaymentRow(label: 'GST', value: '₹${order.gstAmount}'),
             const Divider(height: 24),
           ],
           _PaymentRow(label: 'Total', value: '₹${order.totalFare}', isTotal: true),

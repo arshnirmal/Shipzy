@@ -23,7 +23,7 @@ class AuthService {
   }
 
   /// Google OAuth authentication
-  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'driver'}) async {
+  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'courier'}) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -48,7 +48,7 @@ class AuthService {
     required String email,
     required String password,
     required String phoneNumber,
-    String role = 'driver',
+    String role = 'courier',
   }) async {
     try {
       final deviceId = await _getDeviceId();

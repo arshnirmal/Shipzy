@@ -43,6 +43,10 @@ abstract class FareData with _$FareData {
     @JsonKey(name: 'distanceKm') required double distanceKm,
     @JsonKey(name: 'distancePrice') required double distancePrice,
     @JsonKey(name: 'weightSurcharge') required double weightSurcharge,
+    @JsonKey(name: 'platformFee') required double platformFee,
+    @JsonKey(name: 'specialHandlingFee') required double specialHandlingFee,
+    @JsonKey(name: 'subtotalBeforeTax') required double subtotalBeforeTax,
+    @JsonKey(name: 'gstAmount') required double gstAmount,
     @JsonKey(name: 'totalPrice') required double totalPrice,
     required String currency,
   }) = _FareData;

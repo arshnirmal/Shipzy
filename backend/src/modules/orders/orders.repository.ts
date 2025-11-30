@@ -12,6 +12,7 @@ class OrdersRepository {
     vehicleCategoryId: number,
     distanceKm: number,
     weightTierId: number,
+    packageTypeId?: number,
   ) {
     try {
       const result = await db.query(ordersQueries.CALL_CALCULATE_FARE, [
@@ -19,6 +20,7 @@ class OrdersRepository {
         vehicleCategoryId,
         distanceKm,
         weightTierId,
+        packageTypeId,
       ]);
 
       return result.rows[0].result;

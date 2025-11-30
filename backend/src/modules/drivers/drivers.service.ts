@@ -240,44 +240,176 @@ class DriversService {
     try {
       const assignments = await driversRepository.getActiveAssignments(userId);
 
-      return assignments.map((assignment) => ({
-        assignmentId: assignment.assignment_id,
-        orderId: assignment.order_id,
-        orderUuid: assignment.order_uuid,
-        orderNumber: assignment.order_number,
-        orderStatus: assignment.order_status,
-        assignmentStatus: assignment.assignment_status,
-        pickup: {
-          address: assignment.pickup_address,
-          building: assignment.pickup_building,
-          landmark: assignment.pickup_landmark,
-          latitude: Number.parseFloat(assignment.pickup_latitude),
-          longitude: Number.parseFloat(assignment.pickup_longitude),
-          contactName: assignment.pickup_contact_name,
-          contactPhone: assignment.pickup_contact_phone,
-        },
-        delivery: {
-          address: assignment.delivery_address,
-          building: assignment.delivery_building,
-          landmark: assignment.delivery_landmark,
-          latitude: Number.parseFloat(assignment.delivery_latitude),
-          longitude: Number.parseFloat(assignment.delivery_longitude),
-          contactName: assignment.delivery_contact_name,
-          contactPhone: assignment.delivery_contact_phone,
-        },
-        packageDescription: assignment.package_description,
-        packageWeightKg: Number.parseFloat(assignment.package_weight_kg),
-        totalPrice: Number.parseFloat(assignment.total_price),
-        specialInstructions: assignment.special_instructions,
-        assignedAt: assignment.assigned_at,
-        acceptedAt: assignment.accepted_at,
-      }));
+      // Calculate earnings for all assignments
+      const assignmentsWithEarnings = await Promise.all(
+        assignments.map(async (assignment) => ({
+          assignmentId: assignment.assignment_id,
+          orderId: assignment.order_id,
+          orderUuid: assignment.order_uuid,
+          orderNumber: assignment.order_number,
+          orderStatus: assignment.order_status,
+          assignmentStatus: assignment.assignment_status,
+          vehicleCategory: assignment.vehicle_category,
+          vehicleCategoryDisplay: assignment.vehicle_category_display,
+          packageType: assignment.package_type,
+          weightTier: assignment.weight_tier_name
+            ? {
+                id: assignment.weight_tier_id,
+                name: assignment.weight_tier_name,
+                minWeightKg: Number.parseFloat(
+                  assignment.weight_tier_min || "0",
+                ),
+                maxWeightKg: Number.parseFloat(
+                  assignment.weight_tier_max || "0",
+                ),
+              }
+            : null,
+          pickup: {
+            address: assignment.pickup_address,
+            building: assignment.pickup_building,
+            landmark: assignment.pickup_landmark,
+            city: assignment.pickup_city,
+            state: assignment.pickup_state,
+            postalCode: assignment.pickup_postal_code,
+            latitude: Number.parseFloat(assignment.pickup_latitude),
+            longitude: Number.parseFloat(assignment.pickup_longitude),
+            contactName: assignment.pickup_contact_name,
+            contactPhone: assignment.pickup_contact_phone,
+          },
+          delivery: {
+            address: assignment.delivery_address,
+            building: assignment.delivery_building,
+            landmark: assignment.delivery_landmark,
+            city: assignment.delivery_city,
+            state: assignment.delivery_state,
+            postalCode: assignment.delivery_postal_code,
+            latitude: Number.parseFloat(assignment.delivery_latitude),
+            longitude: Number.parseFloat(assignment.delivery_longitude),
+            contactName: assignment.delivery_contact_name,
+            contactPhone: assignment.delivery_contact_phone,
+          },
+          packageDescription: assignment.package_description,
+          specialInstructions: assignment.special_instructions,
+          declaredValue: assignment.declared_value
+            ? Number.parseFloat(assignment.declared_value)
+            : null,
+          estimatedDistanceKm: assignment.estimated_distance_km
+            ? Number.parseFloat(assignment.estimated_distance_km)
+            : null,
+          actualDistanceKm: assignment.actual_distance_km
+            ? Number.parseFloat(assignment.actual_distance_km)
+            : null,
+          driverEarnings: await this.calculateDriverEarnings(assignment),
+          estimatedDeliveryTime: Math.ceil(
+            (Number.parseFloat(assignment.estimated_distance_km || "10") / 25) *
+              60,
+          ), // Estimate based on 25km/h average speed
+          assignedAt: assignment.assigned_at,
+          acceptedAt: assignment.accepted_at,
+        })),
+      );
+
+      return assignmentsWithEarnings;
     } catch (error) {
       logger.error({
         msg: "Error getting driver assignments",
         error: (error as Error).message,
       });
       throw error;
+    }
+  }
+
+  /**
+   * Calculate driver earnings for an assignment
+   */
+  private async calculateDriverEarnings(assignment: any): Promise<number> {
+    try {
+      // Import pricing repository for configurable rates
+      const pricingRepo = await import("../pricing/pricing.repository").then(
+        (m) => m.default,
+      );
+
+      // Get configurable rates
+      const commissionRate =
+        (await pricingRepo.getPricingConfigValue("driver_commission_rate")) ||
+        0.7;
+      const distanceRate =
+        (await pricingRepo.getPricingConfigValue("driver_distance_rate")) ||
+        0.65;
+      const weightRate =
+        (await pricingRepo.getPricingConfigValue("driver_weight_rate")) || 0.6;
+      const peakHourBonusRate =
+        (await pricingRepo.getPricingConfigValue("peak_hour_bonus_rate")) ||
+        0.15;
+      const urgencyBonusAmount =
+        (await pricingRepo.getPricingConfigValue("urgency_bonus_amount")) ||
+        15.0;
+      const onTimeBonusRate =
+        (await pricingRepo.getPricingConfigValue("on_time_bonus_rate")) || 0.05;
+      const qualityBonusAmount =
+        (await pricingRepo.getPricingConfigValue("quality_bonus_amount")) ||
+        5.0;
+
+      const basePrice = Number.parseFloat(assignment.base_price || "0");
+      const distancePrice = Number.parseFloat(assignment.distance_price || "0");
+      const weightSurcharge = Number.parseFloat(
+        assignment.weight_surcharge || "0",
+      );
+
+      // Base earnings using configurable rates
+      const basePayout = basePrice * commissionRate;
+      const distanceEarning = distancePrice * distanceRate;
+      const weightCompensation = weightSurcharge * weightRate;
+
+      // Peak hour bonus
+      const pickupTime = new Date(assignment.assigned_at);
+      const hour = pickupTime.getHours();
+      const isPeakHour =
+        (hour >= 8 && hour < 10) ||
+        (hour >= 12 && hour < 14) ||
+        (hour >= 18 && hour < 21);
+      const peakHourBonus = isPeakHour ? basePayout * peakHourBonusRate : 0;
+
+      // Urgency bonus for "Deliver Now"
+      const urgencyBonus =
+        assignment.delivery_type === "deliver_now" ? urgencyBonusAmount : 0;
+
+      // On-time delivery bonus (simplified)
+      const onTimeBonus =
+        Math.random() > 0.7 ? basePayout * onTimeBonusRate : 0;
+
+      // Quality bonus
+      const qualityBonus = qualityBonusAmount;
+
+      // Calculate gross earning
+      const grossEarning =
+        basePayout +
+        distanceEarning +
+        weightCompensation +
+        peakHourBonus +
+        urgencyBonus +
+        onTimeBonus +
+        qualityBonus;
+
+      // Platform commission
+      const platformCommission = (basePayout + distanceEarning) * 0.15;
+
+      // Customer tip (100% to driver)
+      const customerTip = Number.parseFloat(assignment.customer_tip || "0");
+
+      const netEarning = Math.round(
+        grossEarning - platformCommission + customerTip,
+      );
+
+      return netEarning;
+    } catch (error) {
+      logger.error({
+        msg: "Error calculating driver earnings",
+        assignmentId: assignment.assignment_id,
+        error: (error as Error).message,
+      });
+      // Fallback to simple calculation
+      return Math.round(Number.parseFloat(assignment.total_price) * 0.7);
     }
   }
 

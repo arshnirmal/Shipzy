@@ -71,13 +71,7 @@ class Auth extends _$Auth {
   Future<AuthResult> createUserWithEmailAndPassword(String email, String password, {String? fullName, String? phoneNumber}) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.register(
-        fullName: fullName ?? '',
-        email: email,
-        password: password,
-        phoneNumber: phoneNumber ?? '',
-        role: 'driver',
-      );
+      final response = await authService.register(fullName: fullName ?? '', email: email, password: password, phoneNumber: phoneNumber ?? '');
 
       await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 

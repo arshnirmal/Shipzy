@@ -1,105 +1,164 @@
 import 'package:flutter/material.dart';
-import 'package:shipzy_driver/widgets/map_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../models/driver_home_state.dart';
+import '../../providers/home_provider.dart';
+import 'widgets/active_order_card.dart';
+import 'widgets/available_order_card.dart';
+import 'widgets/quick_actions_grid.dart';
+import 'widgets/stats_grid.dart';
+import 'widgets/status_card.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final _scrollController = ScrollController();
+  bool _isStatusCollapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final shouldCollapse = _scrollController.offset > 100;
+    if (shouldCollapse != _isStatusCollapsed) {
+      setState(() => _isStatusCollapsed = shouldCollapse);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // final driverTheme = theme.extension<DriverThemeExtension>(); // Removed incorrect usage
+    final homeState = ref.watch(driverHomeProvider);
+    final dailyStatsAsync = ref.watch(dailyStatsProvider);
+    final nearbyOrdersAsync = ref.watch(nearbyOrdersProvider);
+    final activeOrderAsync = ref.watch(activeOrderProvider);
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: const Text('Shipzy Driver'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         actions: [
-          Switch(
-            value: true, // TODO: Connect to online/offline state
-            onChanged: (value) {},
-          ),
-          const SizedBox(width: 16),
+          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () {}),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildStatsCard(theme),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 200,
-                child: ClipRRect(borderRadius: BorderRadius.circular(12), child: const MapWidget()),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Refresh all providers
+          ref.invalidate(dailyStatsProvider);
+          ref.invalidate(nearbyOrdersProvider);
+          ref.invalidate(activeOrderProvider);
+          await Future.delayed(const Duration(seconds: 1));
+        },
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    StatusCard(
+                      status: homeState.status,
+                      isLoading: homeState.isLoading,
+                      onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
+                    ),
+
+                    if (homeState.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Text(homeState.error!, style: const TextStyle(color: Colors.red)),
+                      ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 24),
-              Text('Available Orders', style: theme.textTheme.titleLarge), const SizedBox(height: 16),
-              _buildOrderCard(context),
-              // Add more order cards or empty state
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [_buildStatItem(theme, 'Today', '\$120.50'), _buildStatItem(theme, 'Orders', '5'), _buildStatItem(theme, 'Hours', '4.5')],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(ThemeData theme, String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
-        ),
-        Text(label, style: theme.textTheme.bodySmall),
-      ],
-    );
-  }
-
-  Widget _buildOrderCard(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Order #12345', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(
-                  '\$15.00',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
-                ),
-              ],
             ),
-            const SizedBox(height: 8),
-            const Row(children: [Icon(Icons.location_on_outlined, size: 16), SizedBox(width: 4), Text('Pickup: 123 Main St')]),
-            const SizedBox(height: 4),
-            const Row(children: [Icon(Icons.flag_outlined, size: 16), SizedBox(width: 4), Text('Dropoff: 456 Elm St')]),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(onPressed: () {}, child: const Text('Reject')),
+
+            // Stats Grid (Show when Online or On Delivery)
+            if (homeState.status != DriverStatus.offline)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: dailyStatsAsync.when(
+                    data: (stats) => StatsGrid(stats: stats),
+                    loading: () => const Center(child: LinearProgressIndicator()),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(onPressed: () {}, child: const Text('Accept')),
+              ),
+
+            // Active Order Section
+            if (homeState.status == DriverStatus.onDelivery || activeOrderAsync.value != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: activeOrderAsync.when(
+                    data: (order) => order != null ? ActiveOrderCard(order: order, onNavigate: () {}, onCall: () {}) : const SizedBox.shrink(),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Text('Error: $err'),
+                  ),
                 ),
-              ],
+              ),
+
+            // Available Orders Section (Only when Online and NOT on delivery)
+            if (homeState.status == DriverStatus.online)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Available Orders', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      nearbyOrdersAsync.when(
+                        data: (orders) {
+                          if (orders.isEmpty) {
+                            return const Center(
+                              child: Padding(padding: EdgeInsets.all(32), child: Text('No orders nearby...')),
+                            );
+                          }
+                          return Column(
+                            children: orders
+                                .map(
+                                  (order) => AvailableOrderCard(
+                                    order: order,
+                                    onAccept: () => ref.read(driverHomeProvider.notifier).acceptOrder(order.orderId),
+                                    onReject: () => ref.read(driverHomeProvider.notifier).rejectOrder(order.orderId),
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, stack) => Text('Error loading orders: $err'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Quick Actions (Always visible)
+            const SliverToBoxAdapter(
+              child: Padding(padding: EdgeInsets.all(16), child: QuickActionsGrid()),
             ),
+
+            const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
           ],
         ),
       ),

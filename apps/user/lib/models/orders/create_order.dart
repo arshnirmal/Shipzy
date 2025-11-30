@@ -57,6 +57,10 @@ abstract class FareBreakdown with _$FareBreakdown {
     required double distanceKm,
     required double distancePrice,
     required double weightSurcharge,
+    required double platformFee,
+    required double specialHandlingFee,
+    required double subtotalBeforeTax,
+    required double gstAmount,
     required double totalPrice,
     required String currency,
   }) = _FareBreakdown;
@@ -94,6 +98,25 @@ abstract class CreateOrderResponse with _$CreateOrderResponse {
   factory CreateOrderResponse.fromJson(Map<String, dynamic> json) => _$CreateOrderResponseFromJson(json);
 }
 
+/// Enhanced pricing breakdown for created orders
+@freezed
+abstract class CreatedOrderPricing with _$CreatedOrderPricing {
+  const factory CreatedOrderPricing({
+    required double basePrice,
+    required double distanceKm,
+    required double distancePrice,
+    required double weightSurcharge,
+    required double platformFee,
+    required double specialHandlingFee,
+    required double subtotalBeforeTax,
+    required double gstAmount,
+    required double totalPrice,
+    required String currency,
+  }) = _CreatedOrderPricing;
+
+  factory CreatedOrderPricing.fromJson(Map<String, dynamic> json) => _$CreatedOrderPricingFromJson(json);
+}
+
 /// Created order data
 @freezed
 abstract class CreatedOrderData with _$CreatedOrderData {
@@ -102,7 +125,7 @@ abstract class CreatedOrderData with _$CreatedOrderData {
     required String orderUuid,
     required String orderNumber,
     required String status,
-    required double totalPrice,
+    required CreatedOrderPricing pricing,
     required DateTime createdAt,
   }) = _CreatedOrderData;
 

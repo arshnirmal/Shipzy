@@ -40,6 +40,15 @@ abstract class Order with _$Order {
     String? specialInstructions,
     String? cancellationReason,
     OrderCourier? courier,
+    // Enhanced pricing breakdown
+    double? basePrice,
+    double? distancePrice,
+    double? weightSurcharge,
+    double? platformFee,
+    double? specialHandlingFee,
+    double? gstAmount,
+    double? subtotalBeforeTax,
+    String? currency,
   }) = _Order;
 
   const Order._();
@@ -55,9 +64,9 @@ abstract class Order with _$Order {
   double get totalFare => totalPrice;
   double? get distance => actualDistanceKm ?? estimatedDistanceKm;
   String? get packageWeight => weightTierDisplay;
-  double? get baseFare => payment?.fareBreakdown?.basePrice;
-  double? get distanceCharge => payment?.fareBreakdown?.distancePrice;
-  double? get platformFee => payment?.fareBreakdown?.weightSurcharge;
+  double? get baseFare => basePrice;
+  double? get distanceCharge => distancePrice;
+
   String? get paymentMethod => payment?.paymentMethod;
 }
 
@@ -84,16 +93,9 @@ abstract class OrderLocation with _$OrderLocation {
 
 @freezed
 abstract class OrderPayment with _$OrderPayment {
-  const factory OrderPayment({String? paymentMethod, FareBreakdown? fareBreakdown}) = _OrderPayment;
+  const factory OrderPayment({String? paymentMethod}) = _OrderPayment;
 
   factory OrderPayment.fromJson(Map<String, dynamic> json) => _$OrderPaymentFromJson(json);
-}
-
-@freezed
-abstract class FareBreakdown with _$FareBreakdown {
-  const factory FareBreakdown({double? basePrice, double? distancePrice, double? weightSurcharge, double? totalPrice}) = _FareBreakdown;
-
-  factory FareBreakdown.fromJson(Map<String, dynamic> json) => _$FareBreakdownFromJson(json);
 }
 
 @freezed
