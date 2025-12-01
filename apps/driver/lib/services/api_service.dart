@@ -4,23 +4,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/active_order.dart';
 import '../models/available_order.dart';
 import '../models/daily_stats.dart';
+import '../models/driver_profile.dart';
+import '../providers/dio_provider.dart';
 
 part 'api_service.g.dart';
-
-@riverpod
-Dio dio(DioRef ref) {
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: 'http://localhost:3000/api/v1', // Using localhost for dev
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-    ),
-  );
-
-  dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
-
-  return dio;
-}
 
 @riverpod
 ApiService apiService(ApiServiceRef ref) => ApiService(ref.read(dioProvider));
@@ -39,8 +26,17 @@ class ApiService {
     return DailyStats(
       earnings: (data['earnings']['today'] as num).toDouble(),
       trips: data['deliveries']['today'] as int,
+      weeklyEarnings: (data['earnings']['thisWeek'] as num).toDouble(),
+      weeklyTrips: data['deliveries']['thisWeek'] as int,
+      totalEarnings: (data['earnings']['total'] as num).toDouble(),
+      totalTrips: data['deliveries']['total'] as int,
       averageRating: 4.9, // TODO: Backend doesn't return rating in earnings
     );
+  }
+
+  Future<DriverProfile> getDriverProfile() async {
+    final response = await _dio.get('/drivers/me');
+    return DriverProfile.fromJson(response.data['data']);
   }
 
   Future<List<AvailableOrder>> getAvailableOrders({required double latitude, required double longitude}) async {

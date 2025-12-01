@@ -415,8 +415,8 @@ class DriversService {
       // Platform commission
       const platformCommission = (basePayout + distanceEarning) * 0.15;
 
-      // Customer tip (100% to driver)
-      const customerTip = Number.parseFloat(assignment.customer_tip || "0");
+      // Customer tip (100% to driver) - TODO: Implement tips table
+      const customerTip = 0; // assignment.customer_tip when implemented
 
       const netEarning = Math.round(
         grossEarning - platformCommission + customerTip,

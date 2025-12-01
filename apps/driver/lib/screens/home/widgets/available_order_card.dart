@@ -5,12 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../models/available_order.dart';
 
 class AvailableOrderCard extends StatefulWidget {
-  const AvailableOrderCard({
-    required this.order,
-    required this.onAccept,
-    required this.onReject,
-    super.key,
-  });
+  const AvailableOrderCard({required this.order, required this.onAccept, required this.onReject, super.key});
 
   final AvailableOrder order;
   final VoidCallback onAccept;
@@ -54,192 +49,188 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: 16),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with distance and fare
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.blue, size: 20),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${widget.order.distanceFromCourierKm.toStringAsFixed(1)} km away',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              Text(
-                '💰 ₹${widget.order.pricing.totalPrice.toStringAsFixed(0)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
-              ),
-            ],
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-          const SizedBox(height: 12),
-
-          // Route information
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Route:',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${widget.order.pickup['address']} → ${widget.order.delivery['address']}',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Details
-          Row(
-            children: [
-              _buildChip(Icons.two_wheeler, widget.order.vehicleCategory),
-              const SizedBox(width: 8),
-              _buildChip(Icons.inventory_2, widget.order.packageType),
-              const Spacer(),
-              Text(
-                '⏱️ 8 mins away',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Countdown timer with progress bar
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _remainingSeconds < 10 ? Colors.red.shade50 : Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _remainingSeconds < 10 ? Colors.red.shade200 : Colors.orange.shade200,
-              ),
-            ),
-            child: Column(
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: isDark ? 4 : 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with distance and fare
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.timer,
-                      size: 16,
-                      color: _remainingSeconds < 10 ? Colors.red : Colors.orange,
-                    ),
+                    Icon(Icons.location_on, color: theme.colorScheme.primary, size: 20),
                     const SizedBox(width: 4),
                     Text(
-                      '⏳ Expires in ${_formatTime(_remainingSeconds)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: _remainingSeconds < 10 ? Colors.red : Colors.orange,
-                      ),
+                      '${widget.order.distanceFromCourierKm.toStringAsFixed(1)} km away',
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: _remainingSeconds / widget.order.expiresInSeconds,
-                  backgroundColor: Colors.grey.shade300,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _remainingSeconds < 10 ? Colors.red : Colors.orange,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Text(
-                  '${((_remainingSeconds / widget.order.expiresInSeconds) * 100).toInt()}% remaining',
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  '💰 ₹${widget.order.pricing.totalPrice.toStringAsFixed(0)}',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? theme.colorScheme.secondary : const Color(0xFF2E7D32),
+                  ),
                 ),
               ],
             ),
-          ),
 
-          const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-          // Action buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: widget.onReject,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+            // Route information
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Route:',
+                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                   ),
-                  child: const Text('❌ REJECT'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: widget.onAccept,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${widget.order.pickup['address']} → ${widget.order.delivery['address']}',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: const Text('✅ ACCEPT ORDER'),
-                ),
+                ],
               ),
-            ],
-          ),
-
-          // View Details button
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                // TODO: Open order details sheet
-              },
-              child: const Text('View Details'),
             ),
-          ),
+
+            const SizedBox(height: 12),
+
+            // Details
+            Row(
+              children: [
+                _buildChip(Icons.two_wheeler, widget.order.vehicleCategory),
+                const SizedBox(width: 8),
+                _buildChip(Icons.inventory_2, widget.order.packageType),
+                const Spacer(),
+                Text('⏱️ 8 mins away', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Countdown timer with progress bar
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _remainingSeconds < 10
+                    ? theme.colorScheme.errorContainer.withOpacity(0.2)
+                    : theme.colorScheme.tertiaryContainer.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _remainingSeconds < 10 ? theme.colorScheme.error.withOpacity(0.5) : theme.colorScheme.tertiary.withOpacity(0.5),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.timer, size: 16, color: _remainingSeconds < 10 ? theme.colorScheme.error : theme.colorScheme.tertiary),
+                      const SizedBox(width: 4),
+                      Text(
+                        '⏳ Expires in ${_formatTime(_remainingSeconds)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _remainingSeconds < 10 ? theme.colorScheme.error : theme.colorScheme.tertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: _remainingSeconds / widget.order.expiresInSeconds,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(_remainingSeconds < 10 ? theme.colorScheme.error : theme.colorScheme.tertiary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${((_remainingSeconds / widget.order.expiresInSeconds) * 100).toInt()}% remaining',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: widget.onReject,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      side: BorderSide(color: theme.colorScheme.error),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('❌ REJECT'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: widget.onAccept,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark ? theme.colorScheme.secondary : const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('✅ ACCEPT ORDER'),
+                  ),
+                ),
+              ],
+            ),
+
+            // View Details button
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  // TODO: Open order details sheet
+                },
+                child: const Text('View Details'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(IconData icon, String label) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(4)),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+          const SizedBox(width: 4),
+          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
         ],
       ),
-    ),
-  );
-
-  Widget _buildChip(IconData icon, String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade100,
-      borderRadius: BorderRadius.circular(4),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, size: 14, color: Colors.grey.shade700),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 
   String _formatTime(int seconds) {
     final minutes = seconds ~/ 60;

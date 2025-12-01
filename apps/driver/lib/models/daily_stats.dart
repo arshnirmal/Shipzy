@@ -11,6 +11,10 @@ class DailyStats with _$DailyStats {
     @Default(Duration.zero) Duration onlineTime,
     @Default(0.0) double averageRating,
     @Default(0.0) double lastEarning,
+    @Default(0.0) double weeklyEarnings,
+    @Default(0) int weeklyTrips,
+    @Default(0) int totalTrips,
+    @Default(0.0) double totalEarnings,
   }) = _DailyStats;
 
   factory DailyStats.fromJson(Map<String, dynamic> json) => _$DailyStatsFromJson(json);

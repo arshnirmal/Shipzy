@@ -5,7 +5,6 @@ import '../../models/driver_home_state.dart';
 import '../../providers/home_provider.dart';
 import 'widgets/active_order_card.dart';
 import 'widgets/available_order_card.dart';
-import 'widgets/mini_status_banner.dart';
 import 'widgets/quick_actions_grid.dart';
 import 'widgets/recent_activity_section.dart';
 import 'widgets/stats_grid.dart';
@@ -47,27 +46,104 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final dailyStatsAsync = ref.watch(dailyStatsProvider);
     final nearbyOrdersAsync = ref.watch(nearbyOrdersProvider);
     final activeOrderAsync = ref.watch(activeOrderProvider);
+    final driverProfileAsync = ref.watch(driverProfileProvider);
+
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      // backgroundColor: theme.scaffoldBackgroundColor, // Default behavior
       appBar: AppBar(
-        title: const Text('📱 Shipzy Driver'),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+          child: driverProfileAsync.when(
+            data: (profile) => CircleAvatar(
+              backgroundImage: profile.profilePictureUrl != null ? NetworkImage(profile.profilePictureUrl!) : null,
+              backgroundColor: theme.colorScheme.primaryContainer,
+              child: profile.profilePictureUrl == null
+                  ? Text(
+                      profile.fullName.isNotEmpty ? profile.fullName[0].toUpperCase() : '?',
+                      style: TextStyle(color: theme.colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+                    )
+                  : null,
+            ),
+            loading: () => const CircleAvatar(child: CircularProgressIndicator()),
+            error: (_, __) => const CircleAvatar(child: Icon(Icons.person)),
+          ),
+        ),
+        title: driverProfileAsync.when(
+          data: (profile) {
+            final isOnline = homeState.status == DriverStatus.online;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Name and Status Row
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        profile.fullName,
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Status Pill (Display Only)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isOnline ? Colors.green.withOpacity(0.1) : theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isOnline ? Colors.green : theme.dividerColor),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.circle, size: 8, color: isOnline ? Colors.green : Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            isOnline ? 'Online' : 'Offline',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: isOnline ? Colors.green : theme.textTheme.bodyMedium?.color,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                // Vehicle / Zone Info
+                if (profile.vehicle != null)
+                  Text(
+                    '${profile.vehicle!.model} • ${profile.vehicle!.vehicleNumber}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const Text('Shipzy Driver'),
+        ),
         actions: [
+          // SOS / Shield
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              // TODO: Implement SOS
+            },
+            icon: const Icon(Icons.shield_outlined),
+            tooltip: 'Safety Toolkit',
+          ),
+          // Notifications
+          IconButton(
             onPressed: () {
               // TODO: Open notifications
             },
+            icon: const Badge(label: Text('2'), child: Icon(Icons.notifications_outlined)),
+            tooltip: 'Notifications',
           ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              // TODO: Open settings
-            },
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
@@ -76,29 +152,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ref.invalidate(dailyStatsProvider);
           ref.invalidate(nearbyOrdersProvider);
           ref.invalidate(activeOrderProvider);
+          ref.invalidate(driverProfileProvider);
           await Future.delayed(const Duration(seconds: 1));
         },
         child: CustomScrollView(
           controller: _scrollController,
           slivers: [
-            // Status Card (Collapsible)
+            // Status Card
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: _isStatusCollapsed
-                    ? MiniStatusBanner(
-                        status: homeState.status,
-                        isLoading: homeState.isLoading,
-                        onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
-                      )
-                    : StatusCard(
-                        status: homeState.status,
-                        isLoading: homeState.isLoading,
-                        driverName: 'Amit', // TODO: Get from profile
-                        location: 'Andheri West', // TODO: Get from location
-                        onlineDuration: homeState.status == DriverStatus.online ? const Duration(hours: 2, minutes: 15) : null,
-                        onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
-                      ),
+                child: driverProfileAsync.when(
+                  data: (profile) => StatusCard(
+                    status: homeState.status,
+                    isLoading: homeState.isLoading,
+                    driverName: profile.fullName,
+                    location: 'Andheri West', // TODO: Get from location service
+                    onlineDuration: homeState.status == DriverStatus.online ? const Duration(hours: 2, minutes: 15) : null,
+                    onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
+                  ),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Container(
+                    padding: const EdgeInsets.all(16),
+                    color: theme.colorScheme.errorContainer,
+                    child: Text('Profile Error: $e', style: TextStyle(color: theme.colorScheme.error)),
+                  ),
+                ),
               ),
             ),
 
@@ -110,19 +189,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: theme.colorScheme.errorContainer,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
+                      border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
+                        Icon(Icons.error_outline, color: theme.colorScheme.error),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            homeState.error!,
-                            style: const TextStyle(color: Colors.red),
-                          ),
+                          child: Text(homeState.error!, style: TextStyle(color: theme.colorScheme.error)),
                         ),
                       ],
                     ),
@@ -130,15 +206,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
 
-            // Stats Grid (Show when Online or On Delivery)
-            if (homeState.status != DriverStatus.offline)
+            // Stats Grid (Always visible)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: dailyStatsAsync.when(
+                  data: (stats) => StatsGrid(stats: stats),
+                  loading: () => const Center(child: LinearProgressIndicator()),
+                  error: (err, stack) => Text('Error loading stats: $err', style: TextStyle(color: theme.colorScheme.error)),
+                ),
+              ),
+            ),
+
+            // Recent Activity Section (Only when Offline)
+            if (homeState.status == DriverStatus.offline)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: dailyStatsAsync.when(
-                    data: (stats) => StatsGrid(stats: stats),
-                    loading: () => const Center(child: LinearProgressIndicator()),
-                    error: (_, __) => const SizedBox.shrink(),
+                child: dailyStatsAsync.when(
+                  data: (stats) => RecentActivitySection(stats: stats),
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => Container(
+                    padding: const EdgeInsets.all(16),
+                    color: theme.colorScheme.errorContainer,
+                    child: Text('Error loading profile: $err', style: TextStyle(color: theme.colorScheme.error)),
                   ),
                 ),
               ),
@@ -174,10 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '📍 Available Orders Nearby (3)',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
+                      Text('📍 Available Orders Nearby (3)', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       nearbyOrdersAsync.when(
                         data: (orders) {
@@ -185,23 +271,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             return Container(
                               padding: const EdgeInsets.all(32),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: theme.cardColor,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
+                                border: Border.all(color: theme.dividerColor),
                               ),
-                              child: const Center(
+                              child: Center(
                                 child: Column(
                                   children: [
-                                    Icon(Icons.search_off, size: 48, color: Colors.grey),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      'No orders nearby...',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                                    ),
-                                    SizedBox(height: 8),
+                                    Icon(Icons.search_off, size: 48, color: theme.disabledColor),
+                                    const SizedBox(height: 16),
+                                    Text('No orders nearby...', style: theme.textTheme.bodyLarge?.copyWith(color: theme.disabledColor)),
+                                    const SizedBox(height: 8),
                                     Text(
                                       'Orders will appear here when available',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.disabledColor),
                                       textAlign: TextAlign.center,
                                     ),
                                   ],
@@ -228,14 +311,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         error: (err, stack) => Container(
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
-                            color: Colors.red.shade50,
+                            color: theme.colorScheme.errorContainer,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.red.shade200),
+                            border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
                           ),
                           child: Center(
                             child: Text(
                               'Error loading orders: $err',
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(color: theme.colorScheme.error),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -251,20 +334,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           },
                           icon: const Icon(Icons.refresh),
                           label: const Text('🔄 Refresh Orders'),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          ),
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-
-            // Recent Activity Section (Only when Offline)
-            if (homeState.status == DriverStatus.offline)
-              const SliverToBoxAdapter(
-                child: RecentActivitySection(),
               ),
 
             // Quick Actions (Always visible)
@@ -276,31 +351,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0, // Home tab
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: 'Orders',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.attach_money),
-            label: 'Earnings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-        onTap: (index) {
-          // TODO: Navigate to different tabs
-        },
       ),
     );
   }

@@ -93,9 +93,25 @@ abstract class OrderLocation with _$OrderLocation {
 
 @freezed
 abstract class OrderPayment with _$OrderPayment {
-  const factory OrderPayment({String? paymentMethod}) = _OrderPayment;
+  const factory OrderPayment({String? paymentMethod, OrderFareBreakdown? fareBreakdown}) = _OrderPayment;
 
   factory OrderPayment.fromJson(Map<String, dynamic> json) => _$OrderPaymentFromJson(json);
+}
+
+@freezed
+abstract class OrderFareBreakdown with _$OrderFareBreakdown {
+  const factory OrderFareBreakdown({
+    required double basePrice,
+    required double distancePrice,
+    required double weightSurcharge,
+    required double platformFee,
+    required double specialHandlingFee,
+    required double gstAmount,
+    required double subtotalBeforeTax,
+    required double totalPrice,
+  }) = _OrderFareBreakdown;
+
+  factory OrderFareBreakdown.fromJson(Map<String, dynamic> json) => _$OrderFareBreakdownFromJson(json);
 }
 
 @freezed

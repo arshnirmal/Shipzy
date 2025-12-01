@@ -33,7 +33,7 @@ export default {
           cv.model AS vehicle_model,
           cv.year AS vehicle_year,
           vc.name AS vehicle_category,
-          vc.max_weight_kg AS vehicle_max_weight
+          vc.max_weight_kg AS vehicle_max_weight,
           cs.created_at,
           cs.updated_at
       FROM users.profiles u
@@ -244,8 +244,6 @@ export default {
           o.gst_amount,
           o.subtotal_before_tax,
           o.total_price,
-
-          ca.customer_tip,
           ca.assigned_at,
           ca.accepted_at
       FROM orders.courier_assignments ca

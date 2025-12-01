@@ -60,7 +60,7 @@ class OrderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              RouteTimeline(pickupAddress: _shortenAddress(order.pickupAddress), deliveryAddress: _shortenAddress(order.deliveryAddress)),
+              RouteTimeline(pickupAddress: order.pickupAddress, deliveryAddress: order.deliveryAddress),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -90,14 +90,6 @@ class OrderCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _shortenAddress(String address) {
-    final parts = address.split(',');
-    if (parts.length >= 2) {
-      return '${parts[0].trim()}, ${parts[1].trim()}';
-    }
-    return address.length > 30 ? '${address.substring(0, 30)}...' : address;
   }
 }
 

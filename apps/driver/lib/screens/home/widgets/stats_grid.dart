@@ -7,72 +7,46 @@ class StatsGrid extends StatelessWidget {
   final DailyStats stats;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    child: Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            context,
-            '💰 Earnings',
-            '₹${stats.earnings.toStringAsFixed(0)}',
-            stats.lastEarning > 0 ? '+₹${stats.lastEarning.toStringAsFixed(0)}' : null,
-            Icons.attach_money,
-            Colors.green,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            context,
-            '📦 Trips',
-            stats.trips.toString(),
-            stats.averageRating > 0 ? '⭐ ${stats.averageRating.toStringAsFixed(1)}' : null,
-            Icons.local_shipping,
-            Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            context,
-            '⏱️ Online',
-            '${stats.onlineTime.inHours}h ${stats.onlineTime.inMinutes.remainder(60)}m',
-            '🎯 Active',
-            Icons.timer,
-            Colors.orange,
-          ),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
-  Widget _buildStatCard(BuildContext context, String label, String value, String? secondaryValue, IconData icon, Color color) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        if (secondaryValue != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            secondaryValue,
-            style: TextStyle(
-              fontSize: 11,
-              color: color.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Today's Summary", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: Row(
+              children: [
+                Expanded(child: _buildStatItem(context, '💰 Earnings', '₹${stats.earnings.toStringAsFixed(0)}')),
+                Container(width: 1, height: 40, color: theme.dividerColor),
+                Expanded(child: _buildStatItem(context, '📦 Deliveries', stats.trips.toString())),
+                Container(width: 1, height: 40, color: theme.dividerColor),
+                Expanded(child: _buildStatItem(context, '⏱️ Hours', '${stats.onlineTime.inHours}h ${stats.onlineTime.inMinutes.remainder(60)}m')),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall?.color)),
+        const SizedBox(height: 8),
+        Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
       ],
-    ),
-  );
+    );
+  }
 }

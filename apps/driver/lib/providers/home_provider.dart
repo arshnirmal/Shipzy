@@ -6,6 +6,7 @@ import '../models/active_order.dart';
 import '../models/available_order.dart';
 import '../models/daily_stats.dart';
 import '../models/driver_home_state.dart';
+import '../models/driver_profile.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 
@@ -93,4 +94,10 @@ Future<List<AvailableOrder>> nearbyOrders(NearbyOrdersRef ref) async {
 Future<ActiveOrder?> activeOrder(ActiveOrderRef ref) async {
   final apiService = ref.read(apiServiceProvider);
   return apiService.getActiveOrder();
+}
+
+@riverpod
+Future<DriverProfile> driverProfile(DriverProfileRef ref) async {
+  final apiService = ref.read(apiServiceProvider);
+  return apiService.getDriverProfile();
 }
