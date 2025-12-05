@@ -8,6 +8,7 @@ import {
   successResponse,
 } from "../../utils/response.util";
 import ordersService, { OrderData } from "./orders.service";
+import ratingsService from "../ratings/ratings.service";
 
 interface CalculateFareBody {
   deliveryTypeId: number;
@@ -29,6 +30,11 @@ interface OrderParams {
 
 interface CancelOrderBody {
   cancellationReason: string;
+}
+
+interface RateOrderBody {
+  rating: number;
+  comment?: string;
 }
 
 type ListOrdersQuery = {
@@ -381,6 +387,47 @@ class OrdersController {
     } catch (error) {
       logger.error({
         msg: "Update order status controller error",
+        error: (error as Error).message,
+      });
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/rate
+   * Rate a delivered order (customer only)
+   */
+  async rateOrder(
+    request: FastifyRequest<{
+      Params: OrderParams;
+      Body: RateOrderBody;
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { userId } = request.user!;
+      const { id } = request.params;
+      const { rating, comment } = request.body;
+
+      const result = await ratingsService.createRating({
+        orderId: Number.parseInt(id),
+        customerId: userId,
+        rating,
+        comment,
+      });
+
+      return successResponse(
+        reply,
+        result,
+        "Order rated successfully",
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Rate order controller error",
         error: (error as Error).message,
       });
       return errorResponse(

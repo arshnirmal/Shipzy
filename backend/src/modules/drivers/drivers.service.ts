@@ -20,10 +20,10 @@ interface DriverProfile {
     isAvailable: boolean;
     isOnline: boolean;
     totalDeliveriesToday: number;
-    lastLocationUpdate?: Date;
-    currentLocation: {
+    lastActiveLocation: {
       latitude: number;
       longitude: number;
+      updatedAt: Date;
     } | null;
   };
   vehicle: {
@@ -57,6 +57,10 @@ interface UpdateProfileData {
 interface UpdateAvailabilityData {
   isAvailable: boolean;
   isOnline?: boolean;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 interface LocationData {
@@ -89,12 +93,12 @@ class DriversService {
           isAvailable: driver.is_available,
           isOnline: driver.is_online,
           totalDeliveriesToday: driver.total_deliveries_today,
-          lastLocationUpdate: driver.last_location_update,
-          currentLocation:
+          lastActiveLocation:
             driver.current_latitude && driver.current_longitude
               ? {
                   latitude: Number.parseFloat(driver.current_latitude),
                   longitude: Number.parseFloat(driver.current_longitude),
+                  updatedAt: driver.last_location_update || new Date(),
                 }
               : null,
         },
@@ -164,20 +168,66 @@ class DriversService {
   }
 
   /**
-   * Toggle driver availability
+   * Update driver availability and manage sessions
    */
   async updateAvailability(
     userId: number,
     availabilityData: UpdateAvailabilityData,
   ): Promise<any> {
     try {
-      const { isAvailable, isOnline = false } = availabilityData;
+      const { isAvailable, isOnline = false, location } = availabilityData;
 
+      // Get current status before update
+      const currentProfile = await driversRepository.findCourierById(userId);
+      if (!currentProfile) {
+        throw new NotFoundError("Driver profile not found");
+      }
+
+      const currentIsOnline = currentProfile.is_online;
+      const currentIsAvailable = currentProfile.is_available;
+
+      // Update availability in database
       const result = await driversRepository.updateAvailability(
         userId,
         isAvailable,
         isOnline,
       );
+
+      // Update location if provided (this updates lastActiveLocation)
+      if (location) {
+        await driversRepository.updateLocation(
+          userId,
+          location.latitude,
+          location.longitude,
+        );
+      }
+
+      // Session management logic:
+      // Start session when driver becomes Online AND Available
+      if (
+        isOnline &&
+        isAvailable &&
+        (!currentIsOnline || !currentIsAvailable)
+      ) {
+        await driversRepository.createSession(
+          userId,
+          location
+            ? { lat: location.latitude, lng: location.longitude }
+            : undefined,
+        );
+      }
+      // End session when driver goes offline OR becomes unavailable while online
+      else if (
+        (!isOnline || (currentIsOnline && !isAvailable)) &&
+        (currentIsOnline || currentIsAvailable)
+      ) {
+        await driversRepository.endActiveSession(
+          userId,
+          location
+            ? { lat: location.latitude, lng: location.longitude }
+            : undefined,
+        );
+      }
 
       return {
         courierId: result.courier_id,
@@ -469,11 +519,29 @@ class DriversService {
 
   /**
    * Get driver earnings summary
+   * @param period 'today' | 'week' | 'month' | 'year' (default: 'today')
    */
-  async getEarningsSummary(userId: number): Promise<any> {
+  async getEarningsSummary(
+    userId: number,
+    period: string = "today",
+  ): Promise<any> {
     try {
       const earnings = await driversRepository.getEarningsSummary(userId);
 
+      // For home screen (today only) - lightweight response
+      if (period === "today") {
+        return {
+          deliveries: {
+            today: Number.parseInt(earnings.today_deliveries),
+          },
+          earnings: {
+            today: Number.parseFloat(earnings.today_earnings),
+          },
+          totalDistanceKm: Number.parseFloat(earnings.total_distance_km),
+        };
+      }
+
+      // For detailed screens - full response
       return {
         deliveries: {
           total: Number.parseInt(earnings.total_deliveries),

@@ -87,6 +87,15 @@ async function ordersRoutes(fastify: FastifyInstance, options: any) {
     },
     ordersController.updateOrderStatus.bind(ordersController) as any,
   );
+
+  // POST /api/v1/orders/:id/rate - Rate delivered order (clients only)
+  fastify.post(
+    "/:id/rate",
+    {
+      onRequest: [authorize("client")],
+    },
+    ordersController.rateOrder.bind(ordersController) as any,
+  );
 }
 
 export default ordersRoutes;

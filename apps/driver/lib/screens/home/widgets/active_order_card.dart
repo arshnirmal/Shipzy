@@ -3,11 +3,20 @@ import 'package:flutter/material.dart';
 import '../../../models/active_order.dart';
 
 class ActiveOrderCard extends StatelessWidget {
-  const ActiveOrderCard({required this.order, required this.onNavigate, required this.onCall, super.key});
+  const ActiveOrderCard({
+    required this.order,
+    required this.onNavigate,
+    required this.onCall,
+    this.onMarkPickedUp,
+    this.onMarkDelivered,
+    super.key,
+  });
 
   final ActiveOrder order;
   final VoidCallback onNavigate;
   final VoidCallback onCall;
+  final VoidCallback? onMarkPickedUp;
+  final VoidCallback? onMarkDelivered;
 
   @override
   @override
@@ -250,7 +259,45 @@ class ActiveOrderCard extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Actions
+              // Status Update Actions
+              if (onMarkPickedUp != null || onMarkDelivered != null) ...[
+                Text('Order Status', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                if (onMarkPickedUp != null)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onMarkPickedUp,
+                      icon: const Icon(Icons.inventory_2),
+                      label: const Text('📦 MARK AS PICKED UP'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                if (onMarkPickedUp != null && onMarkDelivered != null) const SizedBox(height: 8),
+                if (onMarkDelivered != null)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onMarkDelivered,
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('✅ MARK AS DELIVERED'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+              ],
+
+              // Additional Actions
               Text('Actions', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Row(

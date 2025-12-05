@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/driver_home_state.dart';
 import '../../providers/home_provider.dart';
+import '../../services/api_service.dart';
 import 'widgets/active_order_card.dart';
 import 'widgets/available_order_card.dart';
 import 'widgets/quick_actions_grid.dart';
-import 'widgets/recent_activity_section.dart';
 import 'widgets/stats_grid.dart';
 import 'widgets/status_card.dart';
 
@@ -167,7 +167,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     status: homeState.status,
                     isLoading: homeState.isLoading,
                     driverName: profile.fullName,
-                    location: 'Andheri West', // TODO: Get from location service
+                    // Location display hidden for MVP - TODO: Add reverse geocoding later
                     onlineDuration: homeState.status == DriverStatus.online ? const Duration(hours: 2, minutes: 15) : null,
                     onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
                   ),
@@ -218,20 +218,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            // Recent Activity Section (Only when Offline)
-            if (homeState.status == DriverStatus.offline)
-              SliverToBoxAdapter(
-                child: dailyStatsAsync.when(
-                  data: (stats) => RecentActivitySection(stats: stats),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => Container(
-                    padding: const EdgeInsets.all(16),
-                    color: theme.colorScheme.errorContainer,
-                    child: Text('Error loading profile: $err', style: TextStyle(color: theme.colorScheme.error)),
-                  ),
-                ),
-              ),
-
             // Active Order Section
             if (homeState.status == DriverStatus.onDelivery || activeOrderAsync.value != null)
               SliverToBoxAdapter(
@@ -246,6 +232,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             },
                             onCall: () {
                               // TODO: Call customer
+                            },
+                            onMarkPickedUp: () async {
+                              try {
+                                await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
+                                // Refresh active order to update UI
+                                ref.invalidate(activeOrderProvider);
+                              } catch (e) {
+                                // Handle error - could show snackbar
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                              }
+                            },
+                            onMarkDelivered: () async {
+                              try {
+                                await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'delivered');
+                                // Refresh active order and stats
+                                ref.invalidate(activeOrderProvider);
+                                ref.invalidate(dailyStatsProvider);
+                                // Could also navigate to rating screen here
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                              }
                             },
                           )
                         : const SizedBox.shrink(),

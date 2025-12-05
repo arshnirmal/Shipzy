@@ -2,6 +2,7 @@
 import logger from "../../config/logger";
 import db from "../../database/db";
 import driversQueries from "../../database/queries/drivers.queries";
+import sessionsRepository, { DriverSession } from "./sessions.repository";
 
 interface Courier {
   courier_id: number;
@@ -166,6 +167,49 @@ class DriversRepository {
       });
       throw error;
     }
+  }
+
+  // ============ SESSION MANAGEMENT ============
+
+  /**
+   * Create a new driver session
+   */
+  async createSession(driverId: number, location?: { lat: number; lng: number }) {
+    return sessionsRepository.createSession({
+      driver_id: driverId,
+      started_at: new Date(),
+      last_location_lat: location?.lat,
+      last_location_lng: location?.lng,
+    });
+  }
+
+  /**
+   * Find active session for driver
+   */
+  async findActiveSession(driverId: number) {
+    return sessionsRepository.findActiveSession(driverId);
+  }
+
+  /**
+   * End active session for driver
+   */
+  async endActiveSession(driverId: number, location?: { lat: number; lng: number }) {
+    const activeSession = await sessionsRepository.findActiveSession(driverId);
+    if (!activeSession) return null;
+
+    return sessionsRepository.endSession({
+      session_id: activeSession.session_id,
+      ended_at: new Date(),
+      last_location_lat: location?.lat,
+      last_location_lng: location?.lng,
+    });
+  }
+
+  /**
+   * Get sessions for aggregation
+   */
+  async getSessionsInRange(driverId: number, startDate: Date, endDate: Date) {
+    return sessionsRepository.getSessionsInRange(driverId, startDate, endDate);
   }
 }
 

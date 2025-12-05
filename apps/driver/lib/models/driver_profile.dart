@@ -27,17 +27,21 @@ class DriverStatusData with _$DriverStatusData {
     @Default(false) bool isAvailable,
     @Default(false) bool isOnline,
     @Default(0) int totalDeliveriesToday,
-    LocationData? currentLocation,
+    LastActiveLocationData? lastActiveLocation,
   }) = _DriverStatusData;
 
   factory DriverStatusData.fromJson(Map<String, dynamic> json) => _$DriverStatusDataFromJson(json);
 }
 
 @freezed
-class LocationData with _$LocationData {
-  const factory LocationData({required double latitude, required double longitude}) = _LocationData;
+class LastActiveLocationData with _$LastActiveLocationData {
+  const factory LastActiveLocationData({
+    required double latitude,
+    required double longitude,
+    required DateTime updatedAt,
+  }) = _LastActiveLocationData;
 
-  factory LocationData.fromJson(Map<String, dynamic> json) => _$LocationDataFromJson(json);
+  factory LastActiveLocationData.fromJson(Map<String, dynamic> json) => _$LastActiveLocationDataFromJson(json);
 }
 
 @freezed

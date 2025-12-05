@@ -3,6 +3,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger";
 import { errorResponse, successResponse } from "../../utils/response.util";
 import driversService from "./drivers.service";
+import ratingsService from "../ratings/ratings.service";
 
 interface UpdateProfileBody {
   fullName?: string;
@@ -185,6 +186,7 @@ class DriversController {
   /**
    * GET /api/v1/drivers/me/earnings
    * Get earnings summary
+   * Query params: ?period=today|week|month|year (default: today)
    */
   async getEarnings(
     request: FastifyRequest,
@@ -192,8 +194,12 @@ class DriversController {
   ): Promise<any> {
     try {
       const { userId } = request.user!;
+      const query = request.query as { period?: string };
 
-      const earnings = await driversService.getEarningsSummary(userId);
+      // Default to today for home screen (lightweight)
+      const period = query.period || "today";
+
+      const earnings = await driversService.getEarningsSummary(userId, period);
 
       return successResponse(
         reply,
@@ -203,6 +209,34 @@ class DriversController {
     } catch (error) {
       logger.error({
         msg: "Get earnings controller error",
+        error: (error as Error).message,
+      });
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        (error as any).statusCode || 500,
+      );
+    }
+  }
+
+  /**
+   * GET /api/v1/drivers/me/rating
+   * Get driver rating stats
+   */
+  async getRating(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+    try {
+      const { userId } = request.user!;
+
+      const ratingStats = await ratingsService.getDriverRatingStats(userId);
+
+      return successResponse(
+        reply,
+        ratingStats,
+        "Rating stats retrieved successfully",
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Get rating stats controller error",
         error: (error as Error).message,
       });
       return errorResponse(

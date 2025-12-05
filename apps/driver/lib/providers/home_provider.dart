@@ -27,15 +27,33 @@ class DriverHome extends _$DriverHome {
     state = state.copyWith(isLoading: true);
     try {
       final newStatus = state.status == DriverStatus.offline ? DriverStatus.online : DriverStatus.offline;
+      final isGoingOnline = newStatus == DriverStatus.online;
 
-      // Call API to update status
+      // Fetch current location when going online/offline
+      Map<String, double>? location;
+      try {
+        final position = await ref.read(locationServiceProvider.future);
+        location = {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+        };
+      } catch (e) {
+        // If location fails, continue without it (graceful degradation)
+        // Backend will still work, just won't update lastActiveLocation
+      }
+
+      // Call API to update status with location
       await ref
           .read(apiServiceProvider)
-          .updateDriverAvailability(isAvailable: newStatus == DriverStatus.online, isOnline: newStatus == DriverStatus.online);
+          .updateDriverAvailability(
+            isAvailable: isGoingOnline,
+            isOnline: isGoingOnline,
+            location: location,
+          );
 
       state = state.copyWith(status: newStatus, isLoading: false, error: null);
 
-      if (newStatus == DriverStatus.online) {
+      if (isGoingOnline) {
         _startPolling();
       } else {
         _stopPolling();

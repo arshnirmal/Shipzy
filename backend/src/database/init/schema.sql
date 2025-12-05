@@ -897,6 +897,20 @@ CREATE TABLE logistics.courier_status (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Driver Sessions (track online time when available)
+CREATE TABLE IF NOT EXISTS logistics.driver_sessions (
+  session_id BIGSERIAL PRIMARY KEY,
+  driver_id INTEGER NOT NULL REFERENCES logistics.courier_status(courier_id),
+  started_at TIMESTAMPTZ NOT NULL,
+  ended_at TIMESTAMPTZ NULL,
+  total_online_minutes INTEGER NULL,
+  last_location_lat DECIMAL(10,8),
+  last_location_lng DECIMAL(11,8),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_driver_sessions_driver_started ON logistics.driver_sessions(driver_id, started_at);
+CREATE INDEX IF NOT EXISTS idx_driver_sessions_active ON logistics.driver_sessions(driver_id) WHERE ended_at IS NULL;
+
 CREATE INDEX idx_logistics_courier_status_available ON logistics.courier_status (is_available, is_online)
 WHERE
     is_available = TRUE
@@ -911,6 +925,19 @@ UPDATE
     ON logistics.courier_status FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
 
 COMMENT ON TABLE logistics.courier_status IS 'Real-time courier availability and location for order matching';
+
+-- Driver Ratings (customer feedback per delivered order)
+CREATE TABLE IF NOT EXISTS public.driver_ratings (
+  rating_id BIGSERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders.requests(order_id),
+  driver_id INTEGER NOT NULL REFERENCES logistics.courier_status(courier_id),
+  customer_id INTEGER NOT NULL REFERENCES users.profiles(user_id),
+  rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(order_id) -- one rating per order
+);
+CREATE INDEX IF NOT EXISTS idx_driver_ratings_driver_created ON public.driver_ratings(driver_id, created_at);
 
 -- Locations (pickup/delivery points)
 CREATE TABLE logistics.locations (

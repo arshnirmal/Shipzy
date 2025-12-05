@@ -16,21 +16,37 @@ class ApiService {
   ApiService(this._dio);
   final Dio _dio;
 
-  Future<void> updateDriverAvailability({required bool isAvailable, required bool isOnline}) async {
-    await _dio.put('/drivers/me/availability', data: {'isAvailable': isAvailable, 'isOnline': isOnline});
+  Future<void> updateDriverAvailability({
+    required bool isAvailable,
+    required bool isOnline,
+    Map<String, double>? location,
+  }) async {
+    final Map<String, dynamic> data = {'isAvailable': isAvailable, 'isOnline': isOnline};
+    if (location != null) {
+      data['location'] = {
+        'latitude': location['latitude'],
+        'longitude': location['longitude'],
+      };
+    }
+    await _dio.put('/drivers/me/availability', data: data);
+  }
+
+  Future<void> updateDriverLocation({required double latitude, required double longitude}) async {
+    await _dio.put('/drivers/me/location', data: {'latitude': latitude, 'longitude': longitude});
   }
 
   Future<DailyStats> getDailyStats() async {
-    final response = await _dio.get('/drivers/me/earnings');
+    // Request only today's data for home screen (lightweight)
+    final response = await _dio.get('/drivers/me/earnings', queryParameters: {'period': 'today'});
     final data = response.data['data'];
     return DailyStats(
       earnings: (data['earnings']['today'] as num).toDouble(),
       trips: data['deliveries']['today'] as int,
-      weeklyEarnings: (data['earnings']['thisWeek'] as num).toDouble(),
-      weeklyTrips: data['deliveries']['thisWeek'] as int,
-      totalEarnings: (data['earnings']['total'] as num).toDouble(),
-      totalTrips: data['deliveries']['total'] as int,
-      averageRating: 4.9, // TODO: Backend doesn't return rating in earnings
+      weeklyEarnings: 0, // Not used in home screen MVP
+      weeklyTrips: 0,
+      totalEarnings: 0,
+      totalTrips: 0,
+      averageRating: 0, // Not used in home screen MVP
     );
   }
 
@@ -87,5 +103,24 @@ class ApiService {
     // But if we want to hide it from the list, we might need local state or a "skip" endpoint
     // For now, assuming we just ignore it locally or call a skip endpoint if it exists
     // await _dio.post('/orders/$orderId/skip');
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    await _dio.put('/orders/$orderId/status', data: {'status': status});
+  }
+
+  Future<void> rateOrder(String orderId, {required int rating, String? comment}) async {
+    await _dio.post('/orders/$orderId/rate', data: {'rating': rating, 'comment': comment});
+  }
+
+  Future<Map<String, dynamic>> getDriverRatingStats() async {
+    final response = await _dio.get('/drivers/me/rating');
+    return response.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getDetailedEarnings(String period) async {
+    // For summary/details screen - get full earnings data
+    final response = await _dio.get('/drivers/me/earnings', queryParameters: {'period': period});
+    return response.data['data'] as Map<String, dynamic>;
   }
 }

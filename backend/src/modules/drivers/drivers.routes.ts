@@ -53,6 +53,12 @@ async function driversRoutes(fastify: FastifyInstance, options: any) {
     "/me/earnings",
     driversController.getEarnings.bind(driversController),
   );
+
+  // GET /api/v1/drivers/me/rating - Get driver rating stats
+  fastify.get(
+    "/me/rating",
+    driversController.getRating.bind(driversController),
+  );
 }
 
 export default driversRoutes;

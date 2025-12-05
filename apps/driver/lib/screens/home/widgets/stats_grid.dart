@@ -29,8 +29,6 @@ class StatsGrid extends StatelessWidget {
                 Expanded(child: _buildStatItem(context, '💰 Earnings', '₹${stats.earnings.toStringAsFixed(0)}')),
                 Container(width: 1, height: 40, color: theme.dividerColor),
                 Expanded(child: _buildStatItem(context, '📦 Deliveries', stats.trips.toString())),
-                Container(width: 1, height: 40, color: theme.dividerColor),
-                Expanded(child: _buildStatItem(context, '⏱️ Hours', '${stats.onlineTime.inHours}h ${stats.onlineTime.inMinutes.remainder(60)}m')),
               ],
             ),
           ),
