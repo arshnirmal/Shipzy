@@ -3,7 +3,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/active_order.dart';
 import '../models/available_order.dart';
-import '../models/daily_stats.dart';
 import '../models/driver_profile.dart';
 import '../providers/dio_provider.dart';
 
@@ -16,38 +15,16 @@ class ApiService {
   ApiService(this._dio);
   final Dio _dio;
 
-  Future<void> updateDriverAvailability({
-    required bool isAvailable,
-    required bool isOnline,
-    Map<String, double>? location,
-  }) async {
-    final Map<String, dynamic> data = {'isAvailable': isAvailable, 'isOnline': isOnline};
+  Future<void> updateDriverAvailability({required bool isAvailable, required bool isOnline, Map<String, double>? location}) async {
+    final data = <String, dynamic>{'isAvailable': isAvailable, 'isOnline': isOnline};
     if (location != null) {
-      data['location'] = {
-        'latitude': location['latitude'],
-        'longitude': location['longitude'],
-      };
+      data['location'] = {'latitude': location['latitude'], 'longitude': location['longitude']};
     }
     await _dio.put('/drivers/me/availability', data: data);
   }
 
   Future<void> updateDriverLocation({required double latitude, required double longitude}) async {
     await _dio.put('/drivers/me/location', data: {'latitude': latitude, 'longitude': longitude});
-  }
-
-  Future<DailyStats> getDailyStats() async {
-    // Request only today's data for home screen (lightweight)
-    final response = await _dio.get('/drivers/me/earnings', queryParameters: {'period': 'today'});
-    final data = response.data['data'];
-    return DailyStats(
-      earnings: (data['earnings']['today'] as num).toDouble(),
-      trips: data['deliveries']['today'] as int,
-      weeklyEarnings: 0, // Not used in home screen MVP
-      weeklyTrips: 0,
-      totalEarnings: 0,
-      totalTrips: 0,
-      averageRating: 0, // Not used in home screen MVP
-    );
   }
 
   Future<DriverProfile> getDriverProfile() async {

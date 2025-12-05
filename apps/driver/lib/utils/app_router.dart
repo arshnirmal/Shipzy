@@ -15,6 +15,8 @@ import '../screens/orders/orders_list_screen.dart';
 import '../screens/profile/document_upload_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/profile/setup_profile_screen.dart';
+import '../screens/splash_screen.dart';
+import 'app_routes.dart';
 
 part 'app_router.g.dart';
 
@@ -23,53 +25,74 @@ GoRouter router(Ref ref) {
   final authState = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: '/login', // Changed initialLocation
-    redirect: (context, state) => authState.when(
-      data: (auth) => auth.maybeWhen(
-        authenticated: (user, {required isNewUser}) {
-          // User is authenticated
-          if (state.matchedLocation == '/login' || state.matchedLocation == '/register') {
-            return '/home'; // Redirect to home if trying to access auth screens
-          }
-          return null; // Allow access
-        },
-        unauthenticated: () {
-          // User is not authenticated
-          if (state.matchedLocation != '/login' && state.matchedLocation != '/register') {
-            return '/login'; // Redirect to login if trying to access protected screens
-          }
-          return null; // Allow access
-        },
-        orElse: () => null,
-      ),
-      loading: () => null, // Wait while loading
-      error: (_, __) => '/login', // Redirect to login on error
-    ),
+    debugLogDiagnostics: true,
+    initialLocation: AppRoutes.splash,
+
+    // Redirect logic based on auth state
+    redirect: (context, state) {
+      final authStateValue = authState;
+      final isOnSplash = state.matchedLocation == AppRoutes.splash;
+
+      // Handle splash screen redirects
+      if (isOnSplash) {
+        return authStateValue.maybeWhen(
+          data: (authData) => authData.maybeWhen(
+            authenticated: (user, {required isNewUser}) => AppRoutes.home,
+            unauthenticated: () => AppRoutes.login,
+            orElse: () => AppRoutes.login,
+          ),
+          orElse: () => null, // Stay on splash while loading
+        );
+      }
+
+      // If auth state is still loading, don't redirect
+      final authResult = authStateValue.maybeWhen(
+        data: (authData) => authData.maybeWhen(
+          authenticated: (user, {required isNewUser}) => isNewUser ? AppRoutes.setupProfile : 'authenticated',
+          unauthenticated: () => 'unauthenticated',
+          orElse: () => 'unknown',
+        ),
+        orElse: () => null, // Loading state
+      );
+
+      if (authResult == null) {
+        return null; // Stay on current route while loading
+      }
+
+      return null;
+    },
     routes: [
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
-      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
-      GoRoute(path: '/setup-profile', builder: (context, state) => const SetupProfileScreen()),
-      GoRoute(path: '/document-upload', builder: (context, state) => const DocumentUploadScreen()),
+      // ============ SPLASH ============
+      GoRoute(path: AppRoutes.splash, name: 'splash', builder: (context, state) => const SplashScreen()),
+
+      // ============ AUTHENTICATION ============
+      GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (context, state) => const OnboardingScreen()),
+      GoRoute(path: AppRoutes.setupProfile, name: 'setupProfile', builder: (context, state) => const SetupProfileScreen()),
+      GoRoute(path: AppRoutes.documentUpload, name: 'documentUpload', builder: (context, state) => const DocumentUploadScreen()),
+      // ============ MAIN APP (Shell Route for Bottom Nav) ============
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => DashboardScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: '/home', builder: (context, state) => const HomeScreen())],
+            routes: [GoRoute(path: AppRoutes.home, name: 'home', builder: (context, state) => const HomeScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/orders', builder: (context, state) => const OrdersListScreen())],
+            routes: [GoRoute(path: AppRoutes.orders, name: 'orders', builder: (context, state) => const OrdersListScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen())],
+            routes: [GoRoute(path: AppRoutes.earnings, name: 'earnings', builder: (context, state) => const EarningsScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen())],
+            routes: [GoRoute(path: AppRoutes.profile, name: 'profile', builder: (context, state) => const ProfileScreen())],
           ),
         ],
       ),
+      // ============ ORDER ROUTES ============
       GoRoute(
         path: '/order-details/:id',
+        name: 'orderDetails',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return OrderDetailsScreen(orderId: id);
@@ -77,6 +100,7 @@ GoRouter router(Ref ref) {
       ),
       GoRoute(
         path: '/active-delivery/:id',
+        name: 'activeDelivery',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ActiveDeliveryScreen(orderId: id);

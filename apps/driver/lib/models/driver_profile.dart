@@ -16,6 +16,9 @@ class DriverProfile with _$DriverProfile {
     @Default(false) bool isActive,
     DriverStatusData? status,
     VehicleData? vehicle,
+    DriverEarningsData? earnings,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) = _DriverProfile;
 
   factory DriverProfile.fromJson(Map<String, dynamic> json) => _$DriverProfileFromJson(json);
@@ -35,11 +38,7 @@ class DriverStatusData with _$DriverStatusData {
 
 @freezed
 class LastActiveLocationData with _$LastActiveLocationData {
-  const factory LastActiveLocationData({
-    required double latitude,
-    required double longitude,
-    required DateTime updatedAt,
-  }) = _LastActiveLocationData;
+  const factory LastActiveLocationData({required double latitude, required double longitude, required DateTime updatedAt}) = _LastActiveLocationData;
 
   factory LastActiveLocationData.fromJson(Map<String, dynamic> json) => _$LastActiveLocationDataFromJson(json);
 }
@@ -56,4 +55,18 @@ class VehicleData with _$VehicleData {
   }) = _VehicleData;
 
   factory VehicleData.fromJson(Map<String, dynamic> json) => _$VehicleDataFromJson(json);
+}
+
+@freezed
+class DriverEarningsData with _$DriverEarningsData {
+  const factory DriverEarningsData({
+    @Default(0) double total,
+    @Default(0) double today,
+    @Default(0) double thisWeek,
+    @Default(0) double thisMonth,
+    @Default(0) double averageOrderValue,
+    @Default(0) double totalDistanceKm,
+  }) = _DriverEarningsData;
+
+  factory DriverEarningsData.fromJson(Map<String, dynamic> json) => _$DriverEarningsDataFromJson(json);
 }

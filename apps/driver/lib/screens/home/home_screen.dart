@@ -270,7 +270,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('📍 Available Orders Nearby (3)', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      nearbyOrdersAsync.when(
+                        data: (orders) => Text(
+                          '📍 Available Orders Nearby (${orders.length})',
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        loading: () => Text('📍 Available Orders Nearby', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                        error: (err, stack) =>
+                            Text('📍 Available Orders Nearby (Error)', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
                       const SizedBox(height: 16),
                       nearbyOrdersAsync.when(
                         data: (orders) {

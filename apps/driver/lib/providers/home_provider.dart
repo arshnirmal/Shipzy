@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/active_order.dart';
 import '../models/available_order.dart';
 import '../models/daily_stats.dart';
+import '../models/driver_dashboard_data.dart';
 import '../models/driver_home_state.dart';
 import '../models/driver_profile.dart';
 import '../services/api_service.dart';
@@ -33,28 +34,21 @@ class DriverHome extends _$DriverHome {
       Map<String, double>? location;
       try {
         final position = await ref.read(locationServiceProvider.future);
-        location = {
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-        };
+        location = {'latitude': position.latitude, 'longitude': position.longitude};
       } catch (e) {
         // If location fails, continue without it (graceful degradation)
         // Backend will still work, just won't update lastActiveLocation
       }
 
       // Call API to update status with location
-      await ref
-          .read(apiServiceProvider)
-          .updateDriverAvailability(
-            isAvailable: isGoingOnline,
-            isOnline: isGoingOnline,
-            location: location,
-          );
+      await ref.read(apiServiceProvider).updateDriverAvailability(isAvailable: isGoingOnline, isOnline: isGoingOnline, location: location);
 
       state = state.copyWith(status: newStatus, isLoading: false, error: null);
 
       if (isGoingOnline) {
         _startPolling();
+        // Refresh nearby orders when going online
+        ref.invalidate(nearbyOrdersProvider);
       } else {
         _stopPolling();
       }
@@ -65,9 +59,9 @@ class DriverHome extends _$DriverHome {
 
   void _startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.invalidate(nearbyOrdersProvider);
-    });
+    // Note: nearbyOrdersProvider will refresh automatically when status changes
+    // due to its dependency on driverHomeProvider, but we don't need to invalidate it here
+    // to avoid circular dependencies
   }
 
   void _stopPolling() {
@@ -97,25 +91,59 @@ class DriverHome extends _$DriverHome {
 
 @riverpod
 Future<DailyStats> dailyStats(DailyStatsRef ref) async {
-  final apiService = ref.read(apiServiceProvider);
-  return apiService.getDailyStats();
+  // Get daily stats from driver profile to avoid extra API call
+  final driverProfile = await ref.watch(driverProfileProvider.future);
+  return DailyStats(
+    earnings: (driverProfile.earnings?.today ?? 0).toDouble(),
+    trips: driverProfile.status?.totalDeliveriesToday ?? 0,
+    weeklyEarnings: (driverProfile.earnings?.thisWeek ?? 0).toDouble(),
+    totalEarnings: (driverProfile.earnings?.total ?? 0).toDouble(),
+  );
+}
+
+@riverpod
+DriverStatus driverStatus(DriverStatusRef ref) {
+  // Separate provider for driver status to avoid circular dependencies
+  return ref.watch(driverHomeProvider).status;
 }
 
 @riverpod
 Future<List<AvailableOrder>> nearbyOrders(NearbyOrdersRef ref) async {
+  // Watch driver status from separate provider to avoid circular dependency
+  final driverStatus = ref.watch(driverStatusProvider);
+  if (driverStatus != DriverStatus.online) {
+    return []; // Return empty list when offline
+  }
+
+  // Add small delay to prioritize other API calls
+  await Future.delayed(const Duration(milliseconds: 500));
+
   final location = await ref.read(locationServiceProvider.future);
   final apiService = ref.read(apiServiceProvider);
   return apiService.getAvailableOrders(latitude: location.latitude, longitude: location.longitude);
 }
 
 @riverpod
-Future<ActiveOrder?> activeOrder(ActiveOrderRef ref) async {
+Future<DriverDashboardData> driverDashboardData(DriverDashboardDataRef ref) async {
   final apiService = ref.read(apiServiceProvider);
-  return apiService.getActiveOrder();
+
+  // Fetch both profile and assignments in parallel to reduce total API calls
+  final results = await Future.wait([apiService.getDriverProfile(), apiService.getActiveOrder()]);
+
+  final profile = results[0] as DriverProfile;
+  final activeOrder = results[1] as ActiveOrder?;
+
+  return DriverDashboardData(profile: profile, activeOrder: activeOrder);
+}
+
+@riverpod
+Future<ActiveOrder?> activeOrder(ActiveOrderRef ref) async {
+  final dashboardData = await ref.watch(driverDashboardDataProvider.future);
+  return dashboardData.activeOrder;
 }
 
 @riverpod
 Future<DriverProfile> driverProfile(DriverProfileRef ref) async {
-  final apiService = ref.read(apiServiceProvider);
-  return apiService.getDriverProfile();
+  final dashboardData = await ref.watch(driverDashboardDataProvider.future);
+  return dashboardData.profile;
 }
