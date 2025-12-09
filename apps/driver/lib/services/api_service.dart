@@ -65,28 +65,56 @@ class ApiService {
     if (data.isEmpty) return null;
 
     // Get the first active assignment
-    final activeAssignment = data.first;
+    final activeAssignment = Map<String, dynamic>.from(data.first as Map);
 
-    // Map to ActiveOrder with the new structure
-    return ActiveOrder.fromJson(activeAssignment);
+    // Normalize nullable numeric fields to avoid cast errors
+    double numOrZero(dynamic v) => (v as num?)?.toDouble() ?? 0;
+
+    final rawEarnings = Map<String, dynamic>.from(activeAssignment['earningsBreakdown'] as Map? ?? {});
+    final normalizedEarnings = {
+      'basePayout': numOrZero(rawEarnings['basePayout']),
+      'distanceEarning': numOrZero(rawEarnings['distanceEarning']),
+      'weightCompensation': numOrZero(rawEarnings['weightCompensation']),
+      'peakHourBonus': numOrZero(rawEarnings['peakHourBonus']),
+      'urgencyBonus': numOrZero(rawEarnings['urgencyBonus']),
+      'onTimeBonus': numOrZero(rawEarnings['onTimeBonus']),
+      'qualityBonus': numOrZero(rawEarnings['qualityBonus']),
+      'platformCommission': numOrZero(rawEarnings['platformCommission']),
+      'customerTip': numOrZero(rawEarnings['customerTip']),
+      'grossEarning': numOrZero(rawEarnings['grossEarning']),
+      'netEarning': numOrZero(rawEarnings['netEarning']),
+    };
+
+    final transformed = {
+      ...activeAssignment,
+      'driverEarnings': numOrZero(activeAssignment['driverEarnings'] ?? normalizedEarnings['netEarning']),
+      'earningsBreakdown': normalizedEarnings,
+      'estimatedDistanceKm': numOrZero(activeAssignment['estimatedDistanceKm']),
+      'actualDistanceKm': (activeAssignment['actualDistanceKm'] as num?)?.toDouble(),
+    };
+
+    // Map to ActiveOrder with the normalized structure
+    return ActiveOrder.fromJson(transformed);
   }
 
-  Future<void> acceptOrder(String orderId) async {
-    await _dio.post('/orders/$orderId/accept');
+  Future<void> acceptOrder(int orderId) async {
+    // Fastify rejects empty JSON bodies when content-type is application/json,
+    // so send a minimal payload.
+    await _dio.post('/orders/$orderId/accept', data: const {'accept': true});
   }
 
-  Future<void> rejectOrder(String orderId) async {
+  Future<void> rejectOrder(int orderId) async {
     // Backend might not have an explicit reject endpoint if it just means "ignore"
     // But if we want to hide it from the list, we might need local state or a "skip" endpoint
     // For now, assuming we just ignore it locally or call a skip endpoint if it exists
     // await _dio.post('/orders/$orderId/skip');
   }
 
-  Future<void> updateOrderStatus(String orderId, String status) async {
+  Future<void> updateOrderStatus(int orderId, String status) async {
     await _dio.put('/orders/$orderId/status', data: {'status': status});
   }
 
-  Future<void> rateOrder(String orderId, {required int rating, String? comment}) async {
+  Future<void> rateOrder(int orderId, {required int rating, String? comment}) async {
     await _dio.post('/orders/$orderId/rate', data: {'rating': rating, 'comment': comment});
   }
 

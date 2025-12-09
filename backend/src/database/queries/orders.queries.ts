@@ -243,14 +243,18 @@ export default {
 
           -- Delivery location
           dl.address AS delivery_address,
+          dl.landmark AS delivery_landmark,
           dl.city AS delivery_city,
           dl.state AS delivery_state,
+          dl.postal_code AS delivery_postal_code,
+          ST_Y(dl.location::geometry) AS delivery_latitude,
+          ST_X(dl.location::geometry) AS delivery_longitude,
 
           -- Distance from courier
           ROUND(
               ST_Distance(
                   pl.location,
-                  ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
+                  ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
               )::numeric / 1000, 2
           ) AS distance_from_courier_km
 
@@ -273,11 +277,11 @@ export default {
           )
           AND ST_DWithin(
               pl.location,
-              ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-              $4 * 1000
+              ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+              $3 * 1000
           )
       ORDER BY o.created_at ASC
-      LIMIT $5
+      LIMIT $4
   `,
 
   // ============ ORDER STATUS UPDATES ============
@@ -361,7 +365,7 @@ export default {
   UPDATE_ORDER_STATUS_TO_ASSIGNED: `
       UPDATE orders.requests
       SET
-          status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'assigned'),
+          status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'accepted'),
           accepted_at = NOW(),
           updated_at = NOW()
       WHERE order_id = $1

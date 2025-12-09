@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../../models/available_order.dart';
@@ -16,43 +14,12 @@ class AvailableOrderCard extends StatefulWidget {
 }
 
 class _AvailableOrderCardState extends State<AvailableOrderCard> {
-  late int _remainingSeconds;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _remainingSeconds = widget.order.expiresInSeconds;
-    _startTimer();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _remainingSeconds--;
-        });
-
-        if (_remainingSeconds <= 0) {
-          _timer?.cancel();
-          // Auto-reject when timer expires
-          widget.onReject();
-        }
-      }
-    });
-  }
-
   @override
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final etaMins = (widget.order.distanceFromCourierKm / 25 * 60).ceil();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -102,7 +69,7 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${widget.order.pickup['address']} → ${widget.order.delivery['address']}',
+                    '${widget.order.pickup.address} → ${widget.order.delivery.address}',
                     style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -120,53 +87,22 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
                 const SizedBox(width: 8),
                 _buildChip(Icons.inventory_2, widget.order.packageType),
                 const Spacer(),
-                Text('⏱️ 8 mins away', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                Text('⏱️ $etaMins mins away', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
               ],
             ),
 
             const SizedBox(height: 12),
 
-            // Countdown timer with progress bar
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _remainingSeconds < 10
-                    ? theme.colorScheme.errorContainer.withOpacity(0.2)
-                    : theme.colorScheme.tertiaryContainer.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _remainingSeconds < 10 ? theme.colorScheme.error.withOpacity(0.5) : theme.colorScheme.tertiary.withOpacity(0.5),
+            // Countdown removed (timer disabled)
+            Row(
+              children: [
+                Icon(Icons.timer_off, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                const SizedBox(width: 4),
+                Text(
+                  'Offer may expire soon',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.timer, size: 16, color: _remainingSeconds < 10 ? theme.colorScheme.error : theme.colorScheme.tertiary),
-                      const SizedBox(width: 4),
-                      Text(
-                        '⏳ Expires in ${_formatTime(_remainingSeconds)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: _remainingSeconds < 10 ? theme.colorScheme.error : theme.colorScheme.tertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: _remainingSeconds / widget.order.expiresInSeconds,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(_remainingSeconds < 10 ? theme.colorScheme.error : theme.colorScheme.tertiary),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${((_remainingSeconds / widget.order.expiresInSeconds) * 100).toInt()}% remaining',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 10),
-                  ),
-                ],
-              ),
+              ],
             ),
 
             const SizedBox(height: 16),
@@ -230,15 +166,5 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
         ],
       ),
     );
-  }
-
-  String _formatTime(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    if (minutes > 0) {
-      return '${minutes}m ${remainingSeconds}s';
-    } else {
-      return '${remainingSeconds}s';
-    }
   }
 }

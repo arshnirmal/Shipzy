@@ -668,8 +668,15 @@ class OrdersService {
         },
         delivery: {
           address: order.delivery_address,
+          landmark: order.delivery_landmark,
           city: order.delivery_city,
           state: order.delivery_state,
+          latitude: order.delivery_latitude
+            ? Number.parseFloat(order.delivery_latitude)
+            : null,
+          longitude: order.delivery_longitude
+            ? Number.parseFloat(order.delivery_longitude)
+            : null,
         },
         distanceFromCourierKm: Number.parseFloat(
           order.distance_from_courier_km,

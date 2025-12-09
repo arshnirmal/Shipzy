@@ -132,13 +132,7 @@ class OrdersRepository {
     try {
       const result = await db.query(
         ordersQueries.FIND_AVAILABLE_ORDERS_FOR_COURIER,
-        [
-          null, // Placeholder for courier_id (not used in WHERE clause)
-          longitude,
-          latitude,
-          radiusKm,
-          limit,
-        ],
+        [longitude, latitude, radiusKm, limit],
       );
 
       return result.rows;

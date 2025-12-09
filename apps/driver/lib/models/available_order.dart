@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'order_address.dart';
+
 part 'available_order.freezed.dart';
 part 'available_order.g.dart';
 
@@ -29,7 +31,7 @@ class WeightTier with _$WeightTier {
 @freezed
 class AvailableOrder with _$AvailableOrder {
   const factory AvailableOrder({
-    required String orderId,
+    required int orderId,
     required String orderUuid,
     required String orderNumber,
     required String deliveryType,
@@ -38,21 +40,24 @@ class AvailableOrder with _$AvailableOrder {
     required String vehicleCategoryDisplay,
     required String packageType,
     required Pricing pricing,
-    required String packageDescription,
     required double estimatedDistanceKm,
     required String createdAt,
-    required Map<String, dynamic> pickup,
-    required Map<String, dynamic> delivery,
+    required OrderAddress pickup,
+    required OrderAddress delivery,
     required double distanceFromCourierKm,
-    required double pickupLatitude,
-    required double pickupLongitude,
-    required double deliveryLatitude,
-    required double deliveryLongitude,
+    String? packageDescription,
     WeightTier? weightTier,
     String? specialInstructions,
     @Default(60) int expiresInSeconds,
     @Default(false) bool isUrgent,
   }) = _AvailableOrder;
 
+  const AvailableOrder._();
+
   factory AvailableOrder.fromJson(Map<String, dynamic> json) => _$AvailableOrderFromJson(json);
+
+  double get pickupLatitude => pickup.latitude ?? 0.0;
+  double get pickupLongitude => pickup.longitude ?? 0.0;
+  double get deliveryLatitude => delivery.latitude ?? 0.0;
+  double get deliveryLongitude => delivery.longitude ?? 0.0;
 }

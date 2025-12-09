@@ -50,6 +50,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final theme = Theme.of(context);
 
+    final isOnDelivery = homeState.status == DriverStatus.onDelivery || activeOrderAsync.value != null;
+
     return Scaffold(
       // backgroundColor: theme.scaffoldBackgroundColor, // Default behavior
       appBar: AppBar(
@@ -72,7 +74,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         title: driverProfileAsync.when(
           data: (profile) {
-            final isOnline = homeState.status == DriverStatus.online;
+            final status = homeState.status;
+            Color pillColor;
+            Color pillBorder;
+            Color textColor;
+            String label;
+            IconData icon;
+
+            if (status == DriverStatus.onDelivery) {
+              pillColor = Colors.orange.withOpacity(0.12);
+              pillBorder = Colors.orange;
+              textColor = Colors.orange;
+              label = 'In Transit';
+              icon = Icons.directions_bike;
+            } else if (status == DriverStatus.online) {
+              pillColor = Colors.green.withOpacity(0.12);
+              pillBorder = Colors.green;
+              textColor = Colors.green;
+              label = 'Online';
+              icon = Icons.circle;
+            } else {
+              pillColor = theme.colorScheme.surfaceContainerHighest;
+              pillBorder = theme.dividerColor;
+              textColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
+              label = 'Offline';
+              icon = Icons.circle_outlined;
+            }
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -92,19 +120,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isOnline ? Colors.green.withOpacity(0.1) : theme.colorScheme.surfaceContainerHighest,
+                        color: pillColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isOnline ? Colors.green : theme.dividerColor),
+                        border: Border.all(color: pillBorder),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.circle, size: 8, color: isOnline ? Colors.green : Colors.grey),
+                          Icon(icon, size: 12, color: textColor),
                           const SizedBox(width: 4),
                           Text(
-                            isOnline ? 'Online' : 'Offline',
+                            label,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: isOnline ? Colors.green : theme.textTheme.bodyMedium?.color,
+                              color: textColor,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -157,214 +185,254 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         },
         child: CustomScrollView(
           controller: _scrollController,
-          slivers: [
-            // Status Card
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: driverProfileAsync.when(
-                  data: (profile) => StatusCard(
-                    status: homeState.status,
-                    isLoading: homeState.isLoading,
-                    driverName: profile.fullName,
-                    // Location display hidden for MVP - TODO: Add reverse geocoding later
-                    onlineDuration: homeState.status == DriverStatus.online ? const Duration(hours: 2, minutes: 15) : null,
-                    onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
-                  ),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, s) => Container(
-                    padding: const EdgeInsets.all(16),
-                    color: theme.colorScheme.errorContainer,
-                    child: Text('Profile Error: $e', style: TextStyle(color: theme.colorScheme.error)),
-                  ),
-                ),
-              ),
-            ),
-
-            // Error display
-            if (homeState.error != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline, color: theme.colorScheme.error),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(homeState.error!, style: TextStyle(color: theme.colorScheme.error)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-            // Stats Grid (Always visible)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: dailyStatsAsync.when(
-                  data: (stats) => StatsGrid(stats: stats),
-                  loading: () => const Center(child: LinearProgressIndicator()),
-                  error: (err, stack) => Text('Error loading stats: $err', style: TextStyle(color: theme.colorScheme.error)),
-                ),
-              ),
-            ),
-
-            // Active Order Section
-            if (homeState.status == DriverStatus.onDelivery || activeOrderAsync.value != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: activeOrderAsync.when(
-                    data: (order) => order != null
-                        ? ActiveOrderCard(
-                            order: order,
-                            onNavigate: () {
-                              // TODO: Open navigation
-                            },
-                            onCall: () {
-                              // TODO: Call customer
-                            },
-                            onMarkPickedUp: () async {
-                              try {
-                                await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
-                                // Refresh active order to update UI
-                                ref.invalidate(activeOrderProvider);
-                              } catch (e) {
-                                // Handle error - could show snackbar
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
-                              }
-                            },
-                            onMarkDelivered: () async {
-                              try {
-                                await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'delivered');
-                                // Refresh active order and stats
-                                ref.invalidate(activeOrderProvider);
-                                ref.invalidate(dailyStatsProvider);
-                                // Could also navigate to rating screen here
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
-                              }
-                            },
-                          )
-                        : const SizedBox.shrink(),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Text('Error: $err'),
-                  ),
-                ),
-              ),
-
-            // Available Orders Section (Only when Online and NOT on delivery)
-            if (homeState.status == DriverStatus.online && activeOrderAsync.value == null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      nearbyOrdersAsync.when(
-                        data: (orders) => Text(
-                          '📍 Available Orders Nearby (${orders.length})',
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        loading: () => Text('📍 Available Orders Nearby', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                        error: (err, stack) =>
-                            Text('📍 Available Orders Nearby (Error)', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          slivers: isOnDelivery
+              ? [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: activeOrderAsync.when(
+                        data: (order) => order != null
+                            ? ActiveOrderCard(
+                                order: order,
+                                onNavigate: () {
+                                  // TODO: Open navigation
+                                },
+                                onCall: () {
+                                  // TODO: Call customer
+                                },
+                                onMarkPickedUp: () async {
+                                  try {
+                                    await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
+                                    ref.invalidate(activeOrderProvider);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                  }
+                                },
+                                onMarkDelivered: () async {
+                                  try {
+                                    await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'delivered');
+                                    ref.invalidate(activeOrderProvider);
+                                    ref.invalidate(dailyStatsProvider);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                  }
+                                },
+                              )
+                            : const SizedBox.shrink(),
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, stack) => Text('Error: $err'),
                       ),
-                      const SizedBox(height: 16),
-                      nearbyOrdersAsync.when(
-                        data: (orders) {
-                          if (orders.isEmpty) {
-                            return Container(
-                              padding: const EdgeInsets.all(32),
-                              decoration: BoxDecoration(
-                                color: theme.cardColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: theme.dividerColor),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.search_off, size: 48, color: theme.disabledColor),
-                                    const SizedBox(height: 16),
-                                    Text('No orders nearby...', style: theme.textTheme.bodyLarge?.copyWith(color: theme.disabledColor)),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Orders will appear here when available',
-                                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.disabledColor),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-                          return Column(
-                            children: orders
-                                .map(
-                                  (order) => AvailableOrderCard(
-                                    order: order,
-                                    onAccept: () => ref.read(driverHomeProvider.notifier).acceptOrder(order.orderId),
-                                    onReject: () => ref.read(driverHomeProvider.notifier).rejectOrder(order.orderId),
-                                  ),
-                                )
-                                .toList(),
-                          );
-                        },
-                        loading: () => Container(
-                          padding: const EdgeInsets.all(32),
-                          child: const Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                ]
+              : [
+                  // Status Card
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: driverProfileAsync.when(
+                        data: (profile) => StatusCard(
+                          status: homeState.status,
+                          isLoading: homeState.isLoading,
+                          driverName: profile.fullName,
+                          // Location display hidden for MVP - TODO: Add reverse geocoding later
+                          onlineDuration: homeState.status == DriverStatus.online ? const Duration(hours: 2, minutes: 15) : null,
+                          onToggle: () => ref.read(driverHomeProvider.notifier).toggleStatus(),
                         ),
-                        error: (err, stack) => Container(
-                          padding: const EdgeInsets.all(32),
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (e, s) => Container(
+                          padding: const EdgeInsets.all(16),
+                          color: theme.colorScheme.errorContainer,
+                          child: Text('Profile Error: $e', style: TextStyle(color: theme.colorScheme.error)),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Error display
+                  if (homeState.error != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.errorContainer,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
                           ),
-                          child: Center(
-                            child: Text(
-                              'Error loading orders: $err',
-                              style: TextStyle(color: theme.colorScheme.error),
-                              textAlign: TextAlign.center,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, color: theme.colorScheme.error),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(homeState.error!, style: TextStyle(color: theme.colorScheme.error)),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+                    ),
 
-                      // Refresh button
-                      const SizedBox(height: 16),
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: () {
-                            ref.invalidate(nearbyOrdersProvider);
-                          },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('🔄 Refresh Orders'),
-                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+                  // Stats Grid
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: dailyStatsAsync.when(
+                        data: (stats) => StatsGrid(stats: stats),
+                        loading: () => const Center(child: LinearProgressIndicator()),
+                        error: (err, stack) => Text('Error loading stats: $err', style: TextStyle(color: theme.colorScheme.error)),
+                      ),
+                    ),
+                  ),
+
+                  // Active Order Section (if any, but not forcing full-screen)
+                  if (activeOrderAsync.value != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: activeOrderAsync.when(
+                          data: (order) => order != null
+                              ? ActiveOrderCard(
+                                  order: order,
+                                  onNavigate: () {
+                                    // TODO: Open navigation
+                                  },
+                                  onCall: () {
+                                    // TODO: Call customer
+                                  },
+                                  onMarkPickedUp: () async {
+                                    try {
+                                      await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
+                                      ref.invalidate(activeOrderProvider);
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    }
+                                  },
+                                  onMarkDelivered: () async {
+                                    try {
+                                      await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'delivered');
+                                      ref.invalidate(activeOrderProvider);
+                                      ref.invalidate(dailyStatsProvider);
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    }
+                                  },
+                                )
+                              : const SizedBox.shrink(),
+                          loading: () => const Center(child: CircularProgressIndicator()),
+                          error: (err, stack) => Text('Error: $err'),
                         ),
                       ),
-                    ],
+                    ),
+
+                  // Available Orders Section (Only when Online)
+                  if (homeState.status == DriverStatus.online && activeOrderAsync.value == null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            nearbyOrdersAsync.when(
+                              data: (orders) => Text(
+                                '📍 Available Orders Nearby (${orders.length})',
+                                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              loading: () =>
+                                  Text('📍 Available Orders Nearby', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                              error: (err, stack) => Text(
+                                '📍 Available Orders Nearby (Error)',
+                                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            nearbyOrdersAsync.when(
+                              data: (orders) {
+                                if (orders.isEmpty) {
+                                  return Container(
+                                    padding: const EdgeInsets.all(32),
+                                    decoration: BoxDecoration(
+                                      color: theme.cardColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: theme.dividerColor),
+                                    ),
+                                    child: Center(
+                                      child: Column(
+                                        children: [
+                                          Icon(Icons.search_off, size: 48, color: theme.disabledColor),
+                                          const SizedBox(height: 16),
+                                          Text('No orders nearby...', style: theme.textTheme.bodyLarge?.copyWith(color: theme.disabledColor)),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Orders will appear here when available',
+                                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.disabledColor),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return Column(
+                                  children: orders
+                                      .map(
+                                        (order) => AvailableOrderCard(
+                                          order: order,
+                                          onAccept: () => ref.read(driverHomeProvider.notifier).acceptOrder(order.orderId),
+                                          onReject: () => ref.read(driverHomeProvider.notifier).rejectOrder(order.orderId),
+                                        ),
+                                      )
+                                      .toList(),
+                                );
+                              },
+                              loading: () => Container(
+                                padding: const EdgeInsets.all(32),
+                                child: const Center(child: CircularProgressIndicator()),
+                              ),
+                              error: (err, stack) => Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Error loading orders: $err',
+                                    style: TextStyle(color: theme.colorScheme.error),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // Refresh button
+                            const SizedBox(height: 16),
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  ref.invalidate(nearbyOrdersProvider);
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('🔄 Refresh Orders'),
+                                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  // Quick Actions
+                  const SliverToBoxAdapter(
+                    child: Padding(padding: EdgeInsets.all(16), child: QuickActionsGrid()),
                   ),
-                ),
-              ),
 
-            // Quick Actions (Always visible)
-            const SliverToBoxAdapter(
-              child: Padding(padding: EdgeInsets.all(16), child: QuickActionsGrid()),
-            ),
-
-            // Bottom padding for navigation
-            const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-          ],
+                  // Bottom padding for navigation
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                ],
         ),
       ),
     );

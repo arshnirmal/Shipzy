@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'available_order.dart';
 import 'earnings_breakdown.dart';
+import 'order_address.dart';
 
 part 'active_order.freezed.dart';
 part 'active_order.g.dart';
@@ -11,8 +12,8 @@ enum ActiveOrderStatus { accepted, arrivedAtPickup, pickedUp, arrivedAtDelivery,
 @freezed
 class ActiveOrder with _$ActiveOrder {
   const factory ActiveOrder({
-    required String assignmentId,
-    required String orderId,
+    required int assignmentId,
+    required int orderId,
     required String orderUuid,
     required String orderNumber,
     required String orderStatus,
@@ -20,15 +21,15 @@ class ActiveOrder with _$ActiveOrder {
     required String vehicleCategory,
     required String vehicleCategoryDisplay,
     required String packageType,
-    required Map<String, dynamic> pickup,
-    required Map<String, dynamic> delivery,
-    required String packageDescription,
-    required double estimatedDistanceKm,
+    required OrderAddress pickup,
+    required OrderAddress delivery,
+    String? packageDescription,
+    double? estimatedDistanceKm,
     required double driverEarnings,
     required EarningsBreakdown earningsBreakdown,
     required int estimatedDeliveryTime,
     required String assignedAt,
-    required String acceptedAt,
+    String? acceptedAt,
     WeightTier? weightTier,
     String? specialInstructions,
     double? declaredValue,

@@ -3,14 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../models/active_order.dart';
 
 class ActiveOrderCard extends StatelessWidget {
-  const ActiveOrderCard({
-    required this.order,
-    required this.onNavigate,
-    required this.onCall,
-    this.onMarkPickedUp,
-    this.onMarkDelivered,
-    super.key,
-  });
+  const ActiveOrderCard({required this.order, required this.onNavigate, required this.onCall, this.onMarkPickedUp, this.onMarkDelivered, super.key});
 
   final ActiveOrder order;
   final VoidCallback onNavigate;
@@ -67,7 +60,7 @@ class ActiveOrderCard extends StatelessWidget {
                     ),
                     Divider(height: 16, color: theme.dividerColor),
                     Text(
-                      '📍 Delivering to: ${order.delivery['address']}',
+                      '📍 Delivering to: ${order.delivery.address}',
                       style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -129,10 +122,7 @@ class ActiveOrderCard extends StatelessWidget {
                       children: [
                         const Text('👤 ', style: TextStyle(fontSize: 16)),
                         Expanded(
-                          child: Text(
-                            order.delivery['contactName'] ?? 'Customer',
-                            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                          ),
+                          child: Text(order.delivery.contactName ?? 'Customer', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -142,7 +132,7 @@ class ActiveOrderCard extends StatelessWidget {
                         Icon(Icons.phone, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                         const SizedBox(width: 4),
                         Text(
-                          order.delivery['contactPhone'] ?? '',
+                          order.delivery.contactPhone ?? '',
                           style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                         ),
                         const Spacer(),
@@ -170,7 +160,7 @@ class ActiveOrderCard extends StatelessWidget {
                         const Text('📍 ', style: TextStyle(fontSize: 14)),
                         Expanded(
                           child: Text(
-                            '${order.delivery['address']}\n${order.delivery['building'] ?? ''} ${order.delivery['landmark'] ?? ''}',
+                            '${order.delivery.address}\n${order.delivery.building ?? ''} ${order.delivery.landmark ?? ''}',
                             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                           ),
                         ),

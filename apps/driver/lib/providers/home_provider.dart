@@ -19,9 +19,39 @@ class DriverHome extends _$DriverHome {
 
   @override
   DriverHomeState build() {
-    // Initialize with offline state
-    // In a real app, we would check the persisted state or fetch from API
-    return const DriverHomeState();
+    // Keep driver status in sync with backend profile & active order on startup
+    final profileAsync = ref.watch(driverProfileProvider);
+    final activeOrderAsync = ref.watch(activeOrderProvider);
+
+    // Default values
+    var initialStatus = DriverStatus.offline;
+    String? initialError;
+
+    // 1. Try to sync with backend profile status (three states)
+    if (profileAsync.hasValue) {
+      final profile = profileAsync.value!;
+      final status = profile.status;
+      if (status != null) {
+        if (status.isOnline && status.isAvailable) {
+          initialStatus = DriverStatus.online;
+        } else if (status.isOnline && !status.isAvailable) {
+          initialStatus = DriverStatus.onDelivery; // in-transit
+        } else {
+          initialStatus = DriverStatus.offline;
+        }
+      }
+    }
+
+    // 2. Override if there's an active order
+    if (activeOrderAsync.hasValue) {
+      final order = activeOrderAsync.value;
+      if (order != null) {
+        initialStatus = DriverStatus.onDelivery;
+      }
+    }
+
+    // Return the calculated state
+    return DriverHomeState(status: initialStatus, error: initialError);
   }
 
   Future<void> toggleStatus() async {
@@ -69,11 +99,13 @@ class DriverHome extends _$DriverHome {
     _pollingTimer = null;
   }
 
-  Future<void> acceptOrder(String orderId) async {
+  Future<void> acceptOrder(int orderId) async {
     try {
       await ref.read(apiServiceProvider).acceptOrder(orderId);
       // Refresh active order and available orders
       ref.invalidate(activeOrderProvider);
+      ref.invalidate(driverDashboardDataProvider);
+      ref.invalidate(driverProfileProvider);
       ref.invalidate(nearbyOrdersProvider);
 
       state = state.copyWith(status: DriverStatus.onDelivery);
@@ -82,7 +114,7 @@ class DriverHome extends _$DriverHome {
     }
   }
 
-  Future<void> rejectOrder(String orderId) async {
+  Future<void> rejectOrder(int orderId) async {
     // For now, just invalidate the list to refresh
     // In a real app, we'd probably want to add it to a "ignored" list locally
     ref.invalidate(nearbyOrdersProvider);
@@ -118,9 +150,16 @@ Future<List<AvailableOrder>> nearbyOrders(NearbyOrdersRef ref) async {
   // Add small delay to prioritize other API calls
   await Future.delayed(const Duration(milliseconds: 500));
 
-  final location = await ref.read(locationServiceProvider.future);
-  final apiService = ref.read(apiServiceProvider);
-  return apiService.getAvailableOrders(latitude: location.latitude, longitude: location.longitude);
+  // Use current location once (stream can hang waiting for first emit)
+  final locationService = ref.read(locationServiceProvider.notifier);
+  try {
+    final position = await locationService.getCurrentLocation();
+    final apiService = ref.read(apiServiceProvider);
+    return apiService.getAvailableOrders(latitude: position.latitude, longitude: position.longitude);
+  } catch (e) {
+    // If location is unavailable, return empty list to avoid perpetual loading
+    return [];
+  }
 }
 
 @riverpod
