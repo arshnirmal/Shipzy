@@ -18,10 +18,13 @@ RUN apk update && apk add --no-cache \
     make \
     g++
 
+# Install pnpm
+RUN npm install -g pnpm
+
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # ============================================
 # Development Stage
@@ -29,15 +32,12 @@ COPY package*.json ./
 FROM base AS development
 
 # Install all dependencies (including devDependencies)
-RUN npm install
+RUN pnpm install --frozen-lockfile
 
 # Copy source code and TypeScript config
 COPY src ./src
 COPY tsconfig.json ./
 COPY .eslintrc.js ./
-
-# Copy Firebase service account key file
-COPY shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json ./
 
 # DON'T copy source code - it will be mounted via docker-compose
 # This allows hot reload to work properly
@@ -54,11 +54,10 @@ CMD ["npm", "run", "dev"]
 FROM base AS production-builder
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
-# Copy source code, TypeScript config, and Firebase service account key file
+# Copy source code and TypeScript config
 COPY . .
-COPY shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json .
 
 # Build TypeScript
 RUN npm run build
@@ -79,8 +78,7 @@ WORKDIR /app
 # Copy dependencies and compiled files from builder
 COPY --from=production-builder /app/node_modules ./node_modules
 COPY --from=production-builder /app/dist ./dist
-COPY --from=production-builder /app/package*.json ./
-COPY --from=production-builder /app/shipzy-37e1c-firebase-adminsdk-fbsvc-e2f198175a.json ./
+COPY --from=production-builder /app/package.json ./
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

@@ -146,7 +146,7 @@ CREATE TABLE public.pricing_config (
     config_value NUMERIC(10, 4) NOT NULL,
     description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
-    updated_by INT REFERENCES users.profiles(user_id),
+    updated_by INT,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -175,24 +175,55 @@ VALUES
     (
         'truck',
         'Truck',
-        2000.00 ');
+        2000.00
+    );
 
 -- order statuses
-INSERT INTO public.order_statuses (name, description, display_order) VALUES (' pending ', ' Order created,
-        awaiting driver assignment ', 1), (' accepted ', ' Driver accepted the order ', 2), (' picked_up ', ' Package picked up
-        from
-            sender ', 3), (' in_transit ', ' Package in transit to destination ', 4), (' delivered ', ' Successfully delivered ', 5), (' cancelled ', ' Order cancelled ', 6), (' undeliverable ', ' Could not deliver to recipient ', 7), (' returned ', ' Package returned to sender ', 8);
+INSERT INTO public.order_statuses (name, description, display_order) VALUES 
+    ('pending', 'Order created, awaiting driver assignment', 1), 
+    ('accepted', 'Driver accepted the order', 2), 
+    ('picked_up', 'Package picked up from sender', 3), 
+    ('in_transit', 'Package in transit to destination', 4), 
+    ('delivered', 'Successfully delivered', 5), 
+    ('cancelled', 'Order cancelled', 6), 
+    ('undeliverable', 'Could not deliver to recipient', 7), 
+    ('returned', 'Package returned to sender', 8);
 
 -- payment methods
-INSERT INTO public.payment_methods (name, description) VALUES (' Cash on Delivery ', ' Cash on Delivery '), (' Prepaid via UPI ', ' Prepaid via UPI '), (' Prepaid via Credit / Debit Card ', ' Prepaid via Credit / Debit Card ');
+INSERT INTO public.payment_methods (name, description) VALUES 
+    ('cash_on_delivery', 'Cash on Delivery'), 
+    ('prepaid_via_upi', 'Prepaid via UPI'), 
+    ('prepaid_via_card', 'Prepaid via Credit/Debit Card');
 
-INSERT INTO public.payment_statuses (name, description) VALUES (' pending ', ' Payment not yet received '), (' completed ', ' Payment successful '), (' failed ', ' Payment failed '), (' refunded ', ' Payment refunded '), (' cancelled ', ' Payment cancelled ');
+INSERT INTO public.payment_statuses (name, description) VALUES 
+    ('pending', 'Payment not yet received'), 
+    ('completed', 'Payment successful'), 
+    ('failed', 'Payment failed'), 
+    ('refunded', 'Payment refunded'), 
+    ('cancelled', 'Payment cancelled');
 
-INSERT INTO public.assignment_statuses (name, description) VALUES (' assigned ', ' Order assigned to courier '), (' accepted ', ' Courier accepted assignment '), (' rejected ', ' Courier rejected assignment '), (' picked_up ', ' Package picked up '), (' in_transit ', ' Package in transit '), (' delivered ', ' Package delivered '), (' cancelled ', ' Assignment cancelled '), (' returned ', ' Package returned ');
+INSERT INTO public.assignment_statuses (name, description) VALUES 
+    ('assigned', 'Order assigned to courier'), 
+    ('accepted', 'Courier accepted assignment'), 
+    ('rejected', 'Courier rejected assignment'), 
+    ('picked_up', 'Package picked up'), 
+    ('in_transit', 'Package in transit'), 
+    ('delivered', 'Package delivered'), 
+    ('cancelled', 'Assignment cancelled'), 
+    ('returned', 'Package returned');
 
-INSERT INTO public.notification_channels (name, description) VALUES (' push ', ' Push notification via FCM '), (' sms ', ' SMS notification '), (' email ', ' Email notification '), (' in_app ', ' In - app notification banner ');
+INSERT INTO public.notification_channels (name, description) VALUES 
+    ('push', 'Push notification via FCM'), 
+    ('sms', 'SMS notification'), 
+    ('email', 'Email notification'), 
+    ('in_app', 'In-app notification banner');
 
-INSERT INTO public.notification_statuses (name) VALUES (' pending '), (' sent '), (' delivered '), (' read '), (' failed ');
+INSERT INTO public.notification_statuses (name) VALUES 
+    ('pending'), 
+    ('sent'), 
+    ('delivered'), 
+    ('read'), 
+    ('failed');
 
 -- weight tiers, delivery types, package types, delivery_type_capabilities, labels and related inserts follow from original schema
 

@@ -3,6 +3,7 @@ import admin from "firebase-admin";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import config from "./env";
 import logger from "./logger";
 
 // Initialize Firebase Admin SDK using service account key file
@@ -47,13 +48,27 @@ try {
 
   let serviceAccount = null;
 
-  // Try each possible path
-  for (const testPath of possiblePaths) {
-    logger.info(`Checking Firebase service account path: ${testPath}`);
-    if (fs.existsSync(testPath)) {
-      serviceAccount = JSON.parse(fs.readFileSync(testPath, "utf8"));
-      logger.info(`Found Firebase service account at: ${testPath}`);
-      break;
+  // Check if Firebase credentials are provided via environment variables
+  if (
+    config.firebase.projectId &&
+    config.firebase.clientEmail &&
+    config.firebase.privateKey
+  ) {
+    logger.info("Initializing Firebase Admin SDK using environment variables");
+    serviceAccount = {
+      projectId: config.firebase.projectId,
+      clientEmail: config.firebase.clientEmail,
+      privateKey: config.firebase.privateKey,
+    };
+  } else {
+    // Try each possible path
+    for (const testPath of possiblePaths) {
+      logger.info(`Checking Firebase service account path: ${testPath}`);
+      if (fs.existsSync(testPath)) {
+        serviceAccount = JSON.parse(fs.readFileSync(testPath, "utf8"));
+        logger.info(`Found Firebase service account at: ${testPath}`);
+        break;
+      }
     }
   }
 

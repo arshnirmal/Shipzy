@@ -124,3 +124,8 @@ CREATE INDEX idx_users_business_accounts_user_id ON users.business_accounts (use
 CREATE TRIGGER set_timestamp_users_business_accounts BEFORE
 UPDATE
     ON users.business_accounts FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+-- Add foreign key constraint to pricing_config.updated_by after users.profiles is created
+ALTER TABLE public.pricing_config
+ADD CONSTRAINT fk_pricing_config_updated_by
+FOREIGN KEY (updated_by) REFERENCES users.profiles(user_id);

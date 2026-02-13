@@ -43,6 +43,8 @@ const config: Config = {
     max: parseInt(process.env.DB_POOL_MAX || "20", 10),
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
+    ssl:
+      process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
   },
 
   // JWT
@@ -52,12 +54,13 @@ const config: Config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "30d",
   },
 
-  // Firebase (now using service account key file)
+  // Firebase
   firebase: {
-    // These are no longer needed as we're using the service account key file directly
-    projectId: "",
-    clientEmail: "",
-    privateKey: "",
+    projectId: process.env.FIREBASE_PROJECT_ID || "",
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "",
+    privateKey: process.env.FIREBASE_PRIVATE_KEY
+      ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+      : "",
   },
 
   // CORS
@@ -85,7 +88,7 @@ const config: Config = {
 const requiredEnvVars = [
   "JWT_SECRET",
   "MAPBOX_ACCESS_TOKEN",
-  // Firebase credentials are now handled via service account key file
+  // Firebase credentials (optional if using service account file, required for cloud deployment)
   // 'FIREBASE_PROJECT_ID',
   // 'FIREBASE_CLIENT_EMAIL',
   // 'FIREBASE_PRIVATE_KEY',

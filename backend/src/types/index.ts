@@ -1,22 +1,25 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance } from "fastify";
 
 // Extend FastifyInstance with custom decorators
-declare module 'fastify' {
+declare module "fastify" {
   interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticate: (
+      request: FastifyRequest,
+      reply: FastifyReply,
+    ) => Promise<void>;
   }
 }
 
 // Common interfaces
 export interface ApiResponse<T = any> {
-  status: 'success' | 'error';
+  status: "success" | "error";
   message: string;
   data?: T;
   timestamp?: string;
 }
 
 export interface ErrorResponse {
-  status: 'error';
+  status: "error";
   message: string;
   error?: string;
   timestamp?: string;
@@ -49,6 +52,7 @@ export interface DatabaseConfig {
   max: number;
   idleTimeoutMillis: number;
   connectionTimeoutMillis: number;
+  ssl?: { rejectUnauthorized: boolean };
 }
 
 export interface CorsConfig {
