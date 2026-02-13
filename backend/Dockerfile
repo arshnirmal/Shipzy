@@ -64,5 +64,5 @@ EXPOSE 3000
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start production server
-CMD ["node", "dist/src/server.js"]
+CMD ["node", "dist/server.js"]
 
