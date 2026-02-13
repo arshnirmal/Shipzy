@@ -1,101 +1,68 @@
 # ============================================
 # Shipzy Backend Dockerfile
-# Multi-stage build for development and production
 # ============================================
 
 # ============================================
-# Base Stage - Common dependencies
+# Base Stage
 # ============================================
-FROM node:lts-alpine AS base
+FROM node:20-alpine AS base
 
-# Install system dependencies and build tools for native modules
-# Update package index first to avoid stale mirrors
-RUN apk update && apk add --no-cache \
-    wget \
-    curl \
-    bash \
+# Install system dependencies and enable corepack
+RUN apk add --no-cache \
+    libc6-compat \
     python3 \
     make \
-    g++
-
-# Install pnpm
-RUN npm install -g pnpm
+    g++ \
+    dumb-init && \
+    corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
+
+# ============================================
+# Dependencies Stage
+# ============================================
+FROM base AS deps
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# ============================================
-# Development Stage
-# ============================================
-FROM base AS development
-
-# Install all dependencies (including devDependencies)
+# Install dependencies (frozen lockfile for reproducibility)
 RUN pnpm install --frozen-lockfile
 
-# Copy source code and TypeScript config
-COPY src ./src
-COPY tsconfig.json ./
-COPY .eslintrc.js ./
-
-# DON'T copy source code - it will be mounted via docker-compose
-# This allows hot reload to work properly
-
-# Expose port
-EXPOSE 3000
-
-# Start with hot reload
-CMD ["npm", "run", "dev"]
-
 # ============================================
-# Production Builder Stage
+# Builder Stage
 # ============================================
-FROM base AS production-builder
+FROM base AS builder
 
-# Install all dependencies (including devDependencies for build)
-RUN pnpm install --frozen-lockfile
-
-# Copy source code and TypeScript config
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build TypeScript
-RUN npm run build
+RUN pnpm run build
 
 # ============================================
 # Production Stage
 # ============================================
-FROM node:lts-alpine AS production
-
-# Install runtime dependencies only
-RUN apk update && apk add --no-cache \
-    wget \
-    curl \
-    libstdc++
+FROM base AS runner
 
 WORKDIR /app
 
-# Copy dependencies and compiled files from builder
-COPY --from=production-builder /app/node_modules ./node_modules
-COPY --from=production-builder /app/dist ./dist
-COPY --from=production-builder /app/package.json ./
-
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nodejs
 
-# Change ownership
-RUN chown -R nodejs:nodejs /app
+# Copy built artifacts and dependencies
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
 
-# Switch to non-root user
 USER nodejs
 
-# Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
+# Use dumb-init as PID 1
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start production server
-CMD ["npm", "start"]
+CMD ["node", "dist/src/server.js"]
+
