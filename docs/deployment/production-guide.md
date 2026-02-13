@@ -136,9 +136,10 @@ docker run -d \
   -e POSTGRES_DB=shipzy_prod \
   -e POSTGRES_USER=shipzy_user \
   -e POSTGRES_PASSWORD=your_secure_db_password \
-  -v $(pwd)/src/database/init/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro \
+  -v $(pwd)/src/database/schemas:/tmp/schemas:ro \
   -v $(pwd)/docker/postgres/init-scripts/01-extensions.sql:/docker-entrypoint-initdb.d/02-extensions.sql:ro \
-  -v $(pwd)/docker/postgres/init-scripts/03-load-functions.sh:/docker-entrypoint-initdb.d/03-load-functions.sh:ro \
+  -v $(pwd)/docker/postgres/init-scripts/02-load-schema.sh:/docker-entrypoint-initdb.d/03-load-schema.sh:ro \
+  -v $(pwd)/docker/postgres/init-scripts/03-load-functions.sh:/docker-entrypoint-initdb.d/04-load-functions.sh:ro \
   postgis/postgis:17-3.6-alpine
 
 # Wait for database to initialize (check logs)
@@ -182,9 +183,10 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./src/database/init/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./src/database/schemas:/tmp/schemas:ro
       - ./docker/postgres/init-scripts/01-extensions.sql:/docker-entrypoint-initdb.d/02-extensions.sql:ro
-      - ./docker/postgres/init-scripts/03-load-functions.sh:/docker-entrypoint-initdb.d/03-load-functions.sh:ro
+      - ./docker/postgres/init-scripts/02-load-schema.sh:/docker-entrypoint-initdb.d/03-load-schema.sh:ro
+      - ./docker/postgres/init-scripts/03-load-functions.sh:/docker-entrypoint-initdb.d/04-load-functions.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s

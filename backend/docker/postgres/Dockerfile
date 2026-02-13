@@ -2,7 +2,7 @@
 FROM postgis/postgis:17-3.6-alpine
 
 # Copy initialization files
-COPY ./src/database/init/schema.sql /tmp/schema.sql
+COPY ./src/database/schemas /tmp/schemas
 COPY ./src/database/functions /docker-entrypoint-initdb.d/functions
 COPY ./docker/postgres/init-scripts/01-extensions.sql /docker-entrypoint-initdb.d/01-extensions.sql
 COPY ./docker/postgres/init-scripts/02-load-schema.sh /docker-entrypoint-initdb.d/02-load-schema.sh

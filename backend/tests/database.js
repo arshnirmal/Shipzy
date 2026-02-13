@@ -11,7 +11,6 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const schemaPath = path.join(__dirname, "../src/database/init/schema.sql");
 const functionsDir = path.join(__dirname, "../src/database/functions");
 const seedsPath = path.join(__dirname, "../src/database/seeds/dev-data.sql");
 
@@ -59,19 +58,14 @@ class TestDatabase {
     const { promisify } = await import("util");
 
     return new Promise((resolve, reject) => {
+      // Run all SQL files from the schemas directory inside the container
+      const schemaDir =
+        "/mnt/data/Arsh/Computer_Science/Projects/shipzy/backend/src/database/schemas";
+      const cmd = `for f in ${schemaDir}/*.sql; do psql -U ${testConfig.database.user} -d ${testConfig.database.database} -f "$f"; done`;
+
       const psql = spawn(
         "docker",
-        [
-          "exec",
-          "shipzy-postgres-dev",
-          "psql",
-          "-U",
-          testConfig.database.user,
-          "-d",
-          testConfig.database.database,
-          "-f",
-          "/mnt/data/Arsh/Computer_Science/Projects/shipzy/services/backend/src/database/init/schema.sql",
-        ],
+        ["exec", "shipzy-postgres-dev", "sh", "-c", cmd],
         { stdio: "inherit" },
       );
 

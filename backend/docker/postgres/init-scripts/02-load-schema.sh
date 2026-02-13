@@ -1,15 +1,19 @@
 #!/bin/bash
 # ============================================
-# Load schema.sql
-# This script loads the main database schema
+# Load database schemas
+# This script loads the modular database schemas
 # ============================================
 
 set -e
 
-echo "🏗️  Creating database schema..."
+echo "🏗️  Creating database schema (split files)..."
 
-# Load the schema file
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f "/tmp/schema.sql"
+# Load all SQL files from /tmp/schemas in lexicographic order
+for f in /tmp/schemas/*.sql; do
+  echo "-- Running $f --"
+  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f "$f"
+done
 
 echo "✅ Database schema created successfully"
 echo ""
+

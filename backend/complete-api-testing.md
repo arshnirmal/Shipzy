@@ -1547,7 +1547,7 @@ chmod +x test-all.sh
 ## 🔗 **Related Documentation**
 
 - [API Reference](../../docs/api/swagger.yaml)
-- [Database Schema](../../src/database/init/schema.sql)
+- [Database Schema](../../src/database/schemas/)
 - [Environment Setup](../../README.md#environment-variables)
 - [Deployment Guide](../../docs/deployment/production-guide.md)
 

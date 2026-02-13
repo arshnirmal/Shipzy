@@ -50,7 +50,7 @@ cp .env.example .env
 # Edit .env with your credentials (see .env.example for all required variables)
 
 # 4. Setup database
-psql -U postgres -f src/database/init/schema.sql
+npm run db:init
 
 # 5. Start server
 npm run dev
@@ -114,15 +114,15 @@ services/backend/
 
 ## 🛠️ Tech Stack
 
-| Category           | Technology                  |
-| ------------------ | --------------------------- |
-| **Runtime**        | Node.js 18+                 |
-| **Framework**      | Fastify 4.28                |
-| **Database**       | PostgreSQL 14+ with PostGIS |
+| Category           | Technology                                          |
+| ------------------ | --------------------------------------------------- |
+| **Runtime**        | Node.js 18+                                         |
+| **Framework**      | Fastify 4.28                                        |
+| **Database**       | PostgreSQL 14+ with PostGIS                         |
 | **Authentication** | Firebase Auth + Google OAuth + Email/Password + JWT |
-| **Logger**         | Pino                        |
-| **Validation**     | AJV                         |
-| **Security**       | Helmet, CORS, Rate Limiting |
+| **Logger**         | Pino                                                |
+| **Validation**     | AJV                                                 |
+| **Security**       | Helmet, CORS, Rate Limiting                         |
 
 ---
 
@@ -442,7 +442,7 @@ kill -9 <PID>
 
 - [Quick Start Guide](./QUICKSTART.md)
 - [Firebase Auth Setup](./FIREBASE_AUTH_SETUP.md)
-- [Database Schema](./src/database/init/schema.sql)
+- [Database Schema](./src/database/schemas/)
 - [API Documentation](../../docs/api/swagger.yaml) (coming soon)
 - [Architecture](../../docs/architecture/system-design.md)
 

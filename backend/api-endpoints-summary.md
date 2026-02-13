@@ -163,7 +163,7 @@ curl http://localhost:3000/api/v1/static/delivery-types
 - [Complete API Testing Guide](complete-api-testing.md)
 - [HTTP Test Examples](test-complete-apis.http)
 - [API Architecture](../../docs/architecture/system-design.md)
-- [Database Schema](../../src/database/init/schema.sql)
+- [Database Schema](../../src/database/schemas/)
 
 ---
 

@@ -4,7 +4,7 @@ This directory contains the PostgreSQL database schema, functions, queries, and 
 
 ## Structure
 
-- `init/schema.sql`: Main schema definition with tables, enums, indexes, views, and triggers.
+- `schemas/`: Modular schema definitions split into ordered SQL files.
 - `functions/`: PL/pgSQL functions for business logic (auth, orders, etc.).
 - `queries/`: JavaScript modules exporting parameterized SQL queries for use in the Node.js backend.
 - `seeds/`: SQL scripts for populating development data.
@@ -27,7 +27,7 @@ See `schema.sql` for full details.
 2. Run the backend: `npm run dev` (connects automatically).
 3. Initialize schema:
    ```bash
-   psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f init/schema.sql
+   for f in schemas/*.sql; do psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$f"; done
    ```
 4. Seed development data:
    ```bash

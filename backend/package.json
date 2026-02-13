@@ -28,7 +28,7 @@
     "lint:test:fix": "eslint tests/ --ext .ts,.js --fix",
     "format": "prettier --write \"src/**/*.{ts,js}\"",
     "format:test": "prettier --write \"tests/**/*.{ts,js}\"",
-    "db:init": "psql -U shipzy_user -d shipzy_dev -f src/database/init/schema.sql",
+    "db:init": "for f in src/database/schemas/*.sql; do echo \"Running $f\"; psql -U shipzy_user -d shipzy_dev -f \"$f\"; done",
     "db:functions": "psql -U shipzy_user -d shipzy_dev -f src/database/functions/*.sql",
     "db:seed": "psql -U shipzy_user -d shipzy_dev -f src/database/seeds/dev-data.sql"
   },
@@ -50,7 +50,7 @@
     "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
-    "fastify": "^5.0.0",
+    "fastify": "^5.7.4",
     "firebase-admin": "^12.3.1",
     "node-cache": "^5.1.2",
     "pg": "^8.12.0",

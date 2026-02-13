@@ -9,16 +9,13 @@ This setup uses **direct volume mounts** to the source files - **no copying requ
 PostgreSQL runs scripts in `/docker-entrypoint-initdb.d/` in alphabetical order:
 
 1. **01-extensions.sql** (from `docker/postgres/init-scripts/`)
-
    - Installs PostGIS, UUID, pg_stat_statements
 
-2. **02-schema.sql** (mounted from `services/backend/src/database/init/schema.sql`)
-
-   - Your complete database schema
-   - ✅ **Single source of truth!**
+2. **02-load-schema.sh** (from `docker/postgres/init-scripts/`)
+   - Loads all schema files from `src/database/schemas/` in order
+   - ✅ **Modular schema files!**
 
 3. **03-load-functions.sh** (from `docker/postgres/init-scripts/`)
-
    - Loads all `.sql` files from mounted functions directory
 
 4. **functions/\*.sql** (mounted from `services/backend/src/database/functions/`)
@@ -30,7 +27,7 @@ PostgreSQL runs scripts in `/docker-entrypoint-initdb.d/` in alphabetical order:
 ```yaml
 volumes:
   # Actual source files (no duplication!)
-  - ./services/backend/src/database/init/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
+  - ./services/backend/src/database/schemas:/docker-entrypoint-initdb.d/schemas:ro
   - ./services/backend/src/database/functions:/docker-entrypoint-initdb.d/functions:ro
 ```
 
@@ -47,7 +44,7 @@ Just edit the source files:
 
 ```bash
 # Edit schema
-nano services/backend/src/database/init/schema.sql
+nano services/backend/src/database/schemas/
 
 # Edit functions
 nano services/backend/src/database/functions/auth.sql
