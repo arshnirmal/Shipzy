@@ -1,7 +1,7 @@
 // services/backend/src/database/db.ts
 import pg from "pg";
-import config from "../config/env";
-import logger from "../config/logger";
+import config from "../config/env.js";
+import logger from "../config/logger.js";
 
 const { Pool } = pg;
 

@@ -1,9 +1,9 @@
 // services/backend/src/modules/users/users.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import logger from "../../config/logger";
-import { errorResponse, successResponse } from "../../utils/response.util";
-import { AuthenticationError } from "../../utils/error.util";
-import usersService from "./users.service";
+import logger from "../../config/logger.js";
+import { errorResponse, successResponse } from "../../utils/response.util.js";
+import { AuthenticationError } from "../../utils/error.util.js";
+import usersService from "./users.service.js";
 
 interface UpdateProfileBody {
   fullName?: string;

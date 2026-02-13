@@ -1,7 +1,7 @@
 // services/backend/src/modules/users/users.repository.ts
-import logger from "../../config/logger";
-import db from "../../database/db";
-import usersQueries from "../../database/queries/users.queries";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import usersQueries from "../../database/queries/users.queries.js";
 
 interface User {
   user_id: number;

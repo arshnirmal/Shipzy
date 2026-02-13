@@ -1,12 +1,12 @@
 // services/backend/src/modules/orders/orders.service.ts
-import logger from "../../config/logger";
+import logger from "../../config/logger.js";
 import {
   AppError,
   AuthorizationError,
   NotFoundError,
   ValidationError,
-} from "../../utils/error.util";
-import ordersRepository from "./orders.repository";
+} from "../../utils/error.util.js";
+import ordersRepository from "./orders.repository.js";
 
 interface FareData {
   deliveryTypeId: number;
@@ -98,7 +98,7 @@ class OrdersService {
 
       // Lazy import addresses service to avoid circular dependencies
       const addressesService = await import(
-        "../addresses/addresses.service"
+        "../addresses/addresses.service.js"
       ).then((m) => m.default);
 
       const estimatedDistanceKm = addressesService.calculateDistance(

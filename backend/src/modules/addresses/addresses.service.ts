@@ -2,8 +2,8 @@
 import axios from "axios";
 import crypto from "node:crypto";
 import NodeCache from "node-cache";
-import logger from "../../config/logger";
-import { ValidationError } from "../../utils/error.util";
+import logger from "../../config/logger.js";
+import { ValidationError } from "../../utils/error.util.js";
 
 interface SearchParams {
   query: string;

@@ -1,7 +1,7 @@
 // services/backend/src/modules/static/static.repository.js
-import logger from "../../config/logger";
-import db from "../../database/db";
-import staticQueries from "../../database/queries/static.queries";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import staticQueries from "../../database/queries/static.queries.js";
 
 class StaticRepository {
   /**

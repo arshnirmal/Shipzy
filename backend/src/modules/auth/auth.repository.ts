@@ -1,8 +1,8 @@
 // services/backend/src/modules/auth/auth.repository.ts
-import logger from "../../config/logger";
-import db from "../../database/db";
-import authQueries from "../../database/queries/auth.queries";
-import { getUserRoleName } from "../../utils/roles.utils";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import authQueries from "../../database/queries/auth.queries.js";
+import { getUserRoleName } from "../../utils/roles.utils.js";
 
 interface User {
   user_id: number;

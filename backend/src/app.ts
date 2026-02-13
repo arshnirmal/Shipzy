@@ -3,14 +3,14 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import Fastify, { FastifyInstance } from "fastify";
-import config from "./config/env";
-import logger from "./config/logger";
-import { authenticate } from "./middleware/auth.middleware";
-import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
+import config from "./config/env.js";
+import logger from "./config/logger.js";
+import { authenticate } from "./middleware/auth.middleware.js";
+import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
 import {
   authRateLimitConfig,
   rateLimitConfig,
-} from "./middleware/ratelimit.middleware";
+} from "./middleware/ratelimit.middleware.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -19,12 +19,12 @@ declare module "fastify" {
 }
 
 // Import routes
-import addressesRoutes from "./modules/addresses/addresses.routes";
-import authRoutes from "./modules/auth/auth.routes";
-import driversRoutes from "./modules/drivers/drivers.routes";
-import ordersRoutes from "./modules/orders/orders.routes";
-import staticRoutes from "./modules/static/static.routes";
-import usersRoutes from "./modules/users/users.routes";
+import addressesRoutes from "./modules/addresses/addresses.routes.js";
+import authRoutes from "./modules/auth/auth.routes.js";
+import driversRoutes from "./modules/drivers/drivers.routes.js";
+import ordersRoutes from "./modules/orders/orders.routes.js";
+import staticRoutes from "./modules/static/static.routes.js";
+import usersRoutes from "./modules/users/users.routes.js";
 
 /**
  * Build Fastify application

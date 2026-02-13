@@ -3,8 +3,8 @@ import admin from "firebase-admin";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import config from "./env";
-import logger from "./logger";
+import config from "./env.js";
+import logger from "./logger.js";
 
 // Initialize Firebase Admin SDK using service account key file
 // eslint-disable-next-line import/no-mutable-exports

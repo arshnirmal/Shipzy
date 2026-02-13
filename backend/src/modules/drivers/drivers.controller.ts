@@ -1,9 +1,9 @@
 // services/backend/src/modules/drivers/drivers.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import logger from "../../config/logger";
-import { errorResponse, successResponse } from "../../utils/response.util";
-import driversService from "./drivers.service";
-import ratingsService from "../ratings/ratings.service";
+import logger from "../../config/logger.js";
+import { errorResponse, successResponse } from "../../utils/response.util.js";
+import driversService from "./drivers.service.js";
+import ratingsService from "../ratings/ratings.service.js";
 
 interface UpdateProfileBody {
   fullName?: string;

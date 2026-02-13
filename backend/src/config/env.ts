@@ -6,7 +6,7 @@ import type {
   JWTConfig,
   FirebaseConfig,
   LoggerConfig,
-} from "../types/index";
+} from "../types/index.js";
 
 dotenv.config();
 

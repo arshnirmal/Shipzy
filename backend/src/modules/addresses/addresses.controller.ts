@@ -1,8 +1,8 @@
 // services/backend/src/modules/addresses/addresses.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import logger from "../../config/logger";
-import { errorResponse, successResponse } from "../../utils/response.util";
-import addressesService from "./addresses.service";
+import logger from "../../config/logger.js";
+import { errorResponse, successResponse } from "../../utils/response.util.js";
+import addressesService from "./addresses.service.js";
 
 interface SearchAddressesBody {
   query: string;

@@ -1,11 +1,11 @@
 // services/backend/src/modules/users/users.service.ts
-import logger from "../../config/logger";
+import logger from "../../config/logger.js";
 import {
   AuthorizationError,
   NotFoundError,
   ValidationError,
-} from "../../utils/error.util";
-import usersRepository from "./users.repository";
+} from "../../utils/error.util.js";
+import usersRepository from "./users.repository.js";
 
 interface UserProfile {
   userId: number;

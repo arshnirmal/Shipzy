@@ -1,6 +1,6 @@
 // services/backend/src/modules/addresses/addresses.routes.ts
 import { FastifyInstance } from "fastify";
-import addressesController from "./addresses.controller";
+import addressesController from "./addresses.controller.js";
 
 async function addressesRoutes(fastify: FastifyInstance, options: any) {
   // All routes require authentication

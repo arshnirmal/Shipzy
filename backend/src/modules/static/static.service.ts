@@ -1,6 +1,6 @@
 // services/backend/src/modules/static/static.service.js
-import logger from "../../config/logger";
-import staticRepository from "./static.repository";
+import logger from "../../config/logger.js";
+import staticRepository from "./static.repository.js";
 
 class StaticService {
   /**

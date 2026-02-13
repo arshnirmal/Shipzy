@@ -1,11 +1,11 @@
 // services/backend/src/modules/drivers/drivers.service.ts
-import logger from "../../config/logger";
+import logger from "../../config/logger.js";
 import {
   AuthorizationError,
   NotFoundError,
   ValidationError,
-} from "../../utils/error.util";
-import driversRepository from "./drivers.repository";
+} from "../../utils/error.util.js";
+import driversRepository from "./drivers.repository.js";
 
 interface DriverProfile {
   userId: number;
@@ -396,7 +396,7 @@ class DriversService {
   }> {
     try {
       // Import pricing repository for configurable rates
-      const pricingRepo = await import("../pricing/pricing.repository").then(
+      const pricingRepo = await import("../pricing/pricing.repository.js").then(
         (m) => m.default,
       );
 

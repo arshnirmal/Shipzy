@@ -1,7 +1,7 @@
 // services/backend/src/modules/orders/orders.routes.ts
 import { FastifyInstance } from "fastify";
-import { authorize } from "../../middleware/auth.middleware";
-import ordersController from "./orders.controller";
+import { authorize } from "../../middleware/auth.middleware.js";
+import ordersController from "./orders.controller.js";
 import {
   acceptOrderSchema,
   calculateFareSchema,
@@ -11,7 +11,7 @@ import {
   getOrderByIdSchema,
   listOrdersSchema,
   updateOrderStatusSchema,
-} from "./orders.schema";
+} from "./orders.schema.js";
 
 async function ordersRoutes(fastify: FastifyInstance, options: any) {
   // All routes require authentication

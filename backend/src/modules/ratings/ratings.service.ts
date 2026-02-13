@@ -1,11 +1,11 @@
 // services/backend/src/modules/ratings/ratings.service.ts
-import logger from "../../config/logger";
+import logger from "../../config/logger.js";
 import {
   AuthorizationError,
   NotFoundError,
   ValidationError,
-} from "../../utils/error.util";
-import ratingsRepository from "./ratings.repository";
+} from "../../utils/error.util.js";
+import ratingsRepository from "./ratings.repository.js";
 
 interface CreateRatingData {
   orderId: number;

@@ -1,5 +1,5 @@
-import logger from "../../config/logger";
-import db from "../../database/db";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
 
 export class PricingRepository {
   /**

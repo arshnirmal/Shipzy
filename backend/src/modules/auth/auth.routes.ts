@@ -1,12 +1,12 @@
 // services/backend/src/modules/auth/auth.routes.ts
 import { FastifyInstance } from "fastify";
-import authController from "./auth.controller";
+import authController from "./auth.controller.js";
 import {
   refreshTokenSchema,
   verifyGoogleSchema,
   registerSchema,
   loginSchema,
-} from "./auth.schema";
+} from "./auth.schema.js";
 
 async function authRoutes(fastify: FastifyInstance, options: any) {
   // POST /api/v1/auth/google/verify

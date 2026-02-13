@@ -1,14 +1,14 @@
 // services/backend/src/modules/orders/orders.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import logger from "../../config/logger";
+import logger from "../../config/logger.js";
 import "../../middleware/auth.middleware";
 import {
   errorResponse,
   paginatedResponse,
   successResponse,
-} from "../../utils/response.util";
-import ordersService, { OrderData } from "./orders.service";
-import ratingsService from "../ratings/ratings.service";
+} from "../../utils/response.util.js";
+import ordersService, { OrderData } from "./orders.service.js";
+import ratingsService from "../ratings/ratings.service.js";
 
 interface CalculateFareBody {
   deliveryTypeId: number;

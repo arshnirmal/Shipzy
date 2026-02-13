@@ -1,8 +1,8 @@
 // services/backend/src/modules/drivers/drivers.repository.ts
-import logger from "../../config/logger";
-import db from "../../database/db";
-import driversQueries from "../../database/queries/drivers.queries";
-import sessionsRepository, { DriverSession } from "./sessions.repository";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import driversQueries from "../../database/queries/drivers.queries.js";
+import sessionsRepository, { DriverSession } from "./sessions.repository.js";
 
 interface Courier {
   courier_id: number;

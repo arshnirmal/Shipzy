@@ -1,7 +1,7 @@
 // services/backend/src/modules/orders/orders.repository.js
-import logger from "../../config/logger";
-import db from "../../database/db";
-import ordersQueries from "../../database/queries/orders.queries";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import ordersQueries from "../../database/queries/orders.queries.js";
 
 class OrdersRepository {
   /**

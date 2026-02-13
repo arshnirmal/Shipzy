@@ -1,8 +1,8 @@
 import { FastifyInstance } from "fastify";
-import { buildApp } from "./app";
-import config from "./config/env";
-import logger from "./config/logger";
-import db from "./database/db";
+import { buildApp } from "./app.js";
+import config from "./config/env.js";
+import logger from "./config/logger.js";
+import db from "./database/db.js";
 
 /**
  * Start the server

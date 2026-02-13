@@ -1,6 +1,6 @@
 // services/backend/src/middleware/validate.middleware.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import { ValidationError } from "../utils/error.util";
+import { ValidationError } from "../utils/error.util.js";
 
 /**
  * Custom validation middleware for additional checks

@@ -1,7 +1,7 @@
 // services/backend/src/modules/ratings/ratings.repository.ts
-import logger from "../../config/logger";
-import db from "../../database/db";
-import ratingsQueries from "../../database/queries/ratings.queries";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import ratingsQueries from "../../database/queries/ratings.queries.js";
 
 interface DriverRating {
   rating_id: number;

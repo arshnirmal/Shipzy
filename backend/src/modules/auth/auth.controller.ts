@@ -1,9 +1,9 @@
 // services/backend/src/modules/auth/auth.controller.ts
 import crypto from "node:crypto";
 import { FastifyRequest, FastifyReply } from "fastify";
-import logger from "../../config/logger";
-import { errorResponse, successResponse } from "../../utils/response.util";
-import authService from "./auth.service";
+import logger from "../../config/logger.js";
+import { errorResponse, successResponse } from "../../utils/response.util.js";
+import authService from "./auth.service.js";
 
 interface GoogleVerifyBody {
   idToken: string;

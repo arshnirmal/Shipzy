@@ -1,17 +1,17 @@
 // services/backend/src/modules/auth/auth.service.ts
 import crypto from "node:crypto";
 import bcrypt from "bcrypt";
-import { verifyFirebaseToken } from "../../config/firebase";
-import logger from "../../config/logger";
-import { AuthenticationError, ValidationError } from "../../utils/error.util";
+import { verifyFirebaseToken } from "../../config/firebase.js";
+import logger from "../../config/logger.js";
+import { AuthenticationError, ValidationError } from "../../utils/error.util.js";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyToken,
-} from "../../utils/jwt.util";
-import authRepository from "./auth.repository";
-import { DeviceInfo } from "../../types/index";
-import { getRoleId } from "../../utils/roles.utils";
+} from "../../utils/jwt.util.js";
+import authRepository from "./auth.repository.js";
+import { DeviceInfo } from "../../types/index.js";
+import { getRoleId } from "../../utils/roles.utils.js";
 
 interface UserData {
   fullName?: string;

@@ -1,8 +1,8 @@
 // services/backend/src/modules/static/static.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import logger from "../../config/logger";
-import { errorResponse, successResponse } from "../../utils/response.util";
-import staticService from "./static.service";
+import logger from "../../config/logger.js";
+import { errorResponse, successResponse } from "../../utils/response.util.js";
+import staticService from "./static.service.js";
 
 class StaticController {
   /**

@@ -1,12 +1,12 @@
 // services/backend/src/modules/drivers/drivers.routes.js
-import { authorize } from "../../middleware/auth.middleware";
+import { authorize } from "../../middleware/auth.middleware.js";
 import { FastifyInstance } from "fastify";
-import driversController from "./drivers.controller";
+import driversController from "./drivers.controller.js";
 import {
   updateAvailabilitySchema,
   updateDriverProfileSchema,
   updateLocationSchema,
-} from "./drivers.schema";
+} from "./drivers.schema.js";
 
 async function driversRoutes(fastify: FastifyInstance, options: any) {
   // All routes require authentication

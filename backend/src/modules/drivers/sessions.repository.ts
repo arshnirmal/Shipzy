@@ -1,7 +1,7 @@
 // services/backend/src/modules/drivers/sessions.repository.ts
-import logger from "../../config/logger";
-import db from "../../database/db";
-import sessionsQueries from "../../database/queries/sessions.queries";
+import logger from "../../config/logger.js";
+import db from "../../database/db.js";
+import sessionsQueries from "../../database/queries/sessions.queries.js";
 
 export interface DriverSession {
   session_id: number;

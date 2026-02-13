@@ -1,11 +1,11 @@
 // services/backend/src/modules/users/users.routes.ts
 import { FastifyInstance } from "fastify";
-import usersController from "./users.controller";
+import usersController from "./users.controller.js";
 import {
   deleteAddressSchema,
   saveAddressSchema,
   updateProfileSchema,
-} from "./users.schema";
+} from "./users.schema.js";
 
 async function usersRoutes(fastify: FastifyInstance, options: any) {
   // All routes require authentication

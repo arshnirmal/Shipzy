@@ -1,6 +1,6 @@
 // services/backend/src/modules/static/static.routes.ts
 import { FastifyInstance } from "fastify";
-import staticController from "./static.controller";
+import staticController from "./static.controller.js";
 
 async function staticRoutes(fastify: FastifyInstance, options: any) {
   // Public routes - no authentication required for static data
