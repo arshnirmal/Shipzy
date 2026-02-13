@@ -1,8 +1,8 @@
 # 🚀 **Shipzy Backend - Complete API Testing Guide**
 
-> **36 Endpoints** | **6 Modules** | **Production Ready**
+> **38 Endpoints** | **6 Modules** | **Production Ready**
 
-This comprehensive testing guide covers all 36 API endpoints across 6 modules with real cURL examples, request/response formats, and testing workflows.
+This comprehensive testing guide covers all 38 API endpoints across 6 modules with real cURL examples, request/response formats, and testing workflows.
 
 ---
 
@@ -11,8 +11,8 @@ This comprehensive testing guide covers all 36 API endpoints across 6 modules wi
 1. [Setup & Prerequisites](#setup)
 2. [Authentication APIs (6 endpoints)](#authentication)
 3. [User Management APIs (5 endpoints)](#users)
-4. [Driver Management APIs (6 endpoints)](#drivers)
-5. [Order Management APIs (8 endpoints)](#orders)
+4. [Driver Management APIs (7 endpoints)](#drivers)
+5. [Order Management APIs (9 endpoints)](#orders)
 6. [Address & Location APIs (5 endpoints)](#addresses)
 7. [Static Data APIs (7 endpoints)](#static)
 8. [Complete Testing Workflows](#workflows)
@@ -92,6 +92,8 @@ curl -X GET "http://localhost:3000/health" \
 ```
 
 ### **2.2 Google Authentication**
+
+> Note: `POST /api/v1/auth/firebase/verify` is referenced in tests but currently skipped/disabled — the active auth routes are Google verify, register, login, refresh and logout.
 
 ```bash
 curl -X POST "$BASE_URL/auth/google/verify" \
@@ -409,7 +411,7 @@ curl -X DELETE "$BASE_URL/users/me/addresses/$TEST_ADDRESS_ID" \
 
 <a name="drivers"></a>
 
-## 🚗 **4. Driver Management APIs (6 endpoints)**
+## 🚗 **4. Driver Management APIs (7 endpoints)**
 
 ### **4.1 Get Driver Profile**
 
@@ -560,8 +562,10 @@ curl -X GET "$BASE_URL/drivers/me/assignments" \
 
 ### **4.6 Get Earnings Summary**
 
+> Note: `GET /api/v1/drivers/me/earnings` accepts query param `?period=today|week|month|year` (default: `today`).
+
 ```bash
-curl -X GET "$BASE_URL/drivers/me/earnings" \
+curl -X GET "$BASE_URL/drivers/me/earnings?period=monthly" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN"
 ```
@@ -596,11 +600,34 @@ curl -X GET "$BASE_URL/drivers/me/earnings" \
 }
 ```
 
+### **4.7 Get Driver Rating**
+
+```bash
+curl -X GET "$BASE_URL/drivers/me/rating" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Rating stats retrieved successfully",
+  "data": {
+    "driverId": 1,
+    "averageRating": 4.7,
+    "totalRatings": 150,
+    "breakdown": { "5": 100, "4": 30, "3": 10, "2": 5, "1": 5 }
+  }
+}
+```
+
 ---
 
 <a name="orders"></a>
 
-## 📦 **5. Order Management APIs (8 endpoints)**
+## 📦 **5. Order Management APIs (9 endpoints)**
 
 ### **5.1 Calculate Fare Estimate**
 
@@ -863,6 +890,31 @@ curl -X PUT "$BASE_URL/orders/$TEST_ORDER_ID/status" \
     "status": "picked_up",
     "updatedAt": "2025-10-25T10:10:00.000Z",
     "notes": "Package collected successfully"
+  }
+}
+```
+
+### **5.9 Rate Delivered Order (Client)**
+
+```bash
+curl -X POST "$BASE_URL/orders/$TEST_ORDER_ID/rate" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -d '{ "rating": 5, "comment": "Smooth delivery" }'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Order rated successfully",
+  "data": {
+    "ratingId": 123,
+    "orderId": 5,
+    "rating": 5,
+    "comment": "Smooth delivery",
+    "createdAt": "2025-10-25T12:00:00.000Z"
   }
 }
 ```
@@ -1404,6 +1456,16 @@ curl -X GET "$BASE_URL/drivers/me/earnings" \
 <a name="errors"></a>
 
 ## ⚠️ **9. Error Handling Examples**
+
+---
+
+## ⚙️ Implementation & validation notes
+
+- `GET /api/v1/orders/available` requires `latitude` and `longitude` in querystring; supports `radius` (1–50 km) and `limit`.
+- `GET /api/v1/drivers/me/earnings` accepts `?period=today|week|month|year` (default `today`).
+- `GET /api/v1/orders` query params: `page` (≥1), `limit` (≤100), `status` (`active|completed|cancelled`).
+- `POST /api/v1/orders` and `/calculate-fare` validate `fareBreakdown`, `pickup` and `delivery` objects strictly (see request schemas).
+- Role enforcement: `client` = create/list/rate orders; `courier` = driver routes + accept/status/available endpoints.
 
 ### **Authentication Errors**
 

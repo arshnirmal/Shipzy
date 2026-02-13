@@ -977,6 +977,120 @@ describe("Drivers API", () => {
     });
   });
 
+  describe("GET /api/v1/drivers/me/rating", () => {
+    it("should return rating stats when ratings exist", async () => {
+      // Create a delivered order and insert a rating for the courier
+      const deliveredOrder = await testDb.createTestOrder(
+        {
+          clientId: clientUser.user_id,
+          deliveryTypeId: 1,
+          statusId: 5, // Delivered
+          weight: 1.0,
+          declaredValue: 100,
+          pickupAddress: "Rating Pickup",
+          pickupLatitude: 28.6139,
+          pickupLongitude: 77.209,
+          pickupCity: "Test City",
+          pickupState: "Test State",
+          deliveryAddress: "Rating Delivery",
+          deliveryLatitude: 28.7041,
+          deliveryLongitude: 77.1025,
+          deliveryCity: "Test City",
+          deliveryState: "Test State",
+          pickupContactName: "Client",
+          pickupContactPhone: "+1234567890",
+          deliveryContactName: "Recipient",
+          deliveryContactPhone: "+1234567891",
+          specialInstructions: "",
+          items: [
+            {
+              name: "Item",
+              quantity: 1,
+              weight: 1.0,
+              dimensions: { length: 10, width: 10, height: 5 },
+              value: 100,
+            },
+          ],
+        },
+        clientUser.user_id,
+      );
+
+      // Ensure courier_status exists for courierUser (created in beforeAll)
+      // Insert a rating row referencing the delivered order
+      await testDb.query(
+        `INSERT INTO public.driver_ratings (order_id, driver_id, customer_id, rating, comment) VALUES ($1, $2, $3, $4, $5)`,
+        [
+          deliveredOrder.order_id,
+          courierUser.user_id,
+          clientUser.user_id,
+          5,
+          "Excellent",
+        ],
+      );
+
+      const response = await request(app.server)
+        .get("/api/v1/drivers/me/rating")
+        .set(createTestAuthHeaders(courierToken))
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: "Rating stats retrieved successfully",
+        data: expect.objectContaining({
+          averageRating: 5,
+          totalRatings: 1,
+          ratingDistribution: expect.objectContaining({ 5: 1 }),
+        }),
+      });
+    });
+
+    it("should return zeros if driver has no recent ratings", async () => {
+      // Create a fresh courier user without any ratings
+      const newCourier = await testDb.createTestUser({
+        ...testUsers.courier,
+        phoneNumber: "+1234567800",
+        firebaseUid: "test_courier_no_ratings_uid",
+      });
+
+      await testDb.createTestDriver(
+        { vehicle: testVehicle },
+        newCourier.user_id,
+      );
+
+      const firebaseAdmin = require("firebase-admin");
+      firebaseAdmin.auth = () => ({
+        verifyIdToken: jest.fn().mockResolvedValue({
+          uid: "test_courier_no_ratings_uid",
+          phone_number: "+1234567800",
+        }),
+      });
+
+      const loginResponse = await request(app.server)
+        .post("/api/v1/auth/firebase/verify")
+        .send({
+          idToken: "valid_token_new_courier",
+          fullName: "No Ratings Courier",
+          role: "courier",
+        })
+        .set(createTestDeviceHeaders("new_courier_device"));
+
+      const newCourierToken = loginResponse.body.data.tokens.accessToken;
+
+      const response = await request(app.server)
+        .get("/api/v1/drivers/me/rating")
+        .set(createTestAuthHeaders(newCourierToken))
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: expect.objectContaining({
+          averageRating: 0,
+          totalRatings: 0,
+        }),
+      });
+    });
+  });
+
   describe("Driver Status Management", () => {
     it("should handle online/offline status correctly", async () => {
       // Go online
