@@ -68,32 +68,22 @@ FROM base AS runner
 
 WORKDIR /app
 
-# Install build tools temporarily for native module rebuild
-# Create non-root user (but don't switch yet - need root for rebuild)
-RUN apk add --no-cache python3 make g++ && \
-    addgroup --system --gid 1001 nodejs && \
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
 
 # Set production environment
 ENV NODE_ENV=production
 
-# Copy package files first
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/pnpm-lock.yaml ./
+# Copy package files
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/pnpm-lock.yaml ./
 
-# Copy production dependencies from prod-deps stage
-COPY --from=prod-deps /app/node_modules ./node_modules
-
-# Rebuild native modules in production stage to ensure compatibility
-# This is necessary because pnpm's structure may not preserve native bindings correctly
-RUN pnpm rebuild || true
+# Copy production dependencies (pre-built native modules)
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 # Copy built artifacts
-COPY --from=builder /app/dist ./dist
-
-# Remove build tools to reduce image size and change ownership to nodejs user
-RUN apk del python3 make g++ && \
-    chown -R nodejs:nodejs /app
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
 USER nodejs
 
