@@ -51,7 +51,10 @@ class RatingsRepository {
   /**
    * Get recent ratings for a driver (last 90 days)
    */
-  async getDriverRatingsRecent(driverId: number, since: Date): Promise<DriverRating[]> {
+  async getDriverRatingsRecent(
+    driverId: number,
+    since: Date,
+  ): Promise<DriverRating[]> {
     try {
       const result = await db.query(ratingsQueries.FIND_DRIVER_RATINGS_RECENT, [
         driverId,
@@ -71,7 +74,10 @@ class RatingsRepository {
   /**
    * Validate that order belongs to customer
    */
-  async orderBelongsToCustomer(orderId: number, customerId: number): Promise<boolean> {
+  async orderBelongsToCustomer(
+    orderId: number,
+    customerId: number,
+  ): Promise<boolean> {
     try {
       const result = await db.query(ratingsQueries.ORDER_BELONGS_TO_CUSTOMER, [
         orderId,
@@ -111,7 +117,9 @@ class RatingsRepository {
    */
   async isOrderDelivered(orderId: number): Promise<boolean> {
     try {
-      const result = await db.query(ratingsQueries.ORDER_IS_DELIVERED, [orderId]);
+      const result = await db.query(ratingsQueries.ORDER_IS_DELIVERED, [
+        orderId,
+      ]);
       return result.rows.length > 0;
     } catch (error) {
       logger.error({
@@ -128,7 +136,9 @@ class RatingsRepository {
    */
   async ratingExistsForOrder(orderId: number): Promise<boolean> {
     try {
-      const result = await db.query(ratingsQueries.RATING_EXISTS_FOR_ORDER, [orderId]);
+      const result = await db.query(ratingsQueries.RATING_EXISTS_FOR_ORDER, [
+        orderId,
+      ]);
       return result.rows.length > 0;
     } catch (error) {
       logger.error({

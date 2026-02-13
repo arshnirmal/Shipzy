@@ -1,5 +1,5 @@
 // services/backend/src/utils/response.util.ts
-import { FastifyReply } from 'fastify';
+import { FastifyReply } from "fastify";
 
 interface PaginationMeta {
   page: number;
@@ -17,15 +17,15 @@ interface PaginationMeta {
 export const successResponse = <T = any>(
   reply: FastifyReply,
   data: T,
-  message: string = 'Success',
-  statusCode: number = 200
+  message: string = "Success",
+  statusCode: number = 200,
 ) => {
-    return reply.status(statusCode).send({
-        success: true,
-        message,
-        data,
-        timestamp: new Date().toISOString(),
-    });
+  return reply.status(statusCode).send({
+    success: true,
+    message,
+    data,
+    timestamp: new Date().toISOString(),
+  });
 };
 
 /**
@@ -39,14 +39,14 @@ export const errorResponse = (
   reply: FastifyReply,
   message: string,
   statusCode: number = 400,
-  errors: any = null
+  errors: any = null,
 ) => {
-    return reply.status(statusCode).send({
-        success: false,
-        message,
-        errors,
-        timestamp: new Date().toISOString(),
-    });
+  return reply.status(statusCode).send({
+    success: false,
+    message,
+    errors,
+    timestamp: new Date().toISOString(),
+  });
 };
 
 /**
@@ -58,18 +58,17 @@ export const errorResponse = (
 export const paginatedResponse = <T = any>(
   reply: FastifyReply,
   data: T[],
-  pagination: PaginationMeta
+  pagination: PaginationMeta,
 ) => {
-    return reply.status(200).send({
-        success: true,
-        data,
-        pagination: {
-            page: pagination.page,
-            limit: pagination.limit,
-            total: pagination.total,
-            totalPages: Math.ceil(pagination.total / pagination.limit),
-        },
-        timestamp: new Date().toISOString(),
-    });
+  return reply.status(200).send({
+    success: true,
+    data,
+    pagination: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: Math.ceil(pagination.total / pagination.limit),
+    },
+    timestamp: new Date().toISOString(),
+  });
 };
-

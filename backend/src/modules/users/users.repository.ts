@@ -70,7 +70,7 @@ class UsersRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -81,7 +81,7 @@ class UsersRepository {
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData
+    updateData: UpdateProfileData,
   ): Promise<User> {
     try {
       const { fullName, email, profilePictureUrl } = updateData;
@@ -97,7 +97,7 @@ class UsersRepository {
     } catch (error) {
       logger.error({
         msg: "Error updating user profile",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -113,7 +113,7 @@ class UsersRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting user addresses",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -131,7 +131,7 @@ class UsersRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting address by ID",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -142,7 +142,7 @@ class UsersRepository {
    */
   async saveAddress(
     userId: number,
-    addressData: AddressData
+    addressData: AddressData,
   ): Promise<Address> {
     const client = await db.getClient();
 
@@ -178,7 +178,7 @@ class UsersRepository {
       await client.query("ROLLBACK");
       logger.error({
         msg: "Error saving address",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     } finally {
@@ -199,7 +199,7 @@ class UsersRepository {
     } catch (error) {
       logger.error({
         msg: "Error deleting address",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }

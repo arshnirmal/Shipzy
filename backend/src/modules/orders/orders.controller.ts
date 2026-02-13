@@ -420,11 +420,7 @@ class OrdersController {
         comment,
       });
 
-      return successResponse(
-        reply,
-        result,
-        "Order rated successfully",
-      );
+      return successResponse(reply, result, "Order rated successfully");
     } catch (error) {
       logger.error({
         msg: "Rate order controller error",

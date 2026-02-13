@@ -1,7 +1,7 @@
 // services/backend/src/utils/jwt.util.ts
-import jwt from 'jsonwebtoken';
-import config from '../config/env.js';
-import logger from '../config/logger.js';
+import jwt from "jsonwebtoken";
+import config from "../config/env.js";
+import logger from "../config/logger.js";
 
 interface JWTPayload {
   userId: number;
@@ -18,9 +18,9 @@ interface JWTPayload {
  * @returns JWT token
  */
 export const generateAccessToken = (payload: Partial<JWTPayload>): string => {
-    return jwt.sign(payload, config.jwt.secret, {
-        expiresIn: config.jwt.expiresIn,
-    } as jwt.SignOptions);
+  return jwt.sign(payload, config.jwt.secret, {
+    expiresIn: config.jwt.expiresIn,
+  } as jwt.SignOptions);
 };
 
 /**
@@ -29,9 +29,9 @@ export const generateAccessToken = (payload: Partial<JWTPayload>): string => {
  * @returns JWT refresh token
  */
 export const generateRefreshToken = (payload: Partial<JWTPayload>): string => {
-    return jwt.sign(payload, config.jwt.secret, {
-        expiresIn: config.jwt.refreshExpiresIn,
-    } as jwt.SignOptions);
+  return jwt.sign(payload, config.jwt.secret, {
+    expiresIn: config.jwt.refreshExpiresIn,
+  } as jwt.SignOptions);
 };
 
 /**
@@ -40,15 +40,15 @@ export const generateRefreshToken = (payload: Partial<JWTPayload>): string => {
  * @returns Decoded token
  */
 export const verifyToken = (token: string): JWTPayload => {
-    try {
-        return jwt.verify(token, config.jwt.secret) as JWTPayload;
-    } catch (error) {
-        logger.error({
-            msg: 'JWT verification failed',
-            error: (error as Error).message
-        });
-        throw error;
-    }
+  try {
+    return jwt.verify(token, config.jwt.secret) as JWTPayload;
+  } catch (error) {
+    logger.error({
+      msg: "JWT verification failed",
+      error: (error as Error).message,
+    });
+    throw error;
+  }
 };
 
 /**
@@ -57,7 +57,7 @@ export const verifyToken = (token: string): JWTPayload => {
  * @returns Decoded token
  */
 export const decodeToken = (token: string): JWTPayload | null => {
-    return jwt.decode(token) as JWTPayload | null;
+  return jwt.decode(token) as JWTPayload | null;
 };
 
 /**
@@ -66,7 +66,6 @@ export const decodeToken = (token: string): JWTPayload | null => {
  * @returns SHA256 hash
  */
 export const hashToken = async (token: string): Promise<string> => {
-    const crypto = await import('crypto');
-    return crypto.createHash('sha256').update(token).digest('hex');
+  const crypto = await import("crypto");
+  return crypto.createHash("sha256").update(token).digest("hex");
 };
-

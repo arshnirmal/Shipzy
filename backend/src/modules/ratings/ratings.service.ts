@@ -35,10 +35,8 @@ class RatingsService {
       }
 
       // Check if order belongs to customer
-      const orderBelongsToCustomer = await ratingsRepository.orderBelongsToCustomer(
-        orderId,
-        customerId
-      );
+      const orderBelongsToCustomer =
+        await ratingsRepository.orderBelongsToCustomer(orderId, customerId);
       if (!orderBelongsToCustomer) {
         throw new AuthorizationError("You can only rate your own orders");
       }
@@ -50,7 +48,8 @@ class RatingsService {
       }
 
       // Check if rating already exists
-      const ratingExists = await ratingsRepository.ratingExistsForOrder(orderId);
+      const ratingExists =
+        await ratingsRepository.ratingExistsForOrder(orderId);
       if (ratingExists) {
         throw new ValidationError("Rating already exists for this order");
       }
@@ -99,7 +98,7 @@ class RatingsService {
 
       const ratings = await ratingsRepository.getDriverRatingsRecent(
         driverId,
-        ninetyDaysAgo
+        ninetyDaysAgo,
       );
 
       if (ratings.length === 0) {
@@ -116,14 +115,23 @@ class RatingsService {
       let totalScore = 0;
 
       ratings.forEach((rating) => {
-        if (rating && rating.rating && typeof rating.rating === 'number' && rating.rating >= 1 && rating.rating <= 5) {
+        if (
+          rating &&
+          rating.rating &&
+          typeof rating.rating === "number" &&
+          rating.rating >= 1 &&
+          rating.rating <= 5
+        ) {
           const ratingValue = rating.rating;
           distribution[ratingValue as keyof typeof distribution]++;
           totalScore += ratingValue;
         }
       });
 
-      const averageRating = ratings.length > 0 ? Math.round((totalScore / ratings.length) * 10) / 10 : 0;
+      const averageRating =
+        ratings.length > 0
+          ? Math.round((totalScore / ratings.length) * 10) / 10
+          : 0;
 
       // Find the most recent rating date
       let lastUpdated = new Date();

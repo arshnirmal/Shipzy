@@ -3,9 +3,7 @@ services:
   # PostgreSQL with PostGIS
   # ============================================
   postgres:
-    build:
-      context: .
-      dockerfile: ./docker/postgres/Dockerfile
+    image: postgis/postgis:17-3.6-alpine
     container_name: shipzy-postgres-dev
     restart: unless-stopped
     environment:
@@ -15,6 +13,8 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./src/database:/src/database
+      - ./scripts/db-init.sh:/docker-entrypoint-initdb.d/init.sh
     ports:
       - "5432:5432"
     networks:

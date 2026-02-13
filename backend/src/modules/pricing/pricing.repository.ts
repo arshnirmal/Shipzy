@@ -9,7 +9,7 @@ export class PricingRepository {
     try {
       const result = await db.query(
         `SELECT config_value FROM public.pricing_config WHERE config_key = $1 AND is_active = TRUE`,
-        [key]
+        [key],
       );
       return result.rows[0]?.config_value || null;
     } catch (error) {
@@ -28,11 +28,11 @@ export class PricingRepository {
   async getAllPricingConfig(): Promise<Map<string, number>> {
     try {
       const result = await db.query(
-        `SELECT config_key, config_value FROM public.pricing_config WHERE is_active = TRUE`
+        `SELECT config_key, config_value FROM public.pricing_config WHERE is_active = TRUE`,
       );
 
       const config = new Map<string, number>();
-      result.rows.forEach(row => {
+      result.rows.forEach((row) => {
         config.set(row.config_key, Number.parseFloat(row.config_value));
       });
 
@@ -49,13 +49,20 @@ export class PricingRepository {
   /**
    * Update pricing configuration value
    */
-  async updatePricingConfig(key: string, value: number, updatedBy: number): Promise<void> {
+  async updatePricingConfig(
+    key: string,
+    value: number,
+    updatedBy: number,
+  ): Promise<void> {
     try {
-      await db.query(`
+      await db.query(
+        `
         UPDATE public.pricing_config
         SET config_value = $1, updated_by = $2, updated_at = NOW()
         WHERE config_key = $3
-      `, [value, updatedBy, key]);
+      `,
+        [value, updatedBy, key],
+      );
     } catch (error) {
       logger.error({
         msg: "Error updating pricing config",
@@ -74,7 +81,7 @@ export class PricingRepository {
     try {
       const result = await db.query(
         `SELECT special_handling_fee FROM public.package_types WHERE package_type_id = $1`,
-        [packageTypeId]
+        [packageTypeId],
       );
       return result.rows[0]?.special_handling_fee || 0;
     } catch (error) {

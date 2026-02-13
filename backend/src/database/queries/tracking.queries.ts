@@ -6,16 +6,16 @@
 
 export default {
   // ============ FUNCTION CALLS ============
-  
+
   /**
    * Call stored function: Get order tracking as GeoJSON
    */
   CALL_GET_TRACKING_GEOJSON: `
       SELECT tracking.get_order_tracking_geojson($1, $2, $3) AS result
   `,
-  
+
   // ============ TRACKING EVENTS ============
-  
+
   /**
    * Add tracking event (location update)
    */
@@ -41,7 +41,7 @@ export default {
       )
       RETURNING event_id, timestamp
   `,
-  
+
   /**
    * Get latest tracking event for order
    */
@@ -59,7 +59,7 @@ export default {
       ORDER BY te.timestamp DESC
       LIMIT 1
   `,
-  
+
   /**
    * Get tracking events for order (paginated)
    */
@@ -78,7 +78,7 @@ export default {
       ORDER BY te.timestamp DESC
       LIMIT $2 OFFSET $3
   `,
-  
+
   /**
    * Count tracking events for order
    */

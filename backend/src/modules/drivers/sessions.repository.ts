@@ -56,7 +56,9 @@ class SessionsRepository {
    */
   async findActiveSession(driverId: number): Promise<DriverSession | null> {
     try {
-      const result = await db.query(sessionsQueries.FIND_ACTIVE_SESSION, [driverId]);
+      const result = await db.query(sessionsQueries.FIND_ACTIVE_SESSION, [
+        driverId,
+      ]);
       return result.rows[0] || null;
     } catch (error) {
       logger.error({
@@ -96,7 +98,7 @@ class SessionsRepository {
   async getSessionsInRange(
     driverId: number,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<DriverSession[]> {
     try {
       const result = await db.query(sessionsQueries.GET_SESSIONS_IN_RANGE, [

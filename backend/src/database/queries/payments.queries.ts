@@ -6,7 +6,7 @@
 
 export default {
   // ============ PAYMENT TRANSACTIONS ============
-  
+
   /**
    * Create payment transaction
    */
@@ -30,7 +30,7 @@ export default {
       )
       RETURNING transaction_id, payment_initiated_at
   `,
-  
+
   /**
    * Update payment status to completed
    */
@@ -42,7 +42,7 @@ export default {
       WHERE transaction_id = $1
       RETURNING transaction_id, payment_completed_at
   `,
-  
+
   /**
    * Mark payment as failed
    */
@@ -55,7 +55,7 @@ export default {
       WHERE transaction_id = $1
       RETURNING transaction_id, payment_failed_at
   `,
-  
+
   /**
    * Get payment transaction by order ID
    */
@@ -81,9 +81,9 @@ export default {
       ORDER BY t.created_at DESC
       LIMIT 1
   `,
-  
+
   // ============ REFUNDS ============
-  
+
   /**
    * Get refund by order ID
    */
@@ -103,7 +103,7 @@ export default {
       ORDER BY r.initiated_at DESC
       LIMIT 1
   `,
-  
+
   /**
    * Update refund status to processed
    */

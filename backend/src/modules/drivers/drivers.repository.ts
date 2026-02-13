@@ -49,7 +49,7 @@ class DriversRepository {
     } catch (error) {
       logger.error({
         msg: "Error finding courier by ID",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -60,7 +60,7 @@ class DriversRepository {
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData
+    updateData: UpdateProfileData,
   ): Promise<Courier> {
     try {
       const { fullName, email, profilePictureUrl } = updateData;
@@ -76,7 +76,7 @@ class DriversRepository {
     } catch (error) {
       logger.error({
         msg: "Error updating courier profile",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -88,7 +88,7 @@ class DriversRepository {
   async updateAvailability(
     courierId: number,
     isAvailable: boolean,
-    isOnline: boolean
+    isOnline: boolean,
   ): Promise<any> {
     try {
       const result = await db.query(
@@ -112,7 +112,7 @@ class DriversRepository {
   async updateLocation(
     courierId: number,
     latitude: number,
-    longitude: number
+    longitude: number,
   ): Promise<any> {
     try {
       const result = await db.query(driversQueries.UPDATE_COURIER_LOCATION, [
@@ -125,7 +125,7 @@ class DriversRepository {
     } catch (error) {
       logger.error({
         msg: "Error updating courier location",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -163,7 +163,7 @@ class DriversRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting courier earnings",
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       throw error;
     }
@@ -174,7 +174,10 @@ class DriversRepository {
   /**
    * Create a new driver session
    */
-  async createSession(driverId: number, location?: { lat: number; lng: number }) {
+  async createSession(
+    driverId: number,
+    location?: { lat: number; lng: number },
+  ) {
     return sessionsRepository.createSession({
       driver_id: driverId,
       started_at: new Date(),
@@ -193,7 +196,10 @@ class DriversRepository {
   /**
    * End active session for driver
    */
-  async endActiveSession(driverId: number, location?: { lat: number; lng: number }) {
+  async endActiveSession(
+    driverId: number,
+    location?: { lat: number; lng: number },
+  ) {
     const activeSession = await sessionsRepository.findActiveSession(driverId);
     if (!activeSession) return null;
 

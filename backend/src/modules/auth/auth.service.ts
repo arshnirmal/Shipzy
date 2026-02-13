@@ -3,7 +3,10 @@ import crypto from "node:crypto";
 import bcrypt from "bcrypt";
 import { verifyFirebaseToken } from "../../config/firebase.js";
 import logger from "../../config/logger.js";
-import { AuthenticationError, ValidationError } from "../../utils/error.util.js";
+import {
+  AuthenticationError,
+  ValidationError,
+} from "../../utils/error.util.js";
 import {
   generateAccessToken,
   generateRefreshToken,

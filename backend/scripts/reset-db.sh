@@ -40,12 +40,7 @@ docker compose -f docker-compose.dev.yml up -d postgres
 echo -e "${YELLOW}⏳ Waiting for database initialization...${NC}"
 sleep 20
 
-# Create shipzy_user and grant permissions
-echo -e "${YELLOW}🔧 Setting up database user...${NC}"
-docker compose -f docker-compose.dev.yml exec postgres psql -U postgres -d shipzy_dev -c "CREATE USER shipzy_user WITH PASSWORD 'password123'; GRANT ALL PRIVILEGES ON DATABASE shipzy_dev TO shipzy_user; ALTER USER shipzy_user CREATEDB;" 2>/dev/null || echo "User may already exist"
 
-# Grant schema permissions
-docker compose -f docker-compose.dev.yml exec postgres psql -U postgres -d shipzy_dev -c "GRANT CREATE ON SCHEMA public TO shipzy_user; GRANT USAGE ON SCHEMA users, logistics, orders, payments, tracking, notifications TO shipzy_user;"
 
 echo -e "${YELLOW}🚀 Starting all services...${NC}"
 docker compose -f docker-compose.dev.yml up -d

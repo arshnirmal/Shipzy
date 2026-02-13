@@ -6,7 +6,7 @@
 
 export default {
   // ============ NOTIFICATION QUEUE ============
-  
+
   /**
    * Queue notification for user
    */
@@ -29,7 +29,7 @@ export default {
       )
       RETURNING notification_id, created_at
   `,
-  
+
   /**
    * Get pending notifications (for processing)
    */
@@ -52,7 +52,7 @@ export default {
       ORDER BY n.priority DESC, n.created_at ASC
       LIMIT $1
   `,
-  
+
   /**
    * Mark notification as sent
    */
@@ -64,7 +64,7 @@ export default {
       WHERE notification_id = $1
       RETURNING notification_id, sent_at
   `,
-  
+
   /**
    * Mark notification as failed
    */
@@ -78,9 +78,9 @@ export default {
       WHERE notification_id = $1
       RETURNING notification_id, retry_count
   `,
-  
+
   // ============ FCM TOKENS ============
-  
+
   /**
    * Save FCM device token
    */
@@ -99,7 +99,7 @@ export default {
           updated_at = NOW()
       RETURNING token_id, device_token
   `,
-  
+
   /**
    * Get active FCM tokens for user
    */
@@ -115,7 +115,7 @@ export default {
           AND is_active = true
       ORDER BY last_used_at DESC
   `,
-  
+
   /**
    * Deactivate FCM token
    */
