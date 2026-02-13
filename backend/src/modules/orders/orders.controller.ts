@@ -1,7 +1,7 @@
 // services/backend/src/modules/orders/orders.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
-import "../../middleware/auth.middleware";
+import "../../middleware/auth.middleware.js";
 import {
   errorResponse,
   paginatedResponse,
