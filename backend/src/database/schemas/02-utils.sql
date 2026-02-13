@@ -20,5 +20,4 @@ BEGIN
   NEW.order_number := 'ORD-' || TO_CHAR(NEW.created_at, 'YYYYMMDD') || '-' || LPAD(NEW.order_id :: TEXT, 6, '0');
   RETURN NEW;
 END;
-
-$$ LANGUAGE plpgsql;
+$$;

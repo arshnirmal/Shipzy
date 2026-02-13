@@ -37,7 +37,7 @@ BEGIN
 
     RETURN new_transaction_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ========================================
 -- Function: payments_update_transaction_status
@@ -80,7 +80,7 @@ BEGIN
 
     RETURN FOUND;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ========================================
 -- Function: payments_get_by_order
@@ -118,7 +118,7 @@ BEGIN
     WHERE pt.order_id = p_order_id
     ORDER BY pt.created_at DESC;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ========================================
 -- Function: payments_get_courier_earnings
@@ -147,7 +147,7 @@ BEGIN
 
     RETURN total_earnings;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ========================================
 -- Function: payments_get_courier_summary
@@ -181,4 +181,4 @@ BEGIN
       AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
       AND ca.completed_at >= p_start_date;
 END;
-$$ LANGUAGE plpgsql;
+$$;
