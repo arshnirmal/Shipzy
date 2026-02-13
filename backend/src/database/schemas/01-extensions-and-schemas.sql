@@ -10,37 +10,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 SELECT
     postgis_full_version();
 
--- Drop existing schemas (for clean re-run in development)
-DROP SCHEMA IF EXISTS users CASCADE;
-
-DROP SCHEMA IF EXISTS logistics CASCADE;
-
-DROP SCHEMA IF EXISTS orders CASCADE;
-
-DROP SCHEMA IF EXISTS payments CASCADE;
-
-DROP SCHEMA IF EXISTS tracking CASCADE;
-
-DROP SCHEMA IF EXISTS notifications CASCADE;
-
--- Drop public tables
-DROP TABLE IF EXISTS public.user_roles CASCADE;
-
-DROP TABLE IF EXISTS public.vehicle_categories CASCADE;
-
-DROP TABLE IF EXISTS public.order_statuses CASCADE;
-
-DROP TABLE IF EXISTS public.payment_methods CASCADE;
-
-DROP TABLE IF EXISTS public.payment_statuses CASCADE;
-
-DROP TABLE IF EXISTS public.assignment_statuses CASCADE;
-
-DROP TABLE IF EXISTS public.notification_channels CASCADE;
-
-DROP TABLE IF EXISTS public.notification_statuses CASCADE;
-
-DROP TABLE IF EXISTS public.labels CASCADE;
+-- [SAFE MODE] Destructive DROPs removed for production safety
+-- To reset the database in development, use scripts/reset-db.sh
 
 -- Create schemas
 CREATE SCHEMA IF NOT EXISTS users;

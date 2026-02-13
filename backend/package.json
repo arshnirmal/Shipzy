@@ -28,8 +28,7 @@
     "lint:test:fix": "eslint tests/ --ext .ts,.js --fix",
     "format": "prettier --write \"src/**/*.{ts,js}\"",
     "format:test": "prettier --write \"tests/**/*.{ts,js}\"",
-    "db:init": "for f in src/database/schemas/*.sql; do echo \"Running $f\"; psql -U shipzy_user -d shipzy_dev -f \"$f\"; done",
-    "db:functions": "psql -U shipzy_user -d shipzy_dev -f src/database/functions/*.sql",
+    "db:deploy": "tsx scripts/db-deploy.ts",
     "db:seed": "psql -U shipzy_user -d shipzy_dev -f src/database/seeds/dev-data.sql"
   },
   "keywords": [
