@@ -33,7 +33,12 @@ FROM
         FROM
             public.assignment_statuses
         WHERE
-            name IN ('assigned', 'accepted', 'picked_up', 'in_transit')
+            name IN (
+                'assigned',
+                'accepted',
+                'picked_up',
+                'in_transit'
+            )
     )
     LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
 WHERE

@@ -1,4 +1,4 @@
-// services/backend/src/database/queries/drivers.queries.js
+// services/backend/src/database/queries/drivers.queries.ts
 
 /**
  * Driver/Courier-related queries
@@ -12,12 +12,12 @@ export default {
    * Get courier profile with status and vehicle
    */
   FIND_COURIER_BY_USER_ID: `
-      SELECT
-          u.user_id,
-          u.user_uuid,
-          u.phone_number,
-          u.full_name,
-          u.email,
+    SELECT
+      u.user_id,
+      u.user_uuid,
+      u.phone_number,
+      u.full_name,
+      u.email,
           u.profile_picture_url,
           u.is_verified,
           u.is_active,

@@ -1,12 +1,22 @@
--- Payments Functions for Shipzy
+-- ========================================
+-- SHIPZY - PAYMENT FUNCTIONS
+-- Payment processing and transaction management
+-- ========================================
 
--- Function to create payment transaction record
+-- ========================================
+-- Function: payments_create_transaction
+-- Description: Create payment transaction record
+-- Returns: Transaction ID
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_create_transaction(
     p_order_id INT,
     p_payment_method_id INT,
     p_amount NUMERIC,
     p_currency VARCHAR DEFAULT 'INR'
-) RETURNS INT AS $$
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
 DECLARE
     new_transaction_id INT;
 BEGIN
@@ -29,14 +39,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to update payment transaction status
+-- ========================================
+-- Function: payments_update_transaction_status
+-- Description: Update payment transaction status
+-- Returns: BOOLEAN indicating success
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_update_transaction_status(
     p_transaction_id INT,
     p_status_name VARCHAR,
     p_external_transaction_id VARCHAR DEFAULT NULL,
     p_payment_gateway VARCHAR DEFAULT NULL,
     p_failure_reason TEXT DEFAULT NULL
-) RETURNS BOOLEAN AS $$
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
 DECLARE
     status_id INT;
 BEGIN
@@ -65,10 +82,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to get payment transactions by order
+-- ========================================
+-- Function: payments_get_by_order
+-- Description: Get payment transactions by order
+-- Returns: TABLE with transaction details
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_get_by_order(
     p_order_id INT
-) RETURNS TABLE (
+)
+RETURNS TABLE (
     transaction_id INT,
     amount NUMERIC,
     currency VARCHAR,
@@ -77,7 +99,9 @@ CREATE OR REPLACE FUNCTION payments_get_by_order(
     payment_gateway VARCHAR,
     created_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
-) AS $$
+)
+LANGUAGE plpgsql
+AS $$
 BEGIN
     RETURN QUERY
     SELECT
@@ -96,11 +120,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to calculate total earnings for courier
+-- ========================================
+-- Function: payments_get_courier_earnings
+-- Description: Calculate total earnings for courier
+-- Returns: Total earnings amount
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_get_courier_earnings(
     p_courier_id INT,
     p_start_date TIMESTAMPTZ DEFAULT NOW() - INTERVAL '30 days'
-) RETURNS NUMERIC AS $$
+)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
 DECLARE
     total_earnings NUMERIC := 0;
 BEGIN
@@ -118,16 +149,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to get payment summary for courier
+-- ========================================
+-- Function: payments_get_courier_summary
+-- Description: Get payment summary for courier
+-- Returns: TABLE with delivery and earnings summary
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_get_courier_summary(
     p_courier_id INT,
     p_start_date TIMESTAMPTZ DEFAULT NOW() - INTERVAL '30 days'
-) RETURNS TABLE (
+)
+RETURNS TABLE (
     total_deliveries BIGINT,
     total_earnings NUMERIC,
     period_start TIMESTAMPTZ,
     period_end TIMESTAMPTZ
-) AS $$
+)
+LANGUAGE plpgsql
+AS $$
 BEGIN
     RETURN QUERY
     SELECT

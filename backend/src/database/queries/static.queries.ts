@@ -1,23 +1,23 @@
-// src/modules/static/static.queries.ts
+// services/backend/src/database/queries/static.queries.ts
 
 export default {
   /**
    * Get all delivery types with nested labels and supported vehicles/weight tiers
    */
   GET_DELIVERY_TYPES: `
-      WITH dt AS (
-        SELECT
-          dt.delivery_type_id,
-          dt.name,
-          dt.display_name,
-          dt.description,
-          dt.base_rate,
-          dt.per_km_rate,
-          dt.sort_order,
-          dt.is_active
-        FROM public.delivery_types dt
-        WHERE dt.is_active = TRUE
-      ),
+    WITH dt AS (
+      SELECT
+        dt.delivery_type_id,
+        dt.name,
+        dt.display_name,
+        dt.description,
+        dt.base_rate,
+        dt.per_km_rate,
+        dt.sort_order,
+        dt.is_active
+      FROM public.delivery_types dt
+      WHERE dt.is_active = TRUE
+    ),
       labels_src AS (
         SELECT DISTINCT ON (dtl.delivery_type_id, dtl.label_id)
           dtl.delivery_type_id,

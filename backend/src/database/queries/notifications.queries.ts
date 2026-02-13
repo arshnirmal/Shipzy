@@ -1,4 +1,4 @@
-// services/backend/src/database/queries/notifications.queries.js
+// services/backend/src/database/queries/notifications.queries.ts
 
 /**
  * Notification queue and FCM token queries

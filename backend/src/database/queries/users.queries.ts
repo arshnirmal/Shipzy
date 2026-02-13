@@ -1,4 +1,4 @@
-// services/backend/src/database/queries/users.queries.js
+// services/backend/src/database/queries/users.queries.ts
 
 /**
  * User profile and address management queries
@@ -11,43 +11,43 @@ export default {
    * Find user by UUID (for JWT payload)
    */
   FIND_USER_BY_UUID: `
-      SELECT 
-          u.user_id,
-          u.user_uuid,
-          u.role_id,
-          r.name AS role_name,
-          u.phone_number,
-          u.email,
-          u.full_name,
-          u.profile_picture_url,
-          u.is_verified,
-          u.is_active,
-          u.created_at
-      FROM users.profiles u
-      JOIN public.user_roles r ON u.role_id = r.role_id
-      WHERE u.user_uuid = $1
-          AND u.deleted_at IS NULL
+    SELECT
+      u.user_id,
+      u.user_uuid,
+      u.role_id,
+      r.name AS role_name,
+      u.phone_number,
+      u.email,
+      u.full_name,
+      u.profile_picture_url,
+      u.is_verified,
+      u.is_active,
+      u.created_at
+    FROM users.profiles u
+    JOIN public.user_roles r ON u.role_id = r.role_id
+    WHERE u.user_uuid = $1
+      AND u.deleted_at IS NULL
   `,
 
   /**
    * Find user by phone number
    */
   FIND_USER_BY_PHONE: `
-      SELECT 
-          u.user_id,
-          u.user_uuid,
-          u.role_id,
-          r.name AS role_name,
-          u.phone_number,
-          u.email,
-          u.full_name,
-          u.profile_picture_url,
-          u.is_verified,
-          u.is_active,
-          u.created_at
-      FROM users.profiles u
-      JOIN public.user_roles r ON u.role_id = r.role_id
-      WHERE u.phone_number = $1
+    SELECT
+      u.user_id,
+      u.user_uuid,
+      u.role_id,
+      r.name AS role_name,
+      u.phone_number,
+      u.email,
+      u.full_name,
+      u.profile_picture_url,
+      u.is_verified,
+      u.is_active,
+      u.created_at
+    FROM users.profiles u
+    JOIN public.user_roles r ON u.role_id = r.role_id
+    WHERE u.phone_number = $1
           AND u.deleted_at IS NULL
   `,
 

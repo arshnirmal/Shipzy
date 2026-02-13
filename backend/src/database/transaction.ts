@@ -35,4 +35,4 @@ export const transaction = async <T>(
   }
 };
 
-export default { transaction };
+export default transaction;
