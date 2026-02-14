@@ -3,6 +3,7 @@ import { buildApp } from "./app.js";
 import config from "./config/env.js";
 import logger from "./config/logger.js";
 import db from "./database/db.js";
+import * as cron from "node-cron";
 
 /**
  * Start the server
@@ -25,6 +26,26 @@ const start = async () => {
     logger.info(
       `API Documentation: http://${config.host}:${config.port}/api/v1`,
     );
+
+    // Self-ping to prevent sleep on free tiers
+    cron.schedule("*/5 * * * *", async () => {
+      try {
+        const response = await app.inject({
+          method: "GET",
+          url: "/health",
+        });
+        if (response.statusCode === 200) {
+          logger.info("Self-ping successful");
+        } else {
+          logger.warn(`Self-ping failed with status ${response.statusCode}`);
+        }
+      } catch (error) {
+        logger.error({
+          msg: "Self-ping error",
+          error: (error as Error).message,
+        });
+      }
+    });
   } catch (error) {
     logger.error({
       msg: "Failed to start server",
