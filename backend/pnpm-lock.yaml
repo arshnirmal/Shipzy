@@ -26,6 +26,9 @@ importers:
       ajv-formats:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.17.1)
+      axios:
+        specifier: ^1.13.5
+        version: 1.13.5
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
@@ -87,9 +90,6 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^8.0.0
         version: 8.46.2(eslint@9.39.0)(typescript@5.9.3)
-      axios:
-        specifier: ^1.13.5
-        version: 1.13.5
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
