@@ -12,42 +12,42 @@ export default {
    * Find user by Firebase UID
    */
   FIND_USER_BY_FIREBASE_UID: `
-      SELECT
-        u.user_id,
-        u.user_uuid,
-        u.role_id,
-        r.name AS role_name,
-        u.firebase_uid,
-        u.phone_number,
-        u.email,
-        u.full_name,
-        u.profile_picture_url,
-        u.is_verified,
-        u.is_active,
-        u.created_at
-      FROM users.profiles u
-      JOIN public.user_roles r ON u.role_id = r.role_id
-      WHERE u.firebase_uid = $1
-        AND u.deleted_at IS NULL
-    `,
+    SELECT
+      u.user_id,
+      u.user_uuid,
+      u.role_id,
+      r.name AS role_name,
+      u.firebase_uid,
+      u.phone_number,
+      u.email,
+      u.full_name,
+      u.profile_picture_url,
+      u.is_verified,
+      u.is_active,
+      u.created_at
+    FROM users.profiles u
+    JOIN public.user_roles r ON u.role_id = r.role_id
+    WHERE u.firebase_uid = $1
+      AND u.deleted_at IS NULL
+  `,
 
   /**
    * Find user by UUID (for JWT payload)
    */
   FIND_USER_BY_UUID: `
-      SELECT
-        u.user_id,
-        u.user_uuid,
-        u.role_id,
-        r.name AS role_name,
-        u.firebase_uid,
-        u.phone_number,
-        u.email,
-        u.full_name,
-        u.profile_picture_url,
-        u.is_verified,
-        u.is_active,
-        u.created_at
+    SELECT
+      u.user_id,
+      u.user_uuid,
+      u.role_id,
+      r.name AS role_name,
+      u.firebase_uid,
+      u.phone_number,
+      u.email,
+      u.full_name,
+      u.profile_picture_url,
+      u.is_verified,
+      u.is_active,
+      u.created_at
       FROM users.profiles u
       JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.user_uuid = $1

@@ -1,4 +1,4 @@
-// services/backend/src/database/queries/tracking.queries.js
+// services/backend/src/database/queries/tracking.queries.ts
 
 /**
  * Tracking and location queries

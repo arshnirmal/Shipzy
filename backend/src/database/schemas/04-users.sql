@@ -1,5 +1,7 @@
 -- 04-users.sql
 -- Users schema (profiles, auth sessions, addresses, business_accounts)
+-- NOTE: user_roles table moved to 03-public-reference-and-master-data.sql
+
 CREATE TABLE users.profiles (
     user_id SERIAL PRIMARY KEY,
     user_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,

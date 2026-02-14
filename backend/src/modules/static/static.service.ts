@@ -111,7 +111,7 @@ class StaticService {
       return methods.map((method) => ({
         methodId: method.method_id,
         name: method.name,
-        displayName: method.display_name,
+        displayName: method.name,
         description: method.description,
         isActive: method.is_active,
       }));

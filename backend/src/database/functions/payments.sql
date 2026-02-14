@@ -1,12 +1,22 @@
--- Payments Functions for Shipzy
+-- ========================================
+-- SHIPZY - PAYMENT FUNCTIONS
+-- Payment processing and transaction management
+-- ========================================
 
--- Function to create payment transaction record
+-- ========================================
+-- Function: payments_create_transaction
+-- Description: Create payment transaction record
+-- Returns: Transaction ID
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_create_transaction(
     p_order_id INT,
     p_payment_method_id INT,
     p_amount NUMERIC,
     p_currency VARCHAR DEFAULT 'INR'
-) RETURNS INT AS $$
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
 DECLARE
     new_transaction_id INT;
 BEGIN
@@ -19,7 +29,7 @@ BEGIN
     ) VALUES (
         p_order_id,
         p_payment_method_id,
-        (SELECT status_id FROM public.payment_statuses WHERE name = 'pending'),
+        (SELECT status_id FROM payments.payment_statuses WHERE name = 'pending'),
         p_amount,
         p_currency
     )
@@ -27,22 +37,29 @@ BEGIN
 
     RETURN new_transaction_id;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Function to update payment transaction status
+-- ========================================
+-- Function: payments_update_transaction_status
+-- Description: Update payment transaction status
+-- Returns: BOOLEAN indicating success
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_update_transaction_status(
     p_transaction_id INT,
     p_status_name VARCHAR,
     p_external_transaction_id VARCHAR DEFAULT NULL,
     p_payment_gateway VARCHAR DEFAULT NULL,
     p_failure_reason TEXT DEFAULT NULL
-) RETURNS BOOLEAN AS $$
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+AS $$
 DECLARE
     status_id INT;
 BEGIN
     -- Get the status_id for the given status name
     SELECT ps.status_id INTO status_id
-    FROM public.payment_statuses ps
+    FROM payments.payment_statuses ps
     WHERE ps.name = p_status_name;
 
     IF status_id IS NULL THEN
@@ -63,12 +80,17 @@ BEGIN
 
     RETURN FOUND;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Function to get payment transactions by order
+-- ========================================
+-- Function: payments_get_by_order
+-- Description: Get payment transactions by order
+-- Returns: TABLE with transaction details
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_get_by_order(
     p_order_id INT
-) RETURNS TABLE (
+)
+RETURNS TABLE (
     transaction_id INT,
     amount NUMERIC,
     currency VARCHAR,
@@ -77,7 +99,9 @@ CREATE OR REPLACE FUNCTION payments_get_by_order(
     payment_gateway VARCHAR,
     created_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
-) AS $$
+)
+LANGUAGE plpgsql
+AS $$
 BEGIN
     RETURN QUERY
     SELECT
@@ -90,17 +114,24 @@ BEGIN
         pt.created_at,
         pt.payment_completed_at
     FROM payments.transactions pt
-    JOIN public.payment_statuses ps ON pt.payment_status_id = ps.status_id
+    JOIN payments.payment_statuses ps ON pt.payment_status_id = ps.status_id
     WHERE pt.order_id = p_order_id
     ORDER BY pt.created_at DESC;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Function to calculate total earnings for courier
+-- ========================================
+-- Function: payments_get_courier_earnings
+-- Description: Calculate total earnings for courier
+-- Returns: Total earnings amount
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_get_courier_earnings(
     p_courier_id INT,
     p_start_date TIMESTAMPTZ DEFAULT NOW() - INTERVAL '30 days'
-) RETURNS NUMERIC AS $$
+)
+RETURNS NUMERIC
+LANGUAGE plpgsql
+AS $$
 DECLARE
     total_earnings NUMERIC := 0;
 BEGIN
@@ -111,23 +142,30 @@ BEGIN
     JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
     WHERE ca.courier_id = p_courier_id
       AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
-      AND pt.payment_status_id = (SELECT status_id FROM public.payment_statuses WHERE name = 'completed')
+      AND pt.payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed')
       AND ca.completed_at >= p_start_date;
 
     RETURN total_earnings;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Function to get payment summary for courier
+-- ========================================
+-- Function: payments_get_courier_summary
+-- Description: Get payment summary for courier
+-- Returns: TABLE with delivery and earnings summary
+-- ========================================
 CREATE OR REPLACE FUNCTION payments_get_courier_summary(
     p_courier_id INT,
     p_start_date TIMESTAMPTZ DEFAULT NOW() - INTERVAL '30 days'
-) RETURNS TABLE (
+)
+RETURNS TABLE (
     total_deliveries BIGINT,
     total_earnings NUMERIC,
     period_start TIMESTAMPTZ,
     period_end TIMESTAMPTZ
-) AS $$
+)
+LANGUAGE plpgsql
+AS $$
 BEGIN
     RETURN QUERY
     SELECT
@@ -138,9 +176,9 @@ BEGIN
     FROM orders.courier_assignments ca
     LEFT JOIN orders.requests o ON ca.order_id = o.order_id
     LEFT JOIN payments.transactions pt ON o.order_id = pt.order_id
-        AND pt.payment_status_id = (SELECT status_id FROM public.payment_statuses WHERE name = 'completed')
+        AND pt.payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed')
     WHERE ca.courier_id = p_courier_id
       AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
       AND ca.completed_at >= p_start_date;
 END;
-$$ LANGUAGE plpgsql;
+$$;

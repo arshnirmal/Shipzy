@@ -1,5 +1,134 @@
 -- 05-logistics.sql
 -- Courier vehicles, courier status, driver sessions, locations
+-- Vehicle Categories moved to public schema for centralized master data
+
+-- Add foreign key constraint to delivery_type_capabilities after vehicle_categories is created
+ALTER TABLE public.delivery_type_capabilities
+ADD CONSTRAINT fk_delivery_type_capabilities_vehicle_category
+FOREIGN KEY (vehicle_category_id) REFERENCES public.vehicle_categories (category_id) ON DELETE CASCADE;
+
+-- ============================================================
+-- DELIVERY TYPE CAPABILITIES
+-- Link delivery types with vehicle categories and weight tiers
+-- ============================================================
+-- DELIVER NOW - Supports 2-Wheeler (0-20kg)
+INSERT INTO
+    public.delivery_type_capabilities (
+        delivery_type_id,
+        vehicle_category_id,
+        weight_tier_id
+    )
+SELECT
+    dt.delivery_type_id,
+    vc.category_id,
+    wt.tier_id
+FROM
+    public.delivery_types dt
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+WHERE
+    dt.name = 'deliver_now'
+    AND vc.name = '2_wheeler'
+    AND wt.max_weight_kg <= 20.00;
+
+-- DELIVER NOW - Supports 3-Wheeler (0-100kg)
+INSERT INTO
+    public.delivery_type_capabilities (
+        delivery_type_id,
+        vehicle_category_id,
+        weight_tier_id
+    )
+SELECT
+    dt.delivery_type_id,
+    vc.category_id,
+    wt.tier_id
+FROM
+    public.delivery_types dt
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+WHERE
+    dt.name = 'deliver_now'
+    AND vc.name = '3_wheeler'
+    AND wt.max_weight_kg <= 100.00;
+
+-- SCHEDULED - Supports 2-Wheeler and 3-Wheeler
+INSERT INTO
+    public.delivery_type_capabilities (
+        delivery_type_id,
+        vehicle_category_id,
+        weight_tier_id
+    )
+SELECT
+    dt.delivery_type_id,
+    vc.category_id,
+    wt.tier_id
+FROM
+    public.delivery_types dt
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+WHERE
+    dt.name = 'scheduled'
+    AND vc.name IN ('2_wheeler', '3_wheeler')
+    AND (
+        (
+            vc.name = '2_wheeler'
+            AND wt.max_weight_kg <= 20.00
+        )
+        OR (
+            vc.name = '3_wheeler'
+            AND wt.max_weight_kg <= 100.00
+        )
+    );
+
+-- END-OF-DAY - Supports all except Truck
+INSERT INTO
+    public.delivery_type_capabilities (
+        delivery_type_id,
+        vehicle_category_id,
+        weight_tier_id
+    )
+SELECT
+    dt.delivery_type_id,
+    vc.category_id,
+    wt.tier_id
+FROM
+    public.delivery_types dt
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+WHERE
+    dt.name = 'end_of_day'
+    AND vc.name IN ('2_wheeler', '3_wheeler')
+    AND (
+        (
+            vc.name = '2_wheeler'
+            AND wt.max_weight_kg <= 20.00
+        )
+        OR (
+            vc.name = '3_wheeler'
+            AND wt.max_weight_kg <= 100.00
+        )
+    );
+
+-- TRUCK DELIVERY - Only trucks, all heavy tiers
+INSERT INTO
+    public.delivery_type_capabilities (
+        delivery_type_id,
+        vehicle_category_id,
+        weight_tier_id
+    )
+SELECT
+    dt.delivery_type_id,
+    vc.category_id,
+    wt.tier_id
+FROM
+    public.delivery_types dt
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+WHERE
+    dt.name = 'truck_delivery'
+    AND vc.name IN ('mini_truck', 'truck')
+    AND wt.min_weight_kg >= 20.00;
+
 CREATE TABLE logistics.courier_vehicles (
     vehicle_id SERIAL PRIMARY KEY,
     courier_id INT NOT NULL REFERENCES users.profiles (user_id) ON DELETE CASCADE,

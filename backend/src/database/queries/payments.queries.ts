@@ -1,4 +1,4 @@
-// services/backend/src/database/queries/payments.queries.js
+// services/backend/src/database/queries/payments.queries.ts
 
 /**
  * Payment transaction queries
@@ -11,23 +11,23 @@ export default {
    * Create payment transaction
    */
   CREATE_PAYMENT_TRANSACTION: `
-      INSERT INTO payments.transactions (
-          order_id,
-          payment_method_id,
-          payment_status_id,
-          amount,
-          currency,
-          external_transaction_id,
-          payment_gateway,
-          upi_vpa,
-          metadata,
-          payment_initiated_at
-      )
-      VALUES (
-          $1, $2,
-          (SELECT status_id FROM public.payment_statuses WHERE name = 'pending'),
-          $3, $4, $5, $6, $7, $8, NOW()
-      )
+    INSERT INTO payments.transactions (
+      order_id,
+      payment_method_id,
+      payment_status_id,
+      amount,
+      currency,
+      external_transaction_id,
+      payment_gateway,
+      upi_vpa,
+      metadata,
+      payment_initiated_at
+    )
+    VALUES (
+      $1, $2,
+      (SELECT status_id FROM public.payment_statuses WHERE name = 'pending'),
+      $3, $4, $5, $6, $7, $8, NOW()
+    )
       RETURNING transaction_id, payment_initiated_at
   `,
 

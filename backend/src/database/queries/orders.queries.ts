@@ -1,4 +1,4 @@
-// services/backend/src/database/queries/orders.queries.js
+// services/backend/src/database/queries/orders.queries.ts
 
 /**
  * Order management queries
@@ -12,21 +12,21 @@ export default {
    * Call stored function: Calculate fare
    */
   CALL_CALCULATE_FARE: `
-      SELECT orders.calculate_fare($1, $2, $3, $4, $5) AS result
+    SELECT orders.calculate_fare($1, $2, $3, $4, $5) AS result
   `,
 
   /**
    * Call stored function: Create order with locations
    */
   CALL_CREATE_ORDER: `
-      SELECT orders.create_order_with_locations($1) AS result
+    SELECT orders.create_order_with_locations($1) AS result
   `,
 
   /**
    * Call stored function: Cancel order with refund
    */
   CALL_CANCEL_ORDER_WITH_REFUND: `
-      SELECT orders.cancel_order_with_refund($1, $2, $3) AS result
+    SELECT orders.cancel_order_with_refund($1, $2, $3) AS result
   `,
 
   // ============ ORDER RETRIEVAL ============
@@ -35,19 +35,19 @@ export default {
    * Find order by ID with full details
    */
   FIND_ORDER_BY_ID: `
-      SELECT 
-          o.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.client_id,
-          u.full_name AS client_name,
-          u.phone_number AS client_phone,
-          o.status_id,
-          os.name AS status_name,
-          o.delivery_type_id,
-          dt.name AS delivery_type,
-          dt.display_name AS delivery_type_display,
-          o.vehicle_category_id,
+    SELECT
+      o.order_id,
+      o.order_uuid,
+      o.order_number,
+      o.client_id,
+      u.full_name AS client_name,
+      u.phone_number AS client_phone,
+      o.status_id,
+      os.name AS status_name,
+      o.delivery_type_id,
+      dt.name AS delivery_type,
+      dt.display_name AS delivery_type_display,
+      o.vehicle_category_id,
           vc.name AS vehicle_category, 
           vc.display_name AS vehicle_category_display,
           o.package_description,

@@ -7,12 +7,12 @@
 # ============================================
 FROM node:20-alpine AS base
 
-# Install system dependencies and enable corepack
+# Install system dependencies and pnpm
 RUN apk add --no-cache \
     libc6-compat \
     dumb-init \
     wget && \
-    corepack enable && corepack prepare pnpm@latest --activate
+    npm install -g pnpm@10.21.0
 
 WORKDIR /app
 
@@ -43,6 +43,19 @@ COPY . .
 
 # Build TypeScript
 RUN pnpm run build
+
+# ============================================
+# Development Stage
+# ============================================
+FROM base AS development
+
+# Install build tools
+RUN apk add --no-cache python3 make g++
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+CMD ["npm", "run", "dev"]
 
 # ============================================
 # Production Dependencies Stage

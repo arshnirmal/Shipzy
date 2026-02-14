@@ -1,10 +1,12 @@
 -- 07-payments.sql
--- Payments tables and triggers
+-- Payments transactions table and triggers
+-- NOTE: payment_methods and payment_statuses are created in 03-public-reference-and-master-data.sql to resolve circular dependency
+
 CREATE TABLE payments.transactions (
     transaction_id SERIAL PRIMARY KEY,
     order_id INT NOT NULL REFERENCES orders.requests (order_id) ON DELETE CASCADE,
-    payment_method_id INT NOT NULL REFERENCES public.payment_methods (method_id),
-    payment_status_id INT NOT NULL REFERENCES public.payment_statuses (status_id),
+    payment_method_id INT NOT NULL REFERENCES payments.payment_methods (method_id),
+    payment_status_id INT NOT NULL REFERENCES payments.payment_statuses (status_id),
     amount NUMERIC(10, 2) NOT NULL,
     currency VARCHAR(10) DEFAULT 'INR',
     external_transaction_id VARCHAR(255),
@@ -28,6 +30,8 @@ CREATE INDEX idx_payments_transactions_external_id ON payments.transactions (ext
 CREATE TRIGGER set_timestamp_payments_transactions BEFORE
 UPDATE
     ON payments.transactions FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+COMMENT ON COLUMN payments.transactions.external_transaction_id IS 'UPI transaction ID or payment gateway reference number';
 
 CREATE TABLE payments.refunds (
     refund_id SERIAL PRIMARY KEY,

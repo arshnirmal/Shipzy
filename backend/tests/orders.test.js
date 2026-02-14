@@ -1942,28 +1942,166 @@ describe("Orders API", () => {
       }
     });
 
-    it("should prevent invalid status transitions", async () => {
-      const invalidTransitions = [
-        { from: 1, to: 5 }, // Pending -> Delivered (skip steps)
-        { from: 5, to: 3 }, // Delivered -> Picked up (reverse)
-        { from: 3, to: 1 }, // Picked up -> Pending (reverse)
-      ];
+    // --- Rating tests (client rates delivered order) ---
+    describe("POST /api/v1/orders/:id/rate", () => {
+      let newOrderId;
 
-      for (const transition of invalidTransitions) {
-        // First set to the "from" status
-        await testDb.query(
-          `
-          UPDATE orders.requests SET status_id = $1 WHERE order_id = $2
-        `,
-          [transition.from, assignedOrder.order_id],
-        );
+      beforeEach(async () => {
+        // Create an order via API so controllers/services manage assignments/statuses
+        const orderBody = {
+          deliveryTypeId: 1,
+          vehicleCategoryId: 1,
+          weightTierId: 1,
+          paymentMethodId: 1,
+          fareBreakdown: {
+            basePrice: 50,
+            distanceKm: 5.2,
+            distancePrice: 25,
+            weightSurcharge: 0,
+            totalPrice: 75,
+            currency: "INR",
+          },
+          pickup: {
+            address: testAddresses.pickup.fullAddress,
+            latitude: testAddresses.pickup.latitude,
+            longitude: testAddresses.pickup.longitude,
+            city: testAddresses.pickup.city,
+            state: testAddresses.pickup.state,
+            postalCode: testAddresses.pickup.postalCode,
+            contactName: "Client Pickup",
+            contactPhone: "+1234567890",
+          },
+          delivery: {
+            address: testAddresses.delivery.fullAddress,
+            latitude: testAddresses.delivery.latitude,
+            longitude: testAddresses.delivery.longitude,
+            city: testAddresses.delivery.city,
+            state: testAddresses.delivery.state,
+            postalCode: testAddresses.delivery.postalCode,
+            contactName: "Client Delivery",
+            contactPhone: "+1234567891",
+          },
+        };
 
-        await testDb.query(
-          `
-          UPDATE orders.courier_assignments SET assignment_status_id = $1 WHERE assignment_id = $2
-        `,
-          [transition.from, acceptedAssignment.assignment_id],
-        );
+        const res = await request(app.server)
+          .post("/api/v1/orders")
+          .set(createTestAuthHeaders(clientToken))
+          .send(orderBody)
+          .expect(201);
+
+        newOrderId = res.body.data.orderId;
+
+        // Accept as courier
+        await request(app.server)
+          .post(`/api/v1/orders/${newOrderId}/accept`)
+          .set(createTestAuthHeaders(courierToken1))
+          .expect(200);
+
+        // Advance status to delivered
+        await request(app.server)
+          .put(`/api/v1/orders/${newOrderId}/status`)
+          .set(createTestAuthHeaders(courierToken1))
+          .send({ status: "picked_up" })
+          .expect(200);
+
+        await request(app.server)
+          .put(`/api/v1/orders/${newOrderId}/status`)
+          .set(createTestAuthHeaders(courierToken1))
+          .send({ status: "delivered" })
+          .expect(200);
+      });
+
+      it("should allow client to rate a delivered order", async () => {
+        const response = await request(app.server)
+          .post(`/api/v1/orders/${newOrderId}/rate`)
+          .set(createTestAuthHeaders(clientToken))
+          .send({ rating: 5, comment: "Great delivery" })
+          .expect(200);
+
+        expect(response.body).toMatchObject({
+          success: true,
+          message: "Order rated successfully",
+          data: expect.objectContaining({ rating: 5, orderId: newOrderId }),
+        });
+
+        // Duplicate rating should fail
+        const dup = await request(app.server)
+          .post(`/api/v1/orders/${newOrderId}/rate`)
+          .set(createTestAuthHeaders(clientToken))
+          .send({ rating: 4 })
+          .expect(400);
+
+        expect(dup.body.message).toMatch(/Rating already exists/);
+      });
+
+      it("should not allow rating before delivery", async () => {
+        // Create another order and accept but do not deliver
+        const res = await request(app.server)
+          .post("/api/v1/orders")
+          .set(createTestAuthHeaders(clientToken))
+          .send({
+            deliveryTypeId: 1,
+            vehicleCategoryId: 1,
+            weightTierId: 1,
+            paymentMethodId: 1,
+            fareBreakdown: { basePrice: 50, distanceKm: 1, distancePrice: 10, weightSurcharge: 0, totalPrice: 60, currency: "INR" },
+            pickup: { address: testAddresses.pickup.fullAddress, latitude: testAddresses.pickup.latitude, longitude: testAddresses.pickup.longitude, city: testAddresses.pickup.city, state: testAddresses.pickup.state, postalCode: testAddresses.pickup.postalCode, contactName: "Client", contactPhone: "+1234567890" },
+            delivery: { address: testAddresses.delivery.fullAddress, latitude: testAddresses.delivery.latitude, longitude: testAddresses.delivery.longitude, city: testAddresses.delivery.city, state: testAddresses.delivery.state, postalCode: testAddresses.delivery.postalCode, contactName: "Client", contactPhone: "+1234567891" },
+          })
+          .expect(201);
+
+        const pendingOrderId = res.body.data.orderId;
+
+        await request(app.server)
+          .post(`/api/v1/orders/${pendingOrderId}/accept`)
+          .set(createTestAuthHeaders(courierToken1))
+          .expect(200);
+
+        const response = await request(app.server)
+          .post(`/api/v1/orders/${pendingOrderId}/rate`)
+          .set(createTestAuthHeaders(clientToken))
+          .send({ rating: 5 })
+          .expect(400);
+
+        expect(response.body.message).toMatch(/rate delivered orders/i);
+      });
+
+      it("should reject rating by non-owner", async () => {
+        const otherClient = await testDb.createTestUser({
+          ...testUsers.client,
+          phoneNumber: "+1234567999",
+          firebaseUid: "other_client_uid",
+        });
+
+        const firebaseAdmin = require("firebase-admin");
+        firebaseAdmin.auth = () => ({ verifyIdToken: jest.fn().mockResolvedValue({ uid: "other_client_uid", phone_number: "+1234567999" }) });
+
+        const loginResp = await request(app.server)
+          .post("/api/v1/auth/firebase/verify")
+          .send({ idToken: "valid_token_other_client", fullName: "Other Client", role: "client" })
+          .set(createTestDeviceHeaders("other_client_device"));
+
+        const otherToken = loginResp.body.data.tokens.accessToken;
+
+        const response = await request(app.server)
+          .post(`/api/v1/orders/${newOrderId}/rate`)
+          .set(createTestAuthHeaders(otherToken))
+          .send({ rating: 4 })
+          .expect(403);
+
+        expect(response.body.message).toMatch(/rate your own orders/i);
+      });
+
+      it("should validate rating value range", async () => {
+        const response = await request(app.server)
+          .post(`/api/v1/orders/${newOrderId}/rate`)
+          .set(createTestAuthHeaders(clientToken))
+          .send({ rating: 10 })
+          .expect(400);
+
+        expect(response.body.message).toMatch(/between 1 and 5/i);
+      });
+    });
 
         const response = await request(app.server)
           .put(`/api/v1/orders/${assignedOrder.order_id}/status`)

@@ -1,23 +1,23 @@
-// src/modules/static/static.queries.ts
+// services/backend/src/database/queries/static.queries.ts
 
 export default {
   /**
    * Get all delivery types with nested labels and supported vehicles/weight tiers
    */
   GET_DELIVERY_TYPES: `
-      WITH dt AS (
-        SELECT
-          dt.delivery_type_id,
-          dt.name,
-          dt.display_name,
-          dt.description,
-          dt.base_rate,
-          dt.per_km_rate,
-          dt.sort_order,
-          dt.is_active
-        FROM public.delivery_types dt
-        WHERE dt.is_active = TRUE
-      ),
+    WITH dt AS (
+      SELECT
+        dt.delivery_type_id,
+        dt.name,
+        dt.display_name,
+        dt.description,
+        dt.base_rate,
+        dt.per_km_rate,
+        dt.sort_order,
+        dt.is_active
+      FROM public.delivery_types dt
+      WHERE dt.is_active = TRUE
+    ),
       labels_src AS (
         SELECT DISTINCT ON (dtl.delivery_type_id, dtl.label_id)
           dtl.delivery_type_id,
@@ -202,13 +202,13 @@ export default {
    */
   GET_VEHICLE_CATEGORIES: `
       SELECT
-        category_id AS "categoryId",
+        category_id,
         name,
-        display_name AS "displayName",
+        display_name,
         description,
-        max_weight_kg AS "maxWeightKg",
-        icon_url AS "iconUrl",
-        is_active AS "isActive"
+        max_weight_kg,
+        icon_url,
+        is_active
       FROM public.vehicle_categories
       WHERE is_active = TRUE
       ORDER BY max_weight_kg ASC
@@ -219,7 +219,7 @@ export default {
    */
   GET_PACKAGE_TYPES: `
       SELECT
-        package_type_id AS "packageTypeId",
+        package_type_id,
         name,
         description
       FROM public.package_types
@@ -231,11 +231,10 @@ export default {
    */
   GET_PAYMENT_METHODS: `
       SELECT
-        method_id AS "methodId",
+        method_id,
         name,
-        name AS "displayName",  -- Alias name as displayName
         description,
-        is_active AS "isActive"
+        is_active
       FROM public.payment_methods
       WHERE is_active = TRUE
       ORDER BY method_id ASC

@@ -7,32 +7,30 @@
 -- Description: Calculate delivery fare based on distance, weight, and delivery type
 -- Returns: JSON with fare breakdown
 -- ========================================
-CREATE
-OR REPLACE FUNCTION orders.calculate_fare(
+CREATE OR REPLACE FUNCTION orders.calculate_fare(
     p_delivery_type_id INT,
     p_vehicle_category_id INT,
     p_distance_km NUMERIC,
     p_weight_tier_id INT,
     p_package_type_id INT DEFAULT NULL
-) RETURNS JSON LANGUAGE plpgsql STABLE AS $ $ DECLARE -- Pricing configuration variables
-v_platform_fee NUMERIC;
+)
+RETURNS JSON
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    -- Pricing configuration variables
+    v_platform_fee NUMERIC;
+    v_gst_rate NUMERIC;
+    v_special_handling_fee NUMERIC := 0;
 
-v_gst_rate NUMERIC;
-
-v_special_handling_fee NUMERIC := 0;
-
--- Base calculation variables
-v_base_rate NUMERIC;
-
-v_per_km_rate NUMERIC;
-
-v_weight_surcharge NUMERIC := 0;
-
-v_base_price NUMERIC;
-
-v_distance_price NUMERIC;
-
-v_subtotal_before_tax NUMERIC;
+    -- Base calculation variables
+    v_base_rate NUMERIC;
+    v_per_km_rate NUMERIC;
+    v_weight_surcharge NUMERIC := 0;
+    v_base_price NUMERIC;
+    v_distance_price NUMERIC;
+    v_subtotal_before_tax NUMERIC;
 
 v_gst_amount NUMERIC;
 
@@ -205,7 +203,7 @@ WHEN OTHERS THEN RETURN json_build_object(
 
 END;
 
-$ $;
+$$;
 
 COMMENT ON FUNCTION orders.calculate_fare IS 'Calculate delivery fare based on distance and weight tier ID';
 
@@ -214,16 +212,18 @@ COMMENT ON FUNCTION orders.calculate_fare IS 'Calculate delivery fare based on d
 -- Description: Create order with pickup and delivery locations (atomic transaction)
 -- Returns: JSON with created order details
 -- ========================================
-CREATE
-OR REPLACE FUNCTION orders.create_order_with_locations(p_order_data JSONB) RETURNS JSON LANGUAGE plpgsql AS $ $ DECLARE v_client_id INT;
-
-v_delivery_type_id INT;
-
-v_vehicle_category_id INT;
-
-v_payment_method_id INT;
-
-v_pickup_location_id INT;
+CREATE OR REPLACE FUNCTION orders.create_order_with_locations(
+    p_order_data JSONB
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_client_id INT;
+    v_delivery_type_id INT;
+    v_vehicle_category_id INT;
+    v_payment_method_id INT;
+    v_pickup_location_id INT;
 
 v_delivery_location_id INT;
 
@@ -306,14 +306,18 @@ WHERE
 -- The service layer has already validated these values
 v_base_price := (p_order_data -> 'fareBreakdown' ->> 'basePrice') :: NUMERIC;
 
-v_distance_price := (p_order_data -> 'fareBreakdown' ->> 'distancePrice') :: NUMERIC;
+v_distance_price := (
+    p_order_data -> 'fareBreakdown' ->> 'distancePrice'
+) :: NUMERIC;
 
 v_weight_surcharge := (
     p_order_data -> 'fareBreakdown' ->> 'weightSurcharge'
 ) :: NUMERIC;
 
 v_platform_fee := COALESCE(
-    (p_order_data -> 'fareBreakdown' ->> 'platformFee') :: NUMERIC,
+    (
+        p_order_data -> 'fareBreakdown' ->> 'platformFee'
+    ) :: NUMERIC,
     10.00
 );
 
@@ -547,7 +551,7 @@ WHEN OTHERS THEN RETURN json_build_object(
 
 END;
 
-$ $;
+$$;
 
 COMMENT ON FUNCTION orders.create_order_with_locations IS 'Create order with pickup and delivery locations in atomic transaction';
 
@@ -556,18 +560,19 @@ COMMENT ON FUNCTION orders.create_order_with_locations IS 'Create order with pic
 -- Description: Cancel order, initiate refund, and queue notifications
 -- Returns: JSON with operation result
 -- ========================================
-CREATE
-OR REPLACE FUNCTION orders.cancel_order_with_refund(
+CREATE OR REPLACE FUNCTION orders.cancel_order_with_refund(
     p_order_id INT,
     p_cancellation_reason TEXT,
     p_cancelled_by_user_id INT
-) RETURNS JSON LANGUAGE plpgsql AS $ $ DECLARE v_order_status_name VARCHAR(50);
-
-v_payment_transaction_id INT;
-
-v_client_id INT;
-
-v_order_total NUMERIC;
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_order_status_name VARCHAR(50);
+    v_payment_transaction_id INT;
+    v_client_id INT;
+    v_order_total NUMERIC;
 
 result JSON;
 
@@ -655,7 +660,7 @@ WHERE
         SELECT
             status_id
         FROM
-            public.payment_statuses
+            payments.payment_statuses
         WHERE
             name = 'completed'
     )
@@ -762,7 +767,7 @@ WHEN OTHERS THEN RETURN json_build_object(
 
 END;
 
-$ $;
+$$;
 
 COMMENT ON FUNCTION orders.cancel_order_with_refund IS 'Cancel order, initiate refund, and queue notifications atomically';
 
@@ -771,18 +776,23 @@ COMMENT ON FUNCTION orders.cancel_order_with_refund IS 'Cancel order, initiate r
 -- Description: Atomically assign an order to a courier with row-level locks to avoid race conditions.
 -- Returns: JSON indicating success/failure and assignment_id
 -- ========================================
-CREATE
-OR REPLACE FUNCTION orders.assign_order_to_courier(p_order_id INT, p_courier_id INT) RETURNS JSON LANGUAGE plpgsql AS $ $ DECLARE v_order_status_id INT;
-
-v_assignment_id INT;
-
-v_assigned_status_id INT := (
-    SELECT
-        status_id
-    FROM
-        public.assignment_statuses
-    WHERE
-        name = 'assigned'
+CREATE OR REPLACE FUNCTION orders.assign_order_to_courier(
+    p_order_id INT,
+    p_courier_id INT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_order_status_id INT;
+    v_assignment_id INT;
+    v_assigned_status_id INT := (
+        SELECT
+            status_id
+        FROM
+            public.assignment_statuses
+        WHERE
+            name = 'assigned'
 );
 
 v_accepted_order_status_id INT := (
@@ -898,6 +908,6 @@ WHEN OTHERS THEN RETURN json_build_object('success', FALSE, 'error', SQLERRM);
 
 END;
 
-$ $;
+$$;
 
 COMMENT ON FUNCTION orders.assign_order_to_courier IS 'Atomically assign an order to a courier with row-level locking to avoid race conditions';
