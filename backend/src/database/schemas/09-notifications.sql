@@ -1,5 +1,7 @@
 -- 09-notifications.sql
 -- Notification queue and FCM tokens
+-- Notification Channels and Statuses moved to public schema for centralized master data
+
 CREATE TABLE notifications.queue (
     notification_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users.profiles (user_id) ON DELETE CASCADE,

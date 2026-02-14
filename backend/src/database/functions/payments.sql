@@ -29,7 +29,7 @@ BEGIN
     ) VALUES (
         p_order_id,
         p_payment_method_id,
-        (SELECT status_id FROM public.payment_statuses WHERE name = 'pending'),
+        (SELECT status_id FROM payments.payment_statuses WHERE name = 'pending'),
         p_amount,
         p_currency
     )
@@ -59,7 +59,7 @@ DECLARE
 BEGIN
     -- Get the status_id for the given status name
     SELECT ps.status_id INTO status_id
-    FROM public.payment_statuses ps
+    FROM payments.payment_statuses ps
     WHERE ps.name = p_status_name;
 
     IF status_id IS NULL THEN
@@ -114,7 +114,7 @@ BEGIN
         pt.created_at,
         pt.payment_completed_at
     FROM payments.transactions pt
-    JOIN public.payment_statuses ps ON pt.payment_status_id = ps.status_id
+    JOIN payments.payment_statuses ps ON pt.payment_status_id = ps.status_id
     WHERE pt.order_id = p_order_id
     ORDER BY pt.created_at DESC;
 END;
@@ -142,7 +142,7 @@ BEGIN
     JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
     WHERE ca.courier_id = p_courier_id
       AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
-      AND pt.payment_status_id = (SELECT status_id FROM public.payment_statuses WHERE name = 'completed')
+      AND pt.payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed')
       AND ca.completed_at >= p_start_date;
 
     RETURN total_earnings;
@@ -176,7 +176,7 @@ BEGIN
     FROM orders.courier_assignments ca
     LEFT JOIN orders.requests o ON ca.order_id = o.order_id
     LEFT JOIN payments.transactions pt ON o.order_id = pt.order_id
-        AND pt.payment_status_id = (SELECT status_id FROM public.payment_statuses WHERE name = 'completed')
+        AND pt.payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed')
     WHERE ca.courier_id = p_courier_id
       AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
       AND ca.completed_at >= p_start_date;

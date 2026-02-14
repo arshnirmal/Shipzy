@@ -1,5 +1,7 @@
 -- 06-orders.sql
 -- Orders schema and related objects
+-- Order Statuses and Assignment Statuses moved to public schema for centralized master data
+
 CREATE TABLE orders.requests (
     order_id SERIAL PRIMARY KEY,
     order_uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
@@ -33,7 +35,7 @@ CREATE TABLE orders.requests (
     subtotal_before_tax NUMERIC(10, 2) DEFAULT 0.00,
     gst_amount NUMERIC(10, 2) DEFAULT 0.00,
     total_price NUMERIC(10, 2) NOT NULL,
-    payment_method_id INT NOT NULL REFERENCES public.payment_methods (method_id),
+    payment_method_id INT NOT NULL REFERENCES payments.payment_methods (method_id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     accepted_at TIMESTAMPTZ,
     picked_up_at TIMESTAMPTZ,
@@ -53,6 +55,14 @@ CREATE INDEX idx_orders_requests_delivery_type_id ON orders.requests (delivery_t
 CREATE INDEX idx_orders_requests_created_at ON orders.requests (created_at DESC);
 
 CREATE INDEX idx_orders_requests_deleted_at ON orders.requests (deleted_at)
+WHERE
+    deleted_at IS NULL;
+
+CREATE INDEX idx_orders_vehicle_category_id ON orders.requests(vehicle_category_id)
+WHERE
+    deleted_at IS NULL;
+
+CREATE INDEX idx_orders_requests_weight_tier_id ON orders.requests(weight_tier_id)
 WHERE
     deleted_at IS NULL;
 
@@ -141,18 +151,15 @@ CREATE TABLE orders.proof_of_delivery (
 
 CREATE INDEX idx_orders_proof_of_delivery_order_id ON orders.proof_of_delivery (order_id);
 
-CREATE TABLE IF NOT EXISTS public.driver_ratings (
+CREATE TABLE IF NOT EXISTS logistics.driver_ratings (
     rating_id BIGSERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES orders.requests(order_id),
     driver_id INTEGER NOT NULL REFERENCES logistics.courier_status(courier_id),
     customer_id INTEGER NOT NULL REFERENCES users.profiles(user_id),
-    rating SMALLINT NOT NULL CHECK (
-        rating BETWEEN 1
-        AND 5
-    ),
+    rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment TEXT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(order_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_driver_ratings_driver_created ON public.driver_ratings(driver_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_driver_ratings_driver_created ON logistics.driver_ratings(driver_id, created_at);

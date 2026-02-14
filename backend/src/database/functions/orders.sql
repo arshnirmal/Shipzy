@@ -660,7 +660,7 @@ WHERE
         SELECT
             status_id
         FROM
-            public.payment_statuses
+            payments.payment_statuses
         WHERE
             name = 'completed'
     )
