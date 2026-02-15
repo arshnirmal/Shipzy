@@ -1,191 +1,61 @@
 // services/backend/src/modules/orders/orders.schema.ts
 import { FastifySchema } from "fastify";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import {
+  CalculateFareZ,
+  CreateOrderZ,
+  RateOrderZ,
+  CancelOrderZ,
+  UpdateOrderStatusZ,
+  OrderParamsZ,
+  ListOrdersQueryZ,
+  GetAvailableOrdersQueryZ,
+} from "./orders.zod.js";
+
+const CalculateFareJson = zodToJsonSchema(
+  CalculateFareZ as any,
+  "CalculateFare",
+);
+const CreateOrderJson = zodToJsonSchema(CreateOrderZ as any, "CreateOrder");
+const RateOrderJson = zodToJsonSchema(RateOrderZ as any, "RateOrder");
+const CancelOrderJson = zodToJsonSchema(CancelOrderZ as any, "CancelOrder");
+const UpdateOrderStatusJson = zodToJsonSchema(
+  UpdateOrderStatusZ as any,
+  "UpdateOrderStatus",
+);
+const OrderParamsJson = zodToJsonSchema(OrderParamsZ as any, "OrderParams");
+const ListOrdersQueryJson = zodToJsonSchema(
+  ListOrdersQueryZ as any,
+  "ListOrdersQuery",
+);
+const GetAvailableOrdersQueryJson = zodToJsonSchema(
+  GetAvailableOrdersQueryZ as any,
+  "GetAvailableOrdersQuery",
+);
 
 export const calculateFareSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: [
-      "deliveryTypeId",
-      "vehicleCategoryId",
-      "weightTierId",
-      "pickup",
-      "drop",
-    ],
-    properties: {
-      deliveryTypeId: { type: "integer", minimum: 1 },
-      vehicleCategoryId: { type: "integer", minimum: 1 },
-      weightTierId: { type: "integer", minimum: 1 },
-      pickup: {
-        type: "object",
-        required: ["lat", "lng"],
-        properties: {
-          lat: { type: "number", minimum: -90, maximum: 90 },
-          lng: { type: "number", minimum: -180, maximum: 180 },
-        },
-      },
-      drop: {
-        type: "object",
-        required: ["lat", "lng"],
-        properties: {
-          lat: { type: "number", minimum: -90, maximum: 90 },
-          lng: { type: "number", minimum: -180, maximum: 180 },
-        },
-      },
-    },
-  },
+  body: CalculateFareJson,
 };
 
 export const createOrderSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: [
-      "deliveryTypeId",
-      "vehicleCategoryId",
-      "weightTierId",
-      "paymentMethodId",
-      "pickup",
-      "delivery",
-      "fareBreakdown",
-    ],
-    properties: {
-      deliveryTypeId: { type: "integer", minimum: 1 },
-      vehicleCategoryId: { type: "integer", minimum: 1 },
-      weightTierId: { type: "integer", minimum: 1 },
-      packageTypeId: { type: ["integer", "null"], minimum: 1 },
-      paymentMethodId: { type: "integer", minimum: 1 },
-      packageDescription: { type: ["string", "null"], maxLength: 500 },
-      specialInstructions: { type: ["string", "null"], maxLength: 1000 },
-      scheduledPickupTime: { type: ["string", "null"], format: "date-time" },
-      scheduledDeliveryTime: { type: ["string", "null"], format: "date-time" },
-      declaredValue: { type: ["number", "null"], minimum: 0 },
-      fareBreakdown: {
-        type: "object",
-        required: [
-          "basePrice",
-          "distanceKm",
-          "distancePrice",
-          "weightSurcharge",
-          "totalPrice",
-          "currency",
-        ],
-        properties: {
-          basePrice: { type: "number", minimum: 0 },
-          distanceKm: { type: "number", minimum: 0.5 },
-          distancePrice: { type: "number", minimum: 0 },
-          weightSurcharge: { type: "number", minimum: 0 },
-          totalPrice: { type: "number", minimum: 0 },
-          currency: { type: "string", enum: ["INR"] },
-        },
-      },
-      pickup: {
-        type: "object",
-        required: [
-          "address",
-          "latitude",
-          "longitude",
-          "city",
-          "state",
-          "postalCode",
-          "contactName",
-          "contactPhone",
-        ],
-        properties: {
-          addressId: { type: ["integer", "null"], minimum: 1 },
-          address: { type: "string" },
-          latitude: { type: "number", minimum: -90, maximum: 90 },
-          longitude: { type: "number", minimum: -180, maximum: 180 },
-          city: { type: "string" },
-          state: { type: "string" },
-          postalCode: { type: "string" },
-          howToReach: { type: ["string", "null"], maxLength: 500 },
-          building: { type: ["string", "null"], maxLength: 200 },
-          floor: { type: ["string", "null"], maxLength: 50 },
-          flatNumber: { type: ["string", "null"], maxLength: 50 },
-          contactName: { type: "string" },
-          contactPhone: { type: "string" },
-        },
-      },
-      delivery: {
-        type: "object",
-        required: [
-          "address",
-          "latitude",
-          "longitude",
-          "city",
-          "state",
-          "postalCode",
-          "contactName",
-          "contactPhone",
-        ],
-        properties: {
-          addressId: { type: ["integer", "null"], minimum: 1 },
-          address: { type: "string" },
-          latitude: { type: "number", minimum: -90, maximum: 90 },
-          longitude: { type: "number", minimum: -180, maximum: 180 },
-          city: { type: "string" },
-          state: { type: "string" },
-          postalCode: { type: "string" },
-          howToReach: { type: ["string", "null"], maxLength: 500 },
-          building: { type: ["string", "null"], maxLength: 200 },
-          floor: { type: ["string", "null"], maxLength: 50 },
-          flatNumber: { type: ["string", "null"], maxLength: 50 },
-          contactName: { type: "string" },
-          contactPhone: { type: "string" },
-        },
-      },
-    },
-  },
+  body: CreateOrderJson,
 };
 
 export const getOrderByIdSchema: FastifySchema = {
-  params: {
-    type: "object",
-    required: ["id"],
-    properties: {
-      id: { type: "string", pattern: "^[0-9]+$" },
-    },
-  },
+  params: OrderParamsJson,
 };
 
 export const listOrdersSchema: FastifySchema = {
-  querystring: {
-    type: "object",
-    properties: {
-      page: { type: "integer", minimum: 1, default: 1 },
-      limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-      status: { type: "string", enum: ["active", "completed", "cancelled"] },
-    },
-  },
+  querystring: ListOrdersQueryJson,
 };
 
 export const getAvailableOrdersSchema: FastifySchema = {
-  querystring: {
-    type: "object",
-    required: ["latitude", "longitude"],
-    properties: {
-      latitude: { type: "number", minimum: -90, maximum: 90 },
-      longitude: { type: "number", minimum: -180, maximum: 180 },
-      radius: { type: "number", minimum: 1, maximum: 50, default: 10 },
-      limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-    },
-  },
+  querystring: GetAvailableOrdersQueryJson,
 };
 
 export const cancelOrderSchema: FastifySchema = {
-  params: {
-    type: "object",
-    required: ["id"],
-    properties: {
-      id: { type: "string", pattern: "^[0-9]+$" },
-    },
-  },
-  body: {
-    type: "object",
-    required: ["cancellationReason"],
-    properties: {
-      cancellationReason: { type: "string", minLength: 5, maxLength: 500 },
-    },
-  },
+  params: OrderParamsJson,
+  body: CancelOrderJson,
 };
 
 export const acceptOrderSchema: FastifySchema = {
@@ -199,18 +69,12 @@ export const acceptOrderSchema: FastifySchema = {
 };
 
 export const updateOrderStatusSchema: FastifySchema = {
-  params: {
-    type: "object",
-    required: ["id"],
-    properties: {
-      id: { type: "string", pattern: "^[0-9]+$" },
-    },
-  },
-  body: {
-    type: "object",
-    required: ["status"],
-    properties: {
-      status: { type: "string", enum: ["picked_up", "delivered"] },
-    },
-  },
+  params: OrderParamsJson,
+  body: UpdateOrderStatusJson,
+};
+
+// New: rate order schema (route-level validation)
+export const rateOrderSchema: FastifySchema = {
+  params: OrderParamsJson,
+  body: RateOrderJson,
 };

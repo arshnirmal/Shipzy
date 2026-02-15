@@ -235,7 +235,7 @@ export default {
         name,
         description,
         is_active
-      FROM public.payment_methods
+      FROM payments.payment_methods
       WHERE is_active = TRUE
       ORDER BY method_id ASC
     `,
@@ -360,7 +360,7 @@ export default {
             )
             ORDER BY pm.method_id
           ) AS payment_methods
-        FROM public.payment_methods pm
+        FROM payments.payment_methods pm
         WHERE pm.is_active = TRUE
       )
       SELECT json_build_object(

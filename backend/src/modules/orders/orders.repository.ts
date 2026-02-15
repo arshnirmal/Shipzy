@@ -13,7 +13,7 @@ class OrdersRepository {
     distanceKm: number,
     weightTierId: number,
     packageTypeId?: number,
-  ) {
+  ): Promise<import("../../types/orders.js").FareCalculationResult> {
     try {
       const result = await db.query(ordersQueries.CALL_CALCULATE_FARE, [
         deliveryTypeId,
@@ -23,7 +23,8 @@ class OrdersRepository {
         packageTypeId,
       ]);
 
-      return result.rows[0].result;
+      return result.rows[0]
+        .result as import("../../types/orders.js").FareCalculationResult;
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",
@@ -36,13 +37,16 @@ class OrdersRepository {
   /**
    * Create order using stored function
    */
-  async createOrder(orderData: Record<string, any>) {
+  async createOrder(
+    orderData: Record<string, any>,
+  ): Promise<import("../../types/orders.js").OrderCreateResult> {
     try {
       const result = await db.query(ordersQueries.CALL_CREATE_ORDER, [
         JSON.stringify(orderData),
       ]);
 
-      return result.rows[0].result;
+      return result.rows[0]
+        .result as import("../../types/orders.js").OrderCreateResult;
     } catch (error) {
       logger.error({
         msg: "Error creating order",

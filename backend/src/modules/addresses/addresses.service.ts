@@ -7,9 +7,10 @@ import { ValidationError } from "../../utils/error.util.js";
 
 interface SearchParams {
   query: string;
-  proximity?: string;
+  // Accept either a "lon,lat" string (legacy) or structured object { latitude, longitude }
+  proximity?: string | { latitude: number; longitude: number };
   limit?: number;
-  types?: string;
+  types?: string | string[];
   country?: string;
   language?: string;
 }
@@ -24,6 +25,34 @@ interface GeocodeParams {
   longitude: number;
   types?: string[];
   limit?: number;
+}
+
+// Search suggestion returned to callers
+type SearchSuggestion = {
+  id?: string;
+  name?: string;
+  fullAddress?: string;
+  placeType?: string;
+  coordinates?: Coordinates | { latitude?: number; longitude?: number };
+  context: Record<string, string | undefined> | null;
+  sessionToken?: string;
+};
+
+// Minimal types for Mapbox raw responses
+interface MapboxSuggestionRaw {
+  mapbox_id?: string;
+  name?: string;
+  full_address?: string;
+  place_formatted?: string;
+  feature_type?: string;
+  coordinates?: { latitude?: number; longitude?: number };
+  context?: unknown;
+}
+interface MapboxFeatureRaw {
+  id?: string;
+  properties?: Record<string, unknown>;
+  geometry?: { coordinates?: number[] };
+  bbox?: number[] | null;
 }
 
 interface DirectionsOrigin {
@@ -93,7 +122,9 @@ class AddressesService {
    * Search for places/addresses using Mapbox Search Box API
    * Returns suggestions (first step of two-step process)
    */
-  async searchAddresses(searchParams: SearchParams): Promise<any> {
+  async searchAddresses(
+    searchParams: SearchParams,
+  ): Promise<SearchSuggestion[]> {
     // Sanitize and validate input first
     let sanitizedQuery = "";
     let sanitizedProximity: string | undefined;
@@ -108,6 +139,9 @@ class AddressesService {
         language = "en",
       } = searchParams;
 
+      // Normalize `types` to a comma-separated string if caller provided an array
+      const typesParam = Array.isArray(types) ? types.join(",") : types;
+
       // Sanitize and validate input
       sanitizedQuery = this._sanitizeInput(query);
       if (sanitizedQuery.length < 3) {
@@ -118,14 +152,30 @@ class AddressesService {
       }
 
       if (proximity) {
-        sanitizedProximity = this._sanitizeInput(proximity);
-        if (sanitizedProximity.length > 50) {
-          throw new ValidationError("Proximity parameter too long");
+        // support structured proximity { latitude, longitude }
+        let proximityStr: string | undefined;
+        if (
+          typeof proximity === "object" &&
+          proximity.latitude &&
+          proximity.longitude
+        ) {
+          proximityStr = `${proximity.longitude},${proximity.latitude}`;
+        } else if (typeof proximity === "string") {
+          proximityStr = proximity;
+        }
+
+        if (proximityStr) {
+          sanitizedProximity = this._sanitizeInput(proximityStr);
+          if (sanitizedProximity.length > 50) {
+            throw new ValidationError("Proximity parameter too long");
+          }
         }
       }
 
       const cacheKey = `search:${sanitizedQuery}:${sanitizedProximity || "default"}`;
-      const cached = searchCache.get(cacheKey);
+      const cached = searchCache.get(cacheKey) as
+        | SearchSuggestion[]
+        | undefined;
       if (cached) {
         logger.info({
           msg: "Returning cached search results",
@@ -147,7 +197,7 @@ class AddressesService {
             session_token: sessionToken,
             proximity: sanitizedProximity,
             limit,
-            types,
+            types: typesParam,
             country,
             language,
           },
@@ -158,21 +208,23 @@ class AddressesService {
         },
       );
 
-      const suggestions = response.data.suggestions.map((item: any) => ({
-        id: item.mapbox_id,
-        name: item.name,
-        fullAddress: item.full_address || item.place_formatted,
-        placeType: item.feature_type,
-        // Note: Mapbox Search Box 'suggest' API does NOT return coordinates.
-        // Coordinates are only available via the 'retrieve' endpoint using the session token.
-        // We return empty/undefined coordinates here, which the frontend must handle.
-        coordinates: {
-          latitude: item.coordinates?.latitude,
-          longitude: item.coordinates?.longitude,
-        },
-        context: this._parseContext(item.context),
-        sessionToken, // Include session token for retrieve step
-      }));
+      const suggestions = response.data.suggestions.map(
+        (item: MapboxSuggestionRaw) => ({
+          id: item.mapbox_id,
+          name: item.name,
+          fullAddress: item.full_address || item.place_formatted,
+          placeType: item.feature_type,
+          // Note: Mapbox Search Box 'suggest' API does NOT return coordinates.
+          // Coordinates are only available via the 'retrieve' endpoint using the session token.
+          // We return empty/undefined coordinates here, which the frontend must handle.
+          coordinates: {
+            latitude: item.coordinates?.latitude,
+            longitude: item.coordinates?.longitude,
+          },
+          context: this._parseContext(item.context),
+          sessionToken, // Include session token for retrieve step
+        }),
+      );
 
       // Cache results
       searchCache.set(cacheKey, suggestions);
@@ -404,22 +456,32 @@ class AddressesService {
       // Transform Mapbox v6 response to our format
       const features = response.data.features || [];
 
-      const results = features.map((feature: any) => {
+      const results = features.map((feature: MapboxFeatureRaw) => {
         // Mapbox v6: coordinates are in properties.coordinates object OR geometry.coordinates array
         let featureLatitude: number;
         let featureLongitude: number;
 
-        if (feature.properties?.coordinates) {
-          // v6 format: properties.coordinates = { longitude, latitude }
-          featureLatitude = feature.properties.coordinates.latitude;
-          featureLongitude = feature.properties.coordinates.longitude;
+        if (
+          feature.properties?.coordinates &&
+          typeof feature.properties.coordinates === "object"
+        ) {
+          const coords = feature.properties.coordinates as Record<
+            string,
+            unknown
+          >;
+          featureLatitude =
+            typeof coords.latitude === "number" ? coords.latitude : latitude;
+          featureLongitude =
+            typeof coords.longitude === "number" ? coords.longitude : longitude;
         } else if (
           feature.geometry?.coordinates &&
           Array.isArray(feature.geometry.coordinates)
         ) {
-          // Fallback: geometry.coordinates = [longitude, latitude]
-          featureLongitude = feature.geometry.coordinates[0];
-          featureLatitude = feature.geometry.coordinates[1];
+          const coordsArr = feature.geometry.coordinates;
+          featureLongitude =
+            typeof coordsArr[0] === "number" ? coordsArr[0] : longitude;
+          featureLatitude =
+            typeof coordsArr[1] === "number" ? coordsArr[1] : latitude;
         } else {
           // Fallback to query coordinates if feature doesn't have coordinates
           featureLatitude = latitude;
@@ -466,9 +528,18 @@ class AddressesService {
           },
           featureType: feature.properties?.feature_type || "address",
           // Only include essential properties, not the entire raw object
-          properties: feature.properties?.coordinates?.accuracy
-            ? { accuracy: feature.properties.coordinates.accuracy }
-            : null,
+          properties:
+            feature.properties &&
+            typeof feature.properties === "object" &&
+            (feature.properties as any).coordinates &&
+            typeof (feature.properties as any).coordinates === "object" &&
+            typeof (feature.properties as any).coordinates.accuracy === "number"
+              ? {
+                  accuracy: Number(
+                    (feature.properties as any).coordinates.accuracy,
+                  ),
+                }
+              : null,
           context: contextArray,
           bbox: feature.bbox || null,
           relevance: feature.properties?.relevance || null,
@@ -764,21 +835,31 @@ class AddressesService {
     return degrees * (Math.PI / 180);
   }
 
-  _parseContext(context: any) {
+  _parseContext(context: unknown) {
     if (!context) return {};
 
     const parsed: Record<string, string> = {};
 
     if (Array.isArray(context)) {
-      for (const item of context) {
-        const [type] = item.id.split(".");
-        parsed[type] = item.text;
+      for (const item of context as Array<Record<string, unknown>>) {
+        const id = typeof item.id === "string" ? item.id : undefined;
+        const text = typeof item.text === "string" ? item.text : undefined;
+        if (id && text) {
+          const parts = id.split(".");
+          if (parts.length > 0) {
+            const key = parts[0]!;
+            parsed[key] = text;
+          }
+        }
       }
-    } else if (typeof context === "object") {
+    } else if (typeof context === "object" && context !== null) {
       // Handle object format (e.g. from Retrieve API)
-      for (const [key, value] of Object.entries(context)) {
-        if (value && typeof value === "object" && "name" in value) {
-          parsed[key] = (value as any).name;
+      for (const [key, value] of Object.entries(
+        context as Record<string, unknown>,
+      )) {
+        if (value && typeof value === "object") {
+          const name = (value as Record<string, unknown>).name;
+          if (typeof name === "string") parsed[key] = name;
         }
       }
     }

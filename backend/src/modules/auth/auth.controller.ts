@@ -5,27 +5,13 @@ import logger from "../../config/logger.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import authService from "./auth.service.js";
 
-interface GoogleVerifyBody {
-  idToken: string;
-  role?: string;
-}
-
-interface RefreshTokenBody {
-  refreshToken: string;
-}
-
-interface RegisterBody {
-  fullName: string;
-  email: string;
-  password: string;
-  role?: string;
-  phoneNumber?: string;
-}
-
-interface LoginBody {
-  email: string;
-  password: string;
-}
+import type {
+  VerifyGoogle,
+  RefreshToken,
+  Register,
+  Login,
+} from "./auth.zod.js";
+import { VerifyGoogleZ, RefreshTokenZ, RegisterZ, LoginZ } from "./auth.zod.js";
 
 class AuthController {
   /**
@@ -33,13 +19,13 @@ class AuthController {
    * Refresh JWT access token
    */
   async refreshToken(
-    request: FastifyRequest<{ Body: RefreshTokenBody }>,
+    request: FastifyRequest<{ Body: RefreshToken }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { refreshToken } = request.body;
+      const parsed = RefreshTokenZ.parse(request.body) as RefreshToken;
 
-      const result = await authService.refreshToken(refreshToken);
+      const result = await authService.refreshToken(parsed.refreshToken);
 
       return successResponse(reply, result, "Token refreshed successfully");
     } catch (error) {
@@ -60,11 +46,12 @@ class AuthController {
    * Verify Google ID token and create/login user
    */
   async verifyGoogle(
-    request: FastifyRequest<{ Body: GoogleVerifyBody }>,
+    request: FastifyRequest<{ Body: VerifyGoogle }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { idToken, role } = request.body;
+      const parsed = VerifyGoogleZ.parse(request.body) as VerifyGoogle;
+      const { idToken, role } = parsed;
 
       // Get device info from request
       const deviceInfo: any = {
@@ -142,11 +129,12 @@ class AuthController {
    * Register new user with email/password
    */
   async register(
-    request: FastifyRequest<{ Body: RegisterBody }>,
+    request: FastifyRequest<{ Body: Register }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { fullName, email, password, role, phoneNumber } = request.body;
+      const parsed = RegisterZ.parse(request.body) as Register;
+      const { fullName, email, password, role, phoneNumber } = parsed;
 
       // Get device info from request
       const deviceInfo: any = {
@@ -190,11 +178,12 @@ class AuthController {
    * Login with email/password
    */
   async login(
-    request: FastifyRequest<{ Body: LoginBody }>,
+    request: FastifyRequest<{ Body: Login }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { email, password } = request.body;
+      const parsed = LoginZ.parse(request.body) as Login;
+      const { email, password } = parsed;
 
       // Get device info from request
       const deviceInfo: any = {

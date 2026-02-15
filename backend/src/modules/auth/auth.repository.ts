@@ -4,21 +4,13 @@ import db from "../../database/db.js";
 import authQueries from "../../database/queries/auth.queries.js";
 import { getUserRoleName } from "../../utils/roles.utils.js";
 
-interface User {
-  user_id: number;
-  user_uuid: string;
+import type { DbUser } from "../../types/user.js";
+
+type User = DbUser & {
   firebase_uid?: string;
-  full_name: string;
-  email?: string;
-  phone_number?: string;
-  role_name: string;
-  is_active: boolean;
-  is_verified?: boolean;
   profile_complete?: boolean;
-  password_hash?: string;
-  created_at: Date;
-  updated_at?: Date;
-}
+  password_hash?: string | null;
+};
 
 interface Session {
   session_id: number;

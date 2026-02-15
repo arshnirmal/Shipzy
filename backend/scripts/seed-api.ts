@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import { faker } from "@faker-js/faker";
+import pool from "../src/database/db";
 
 // Configuration
 const API_URL =
@@ -8,7 +9,6 @@ const API_URL =
 
 console.log(`Using API URL: ${API_URL}`);
 
-// Create axios instance
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -46,6 +46,75 @@ const generateMumbaiCoordinates = () => {
 
 // Helper for delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Fetch existing users from DB and login to get tokens
+async function fetchExistingUsers() {
+  console.log("📊 Fetching existing users from DB...");
+  try {
+    const query =
+      "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role_id = $1 AND deleted_at IS NULL";
+    const res = await pool.query(query, [1]); // 1 for client
+    for (const row of res.rows) {
+      const loginData = { email: row.email, password: "Password123!" };
+      const loginRes = await api.post("/auth/login", loginData);
+      if (loginRes.data.success) {
+        const tokens = loginRes.data.data.tokens;
+        // Fetch address
+        const addrRes = await api.get("/users/me/addresses", {
+          headers: { Authorization: `Bearer ${tokens.accessToken}` },
+        });
+        let addressId = null;
+        if (addrRes.data.success && addrRes.data.data.length > 0) {
+          addressId = addrRes.data.data[0].addressId;
+        }
+        state.users.push({
+          userId: row.user_id,
+          fullName: row.full_name,
+          email: row.email,
+          phoneNumber: row.phone_number,
+          accessToken: tokens.accessToken,
+          addressId,
+        });
+      } else {
+        console.error(`❌ Failed to login user ${row.email}`);
+      }
+      await delay(200); // Small delay to avoid rate limiting
+    }
+    console.log(`   Fetched: ${state.users.length} users`);
+  } catch (error: any) {
+    console.error(`❌ Error fetching users: ${error.message}`);
+  }
+}
+
+// Fetch existing drivers from DB and login to get tokens
+async function fetchExistingDrivers() {
+  console.log("📊 Fetching existing drivers from DB...");
+  try {
+    const query =
+      "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role_id = $1 AND deleted_at IS NULL";
+    const res = await pool.query(query, [2]); // 2 for courier
+    for (const row of res.rows) {
+      const loginData = { email: row.email, password: "Password123!" };
+      const loginRes = await api.post("/auth/login", loginData);
+      if (loginRes.data.success) {
+        const tokens = loginRes.data.data.tokens;
+        state.drivers.push({
+          userId: row.user_id,
+          fullName: row.full_name,
+          email: row.email,
+          phoneNumber: row.phone_number,
+          accessToken: tokens.accessToken,
+        });
+      } else {
+        console.error(`❌ Failed to login driver ${row.email}`);
+      }
+      await delay(200);
+    }
+    console.log(`   Fetched: ${state.drivers.length} drivers`);
+  } catch (error: any) {
+    console.error(`❌ Error fetching drivers: ${error.message}`);
+  }
+}
 
 async function fetchStaticData() {
   console.log("📊 Fetching static data for IDs...");
@@ -193,6 +262,11 @@ async function seedDrivers(count = 2) {
 async function seedOrders(count = 3) {
   console.log(`\n📦 Seeding ${count} orders...`);
 
+  // Fetch existing users if none in state
+  if (state.users.length === 0) {
+    await fetchExistingUsers();
+  }
+
   if (state.users.length === 0 || !state.staticData.deliveryTypes?.length) {
     console.log("⚠️ No users or static data available. Skipping.");
     return;
@@ -216,13 +290,24 @@ async function seedOrders(count = 3) {
         Math.floor(Math.random() * state.staticData.packageTypes.length)
       ];
     const vc =
-      state.staticData.vehicleCategories[
-        Math.floor(Math.random() * state.staticData.vehicleCategories.length)
+      dt.supportedVehicles[
+        Math.floor(Math.random() * dt.supportedVehicles.length)
       ];
-    const wt =
-      state.staticData.weightTiers[
-        Math.floor(Math.random() * state.staticData.weightTiers.length)
-      ];
+
+    // Choose a weight tier compatible with the selected vehicle's max weight
+    const compatibleWeightTiers = state.staticData.weightTiers.filter(
+      (t) =>
+        typeof t.maxWeightKg === "number" &&
+        t.maxWeightKg <= (vc.maxWeightKg ?? Infinity),
+    );
+
+    const wt = compatibleWeightTiers.length
+      ? compatibleWeightTiers[
+          Math.floor(Math.random() * compatibleWeightTiers.length)
+        ]
+      : state.staticData.weightTiers[
+          Math.floor(Math.random() * state.staticData.weightTiers.length)
+        ];
     const pm = state.staticData.paymentMethods[0]; // Cash
 
     const farePayload = {
@@ -296,6 +381,11 @@ async function seedOrders(count = 3) {
           `✅ Order created: ${order.orderNumber} (ID: ${order.orderId})`,
         );
 
+        // Fetch existing drivers if needed for simulation
+        if (state.drivers.length === 0) {
+          await fetchExistingDrivers();
+        }
+
         if (state.drivers.length > 0 && Math.random() > 0.3) {
           const driver =
             state.drivers[Math.floor(Math.random() * state.drivers.length)];
@@ -363,20 +453,53 @@ async function simulateDriverFlow(driver: any, orderId: number) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const runUsers =
-    args.includes("--users") || args.length === 0 || args.includes("--full");
-  const runDrivers =
-    args.includes("--drivers") || args.length === 0 || args.includes("--full");
-  const runOrders =
-    args.includes("--orders") || args.length === 0 || args.includes("--full");
+
+  // Default counts
+  let userCount = 3;
+  let driverCount = 2;
+  let orderCount = 5;
+
+  // Parse flags and counts
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--users" && i + 1 < args.length) {
+      const count = Number.parseInt(args[i + 1]);
+      if (!Number.isNaN(count) && count > 0) {
+        userCount = count;
+      }
+      i++; // skip the number
+    } else if (args[i] === "--drivers" && i + 1 < args.length) {
+      const count = Number.parseInt(args[i + 1]);
+      if (!Number.isNaN(count) && count > 0) {
+        driverCount = count;
+      }
+      i++;
+    } else if (args[i] === "--orders" && i + 1 < args.length) {
+      const count = Number.parseInt(args[i + 1]);
+      if (!Number.isNaN(count) && count > 0) {
+        orderCount = count;
+      }
+      i++;
+    }
+  }
+
+  const runUsers = args.includes("--users") || args.includes("--full");
+  const runDrivers = args.includes("--drivers") || args.includes("--full");
+  const runOrders = args.includes("--orders") || args.includes("--full");
+
+  if (args.length === 0) {
+    console.log(
+      "No flags provided. Use --users <count>, --drivers <count>, --orders <count>, or --full to seed specific data.",
+    );
+    return;
+  }
 
   try {
     await fetchStaticData();
-    if (runUsers) await seedUsers(3);
-    if (runDrivers) await seedDrivers(2);
+    if (runUsers) await seedUsers(userCount);
+    if (runDrivers) await seedDrivers(driverCount);
     // Give drivers a moment to register/online before orders come in
     await delay(1000);
-    if (runOrders) await seedOrders(5);
+    if (runOrders) await seedOrders(orderCount);
 
     console.log("\n✨ Seeding complete!");
   } catch (error) {
@@ -384,4 +507,4 @@ async function main() {
   }
 }
 
-main();
+await main();

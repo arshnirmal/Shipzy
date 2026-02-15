@@ -8,71 +8,104 @@ import {
 } from "../../utils/error.util.js";
 import ordersRepository from "./orders.repository.js";
 
-interface FareData {
-  deliveryTypeId: number;
-  vehicleCategoryId: number;
-  weightTierId: number;
-  packageTypeId?: number;
-  pickup: {
-    lat: number;
-    lng: number;
-  };
-  drop: {
-    lat: number;
-    lng: number;
-  };
-}
+import type {
+  CalculateFare,
+  CreateOrder,
+  FareBreakdown as ZodFareBreakdown,
+  OrderLocation as ZodOrderLocation,
+} from "./orders.zod.js";
 
-export interface OrderData {
-  deliveryTypeId: number;
-  vehicleCategoryId: number;
-  weightTierId: number;
-  packageTypeId?: number;
-  paymentMethodId: number;
-  pickup: Location;
-  delivery: Location;
-  packageDescription?: string;
-  scheduledPickupTime?: string;
-  scheduledDeliveryTime?: string;
-  specialInstructions?: string;
-  declaredValue?: number;
-  fareBreakdown: FareBreakdown;
-}
+type FareData = CalculateFare;
+export type OrderData = CreateOrder;
 
-interface Location {
-  addressId?: number;
-  address: string;
-  latitude: number;
-  longitude: number;
-  city: string;
-  state: string;
-  postalCode: string;
-  howToReach?: string;
-  building?: string;
-  floor?: string;
-  flatNumber?: string;
-  contactName: string;
-  contactPhone: string;
-}
+type Location = ZodOrderLocation;
 
-interface FareBreakdown {
-  basePrice: number;
-  distanceKm: number;
-  distancePrice: number;
-  weightSurcharge: number;
-  platformFee?: number;
-  specialHandlingFee?: number;
-  subtotalBeforeTax?: number;
-  gstAmount?: number;
-  totalPrice: number;
-  currency: string;
-}
+type FareBreakdown = ZodFareBreakdown;
+
+// DB row shape for order queries (only fields used by _formatOrderDetails)
+type OrderRow = {
+  order_id: number;
+  order_uuid: string;
+  order_number: string;
+  status_id?: number;
+  status_name?: string;
+  delivery_type_id?: number;
+  delivery_type?: string;
+  delivery_type_display?: string;
+  vehicle_category_id?: number;
+  vehicle_category_display?: string;
+  package_description?: string | null;
+  package_type_id?: number | null;
+  weight_tier_id?: number | null;
+  weight_tier_name?: string | null;
+  weight_tier_min?: number | string | null;
+  weight_tier_max?: number | string | null;
+  estimated_distance_km?: number | string | null;
+  actual_distance_km?: number | string | null;
+  actual_pickup_time?: string | Date | null;
+  actual_delivery_time?: string | Date | null;
+  payment_method_id?: number;
+  payment_method?: string;
+  created_at?: Date;
+  accepted_at?: Date | null;
+  picked_up_at?: Date | null;
+  delivered_at?: Date | null;
+  cancelled_at?: Date | null;
+  cancellation_reason?: string | null;
+  pickup_location_id?: number;
+  pickup_building?: string | null;
+  pickup_floor?: string | null;
+  pickup_flat?: string | null;
+  pickup_address?: string | null;
+  pickup_landmark?: string | null;
+  pickup_city?: string | null;
+  pickup_state?: string | null;
+  pickup_postal_code?: string | null;
+  pickup_latitude?: number | string | null;
+  pickup_longitude?: number | string | null;
+  pickup_contact_name?: string | null;
+  pickup_contact_phone?: string | null;
+  delivery_location_id?: number;
+  delivery_building?: string | null;
+  delivery_floor?: string | null;
+  delivery_flat?: string | null;
+  delivery_address?: string | null;
+  delivery_landmark?: string | null;
+  delivery_city?: string | null;
+  delivery_state?: string | null;
+  delivery_postal_code?: string | null;
+  delivery_latitude?: number | string | null;
+  delivery_longitude?: number | string | null;
+  delivery_contact_name?: string | null;
+  delivery_contact_phone?: string | null;
+  base_price?: number | string | null;
+  distance_price?: number | string | null;
+  weight_surcharge?: number | string | null;
+  platform_fee?: number | string | null;
+  special_handling_fee?: number | string | null;
+  gst_amount?: number | string | null;
+  subtotal_before_tax?: number | string | null;
+  total_price?: number | string | null;
+  client_name?: string | null;
+  client_phone?: string | null;
+  special_instructions?: string | null;
+  courier_id?: number | null;
+  courier_name?: string | null;
+  courier_phone?: string | null;
+  courier_photo?: string | null;
+  assignment_status?: string | null;
+  assigned_at?: string | Date | null;
+  courier_accepted_at?: string | Date | null;
+};
+
+// Use exported type for created-order DTO
+type CreatedOrder = import("../../types/orders.js").CreatedOrder;
 
 class OrdersService {
   /**
    * Calculate fare estimate using real-time distance from Mapbox
    */
-  async calculateFare(fareData: FareData): Promise<any> {
+  async calculateFare(fareData: FareData): Promise<FareBreakdown> {
     try {
       const {
         deliveryTypeId,
@@ -140,15 +173,15 @@ class OrdersService {
         vehicleCategoryId,
         distanceKm,
         weightTierId,
-        packageTypeId,
+        packageTypeId ?? undefined,
       );
 
       if (!fareResult.success) {
-        throw new AppError(fareResult.error, 400);
+        throw new AppError(fareResult.error || "Fare calculation failed", 400);
       }
 
       // Return the fare breakdown with camelCase keys
-      return fareResult.fare_breakdown;
+      return fareResult.fare_breakdown!;
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",
@@ -161,7 +194,10 @@ class OrdersService {
   /**
    * Create new order
    */
-  async createOrder(clientId: number, orderData: OrderData): Promise<any> {
+  async createOrder(
+    clientId: number,
+    orderData: OrderData,
+  ): Promise<CreatedOrder> {
     const operationId = `create-order-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     try {
@@ -230,7 +266,7 @@ class OrdersService {
         },
       });
 
-      const validateLocation = (location: any, type: string) => {
+      const validateLocation = (location: Location, type: string) => {
         const required = [
           "address",
           "latitude",
@@ -241,7 +277,9 @@ class OrdersService {
           "contactName",
           "contactPhone",
         ];
-        const missing = required.filter((field: string) => !location[field]);
+        const missing = required.filter(
+          (field: string) => !(location as any)[field],
+        );
         if (missing.length > 0) {
           logger.error({
             msg: `[CREATE-ORDER-SERVICE] ${type} location validation failed`,
@@ -297,7 +335,7 @@ class OrdersService {
         throw new ValidationError("Invalid pricing parameters");
       }
 
-      const serverPricing = serverCalculatedFare.fare_breakdown;
+      const serverPricing = serverCalculatedFare.fare_breakdown!; // asserted - success checked above
 
       // Allow small tolerance for rounding differences
       const tolerance = 0.01;
@@ -431,7 +469,7 @@ class OrdersService {
           clientId,
           error: result.error,
         });
-        throw new AppError(result.error, 400);
+        throw new AppError(result.error || "Order creation failed", 400);
       }
 
       // Step 6: Return successful result
@@ -467,7 +505,7 @@ class OrdersService {
     orderId: number,
     userId: number,
     userRole: string,
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     try {
       const order = await ordersRepository.findById(orderId);
 
@@ -508,7 +546,15 @@ class OrdersService {
     page: number = 1,
     limit: number = 20,
     status?: string,
-  ): Promise<any> {
+  ): Promise<{
+    orders: Record<string, unknown>[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
     try {
       const offset = (page - 1) * limit;
 
@@ -611,7 +657,7 @@ class OrdersService {
     longitude: number,
     radiusKm: number = 10,
     limit: number = 20,
-  ): Promise<any[]> {
+  ): Promise<Record<string, unknown>[]> {
     try {
       const orders = await ordersRepository.findAvailableOrders(
         latitude,
@@ -744,7 +790,15 @@ class OrdersService {
   /**
    * Driver accepts order
    */
-  async acceptOrder(orderId: number, courierId: number): Promise<any> {
+  async acceptOrder(
+    orderId: number,
+    courierId: number,
+  ): Promise<{
+    assignmentId: number;
+    orderId: number;
+    courierId: number;
+    assignedAt: Date;
+  }> {
     try {
       // Get order details
       const order = await ordersRepository.findById(orderId);
@@ -789,7 +843,7 @@ class OrdersService {
     orderId: number,
     status: string,
     courierId: number,
-  ): Promise<any> {
+  ): Promise<{ orderId: number; status: string; timestamp: Date }> {
     try {
       // Validate status
       const validStatuses = ["picked_up", "delivered"];
@@ -842,7 +896,7 @@ class OrdersService {
   /**
    * Format order details
    */
-  _formatOrderDetails(order: any): any {
+  _formatOrderDetails(order: OrderRow): Record<string, unknown> {
     // Compute actual delivery duration (only if picked up)
     let actualDurationMins = null;
     if (order.actual_pickup_time && order.actual_delivery_time) {
@@ -894,10 +948,10 @@ class OrdersService {
 
       // Distance and duration (aligned with list)
       estimatedDistanceKm: order.estimated_distance_km
-        ? Number.parseFloat(order.estimated_distance_km)
+        ? Number(order.estimated_distance_km)
         : null,
       actualDistanceKm: order.actual_distance_km
-        ? Number.parseFloat(order.actual_distance_km)
+        ? Number(order.actual_distance_km)
         : null,
       actualDurationMins,
 
@@ -920,8 +974,8 @@ class OrdersService {
         city: order.pickup_city,
         state: order.pickup_state,
         postalCode: order.pickup_postal_code,
-        latitude: Number.parseFloat(order.pickup_latitude),
-        longitude: Number.parseFloat(order.pickup_longitude),
+        latitude: Number(order.pickup_latitude),
+        longitude: Number(order.pickup_longitude),
         contactName: order.pickup_contact_name,
         contactPhone: order.pickup_contact_phone,
       },
@@ -937,8 +991,8 @@ class OrdersService {
         city: order.delivery_city,
         state: order.delivery_state,
         postalCode: order.delivery_postal_code,
-        latitude: Number.parseFloat(order.delivery_latitude),
-        longitude: Number.parseFloat(order.delivery_longitude),
+        latitude: Number(order.delivery_latitude),
+        longitude: Number(order.delivery_longitude),
         contactName: order.delivery_contact_name,
         contactPhone: order.delivery_contact_phone,
       },
@@ -947,35 +1001,33 @@ class OrdersService {
       payment: {
         paymentMethod: order.payment_method,
         fareBreakdown: {
-          basePrice: Number.parseFloat(order.base_price),
-          distancePrice: Number.parseFloat(order.distance_price),
-          weightSurcharge: Number.parseFloat(order.weight_surcharge),
-          platformFee: Number.parseFloat(order.platform_fee || 0),
-          specialHandlingFee: Number.parseFloat(
-            order.special_handling_fee || 0,
-          ),
-          gstAmount: Number.parseFloat(order.gst_amount || 0),
-          subtotalBeforeTax: Number.parseFloat(
+          basePrice: Number(order.base_price),
+          distancePrice: Number(order.distance_price),
+          weightSurcharge: Number(order.weight_surcharge),
+          platformFee: Number(order.platform_fee || 0),
+          specialHandlingFee: Number(order.special_handling_fee || 0),
+          gstAmount: Number(order.gst_amount || 0),
+          subtotalBeforeTax: Number(
             order.subtotal_before_tax || order.total_price,
           ),
-          totalPrice: Number.parseFloat(order.total_price),
+          totalPrice: Number(order.total_price),
         },
       },
 
       // Enhanced pricing breakdown (direct fields for frontend Order model)
-      basePrice: Number.parseFloat(order.base_price),
-      distancePrice: Number.parseFloat(order.distance_price),
-      weightSurcharge: Number.parseFloat(order.weight_surcharge),
-      platformFee: Number.parseFloat(order.platform_fee || 0),
-      specialHandlingFee: Number.parseFloat(order.special_handling_fee || 0),
-      gstAmount: Number.parseFloat(order.gst_amount || 0),
-      subtotalBeforeTax: Number.parseFloat(
-        order.subtotal_before_tax || order.total_price,
+      basePrice: Number(order.base_price ?? 0),
+      distancePrice: Number(order.distance_price ?? 0),
+      weightSurcharge: Number(order.weight_surcharge ?? 0),
+      platformFee: Number(order.platform_fee ?? 0),
+      specialHandlingFee: Number(order.special_handling_fee ?? 0),
+      gstAmount: Number(order.gst_amount ?? 0),
+      subtotalBeforeTax: Number(
+        order.subtotal_before_tax ?? order.total_price ?? 0,
       ),
       currency: "INR",
 
       // Total price (for backward compatibility and quick access)
-      totalPrice: Number.parseFloat(order.total_price),
+      totalPrice: Number(order.total_price ?? 0),
 
       // Client details (additional info not in list view)
       client: {

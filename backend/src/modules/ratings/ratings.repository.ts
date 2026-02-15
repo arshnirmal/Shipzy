@@ -3,31 +3,19 @@ import logger from "../../config/logger.js";
 import db from "../../database/db.js";
 import ratingsQueries from "../../database/queries/ratings.queries.js";
 
-interface DriverRating {
-  rating_id: number;
-  order_id: number;
-  driver_id: number;
-  customer_id: number;
-  rating: number;
-  comment?: string;
-  created_at: Date;
-  order_number?: string;
-  delivered_at?: Date;
-}
-
-interface CreateRatingData {
-  order_id: number;
-  driver_id: number;
-  customer_id: number;
-  rating: number;
-  comment?: string;
-}
+import type { RatingRow } from "../../types/ratings.js";
 
 class RatingsRepository {
   /**
    * Create a new driver rating
    */
-  async createRating(ratingData: CreateRatingData): Promise<DriverRating> {
+  async createRating(ratingData: {
+    order_id: number;
+    driver_id: number;
+    customer_id: number;
+    rating: number;
+    comment?: string | null;
+  }): Promise<RatingRow> {
     try {
       const result = await db.query(ratingsQueries.INSERT_RATING, [
         ratingData.order_id,
@@ -54,7 +42,7 @@ class RatingsRepository {
   async getDriverRatingsRecent(
     driverId: number,
     since: Date,
-  ): Promise<DriverRating[]> {
+  ): Promise<RatingRow[]> {
     try {
       const result = await db.query(ratingsQueries.FIND_DRIVER_RATINGS_RECENT, [
         driverId,

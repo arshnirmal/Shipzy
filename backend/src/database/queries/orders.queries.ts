@@ -125,7 +125,7 @@ export default {
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      JOIN public.payment_methods pm ON o.payment_method_id = pm.method_id
+      JOIN payments.payment_methods pm ON o.payment_method_id = pm.method_id
       JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
       JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       JOIN users.profiles u ON o.client_id = u.user_id

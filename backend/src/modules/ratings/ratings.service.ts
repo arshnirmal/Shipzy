@@ -7,12 +7,7 @@ import {
 } from "../../utils/error.util.js";
 import ratingsRepository from "./ratings.repository.js";
 
-interface CreateRatingData {
-  orderId: number;
-  customerId: number;
-  rating: number;
-  comment?: string;
-}
+import type { CreateRating } from "./ratings.zod.js";
 
 interface DriverRatingStats {
   averageRating: number;
@@ -25,7 +20,9 @@ class RatingsService {
   /**
    * Create a new driver rating
    */
-  async createRating(ratingData: CreateRatingData): Promise<any> {
+  async createRating(
+    ratingData: CreateRating,
+  ): Promise<import("./ratings.zod.js").RatingResponse> {
     try {
       const { orderId, customerId, rating, comment } = ratingData;
 
@@ -75,7 +72,7 @@ class RatingsService {
         driverId: newRating.driver_id,
         rating: newRating.rating,
         comment: newRating.comment,
-        createdAt: newRating.created_at,
+        createdAt: newRating.created_at.toISOString(),
       };
     } catch (error) {
       logger.error({

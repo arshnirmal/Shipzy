@@ -7,42 +7,11 @@ import {
 } from "../../utils/error.util.js";
 import usersRepository from "./users.repository.js";
 
-interface UserProfile {
-  userId: number;
-  userUuid: string;
-  role: string;
-  phoneNumber: string;
-  email?: string;
-  fullName: string;
-  profilePictureUrl?: string;
-  isVerified: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface UpdateProfileData {
-  fullName?: string;
-  email?: string;
-  profilePictureUrl?: string;
-}
-
-interface AddressData {
-  label: string;
-  fullAddress: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  latitude: number;
-  longitude: number;
-  addressType?: "home" | "work" | "other";
-  building?: string;
-  floor?: string;
-  flatNumber?: string;
-  landmark?: string;
-  isDefault?: boolean;
-  [key: string]: any;
-}
+import type { UserProfile } from "../../types/user.js";
+import type {
+  UpdateProfile as UpdateProfileData,
+  SaveAddress as AddressData,
+} from "./users.zod.js";
 
 class UsersService {
   /**
@@ -124,18 +93,21 @@ class UsersService {
   /**
    * Get user addresses
    */
-  async getAddresses(userId: number): Promise<any[]> {
+  async getAddresses(
+    userId: number,
+  ): Promise<import("./users.zod.js").AddressResponse[]> {
     try {
       const addresses = await usersRepository.getAddresses(userId);
 
       return addresses.map((addr) => ({
         addressId: addr.address_id,
-        addressType: addr.address_type,
+        addressType:
+          addr.address_type as import("./users.zod.js").AddressResponse["addressType"],
         label: addr.label,
         fullAddress: addr.full_address,
-        building: addr.building,
-        floor: addr.floor,
-        flatNumber: addr.flat_number,
+        buildingName: addr.building_name || addr.building || null,
+        floorNumber: addr.floor_number || addr.floor || null,
+        roomNumber: addr.flat_number || addr.room_number || null,
         landmark: addr.landmark,
         city: addr.city,
         state: addr.state,
@@ -143,7 +115,7 @@ class UsersService {
         latitude: addr.latitude,
         longitude: addr.longitude,
         isDefault: addr.is_default,
-        createdAt: addr.created_at,
+        createdAt: addr.created_at.toISOString(),
       }));
     } catch (error) {
       logger.error({
@@ -157,7 +129,10 @@ class UsersService {
   /**
    * Save new address
    */
-  async saveAddress(userId: number, addressData: AddressData): Promise<any> {
+  async saveAddress(
+    userId: number,
+    addressData: AddressData,
+  ): Promise<import("./users.zod.js").AddressResponse> {
     try {
       // Validate required fields
       const requiredFields = [
@@ -169,9 +144,10 @@ class UsersService {
         "latitude",
         "longitude",
       ];
-      const missingFields = requiredFields.filter(
-        (field) => !addressData[field],
-      );
+      const missingFields = requiredFields.filter((field) => {
+        const v = (addressData as unknown as Record<string, unknown>)[field];
+        return v === undefined || v === null || v === "";
+      });
 
       if (missingFields.length > 0) {
         throw new ValidationError(
@@ -194,10 +170,23 @@ class UsersService {
 
       return {
         addressId: savedAddress.address_id,
+        addressType:
+          savedAddress.address_type as import("./users.zod.js").AddressResponse["addressType"],
         label: savedAddress.label,
         fullAddress: savedAddress.full_address,
+        buildingName:
+          savedAddress.building_name || savedAddress.building || null,
+        floorNumber: savedAddress.floor_number || savedAddress.floor || null,
+        roomNumber:
+          savedAddress.flat_number || savedAddress.room_number || null,
+        landmark: savedAddress.landmark || null,
+        city: savedAddress.city,
+        state: savedAddress.state,
+        postalCode: savedAddress.postal_code,
+        latitude: savedAddress.latitude,
+        longitude: savedAddress.longitude,
         isDefault: savedAddress.is_default,
-        createdAt: savedAddress.created_at,
+        createdAt: savedAddress.created_at.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -211,7 +200,10 @@ class UsersService {
   /**
    * Delete address
    */
-  async deleteAddress(addressId: number, userId: number): Promise<any> {
+  async deleteAddress(
+    addressId: number,
+    userId: number,
+  ): Promise<{ message: string }> {
     try {
       // Verify address belongs to user
       const address = await usersRepository.getAddressById(addressId);

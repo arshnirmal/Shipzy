@@ -3,41 +3,20 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import addressesService from "./addresses.service.js";
-
-interface SearchAddressesBody {
-  query: string;
-  proximity?: string;
-  limit?: number;
-}
-
-interface RetrievePlaceBody {
-  mapboxId: string;
-  sessionToken: string;
-}
-
-interface ReverseGeocodeBody {
-  latitude: number;
-  longitude: number;
-}
-
-interface DirectionsBody {
-  origin: {
-    latitude: number;
-    longitude: number;
-  };
-  destination: {
-    latitude: number;
-    longitude: number;
-  };
-  profile?: "driving" | "walking" | "cycling";
-}
-
-interface DistanceBody {
-  lat1: number;
-  lon1: number;
-  lat2: number;
-  lon2: number;
-}
+import type {
+  SearchAddresses,
+  RetrievePlace,
+  ReverseGeocode,
+  Directions,
+  Distance,
+} from "./addresses.zod.js";
+import {
+  SearchAddressesZ,
+  RetrievePlaceZ,
+  ReverseGeocodeZ,
+  DirectionsZ,
+  DistanceZ,
+} from "./addresses.zod.js";
 
 class AddressesController {
   /**
@@ -45,70 +24,25 @@ class AddressesController {
    * Search for places (step 1 of 2-step process)
    */
   async searchAddresses(
-    request: FastifyRequest<{ Body: SearchAddressesBody }>,
+    request: FastifyRequest<{ Body: SearchAddresses }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { query, proximity, limit } = request.body;
-
-      // Validate query
-      if (!query || typeof query !== "string") {
-        return errorResponse(
-          reply,
-          "Query is required and must be a string",
-          400,
-        );
-      }
-
-      if (query.length < 3) {
-        return errorResponse(reply, "Query must be at least 3 characters", 400);
-      }
-
-      if (query.length > 256) {
-        return errorResponse(
-          reply,
-          "Query must be less than 256 characters",
-          400,
-        );
-      }
-
-      // Validate proximity if provided
-      if (proximity && typeof proximity !== "string") {
-        return errorResponse(reply, "Proximity must be a string", 400);
-      }
-
-      if (proximity && proximity.length > 50) {
-        return errorResponse(reply, "Proximity parameter too long", 400);
-      }
-
-      // Validate limit if provided
-      if (limit !== undefined) {
-        if (typeof limit !== "number" || limit < 1 || limit > 10) {
-          return errorResponse(
-            reply,
-            "Limit must be a number between 1 and 10",
-            400,
-          );
-        }
-      }
+      const parsed = SearchAddressesZ.parse(request.body);
 
       logger.info({
         msg: "Address search request",
-        query,
-        proximity,
+        query: parsed.query,
+        proximity: parsed.proximity,
         userId: request.user?.userId,
       });
 
-      const searchParams: any = { query };
-      if (proximity !== undefined) searchParams.proximity = proximity;
-      if (limit !== undefined) searchParams.limit = limit;
-
-      const suggestions = await addressesService.searchAddresses(searchParams);
+      const suggestions = await addressesService.searchAddresses(parsed);
 
       return successResponse(
         reply,
         suggestions,
-        `Found ${suggestions.length} suggestions for "${query}"`,
+        `Found ${suggestions.length} suggestions for "${parsed.query}"`,
       );
     } catch (error) {
       logger.error({
@@ -138,47 +72,21 @@ class AddressesController {
    * Retrieve full details for a selected place (step 2 of 2-step process)
    */
   async retrievePlace(
-    request: FastifyRequest<{ Body: RetrievePlaceBody }>,
+    request: FastifyRequest<{ Body: RetrievePlace }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { mapboxId, sessionToken } = request.body;
-
-      // Validate required parameters
-      if (!mapboxId || typeof mapboxId !== "string") {
-        return errorResponse(
-          reply,
-          "mapboxId is required and must be a string",
-          400,
-        );
-      }
-
-      if (!sessionToken || typeof sessionToken !== "string") {
-        return errorResponse(
-          reply,
-          "sessionToken is required and must be a string",
-          400,
-        );
-      }
-
-      // Validate parameter lengths
-      if (mapboxId.length > 100) {
-        return errorResponse(reply, "mapboxId parameter too long", 400);
-      }
-
-      if (sessionToken.length > 100) {
-        return errorResponse(reply, "sessionToken parameter too long", 400);
-      }
+      const parsed = RetrievePlaceZ.parse(request.body);
 
       logger.info({
         msg: "Place retrieve request",
-        mapboxId,
+        mapboxId: parsed.mapboxId,
         userId: request.user?.userId,
       });
 
       const placeDetails = await addressesService.retrievePlace(
-        mapboxId,
-        sessionToken,
+        parsed.mapboxId,
+        parsed.sessionToken,
       );
 
       return successResponse(
@@ -214,54 +122,28 @@ class AddressesController {
    * Convert coordinates to address
    */
   async reverseGeocode(
-    request: FastifyRequest<{ Body: ReverseGeocodeBody }>,
+    request: FastifyRequest<{ Body: ReverseGeocode }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { latitude, longitude } = request.body;
-
-      // Validate required parameters
-      if (latitude === undefined || longitude === undefined) {
-        return errorResponse(reply, "latitude and longitude are required", 400);
-      }
-
-      // Validate coordinate types and ranges
-      if (typeof latitude !== "number" || typeof longitude !== "number") {
-        return errorResponse(
-          reply,
-          "latitude and longitude must be numbers",
-          400,
-        );
-      }
-
-      if (latitude < -90 || latitude > 90) {
-        return errorResponse(reply, "latitude must be between -90 and 90", 400);
-      }
-
-      if (longitude < -180 || longitude > 180) {
-        return errorResponse(
-          reply,
-          "longitude must be between -180 and 180",
-          400,
-        );
-      }
+      const parsed = ReverseGeocodeZ.parse(request.body);
 
       logger.info({
         msg: "Reverse geocoding request",
-        coordinates: { latitude, longitude },
+        coordinates: { latitude: parsed.latitude, longitude: parsed.longitude },
         userId: request.user?.userId,
       });
 
       const result = await addressesService.reverseGeocode({
-        latitude,
-        longitude,
-        types: ["street", "neighborhood"],
+        latitude: parsed.latitude,
+        longitude: parsed.longitude,
+        types: parsed.types || ["street", "neighborhood"],
       });
 
       return successResponse(
         reply,
         result,
-        `Reverse geocode completed for (${longitude}, ${latitude})`,
+        `Reverse geocode completed for (${parsed.longitude}, ${parsed.latitude})`,
       );
     } catch (error) {
       logger.error({
@@ -291,88 +173,24 @@ class AddressesController {
    * Get directions between two points
    */
   async getDirections(
-    request: FastifyRequest<{ Body: DirectionsBody }>,
+    request: FastifyRequest<{ Body: Directions }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { origin, destination, profile } = request.body;
-
-      // Validate required parameters
-      if (!origin || typeof origin !== "object") {
-        return errorResponse(
-          reply,
-          "origin is required and must be an object",
-          400,
-        );
-      }
-
-      if (!destination || typeof destination !== "object") {
-        return errorResponse(
-          reply,
-          "destination is required and must be an object",
-          400,
-        );
-      }
-
-      // Validate coordinate values
-      const { latitude: originLat, longitude: originLng } = origin;
-      const { latitude: destLat, longitude: destLng } = destination;
-
-      if (typeof originLat !== "number" || typeof originLng !== "number") {
-        return errorResponse(reply, "origin coordinates must be numbers", 400);
-      }
-
-      if (typeof destLat !== "number" || typeof destLng !== "number") {
-        return errorResponse(
-          reply,
-          "destination coordinates must be numbers",
-          400,
-        );
-      }
-
-      // Validate coordinate ranges
-      if (
-        originLat < -90 ||
-        originLat > 90 ||
-        originLng < -180 ||
-        originLng > 180
-      ) {
-        return errorResponse(
-          reply,
-          "origin coordinates out of valid range",
-          400,
-        );
-      }
-
-      if (destLat < -90 || destLat > 90 || destLng < -180 || destLng > 180) {
-        return errorResponse(
-          reply,
-          "destination coordinates out of valid range",
-          400,
-        );
-      }
-
-      // Validate profile if provided
-      if (profile && !["driving", "walking", "cycling"].includes(profile)) {
-        return errorResponse(
-          reply,
-          "profile must be one of: driving, walking, cycling",
-          400,
-        );
-      }
+      const parsed = DirectionsZ.parse(request.body);
 
       logger.info({
         msg: "Directions request",
-        origin,
-        destination,
-        profile,
+        origin: parsed.origin,
+        destination: parsed.destination,
+        profile: parsed.profile,
         userId: request.user?.userId,
       });
 
       const result = await addressesService.getDirections(
-        origin,
-        destination,
-        profile,
+        parsed.origin,
+        parsed.destination,
+        parsed.profile,
       );
 
       return successResponse(
@@ -408,58 +226,17 @@ class AddressesController {
    * Calculate distance between two coordinates
    */
   async calculateDistance(
-    request: FastifyRequest<{ Body: DistanceBody }>,
+    request: FastifyRequest<{ Body: Distance }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { lat1, lon1, lat2, lon2 } = request.body;
-
-      // Validate all required parameters
-      if (
-        lat1 === undefined ||
-        lon1 === undefined ||
-        lat2 === undefined ||
-        lon2 === undefined
-      ) {
-        return errorResponse(
-          reply,
-          "lat1, lon1, lat2, lon2 are all required",
-          400,
-        );
-      }
-
-      // Validate parameter types
-      if (
-        typeof lat1 !== "number" ||
-        typeof lon1 !== "number" ||
-        typeof lat2 !== "number" ||
-        typeof lon2 !== "number"
-      ) {
-        return errorResponse(reply, "All coordinates must be numbers", 400);
-      }
-
-      // Validate coordinate ranges
-      if (lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90) {
-        return errorResponse(
-          reply,
-          "Latitude values must be between -90 and 90",
-          400,
-        );
-      }
-
-      if (lon1 < -180 || lon1 > 180 || lon2 < -180 || lon2 > 180) {
-        return errorResponse(
-          reply,
-          "Longitude values must be between -180 and 180",
-          400,
-        );
-      }
+      const parsed = DistanceZ.parse(request.body);
 
       const distance = addressesService.calculateDistance(
-        lat1,
-        lon1,
-        lat2,
-        lon2,
+        parsed.lat1,
+        parsed.lon1,
+        parsed.lat2,
+        parsed.lon2,
       );
 
       return successResponse(

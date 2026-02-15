@@ -1,48 +1,14 @@
 // services/backend/src/modules/auth/auth.schema.ts
 import { FastifySchema } from "fastify";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { VerifyGoogleZ, RefreshTokenZ, RegisterZ, LoginZ } from "./auth.zod.js";
 
-export const verifyGoogleSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: ["idToken"],
-    properties: {
-      idToken: { type: "string" },
-      role: { type: "string", enum: ["client", "courier"] },
-    },
-  },
-};
+const VerifyGoogleJson = zodToJsonSchema(VerifyGoogleZ as any, "VerifyGoogle");
+const RefreshTokenJson = zodToJsonSchema(RefreshTokenZ as any, "RefreshToken");
+const RegisterJson = zodToJsonSchema(RegisterZ as any, "Register");
+const LoginJson = zodToJsonSchema(LoginZ as any, "Login");
 
-export const refreshTokenSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: ["refreshToken"],
-    properties: {
-      refreshToken: { type: "string" },
-    },
-  },
-};
-
-export const registerSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: ["fullName", "email", "password"],
-    properties: {
-      fullName: { type: "string", minLength: 2, maxLength: 100 },
-      email: { type: "string", format: "email", maxLength: 100 },
-      password: { type: "string", minLength: 8, maxLength: 255 },
-      role: { type: "string", enum: ["client", "courier"], default: "client" },
-      phoneNumber: { type: "string", minLength: 10, maxLength: 20 },
-    },
-  },
-};
-
-export const loginSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: ["email", "password"],
-    properties: {
-      email: { type: "string", format: "email", maxLength: 100 },
-      password: { type: "string", minLength: 1, maxLength: 255 },
-    },
-  },
-};
+export const verifyGoogleSchema: FastifySchema = { body: VerifyGoogleJson };
+export const refreshTokenSchema: FastifySchema = { body: RefreshTokenJson };
+export const registerSchema: FastifySchema = { body: RegisterJson };
+export const loginSchema: FastifySchema = { body: LoginJson };

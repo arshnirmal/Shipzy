@@ -124,9 +124,9 @@ abstract class OrderClient with _$OrderClient {
 @freezed
 abstract class OrderCourier with _$OrderCourier {
   const factory OrderCourier({
-    required int id,
-    required String name,
-    required String phone,
+    int? id,
+    String? name,
+    String? phone,
     String? photo,
     String? assignmentStatus,
     DateTime? assignedAt,

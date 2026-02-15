@@ -7,52 +7,24 @@ import {
   paginatedResponse,
   successResponse,
 } from "../../utils/response.util.js";
-import ordersService, { OrderData } from "./orders.service.js";
+import ordersService from "./orders.service.js";
 import ratingsService from "../ratings/ratings.service.js";
-
-interface CalculateFareBody {
-  deliveryTypeId: number;
-  vehicleCategoryId: number;
-  weightTierId: number;
-  pickup: {
-    lat: number;
-    lng: number;
-  };
-  drop: {
-    lat: number;
-    lng: number;
-  };
-}
-
-interface OrderParams {
-  id: string;
-}
-
-interface CancelOrderBody {
-  cancellationReason: string;
-}
-
-interface RateOrderBody {
-  rating: number;
-  comment?: string;
-}
-
-type ListOrdersQuery = {
-  page?: string;
-  limit?: string;
-  status?: string;
-};
-
-interface GetAvailableOrdersQuery {
-  latitude?: string;
-  longitude?: string;
-  radius?: string;
-  limit?: string;
-}
-
-interface UpdateOrderStatusBody {
-  status: string;
-}
+import type {
+  CreateOrder as OrderData,
+  CalculateFare,
+  CancelOrder,
+  RateOrder,
+  UpdateOrderStatus,
+  OrderParams,
+  ListOrdersQuery,
+  GetAvailableOrdersQuery,
+} from "./orders.zod.js";
+import {
+  CalculateFareZ,
+  CancelOrderZ,
+  RateOrderZ,
+  UpdateOrderStatusZ,
+} from "./orders.zod.js";
 
 class OrdersController {
   /**
@@ -60,7 +32,7 @@ class OrdersController {
    * Calculate fare estimate
    */
   async calculateFare(
-    request: FastifyRequest<{ Body: CalculateFareBody }>,
+    request: FastifyRequest<{ Body: CalculateFare }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -297,7 +269,7 @@ class OrdersController {
    * Cancel order
    */
   async cancelOrder(
-    request: FastifyRequest<{ Params: OrderParams; Body: CancelOrderBody }>,
+    request: FastifyRequest<{ Params: OrderParams; Body: CancelOrder }>,
     reply: FastifyReply,
   ) {
     try {
@@ -364,7 +336,7 @@ class OrdersController {
   async updateOrderStatus(
     request: FastifyRequest<{
       Params: OrderParams;
-      Body: UpdateOrderStatusBody;
+      Body: UpdateOrderStatus;
     }>,
     reply: FastifyReply,
   ) {
@@ -404,20 +376,20 @@ class OrdersController {
   async rateOrder(
     request: FastifyRequest<{
       Params: OrderParams;
-      Body: RateOrderBody;
+      Body: RateOrder;
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { userId } = request.user!;
       const { id } = request.params;
-      const { rating, comment } = request.body;
+      const parsed = RateOrderZ.parse(request.body);
 
       const result = await ratingsService.createRating({
         orderId: Number.parseInt(id),
         customerId: userId,
-        rating,
-        comment,
+        rating: parsed.rating,
+        comment: parsed.comment ?? undefined,
       });
 
       return successResponse(reply, result, "Order rated successfully");

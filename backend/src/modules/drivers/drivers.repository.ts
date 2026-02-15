@@ -4,37 +4,21 @@ import db from "../../database/db.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository, { DriverSession } from "./sessions.repository.js";
 
-interface Courier {
-  courier_id: number;
-  user_id: number;
-  user_uuid: string;
-  full_name: string;
-  email?: string;
-  phone_number: string;
-  profile_picture_url?: string;
-  is_verified: boolean;
-  is_active: boolean;
-  is_available: boolean;
-  is_online: boolean;
-  current_latitude?: string;
-  current_longitude?: string;
-  last_location_update?: Date;
-  total_deliveries_today: number;
-  vehicle_id?: number;
-  vehicle_number?: string;
-  vehicle_model?: string;
-  vehicle_year?: number;
-  vehicle_category?: string;
-  vehicle_max_weight?: string;
-  created_at: Date;
-  updated_at: Date;
-}
+import type {
+  DbCourier,
+  CourierAvailabilityResult,
+  CourierLocationResult,
+  EarningsSummaryRow,
+  CourierAssignmentRow,
+} from "../../types/drivers.js";
 
-interface UpdateProfileData {
+type Courier = DbCourier;
+
+type UpdateProfileData = {
   fullName?: string;
   email?: string;
   profilePictureUrl?: string;
-}
+};
 
 class DriversRepository {
   /**
@@ -89,14 +73,14 @@ class DriversRepository {
     courierId: number,
     isAvailable: boolean,
     isOnline: boolean,
-  ): Promise<any> {
+  ): Promise<CourierAvailabilityResult> {
     try {
       const result = await db.query(
         driversQueries.UPDATE_COURIER_AVAILABILITY,
         [courierId, isAvailable, isOnline],
       );
 
-      return result.rows[0];
+      return result.rows[0] as CourierAvailabilityResult;
     } catch (error) {
       logger.error({
         msg: "Error updating courier availability",
@@ -113,7 +97,7 @@ class DriversRepository {
     courierId: number,
     latitude: number,
     longitude: number,
-  ): Promise<any> {
+  ): Promise<CourierLocationResult> {
     try {
       const result = await db.query(driversQueries.UPDATE_COURIER_LOCATION, [
         courierId,
@@ -121,7 +105,7 @@ class DriversRepository {
         latitude,
       ]);
 
-      return result.rows[0];
+      return result.rows[0] as CourierLocationResult;
     } catch (error) {
       logger.error({
         msg: "Error updating courier location",
@@ -134,13 +118,15 @@ class DriversRepository {
   /**
    * Get courier active assignments
    */
-  async getActiveAssignments(courierId: number): Promise<any[]> {
+  async getActiveAssignments(
+    courierId: number,
+  ): Promise<CourierAssignmentRow[]> {
     try {
       const result = await db.query(
         driversQueries.FIND_COURIER_ACTIVE_ASSIGNMENTS,
         [courierId],
       );
-      return result.rows;
+      return result.rows as CourierAssignmentRow[];
     } catch (error) {
       logger.error({
         msg: "Error getting courier assignments",
@@ -153,13 +139,13 @@ class DriversRepository {
   /**
    * Get courier earnings summary
    */
-  async getEarningsSummary(courierId: number): Promise<any> {
+  async getEarningsSummary(courierId: number): Promise<EarningsSummaryRow> {
     try {
       const result = await db.query(
         driversQueries.GET_COURIER_EARNINGS_SUMMARY,
         [courierId],
       );
-      return result.rows[0];
+      return result.rows[0] as EarningsSummaryRow;
     } catch (error) {
       logger.error({
         msg: "Error getting courier earnings",

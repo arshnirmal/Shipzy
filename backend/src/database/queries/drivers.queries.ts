@@ -32,8 +32,10 @@ export default {
           cv.vehicle_number,
           cv.model AS vehicle_model,
           cv.year AS vehicle_year,
+          vc.category_id AS vehicle_category_id,
           vc.name AS vehicle_category,
           vc.max_weight_kg AS vehicle_max_weight,
+          cv.is_active AS vehicle_is_active,
           cs.created_at,
           cs.updated_at
       FROM users.profiles u

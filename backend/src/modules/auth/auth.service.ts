@@ -38,7 +38,7 @@ interface RegisterData {
 }
 
 interface AuthResult {
-  user: any;
+  user: import("../../types/user.js").UserProfile;
   accessToken?: string;
   refreshToken?: string;
   isNewUser?: boolean;
@@ -98,8 +98,22 @@ class AuthService {
         authMethod: "refresh",
       });
 
+      const mappedUser: import("../../types/user.js").UserProfile = {
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+        role: user.role_name,
+        phoneNumber: user.phone_number,
+        email: user.email,
+        fullName: user.full_name,
+        profilePictureUrl: user.profile_picture_url,
+        isVerified: user.is_verified,
+        isActive: user.is_active,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+      };
+
       return {
-        user,
+        user: mappedUser,
         accessToken: newAccessToken,
         refreshToken,
         expiresIn: "7d",
@@ -116,7 +130,7 @@ class AuthService {
   /**
    * Logout user (revoke token)
    */
-  async logout(tokenHash: string): Promise<any> {
+  async logout(tokenHash: string): Promise<{ message: string }> {
     try {
       const result = await authRepository.revokeToken(tokenHash);
 
@@ -222,15 +236,22 @@ class AuthService {
       });
 
       // 6. Return user data and tokens
+      const mappedUser: import("../../types/user.js").UserProfile = {
+        userId: user.user_id,
+        userUuid: user.user_uuid,
+        role: user.role_name,
+        phoneNumber: user.phone_number,
+        email: user.email,
+        fullName: user.full_name,
+        profilePictureUrl: user.profile_picture_url,
+        isVerified: user.is_verified,
+        isActive: user.is_active,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+      };
+
       return {
-        user: {
-          userId: user.user_id,
-          fullName: user.full_name,
-          email: user.email,
-          role: user.role_name,
-          profileComplete: user.profile_complete,
-          createdAt: user.created_at,
-        },
+        user: mappedUser,
         accessToken,
         refreshToken,
         isNewUser,
@@ -349,7 +370,9 @@ class AuthService {
           phoneNumber: user.phone_number,
           role: user.role_name,
           isVerified: user.is_verified,
+          isActive: user.is_active,
           createdAt: user.created_at,
+          updatedAt: user.updated_at,
         },
         tokens: {
           accessToken,
@@ -447,7 +470,9 @@ class AuthService {
           phoneNumber: user.phone_number,
           role: user.role_name,
           isVerified: user.is_verified,
+          isActive: user.is_active,
           createdAt: user.created_at,
+          updatedAt: user.updated_at,
         },
         tokens: {
           accessToken,

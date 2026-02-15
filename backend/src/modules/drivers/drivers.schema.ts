@@ -1,35 +1,48 @@
 // services/backend/src/modules/drivers/drivers.schema.ts
 import { FastifySchema } from "fastify";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import {
+  UpdateDriverProfileZ,
+  UpdateAvailabilityZ,
+  UpdateLocationZ,
+  DriverProfileResponseZ,
+} from "./drivers.zod.js";
+
+const UpdateDriverProfileJson = zodToJsonSchema(
+  UpdateDriverProfileZ as any,
+  "UpdateDriverProfile",
+);
+const UpdateAvailabilityJson = zodToJsonSchema(
+  UpdateAvailabilityZ as any,
+  "UpdateAvailability",
+);
+const UpdateLocationJson = zodToJsonSchema(
+  UpdateLocationZ as any,
+  "UpdateLocation",
+);
+const DriverProfileResponseJson = zodToJsonSchema(
+  DriverProfileResponseZ as any,
+  "DriverProfileResponse",
+);
 
 export const updateDriverProfileSchema: FastifySchema = {
-  body: {
-    type: "object",
-    properties: {
-      fullName: { type: "string", minLength: 2, maxLength: 100 },
-      email: { type: "string", format: "email" },
-      profilePictureUrl: { type: "string", format: "uri" },
+  body: UpdateDriverProfileJson,
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        success: { type: "boolean" },
+        message: { type: "string" },
+        data: DriverProfileResponseJson,
+      },
     },
   },
 };
 
 export const updateAvailabilitySchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: ["isAvailable", "isOnline"],
-    properties: {
-      isAvailable: { type: "boolean" },
-      isOnline: { type: "boolean" },
-    },
-  },
+  body: UpdateAvailabilityJson,
 };
 
 export const updateLocationSchema: FastifySchema = {
-  body: {
-    type: "object",
-    required: ["latitude", "longitude"],
-    properties: {
-      latitude: { type: "number", minimum: -90, maximum: 90 },
-      longitude: { type: "number", minimum: -180, maximum: 180 },
-    },
-  },
+  body: UpdateLocationJson,
 };

@@ -5,22 +5,16 @@ import { errorResponse, successResponse } from "../../utils/response.util.js";
 import driversService from "./drivers.service.js";
 import ratingsService from "../ratings/ratings.service.js";
 
-interface UpdateProfileBody {
-  fullName?: string;
-  phoneNumber?: string;
-  vehicleType?: string;
-  vehicleNumber?: string;
-  licenseNumber?: string;
-}
-
-interface UpdateLocationBody {
-  latitude: number;
-  longitude: number;
-}
-
-interface UpdateAvailabilityBody {
-  isAvailable: boolean;
-}
+import type {
+  UpdateDriverProfile,
+  UpdateAvailability,
+  UpdateLocation,
+} from "./drivers.zod.js";
+import {
+  UpdateDriverProfileZ,
+  UpdateAvailabilityZ,
+  UpdateLocationZ,
+} from "./drivers.zod.js";
 
 class DriversController {
   /**
@@ -59,12 +53,14 @@ class DriversController {
    * Update driver profile
    */
   async updateProfile(
-    request: FastifyRequest<{ Body: UpdateProfileBody }>,
+    request: FastifyRequest<{ Body: UpdateDriverProfile }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const updateData = request.body;
+      const updateData = UpdateDriverProfileZ.parse(
+        request.body,
+      ) as UpdateDriverProfile;
 
       const updatedDriver = await driversService.updateProfile(
         userId,
@@ -94,12 +90,14 @@ class DriversController {
    * Toggle driver availability
    */
   async updateAvailability(
-    request: FastifyRequest<{ Body: UpdateAvailabilityBody }>,
+    request: FastifyRequest<{ Body: UpdateAvailability }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const availabilityData = request.body;
+      const availabilityData = UpdateAvailabilityZ.parse(
+        request.body,
+      ) as UpdateAvailability;
 
       const result = await driversService.updateAvailability(
         userId,
@@ -129,12 +127,14 @@ class DriversController {
    * Update driver location
    */
   async updateLocation(
-    request: FastifyRequest<{ Body: UpdateLocationBody }>,
+    request: FastifyRequest<{ Body: UpdateLocation }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const locationData = request.body;
+      const locationData = UpdateLocationZ.parse(
+        request.body,
+      ) as UpdateLocation;
 
       const result = await driversService.updateLocation(userId, locationData);
 

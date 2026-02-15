@@ -11,6 +11,7 @@ import {
   getOrderByIdSchema,
   listOrdersSchema,
   updateOrderStatusSchema,
+  rateOrderSchema,
 } from "./orders.schema.js";
 
 async function ordersRoutes(fastify: FastifyInstance, options: any) {
@@ -92,6 +93,7 @@ async function ordersRoutes(fastify: FastifyInstance, options: any) {
   fastify.post(
     "/:id/rate",
     {
+      schema: rateOrderSchema,
       onRequest: [authorize("client")],
     },
     ordersController.rateOrder.bind(ordersController) as any,

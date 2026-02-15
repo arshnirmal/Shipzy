@@ -3,19 +3,9 @@ import logger from "../../config/logger.js";
 import db from "../../database/db.js";
 import usersQueries from "../../database/queries/users.queries.js";
 
-interface User {
-  user_id: number;
-  user_uuid: string;
-  full_name: string;
-  email?: string;
-  phone_number: string;
-  profile_picture_url?: string;
-  role_name: string;
-  is_verified: boolean;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
+import type { DbUser } from "../../types/user.js";
+
+type User = DbUser;
 
 interface Address {
   address_id: number;
@@ -28,36 +18,23 @@ interface Address {
   latitude: number;
   longitude: number;
   address_type?: string;
+  // DB may return snake_case or camelCase keys depending on query mapping
   building?: string;
+  building_name?: string;
   floor?: string;
+  floor_number?: string;
   flat_number?: string;
+  room_number?: string;
   landmark?: string;
   is_default: boolean;
   created_at: Date;
   updated_at: Date;
 }
 
-interface UpdateProfileData {
-  fullName?: string;
-  email?: string;
-  profilePictureUrl?: string;
-}
+import type { UpdateProfile, SaveAddress } from "./users.zod.js";
 
-interface AddressData {
-  label: string;
-  fullAddress: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  latitude: number;
-  longitude: number;
-  addressType?: string;
-  building?: string;
-  floor?: string;
-  flatNumber?: string;
-  landmark?: string;
-  isDefault?: boolean;
-}
+type UpdateProfileData = UpdateProfile;
+type AddressData = SaveAddress;
 
 class UsersRepository {
   /**
@@ -189,7 +166,10 @@ class UsersRepository {
   /**
    * Delete address
    */
-  async deleteAddress(addressId: number, userId: number): Promise<any> {
+  async deleteAddress(
+    addressId: number,
+    userId: number,
+  ): Promise<{ address_id: number } | null> {
     try {
       const result = await db.query(usersQueries.DELETE_ADDRESS, [
         addressId,

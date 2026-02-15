@@ -9,16 +9,11 @@ import {
 } from "../utils/error.util.js";
 import { verifyToken } from "../utils/jwt.util.js";
 
-interface User {
-  userId: number;
-  userUuid: string;
-  role: string;
-  phoneNumber: string;
-}
+import type { RequestUser } from "../types/user.js";
 
 declare module "fastify" {
   interface FastifyRequest {
-    user?: User;
+    user?: RequestUser;
   }
 }
 

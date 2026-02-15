@@ -25,7 +25,7 @@ export default {
     )
     VALUES (
       $1, $2,
-      (SELECT status_id FROM public.payment_statuses WHERE name = 'pending'),
+      (SELECT status_id FROM payments.payment_statuses WHERE name = 'pending'),
       $3, $4, $5, $6, $7, $8, NOW()
     )
       RETURNING transaction_id, payment_initiated_at
@@ -37,7 +37,7 @@ export default {
   MARK_PAYMENT_COMPLETED: `
       UPDATE payments.transactions
       SET 
-          payment_status_id = (SELECT status_id FROM public.payment_statuses WHERE name = 'completed'),
+          payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed'),
           payment_completed_at = NOW()
       WHERE transaction_id = $1
       RETURNING transaction_id, payment_completed_at
@@ -49,7 +49,7 @@ export default {
   MARK_PAYMENT_FAILED: `
       UPDATE payments.transactions
       SET 
-          payment_status_id = (SELECT status_id FROM public.payment_statuses WHERE name = 'failed'),
+          payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'failed'),
           payment_failed_at = NOW(),
           failure_reason = $2
       WHERE transaction_id = $1
@@ -75,8 +75,8 @@ export default {
           t.payment_failed_at,
           t.failure_reason
       FROM payments.transactions t
-      JOIN public.payment_statuses ps ON t.payment_status_id = ps.status_id
-      JOIN public.payment_methods pm ON t.payment_method_id = pm.method_id
+      JOIN payments.payment_statuses ps ON t.payment_status_id = ps.status_id
+      JOIN payments.payment_methods pm ON t.payment_method_id = pm.method_id
       WHERE t.order_id = $1
       ORDER BY t.created_at DESC
       LIMIT 1
