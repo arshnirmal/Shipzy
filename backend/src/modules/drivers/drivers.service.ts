@@ -127,8 +127,8 @@ class DriversService {
           currentLocation:
             driver.current_latitude && driver.current_longitude
               ? {
-                  lat: Number(driver.current_latitude),
-                  lng: Number(driver.current_longitude),
+                  latitude: Number(driver.current_latitude),
+                  longitude: Number(driver.current_longitude),
                   updatedAt: (
                     driver.last_location_update ?? new Date()
                   ).toISOString(),
@@ -256,7 +256,7 @@ class DriversService {
         await driversRepository.createSession(
           userId,
           location
-            ? { lat: location.latitude, lng: location.longitude }
+            ? { latitude: location.latitude, longitude: location.longitude }
             : undefined,
         );
       }

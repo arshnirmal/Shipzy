@@ -174,12 +174,12 @@ class UsersService {
           savedAddress.address_type as import("./users.zod.js").AddressResponse["addressType"],
         label: savedAddress.label,
         fullAddress: savedAddress.full_address,
-        buildingName:
-          savedAddress.building_name || savedAddress.building || null,
-        floorNumber: savedAddress.floor_number || savedAddress.floor || null,
-        roomNumber:
-          savedAddress.flat_number || savedAddress.room_number || null,
-        landmark: savedAddress.landmark || null,
+        building:
+          savedAddress.building_name || savedAddress.building || undefined,
+        floor: savedAddress.floor_number || savedAddress.floor || undefined,
+        flatNumber:
+          savedAddress.flat_number || savedAddress.room_number || undefined,
+        landmark: savedAddress.landmark || undefined,
         city: savedAddress.city,
         state: savedAddress.state,
         postalCode: savedAddress.postal_code,

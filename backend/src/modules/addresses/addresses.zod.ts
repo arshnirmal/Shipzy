@@ -1,10 +1,8 @@
 // services/backend/src/modules/addresses/addresses.zod.ts
 import { z } from "zod";
+import { CoordinatesZ } from "../../schemas/common.zod.js";
 
-export const ProximityZ = z.object({
-  longitude: z.number().min(-180).max(180),
-  latitude: z.number().min(-90).max(90),
-});
+export const ProximityZ = CoordinatesZ;
 
 export const SearchAddressesZ = z.object({
   query: z.string().min(1).max(256),
@@ -36,9 +34,7 @@ export const RetrievePlaceZ = z.object({
 });
 export type RetrievePlace = z.infer<typeof RetrievePlaceZ>;
 
-export const ReverseGeocodeZ = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
+export const ReverseGeocodeZ = CoordinatesZ.extend({
   types: z
     .array(
       z.enum([
@@ -56,14 +52,8 @@ export const ReverseGeocodeZ = z.object({
 export type ReverseGeocode = z.infer<typeof ReverseGeocodeZ>;
 
 export const DirectionsZ = z.object({
-  origin: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-  }),
-  destination: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-  }),
+  origin: CoordinatesZ,
+  destination: CoordinatesZ,
   profile: z.enum(["driving", "walking", "cycling"]).optional(),
 });
 export type Directions = z.infer<typeof DirectionsZ>;

@@ -314,8 +314,8 @@ async function seedOrders(count = 3) {
       deliveryTypeId: dt.deliveryTypeId,
       vehicleCategoryId: vc.categoryId,
       weightTierId: wt.tierId,
-      pickup: { lat: pickup.latitude, lng: pickup.longitude },
-      drop: { lat: delivery.latitude, lng: delivery.longitude },
+      pickup: { latitude: pickup.latitude, longitude: pickup.longitude },
+      drop: { latitude: delivery.latitude, longitude: delivery.longitude },
     };
 
     try {

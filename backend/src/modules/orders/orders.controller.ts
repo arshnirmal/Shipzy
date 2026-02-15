@@ -84,7 +84,7 @@ class OrdersController {
           paymentMethodId: orderData.paymentMethodId,
           pickup: {
             addressId: orderData.pickup.addressId,
-            address: orderData.pickup.address,
+            address: orderData.pickup.fullAddress,
             city: orderData.pickup.city,
             state: orderData.pickup.state,
             postalCode: orderData.pickup.postalCode,
@@ -95,7 +95,7 @@ class OrdersController {
           },
           delivery: {
             addressId: orderData.delivery.addressId,
-            address: orderData.delivery.address,
+            address: orderData.delivery.fullAddress,
             city: orderData.delivery.city,
             state: orderData.delivery.state,
             postalCode: orderData.delivery.postalCode,

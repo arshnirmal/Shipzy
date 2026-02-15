@@ -1,5 +1,11 @@
 // services/backend/src/modules/drivers/drivers.zod.ts
 import { z } from "zod";
+import {
+  DriverUserZ,
+  VehicleZ,
+  EarningsZ,
+  CoordinatesZ,
+} from "../../schemas/common.zod.js";
 
 export const UpdateDriverProfileZ = z.object({
   fullName: z.string().min(2).max(100).optional(),
@@ -15,66 +21,28 @@ export type UpdateDriverProfile = z.infer<typeof UpdateDriverProfileZ>;
 export const UpdateAvailabilityZ = z.object({
   isAvailable: z.boolean(),
   isOnline: z.boolean().optional(),
-  location: z
-    .object({
-      latitude: z.number().min(-90).max(90),
-      longitude: z.number().min(-180).max(180),
-    })
-    .optional(),
+  location: CoordinatesZ.optional(),
 });
 export type UpdateAvailability = z.infer<typeof UpdateAvailabilityZ>;
 
-export const UpdateLocationZ = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-});
+export const UpdateLocationZ = CoordinatesZ;
 export type UpdateLocation = z.infer<typeof UpdateLocationZ>;
 
-export const DriverProfileResponseZ = z.object({
-  userId: z.number(),
-  userUuid: z.string(),
-  phoneNumber: z.string().nullable().optional(),
-  fullName: z.string(),
-  email: z.string().nullable().optional(),
-  role: z.enum(["client", "courier"]).optional(),
-  profilePictureUrl: z.string().nullable().optional(),
-  isVerified: z.boolean().optional(),
-  isActive: z.boolean().optional(),
+export const DriverProfileResponseZ = DriverUserZ.extend({
   status: z.object({
     isAvailable: z.boolean(),
     isOnline: z.boolean(),
     totalDeliveriesToday: z.number().int().nonnegative().optional(),
     currentLocation: z
       .object({
-        lat: z.number(),
-        lng: z.number(),
+        ...CoordinatesZ.shape,
         updatedAt: z.string(),
       })
       .nullable()
       .optional(),
   }),
-  vehicle: z
-    .object({
-      vehicleId: z.number().optional(),
-      categoryId: z.number().optional(),
-      category: z.string().optional(),
-      isActive: z.boolean().optional(),
-      vehicleNumber: z.string().optional(),
-      model: z.string().optional(),
-      year: z.number().optional(),
-    })
-    .nullable()
-    .optional(),
-  earnings: z
-    .object({
-      total: z.number(),
-      today: z.number(),
-      thisWeek: z.number(),
-      thisMonth: z.number(),
-      averageOrderValue: z.number(),
-      totalDistanceKm: z.number(),
-    })
-    .optional(),
+  vehicle: VehicleZ.nullable().optional(),
+  earnings: EarningsZ.optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });

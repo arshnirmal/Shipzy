@@ -8,19 +8,13 @@ import {
 } from "../../utils/error.util.js";
 import ordersRepository from "./orders.repository.js";
 
-import type {
-  CalculateFare,
-  CreateOrder,
-  FareBreakdown as ZodFareBreakdown,
-  OrderLocation as ZodOrderLocation,
-} from "./orders.zod.js";
+import type { CalculateFare, CreateOrder } from "./orders.zod.js";
+import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
 
 type FareData = CalculateFare;
 export type OrderData = CreateOrder;
 
-type Location = ZodOrderLocation;
-
-type FareBreakdown = ZodFareBreakdown;
+type Location = OrderAddress;
 
 // DB row shape for order queries (only fields used by _formatOrderDetails)
 type OrderRow = {
@@ -100,6 +94,8 @@ type OrderRow = {
 
 // Use exported type for created-order DTO
 type CreatedOrder = import("../../types/orders.js").CreatedOrder;
+type OrderDetails = import("./orders.zod.js").OrderDetails;
+type ListOrderItem = import("./orders.zod.js").ListOrderItem;
 
 class OrdersService {
   /**
@@ -135,10 +131,10 @@ class OrdersService {
       ).then((m) => m.default);
 
       const estimatedDistanceKm = addressesService.calculateDistance(
-        pickup.lat,
-        pickup.lng,
-        drop.lat,
-        drop.lng,
+        pickup.latitude,
+        pickup.longitude,
+        drop.latitude,
+        drop.longitude,
       );
 
       if (estimatedDistanceKm <= 0.5) {
@@ -156,8 +152,8 @@ class OrdersService {
       });
 
       const distanceData = await addressesService.getDistanceMatrix(
-        pickup,
-        drop,
+        { lat: pickup.latitude, lng: pickup.longitude },
+        { lat: drop.latitude, lng: drop.longitude },
       );
 
       const distanceKm = distanceData.distanceKm;
@@ -253,13 +249,13 @@ class OrdersService {
         operationId,
         clientId,
         pickup: {
-          address: orderData.pickup.address,
+          address: orderData.pickup.fullAddress,
           city: orderData.pickup.city,
           latitude: orderData.pickup.latitude,
           longitude: orderData.pickup.longitude,
         },
         delivery: {
-          address: orderData.delivery.address,
+          address: orderData.delivery.fullAddress,
           city: orderData.delivery.city,
           latitude: orderData.delivery.latitude,
           longitude: orderData.delivery.longitude,
@@ -385,7 +381,7 @@ class OrdersService {
         paymentMethodId: orderData.paymentMethodId,
         pickup: {
           addressId: orderData.pickup.addressId || null,
-          address: orderData.pickup.address,
+          address: orderData.pickup.fullAddress,
           latitude: orderData.pickup.latitude,
           longitude: orderData.pickup.longitude,
           city: orderData.pickup.city,
@@ -400,7 +396,7 @@ class OrdersService {
         },
         delivery: {
           addressId: orderData.delivery.addressId || null,
-          address: orderData.delivery.address,
+          address: orderData.delivery.fullAddress,
           latitude: orderData.delivery.latitude,
           longitude: orderData.delivery.longitude,
           city: orderData.delivery.city,
@@ -505,7 +501,7 @@ class OrdersService {
     orderId: number,
     userId: number,
     userRole: string,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<OrderDetails> {
     try {
       const order = await ordersRepository.findById(orderId);
 
@@ -547,7 +543,7 @@ class OrdersService {
     limit: number = 20,
     status?: string,
   ): Promise<{
-    orders: Record<string, unknown>[];
+    orders: ListOrderItem[];
     pagination: {
       page: number;
       limit: number;
@@ -657,7 +653,7 @@ class OrdersService {
     longitude: number,
     radiusKm: number = 10,
     limit: number = 20,
-  ): Promise<Record<string, unknown>[]> {
+  ): Promise<import("./orders.zod.js").AvailableOrderItem[]> {
     try {
       const orders = await ordersRepository.findAvailableOrders(
         latitude,
@@ -896,7 +892,7 @@ class OrdersService {
   /**
    * Format order details
    */
-  _formatOrderDetails(order: OrderRow): Record<string, unknown> {
+  _formatOrderDetails(order: OrderRow): OrderDetails {
     // Compute actual delivery duration (only if picked up)
     let actualDurationMins = null;
     if (order.actual_pickup_time && order.actual_delivery_time) {
@@ -955,13 +951,26 @@ class OrdersService {
         : null,
       actualDurationMins,
 
-      // Timestamps (flattened for easy access)
-      createdAt: order.created_at,
-      statusTimestamp,
-      acceptedAt: order.accepted_at,
-      pickedUpAt: order.picked_up_at,
-      deliveredAt: order.delivered_at,
-      cancelledAt: order.cancelled_at,
+      // Timestamps (flattened for easy access) - normalize to ISO strings
+      createdAt: order.created_at
+        ? (order.created_at as Date).toISOString()
+        : undefined,
+      statusTimestamp:
+        statusTimestamp instanceof Date
+          ? statusTimestamp.toISOString()
+          : statusTimestamp,
+      acceptedAt: order.accepted_at
+        ? (order.accepted_at as Date).toISOString()
+        : undefined,
+      pickedUpAt: order.picked_up_at
+        ? (order.picked_up_at as Date).toISOString()
+        : undefined,
+      deliveredAt: order.delivered_at
+        ? (order.delivered_at as Date).toISOString()
+        : undefined,
+      cancelledAt: order.cancelled_at
+        ? (order.cancelled_at as Date).toISOString()
+        : undefined,
 
       // Pickup location (enhanced with all details)
       pickup: {
@@ -1002,6 +1011,9 @@ class OrdersService {
         paymentMethod: order.payment_method,
         fareBreakdown: {
           basePrice: Number(order.base_price),
+          distanceKm: order.estimated_distance_km
+            ? Number(order.estimated_distance_km)
+            : 0,
           distancePrice: Number(order.distance_price),
           weightSurcharge: Number(order.weight_surcharge),
           platformFee: Number(order.platform_fee || 0),
@@ -1031,8 +1043,8 @@ class OrdersService {
 
       // Client details (additional info not in list view)
       client: {
-        name: order.client_name,
-        phone: order.client_phone,
+        name: order.client_name ?? undefined,
+        phone: order.client_phone ?? undefined,
       },
 
       // Additional details
@@ -1043,12 +1055,16 @@ class OrdersService {
       courier: order.courier_id
         ? {
             id: order.courier_id,
-            name: order.courier_name,
-            phone: order.courier_phone,
-            photo: order.courier_photo,
-            assignmentStatus: order.assignment_status,
-            assignedAt: order.assigned_at,
-            acceptedAt: order.courier_accepted_at,
+            name: order.courier_name ?? undefined,
+            phone: order.courier_phone ?? undefined,
+            photo: order.courier_photo ?? undefined,
+            assignmentStatus: order.assignment_status ?? undefined,
+            assignedAt: order.assigned_at
+              ? (order.assigned_at as Date).toISOString()
+              : undefined,
+            acceptedAt: order.courier_accepted_at
+              ? (order.courier_accepted_at as Date).toISOString()
+              : undefined,
           }
         : null,
     };

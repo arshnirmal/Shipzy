@@ -1,5 +1,6 @@
 // services/backend/src/types/orders.ts
-import type { FareBreakdown } from "../modules/orders/orders.zod.js";
+import type { FareBreakdown } from "../schemas/common.zod.js";
+import type { CreatedOrder as ZCreatedOrder } from "../modules/orders/orders.zod.js";
 
 export interface FareCalculationResult {
   success: boolean;
@@ -9,15 +10,9 @@ export interface FareCalculationResult {
 
 export interface OrderCreateResult {
   success: boolean;
-  order?: any; // order JSON returned from DB function (kept generic for now)
+  order?: ZCreatedOrder | any; // order JSON returned from DB function (kept generic while DB return shape exists)
   error?: string;
 }
 
-// Minimal shape for created order returned by `createOrder` service
-export type CreatedOrder = {
-  orderId?: number;
-  orderUuid?: string;
-  orderNumber?: string;
-  pricing?: { totalPrice?: number } & Record<string, unknown>;
-  [k: string]: unknown;
-};
+// Re-export the Zod-inferred CreatedOrder type as the canonical CreatedOrder
+export type CreatedOrder = ZCreatedOrder;

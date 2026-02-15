@@ -4,20 +4,16 @@ import crypto from "node:crypto";
 import NodeCache from "node-cache";
 import logger from "../../config/logger.js";
 import { ValidationError } from "../../utils/error.util.js";
+import type { Coordinates } from "../../schemas/common.zod.js";
 
 interface SearchParams {
   query: string;
   // Accept either a "lon,lat" string (legacy) or structured object { latitude, longitude }
-  proximity?: string | { latitude: number; longitude: number };
+  proximity?: string | Coordinates;
   limit?: number;
   types?: string | string[];
   country?: string;
   language?: string;
-}
-
-interface Coordinates {
-  latitude: number;
-  longitude: number;
 }
 
 interface GeocodeParams {
@@ -33,7 +29,7 @@ type SearchSuggestion = {
   name?: string;
   fullAddress?: string;
   placeType?: string;
-  coordinates?: Coordinates | { latitude?: number; longitude?: number };
+  coordinates?: Coordinates;
   context: Record<string, string | undefined> | null;
   sessionToken?: string;
 };

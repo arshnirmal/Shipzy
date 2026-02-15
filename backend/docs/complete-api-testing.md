@@ -1,6 +1,6 @@
 # 🚀 **Shipzy Backend - Complete API Testing Guide**
 
-> **38 Endpoints** | **6 Modules** | **Production Ready**
+> **39 Endpoints** | **6 Modules** | **Production Ready**
 
 This comprehensive testing guide covers all 38 API endpoints across 6 modules with real cURL examples, request/response formats, and testing workflows.
 
@@ -71,7 +71,7 @@ npm start
 
 <a name="authentication"></a>
 
-## 🔐 **2. Authentication APIs (5 endpoints)**
+## 🔐 **2. Authentication APIs (6 endpoints)**
 
 ### **2.1 Health Check**
 
@@ -220,7 +220,19 @@ curl -X POST "$BASE_URL/auth/refresh" \
   "success": true,
   "message": "Token refreshed successfully",
   "data": {
+    "user": {
+      "userId": 1,
+      "userUuid": "uuid",
+      "role": "client",
+      "phoneNumber": null,
+      "email": "john.doe@example.com",
+      "fullName": "John Doe",
+      "profilePictureUrl": null,
+      "isVerified": true,
+      "isActive": true
+    },
     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "expiresIn": "7d"
   }
 }
@@ -378,6 +390,13 @@ curl -X POST "$BASE_URL/users/me/addresses" \
     "addressType": "work",
     "label": "Office",
     "fullAddress": "456 Business Park, Andheri, Mumbai",
+    "building": "Tech Tower",
+    "floor": "12th Floor",
+    "flatNumber": "1201",
+    "landmark": "Opposite Mall",
+    "city": "Mumbai",
+    "state": "Maharashtra",
+    "postalCode": "400058",
     "latitude": 19.1136,
     "longitude": 72.8697,
     "isDefault": false,
@@ -428,20 +447,43 @@ curl -X GET "$BASE_URL/drivers/me" \
   "success": true,
   "message": "Driver profile retrieved successfully",
   "data": {
-    "driverId": 1,
     "userId": 3,
-    "fullName": "Jane Driver",
+    "userUuid": "550e8400-e29b-41d4-a716-446655440003",
+    "role": "courier",
     "phoneNumber": "+919876543211",
+    "fullName": "Jane Driver",
     "email": "jane.driver@example.com",
-    "vehicleType": "bike",
-    "vehicleNumber": "MH12AB1234",
-    "licenseNumber": "DL123456789",
-    "isAvailable": true,
-    "currentLatitude": 19.076,
-    "currentLongitude": 72.8777,
-    "rating": 4.8,
-    "totalDeliveries": 150,
-    "createdAt": "2025-10-25T00:00:00.000Z"
+    "profilePictureUrl": null,
+    "isVerified": true,
+    "isActive": true,
+    "status": {
+      "isAvailable": true,
+      "isOnline": true,
+      "totalDeliveriesToday": 5,
+      "currentLocation": {
+        "latitude": 19.076,
+        "longitude": 72.8777
+      }
+    },
+    "vehicle": {
+      "vehicleId": 1,
+      "categoryId": 1,
+      "category": "bike",
+      "isActive": true,
+      "vehicleNumber": "MH12AB1234",
+      "model": "Honda Activa",
+      "year": 2020
+    },
+    "earnings": {
+      "total": 2500.5,
+      "today": 150.0,
+      "thisWeek": 850.5,
+      "thisMonth": 2500.5,
+      "averageOrderValue": 85.0,
+      "totalDistanceKm": 125.5
+    },
+    "createdAt": "2025-10-25T00:00:00.000Z",
+    "updatedAt": "2025-10-25T12:00:00.000Z"
   }
 }
 ```
@@ -482,7 +524,12 @@ curl -X PUT "$BASE_URL/drivers/me/availability" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
-    "isAvailable": true
+    "isAvailable": true,
+    "isOnline": true,
+    "location": {
+      "latitude": 19.076,
+      "longitude": 72.8777
+    }
   }'
 ```
 
@@ -493,8 +540,9 @@ curl -X PUT "$BASE_URL/drivers/me/availability" \
   "success": true,
   "message": "Driver availability updated successfully",
   "data": {
-    "driverId": 1,
+    "userId": 3,
     "isAvailable": true,
+    "isOnline": true,
     "updatedAt": "2025-10-25T00:00:00.000Z"
   }
 }
@@ -519,9 +567,11 @@ curl -X PUT "$BASE_URL/drivers/me/location" \
   "success": true,
   "message": "Driver location updated successfully",
   "data": {
-    "driverId": 1,
-    "latitude": 19.1136,
-    "longitude": 72.8697,
+    "userId": 3,
+    "location": {
+      "latitude": 19.1136,
+      "longitude": 72.8697
+    },
     "updatedAt": "2025-10-25T00:00:00.000Z"
   }
 }
@@ -548,10 +598,14 @@ curl -X GET "$BASE_URL/drivers/me/assignments" \
       "status": "accepted",
       "pickupAddress": "123 Main St, Mumbai",
       "deliveryAddress": "456 Park St, Mumbai",
-      "pickupLatitude": 19.076,
-      "pickupLongitude": 72.8777,
-      "deliveryLatitude": 19.1136,
-      "deliveryLongitude": 72.8697,
+      "pickupCoordinates": {
+        "latitude": 19.076,
+        "longitude": 72.8777
+      },
+      "deliveryCoordinates": {
+        "latitude": 19.1136,
+        "longitude": 72.8697
+      },
       "estimatedDistance": 5.2,
       "estimatedDuration": 15,
       "assignedAt": "2025-10-25T10:30:00.000Z"
@@ -577,25 +631,12 @@ curl -X GET "$BASE_URL/drivers/me/earnings?period=monthly" \
   "success": true,
   "message": "Earnings summary retrieved successfully",
   "data": {
-    "driverId": 1,
-    "period": "monthly",
-    "totalEarnings": 2500.5,
-    "totalDeliveries": 25,
-    "averageRating": 4.7,
-    "breakdown": {
-      "baseFare": 1800.0,
-      "distanceCharges": 450.0,
-      "tips": 250.5,
-      "bonuses": 0.0
-    },
-    "recentDeliveries": [
-      {
-        "orderId": 10,
-        "date": "2025-10-24T15:30:00.000Z",
-        "amount": 85.5,
-        "distance": 3.2
-      }
-    ]
+    "total": 2500.5,
+    "today": 150.0,
+    "thisWeek": 850.5,
+    "thisMonth": 2500.5,
+    "averageOrderValue": 85.0,
+    "totalDistanceKm": 125.5
   }
 }
 ```
@@ -636,13 +677,17 @@ curl -X POST "$BASE_URL/orders/calculate-fare" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
-    "pickupLatitude": 19.0760,
-    "pickupLongitude": 72.8777,
-    "deliveryLatitude": 19.1136,
-    "deliveryLongitude": 72.8697,
-    "packageWeight": 2.5,
-    "packageType": "documents",
-    "deliveryType": "standard"
+    "deliveryTypeId": 1,
+    "vehicleCategoryId": 1,
+    "weightTierId": 1,
+    "pickup": {
+      "latitude": 19.0760,
+      "longitude": 72.8777
+    },
+    "drop": {
+      "latitude": 19.1136,
+      "longitude": 72.8697
+    }
   }'
 ```
 
@@ -653,12 +698,14 @@ curl -X POST "$BASE_URL/orders/calculate-fare" \
   "success": true,
   "message": "Fare calculated successfully",
   "data": {
-    "baseFare": 50.0,
-    "distanceFare": 25.0,
-    "weightFare": 10.0,
-    "totalFare": 85.0,
-    "estimatedDistance": 5.2,
-    "estimatedDuration": 15,
+    "basePrice": 50.0,
+    "distanceKm": 5.0,
+    "distancePrice": 25.0,
+    "weightSurcharge": 10.0,
+    "platformFee": 5.0,
+    "subtotalBeforeTax": 90.0,
+    "gstAmount": 16.2,
+    "totalPrice": 106.2,
     "currency": "INR"
   }
 }
@@ -671,20 +718,49 @@ curl -X POST "$BASE_URL/orders" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
-    "pickupAddress": "123 Main St, Mumbai, Maharashtra 400001",
-    "pickupLatitude": 19.0760,
-    "pickupLongitude": 72.8777,
-    "pickupContactName": "John Doe",
-    "pickupContactPhone": "+919876543210",
-    "deliveryAddress": "456 Park St, Andheri, Mumbai 400058",
-    "deliveryLatitude": 19.1136,
-    "deliveryLongitude": 72.8697,
-    "deliveryContactName": "Jane Smith",
-    "deliveryContactPhone": "+919876543211",
-    "packageType": "documents",
-    "packageWeight": 2.5,
+    "deliveryTypeId": 1,
+    "vehicleCategoryId": 1,
+    "weightTierId": 1,
+    "paymentMethodId": 1,
+    "fareBreakdown": {
+      "basePrice": 50.0,
+      "distanceKm": 5.0,
+      "distancePrice": 25.0,
+      "weightSurcharge": 10.0,
+      "platformFee": 5.0,
+      "gstAmount": 16.2,
+      "totalPrice": 106.2,
+      "currency": "INR"
+    },
+    "pickup": {
+      "fullAddress": "123 Main St, Mumbai, Maharashtra 400001",
+      "building": "Building A",
+      "floor": "5th Floor",
+      "flatNumber": "501",
+      "landmark": "Near Park",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "postalCode": "400001",
+      "latitude": 19.0760,
+      "longitude": 72.8777,
+      "contactName": "John Doe",
+      "contactPhone": "+919876543210"
+    },
+    "delivery": {
+      "fullAddress": "456 Park St, Andheri, Mumbai 400058",
+      "building": "Tech Tower",
+      "floor": "12th Floor",
+      "flatNumber": "1201",
+      "landmark": "Opposite Mall",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "postalCode": "400058",
+      "latitude": 19.1136,
+      "longitude": 72.8697,
+      "contactName": "Jane Smith",
+      "contactPhone": "+919876543211"
+    },
     "packageDescription": "Important documents",
-    "deliveryType": "standard",
     "specialInstructions": "Handle with care"
   }'
 ```
@@ -794,13 +870,17 @@ curl -X GET "$BASE_URL/orders/$TEST_ORDER_ID" \
     "orderNumber": "ORD-20251025-0005",
     "status": "accepted",
     "pickupAddress": "123 Main St, Mumbai, Maharashtra 400001",
-    "pickupLatitude": 19.076,
-    "pickupLongitude": 72.8777,
+    "pickupCoordinates": {
+      "latitude": 19.076,
+      "longitude": 72.8777
+    },
     "pickupContactName": "John Doe",
     "pickupContactPhone": "+919876543210",
     "deliveryAddress": "456 Park St, Andheri, Mumbai 400058",
-    "deliveryLatitude": 19.1136,
-    "deliveryLongitude": 72.8697,
+    "deliveryCoordinates": {
+      "latitude": 19.1136,
+      "longitude": 72.8697
+    },
     "deliveryContactName": "Jane Smith",
     "deliveryContactPhone": "+919876543211",
     "packageType": "documents",
@@ -825,7 +905,7 @@ curl -X POST "$BASE_URL/orders/$TEST_ORDER_ID/cancel" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
-    "reason": "Changed my mind"
+    "cancellationReason": "Changed my mind"
   }'
 ```
 
@@ -933,7 +1013,10 @@ curl -X POST "$BASE_URL/addresses/search" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
     "query": "Connaught Place",
-    "proximity": "77.2167,28.6139",
+    "proximity": {
+      "longitude": 77.2167,
+      "latitude": 28.6139
+    },
     "limit": 5
   }'
 ```
@@ -1009,8 +1092,10 @@ curl -X POST "$BASE_URL/addresses/reverse-geocode" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
-    "latitude": 28.6139,
-    "longitude": 77.2167
+    "coordinates": {
+      "latitude": 28.6139,
+      "longitude": 77.2167
+    }
   }'
 ```
 
@@ -1102,10 +1187,14 @@ curl -X POST "$BASE_URL/addresses/distance" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -d '{
-    "lat1": 28.6139,
-    "lon1": 77.2167,
-    "lat2": 28.7041,
-    "lon2": 77.1025
+    "point1": {
+      "latitude": 28.6139,
+      "longitude": 77.2167
+    },
+    "point2": {
+      "latitude": 28.7041,
+      "longitude": 77.1025
+    }
   }'
 ```
 
@@ -1393,12 +1482,12 @@ curl -X POST "$BASE_URL/addresses/retrieve" \
 # 5. Calculate fare
 curl -X POST "$BASE_URL/orders/calculate-fare" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"pickupLatitude": 28.6139, "pickupLongitude": 77.2167, "deliveryLatitude": 28.7041, "deliveryLongitude": 77.1025}'
+  -d '{"deliveryTypeId": 1, "vehicleCategoryId": 1, "weightTierId": 1, "pickup": {"latitude": 28.6139, "longitude": 77.2167}, "drop": {"latitude": 28.7041, "longitude": 77.1025}}'
 
 # 6. Create order
 curl -X POST "$BASE_URL/orders" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"pickupAddress": "Connaught Place", "pickupLatitude": 28.6139, "pickupLongitude": 77.2167, "deliveryAddress": "Karol Bagh", "deliveryLatitude": 28.7041, "deliveryLongitude": 77.1025, "packageType": "documents"}'
+  -d '{"deliveryTypeId": 1, "vehicleCategoryId": 1, "weightTierId": 1, "paymentMethodId": 1, "fareBreakdown": {"basePrice": 50.0, "distanceKm": 5.0, "distancePrice": 25.0, "totalPrice": 75.0}, "pickup": {"fullAddress": "Connaught Place", "latitude": 28.6139, "longitude": 77.2167, "city": "Delhi", "state": "Delhi", "postalCode": "110001", "contactName": "John Doe", "contactPhone": "+919876543210"}, "delivery": {"fullAddress": "Karol Bagh", "latitude": 28.7041, "longitude": 77.1025, "city": "Delhi", "state": "Delhi", "postalCode": "110005", "contactName": "Jane Smith", "contactPhone": "+919876543211"}}'
 
 # 7. Track order
 curl -X GET "$BASE_URL/orders/1" \
@@ -1461,10 +1550,13 @@ curl -X GET "$BASE_URL/drivers/me/earnings" \
 
 ## ⚙️ Implementation & validation notes
 
-- `GET /api/v1/orders/available` requires `latitude` and `longitude` in querystring; supports `radius` (1–50 km) and `limit`.
-- `GET /api/v1/drivers/me/earnings` accepts `?period=today|week|month|year` (default `today`).
+- `GET /api/v1/drivers/me/earnings` returns earnings data directly (no wrapper object).
 - `GET /api/v1/orders` query params: `page` (≥1), `limit` (≤100), `status` (`active|completed|cancelled`).
 - `POST /api/v1/orders` and `/calculate-fare` validate `fareBreakdown`, `pickup` and `delivery` objects strictly (see request schemas).
+- `POST /api/v1/orders` uses `OrderAddressZ` schema for pickup/delivery with `fullAddress` field.
+- `PUT /api/v1/drivers/me/location` expects `CoordinatesZ` directly (latitude/longitude).
+- `PUT /api/v1/drivers/me/availability` accepts optional `location` as `CoordinatesZ`.
+- Address schemas (BaseAddressZ, SavedAddressZ, OrderAddressZ) now properly extend CoordinatesZ for consistent coordinate validation, eliminating field duplication.
 - Role enforcement: `client` = create/list/rate orders; `courier` = driver routes + accept/status/available endpoints.
 
 ### **Authentication Errors**
@@ -1531,7 +1623,7 @@ curl -X GET "$BASE_URL/orders/99999" \
 # Insufficient balance
 curl -X POST "$BASE_URL/orders" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
-  -d '{"pickupAddress": "A", "deliveryAddress": "B", "totalFare": 1000}'
+  -d '{"deliveryTypeId": 1, "vehicleCategoryId": 1, "weightTierId": 1, "paymentMethodId": 1, "fareBreakdown": {"totalPrice": 1000}, "pickup": {"address": "A", "latitude": 0, "longitude": 0, "city": "A", "state": "A", "postalCode": "000000", "contactName": "A", "contactPhone": "+910000000000"}, "delivery": {"address": "B", "latitude": 0, "longitude": 0, "city": "B", "state": "B", "postalCode": "000001", "contactName": "B", "contactPhone": "+910000000001"}}'
 ```
 
 **Response:**

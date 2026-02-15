@@ -3,6 +3,7 @@ import logger from "../../config/logger.js";
 import db from "../../database/db.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository, { DriverSession } from "./sessions.repository.js";
+import type { Coordinates } from "../../schemas/common.zod.js";
 
 import type {
   DbCourier,
@@ -160,15 +161,12 @@ class DriversRepository {
   /**
    * Create a new driver session
    */
-  async createSession(
-    driverId: number,
-    location?: { lat: number; lng: number },
-  ) {
+  async createSession(driverId: number, location?: Coordinates) {
     return sessionsRepository.createSession({
       driver_id: driverId,
       started_at: new Date(),
-      last_location_lat: location?.lat,
-      last_location_lng: location?.lng,
+      last_location_lat: location?.latitude,
+      last_location_lng: location?.longitude,
     });
   }
 
