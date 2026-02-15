@@ -4,20 +4,47 @@ import {
   CoordinatesZ,
   OrderAddressZ,
   FareBreakdownZ,
+  BaseQueryZ,
+  VehicleZ,
+  TimestampedEntityZ,
 } from "../../schemas/common.zod.js";
 
-export const CalculateFareZ = z.object({
+// ============================================================================
+// BASE ORDER SCHEMA - Common fields across all order representations
+// ============================================================================
+
+export const BaseOrderZ = z.object({
+  orderId: z.number().int().positive(),
+  orderUuid: z.string().uuid(),
+  orderNumber: z.string(),
+  status: z.string(),
+  statusId: z.number().int().positive(),
+  deliveryTypeId: z.number().int().positive(),
+  deliveryTypeDisplay: z.string(),
+  vehicleCategoryId: z.number().int().positive(),
+  vehicleCategoryDisplay: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime().optional(),
+});
+export type BaseOrder = z.infer<typeof BaseOrderZ>;
+
+// ============================================================================
+// REQUEST SCHEMAS - API request payloads
+// ============================================================================
+
+// Calculate Fare Request
+export const CalculateFareRequestZ = z.object({
   deliveryTypeId: z.number().int().positive(),
   vehicleCategoryId: z.number().int().positive(),
   weightTierId: z.number().int().positive(),
-  // optional package type for more precise fare estimates
   packageTypeId: z.number().int().positive().nullable().optional(),
   pickup: CoordinatesZ,
   drop: CoordinatesZ,
 });
-export type CalculateFare = z.infer<typeof CalculateFareZ>;
+export type CalculateFareRequest = z.infer<typeof CalculateFareRequestZ>;
 
-export const CreateOrderZ = z.object({
+// Create Order Request
+export const CreateOrderRequestZ = z.object({
   deliveryTypeId: z.number().int().positive(),
   vehicleCategoryId: z.number().int().positive(),
   weightTierId: z.number().int().positive(),
@@ -32,222 +59,203 @@ export const CreateOrderZ = z.object({
   pickup: OrderAddressZ,
   delivery: OrderAddressZ,
 });
-export type CreateOrder = z.infer<typeof CreateOrderZ>;
+export type CreateOrderRequest = z.infer<typeof CreateOrderRequestZ>;
 
-export const RateOrderZ = z.object({
+// Cancel Order Request
+export const CancelOrderRequestZ = z.object({
+  cancellationReason: z.string().min(5).max(500),
+});
+export type CancelOrderRequest = z.infer<typeof CancelOrderRequestZ>;
+
+// Update Order Status Request
+export const UpdateOrderStatusRequestZ = z.object({
+  status: z.enum(["picked_up", "delivered"]),
+});
+export type UpdateOrderStatusRequest = z.infer<
+  typeof UpdateOrderStatusRequestZ
+>;
+
+// Rate Order Request
+export const RateOrderRequestZ = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(500).nullable().optional(),
   anonymous: z.boolean().optional(),
 });
-export type RateOrder = z.infer<typeof RateOrderZ>;
+export type RateOrderRequest = z.infer<typeof RateOrderRequestZ>;
 
-// Cancel order (request body)
-export const CancelOrderZ = z.object({
-  cancellationReason: z.string().min(5).max(500),
-});
-export type CancelOrder = z.infer<typeof CancelOrderZ>;
+// ============================================================================
+// QUERY SCHEMAS - API query parameters
+// ============================================================================
 
-// Update order status (request body)
-export const UpdateOrderStatusZ = z.object({
-  status: z.enum(["picked_up", "delivered"]),
-});
-export type UpdateOrderStatus = z.infer<typeof UpdateOrderStatusZ>;
-
-// Route params
-export const OrderParamsZ = z.object({
-  id: z.string().regex(/^[0-9]+$/),
-});
-export type OrderParams = z.infer<typeof OrderParamsZ>;
-
-// Query strings
-export const ListOrdersQueryZ = z.object({
-  page: z.string().optional(),
-  limit: z.string().optional(),
+// List Orders Query
+export const ListOrdersQueryZ = BaseQueryZ.extend({
   status: z.enum(["active", "completed", "cancelled"]).optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
 });
 export type ListOrdersQuery = z.infer<typeof ListOrdersQueryZ>;
 
-export const GetAvailableOrdersQueryZ = z.object({
-  latitude: z.string(),
-  longitude: z.string(),
-  radius: z.string().optional(),
-  limit: z.string().optional(),
+// Available Orders Query (for drivers)
+export const AvailableOrdersQueryZ = z.object({
+  latitude: z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  radius: z.coerce.number().positive().optional().default(10),
+  limit: z.coerce.number().int().positive().optional().default(20),
 });
-export type GetAvailableOrdersQuery = z.infer<typeof GetAvailableOrdersQueryZ>;
+export type AvailableOrdersQuery = z.infer<typeof AvailableOrdersQueryZ>;
 
-// -------------------------
-// Response Schemas (single source-of-truth for DTOs)
-// -------------------------
+// ============================================================================
+// RESPONSE SCHEMAS - API responses
+// ============================================================================
 
-export const AvailableOrderItemZ = z.object({
-  orderId: z.number(),
-  orderUuid: z.string().optional(),
-  orderNumber: z.string().optional(),
-  deliveryType: z.string().optional(),
-  deliveryTypeDisplay: z.string().optional(),
-  vehicleCategory: z.string().optional(),
-  vehicleCategoryDisplay: z.string().optional(),
-  packageType: z.string().nullable().optional(),
-  weightTier: z
-    .object({
-      id: z.number().optional(),
-      name: z.string().optional(),
-      minWeightKg: z.number().optional(),
-      maxWeightKg: z.number().optional(),
-    })
-    .nullable()
-    .optional(),
-  pricing: z
-    .object({
-      basePrice: z.number().nonnegative().optional(),
-      distanceKm: z.number().nonnegative().optional(),
-      distancePrice: z.number().nonnegative().optional(),
-      weightSurcharge: z.number().nonnegative().optional(),
-      platformFee: z.number().nonnegative().optional(),
-      specialHandlingFee: z.number().nonnegative().optional(),
-      gstAmount: z.number().nonnegative().optional(),
-      subtotalBeforeTax: z.number().nonnegative().optional(),
-      totalPrice: z.number().nonnegative().optional(),
-      currency: z.string().optional(),
-    })
-    .optional(),
-  packageDescription: z.string().nullable().optional(),
-  specialInstructions: z.string().nullable().optional(),
-  estimatedDistanceKm: z.number().nullable().optional(),
-  createdAt: z.string().optional(),
+// Calculate Fare Response
+export const CalculateFareResponseZ = FareBreakdownZ.extend({
+  estimatedDurationMins: z.number().nonnegative().optional(),
+});
+export type CalculateFareResponse = z.infer<typeof CalculateFareResponseZ>;
+
+// Create Order Response
+export const CreateOrderResponseZ = z.object({
+  orderId: z.number().int().positive(),
+  orderUuid: z.string().uuid(),
+  orderNumber: z.string(),
+  status: z.string(),
+  fareBreakdown: FareBreakdownZ,
+  estimatedDistanceKm: z.number().nonnegative(),
+  estimatedDurationMins: z.number().nonnegative().optional(),
+  createdAt: z.string().datetime(),
+});
+export type CreateOrderResponse = z.infer<typeof CreateOrderResponseZ>;
+
+// Order List Item (minimal info for lists)
+export const OrderListItemZ = z.object({
+  orderId: z.number().int().positive(),
+  orderUuid: z.string().uuid(),
+  orderNumber: z.string(),
+  status: z.string(),
+  createdAt: z.string().datetime(),
   pickup: z.object({
-    address: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-    state: z.string().nullable().optional(),
-    latitude: z.number().nullable().optional(),
-    longitude: z.number().nullable().optional(),
+    address: z.string(),
+    city: z.string().optional(),
   }),
   delivery: z.object({
-    address: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-    state: z.string().nullable().optional(),
-    latitude: z.number().nullable().optional(),
-    longitude: z.number().nullable().optional(),
+    address: z.string(),
+    city: z.string().optional(),
   }),
-  distanceFromCourierKm: z.number().optional(),
+  totalPrice: z.number().nonnegative(),
+  estimatedDeliveryTime: z.string().datetime().nullable().optional(),
 });
-export type AvailableOrderItem = z.infer<typeof AvailableOrderItemZ>;
+export type OrderListItem = z.infer<typeof OrderListItemZ>;
 
-export const CreatedOrderZ = z.object({
-  orderId: z.number().optional(),
-  orderUuid: z.string().optional(),
-  orderNumber: z.string().optional(),
-  pricing: FareBreakdownZ.optional(),
-  totalFare: z.number().optional(),
-  estimatedDistance: z.number().optional(),
-  estimatedDuration: z.number().optional(),
-  status: z.string().optional(),
-  createdAt: z.string().optional(),
-});
-export type CreatedOrder = z.infer<typeof CreatedOrderZ>;
-
-export const OrderDetailsZ = z.object({
-  orderId: z.number(),
-  orderUuid: z.string().optional(),
-  orderNumber: z.string().optional(),
-  status: z.string().optional(),
-  statusId: z.number().optional(),
-  deliveryTypeId: z.number().optional(),
-  deliveryTypeDisplay: z.string().optional(),
-  vehicleCategoryId: z.number().optional(),
-  vehicleCategoryDisplay: z.string().optional(),
+// Order Details (full info for get by ID)
+export const OrderDetailsZ = BaseOrderZ.extend({
   packageDescription: z.string().nullable().optional(),
   packageTypeId: z.number().nullable().optional(),
   weightTierId: z.number().nullable().optional(),
   weightTierDisplay: z.string().nullable().optional(),
-  estimatedDistanceKm: z.number().nullable().optional(),
-  actualDistanceKm: z.number().nullable().optional(),
-  actualDurationMins: z.number().nullable().optional(),
-  createdAt: z.string().optional(),
-  statusTimestamp: z.any().optional(),
-  acceptedAt: z.any().nullable().optional(),
-  pickedUpAt: z.any().nullable().optional(),
-  deliveredAt: z.any().nullable().optional(),
-  cancelledAt: z.any().nullable().optional(),
-  pickup: z.object({
-    locationId: z.number().nullable().optional(),
-    address: z.string().nullable().optional(),
-    building: z.string().nullable().optional(),
-    floor: z.string().nullable().optional(),
-    flat: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-    state: z.string().nullable().optional(),
-    postalCode: z.string().nullable().optional(),
-    latitude: z.number().nullable().optional(),
-    longitude: z.number().nullable().optional(),
-    contactName: z.string().nullable().optional(),
-    contactPhone: z.string().nullable().optional(),
-  }),
-  delivery: z.object({
-    locationId: z.number().nullable().optional(),
-    address: z.string().nullable().optional(),
-    building: z.string().nullable().optional(),
-    floor: z.string().nullable().optional(),
-    flat: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-    state: z.string().nullable().optional(),
-    postalCode: z.string().nullable().optional(),
-    latitude: z.number().nullable().optional(),
-    longitude: z.number().nullable().optional(),
-    contactName: z.string().nullable().optional(),
-    contactPhone: z.string().nullable().optional(),
-  }),
-  payment: z
-    .object({
-      paymentMethod: z.string().nullable().optional(),
-      fareBreakdown: FareBreakdownZ,
-    })
-    .optional(),
-  basePrice: z.number().optional(),
-  distancePrice: z.number().optional(),
-  weightSurcharge: z.number().optional(),
-  platformFee: z.number().optional(),
-  specialHandlingFee: z.number().optional(),
-  gstAmount: z.number().optional(),
-  subtotalBeforeTax: z.number().optional(),
-  currency: z.string().optional(),
-  totalPrice: z.number().optional(),
+  specialInstructions: z.string().nullable().optional(),
+
+  pickup: OrderAddressZ,
+  delivery: OrderAddressZ,
+
+  fareBreakdown: FareBreakdownZ,
+
   client: z
     .object({
-      name: z.string().nullable().optional(),
-      phone: z.string().nullable().optional(),
+      userId: z.number(),
+      name: z.string(),
+      phone: z.string(),
+      profilePictureUrl: z.string().url().nullable().optional(),
     })
     .optional(),
-  specialInstructions: z.string().nullable().optional(),
-  cancellationReason: z.string().nullable().optional(),
+
   courier: z
     .object({
-      id: z.number().optional(),
-      name: z.string().optional(),
-      phone: z.string().optional(),
-      photo: z.string().nullable().optional(),
-      assignmentStatus: z.string().nullable().optional(),
-      assignedAt: z.any().nullable().optional(),
-      acceptedAt: z.any().nullable().optional(),
+      userId: z.number(),
+      name: z.string(),
+      phone: z.string(),
+      profilePictureUrl: z.string().url().nullable().optional(),
+      vehicle: VehicleZ.nullable().optional(),
+      rating: z
+        .object({
+          averageRating: z.number().min(0).max(5),
+          totalRatings: z.number().int().nonnegative(),
+        })
+        .optional(),
     })
     .nullable()
     .optional(),
+
+  timeline: z.object({
+    confirmedAt: z.string().datetime(),
+    assignedAt: z.string().datetime().nullable().optional(),
+    pickedUpAt: z.string().datetime().nullable().optional(),
+    deliveredAt: z.string().datetime().nullable().optional(),
+    cancelledAt: z.string().datetime().nullable().optional(),
+  }),
+
+  estimatedDistanceKm: z.number().nullable().optional(),
+  actualDistanceKm: z.number().nullable().optional(),
+  actualDurationMins: z.number().nullable().optional(),
 });
 export type OrderDetails = z.infer<typeof OrderDetailsZ>;
 
-export const ListOrderItemZ = z.object({
-  orderId: z.number(),
-  orderUuid: z.string().optional(),
-  orderNumber: z.string().optional(),
-  status: z.string().optional(),
-  createdAt: z.any().optional(),
-  estimatedDeliveryTime: z.any().optional(),
-  pickup: z.object({ address: z.string().optional() }).optional(),
-  delivery: z.object({ address: z.string().optional() }).optional(),
-  totalPrice: z.number().optional(),
+// Available Order Item (for drivers)
+export const AvailableOrderItemZ = z.object({
+  orderId: z.number().int().positive(),
+  orderUuid: z.string().uuid(),
+  orderNumber: z.string(),
+  deliveryTypeDisplay: z.string(),
+  vehicleCategoryDisplay: z.string(),
+  createdAt: z.string().datetime(),
+  pickup: z.object({
+    address: z.string(),
+    city: z.string(),
+    coordinates: CoordinatesZ,
+  }),
+  delivery: z.object({
+    address: z.string(),
+    city: z.string(),
+    coordinates: CoordinatesZ,
+  }),
+  fareBreakdown: FareBreakdownZ,
+  estimatedDistanceKm: z.number().nonnegative(),
+  distanceFromDriverKm: z.number().nonnegative(),
+  packageDescription: z.string().nullable().optional(),
 });
-export type ListOrderItem = z.infer<typeof ListOrderItemZ>;
+export type AvailableOrderItem = z.infer<typeof AvailableOrderItemZ>;
+
+// ============================================================================
+// ROUTE PARAMS
+// ============================================================================
+
+export const OrderParamsZ = z.object({
+  id: z.string().regex(/^\d+$/),
+});
+export type OrderParams = z.infer<typeof OrderParamsZ>;
+
+// ============================================================================
+// LEGACY TYPE EXPORTS (for backward compatibility during migration)
+// ============================================================================
+
+// These will be removed after all files are updated
+export const CalculateFareZ = CalculateFareRequestZ;
+export type CalculateFare = CalculateFareRequest;
+
+export const CreateOrderZ = CreateOrderRequestZ;
+export type CreateOrder = CreateOrderRequest;
+
+export const CancelOrderZ = CancelOrderRequestZ;
+export type CancelOrder = CancelOrderRequest;
+
+export const UpdateOrderStatusZ = UpdateOrderStatusRequestZ;
+export type UpdateOrderStatus = UpdateOrderStatusRequest;
+
+export const RateOrderZ = RateOrderRequestZ;
+export type RateOrder = RateOrderRequest;
+
+export const GetAvailableOrdersQueryZ = AvailableOrdersQueryZ;
+export type GetAvailableOrdersQuery = AvailableOrdersQuery;
+
+export const CreatedOrderZ = CreateOrderResponseZ;
+export type CreatedOrder = CreateOrderResponse;

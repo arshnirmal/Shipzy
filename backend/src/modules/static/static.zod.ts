@@ -40,19 +40,19 @@ export const PackageTypeZ = z.object({
 });
 export type PackageType = z.infer<typeof PackageTypeZ>;
 
-export const PaymentMethodZ = z.object({
+export const StaticPaymentMethodZ = z.object({
   methodId: z.number(),
   name: z.string(),
   displayName: z.string().optional(),
   description: z.string().optional(),
   isActive: z.boolean().optional(),
 });
-export type PaymentMethod = z.infer<typeof PaymentMethodZ>;
+export type StaticPaymentMethod = z.infer<typeof StaticPaymentMethodZ>;
 
 export const CreateOrderDataZ = z.object({
   deliveryTypes: z.array(DeliveryTypeZ),
   packageTypes: z.array(PackageTypeZ),
-  paymentMethods: z.array(PaymentMethodZ),
+  paymentMethods: z.array(StaticPaymentMethodZ),
 });
 export type CreateOrderData = z.infer<typeof CreateOrderDataZ>;
 

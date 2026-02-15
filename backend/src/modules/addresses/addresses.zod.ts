@@ -1,6 +1,10 @@
 // services/backend/src/modules/addresses/addresses.zod.ts
 import { z } from "zod";
-import { CoordinatesZ } from "../../schemas/common.zod.js";
+import { CoordinatesZ, BaseAddressZ } from "../../schemas/common.zod.js";
+
+// ============================================================================
+// REQUEST SCHEMAS - API request payloads
+// ============================================================================
 
 export const ProximityZ = CoordinatesZ;
 
@@ -65,3 +69,32 @@ export const DistanceZ = z.object({
   lon2: z.number().min(-180).max(180),
 });
 export type Distance = z.infer<typeof DistanceZ>;
+
+// ============================================================================
+// RESPONSE SCHEMAS - API responses
+// ============================================================================
+
+export const AddressSuggestionZ = z.object({
+  mapboxId: z.string(),
+  name: z.string(),
+  fullAddress: z.string(),
+  placeType: z.string(),
+  coordinates: CoordinatesZ.optional(),
+});
+export type AddressSuggestion = z.infer<typeof AddressSuggestionZ>;
+
+export const PlaceDetailsZ = BaseAddressZ.extend({
+  mapboxId: z.string(),
+  placeType: z.string(),
+});
+export type PlaceDetails = z.infer<typeof PlaceDetailsZ>;
+
+export const DirectionsResponseZ = z.object({
+  distance: z.number().nonnegative(),
+  duration: z.number().nonnegative(),
+  geometry: z.object({
+    type: z.literal("LineString"),
+    coordinates: z.array(z.tuple([z.number(), z.number()])),
+  }),
+});
+export type DirectionsResponse = z.infer<typeof DirectionsResponseZ>;

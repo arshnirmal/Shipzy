@@ -70,6 +70,7 @@ class RatingsService {
         ratingId: newRating.rating_id,
         orderId: newRating.order_id,
         driverId: newRating.driver_id,
+        customerId: newRating.customer_id,
         rating: newRating.rating,
         comment: newRating.comment,
         createdAt: newRating.created_at.toISOString(),
