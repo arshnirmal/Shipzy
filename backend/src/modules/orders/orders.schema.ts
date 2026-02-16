@@ -12,26 +12,59 @@ import {
   GetAvailableOrdersQueryZ,
 } from "./orders.zod.js";
 
-const CalculateFareJson = zodToJsonSchema(
+const _CalculateFareJson = zodToJsonSchema(
   CalculateFareZ as any,
   "CalculateFare",
 );
-const CreateOrderJson = zodToJsonSchema(CreateOrderZ as any, "CreateOrder");
-const RateOrderJson = zodToJsonSchema(RateOrderZ as any, "RateOrder");
-const CancelOrderJson = zodToJsonSchema(CancelOrderZ as any, "CancelOrder");
-const UpdateOrderStatusJson = zodToJsonSchema(
+const CalculateFareJson =
+  (_CalculateFareJson.definitions &&
+    (_CalculateFareJson.definitions as any).CalculateFare) ||
+  _CalculateFareJson;
+const _CreateOrderJson = zodToJsonSchema(CreateOrderZ as any, "CreateOrder");
+const CreateOrderJson =
+  (_CreateOrderJson.definitions &&
+    (_CreateOrderJson.definitions as any).CreateOrder) ||
+  _CreateOrderJson;
+const _RateOrderJson = zodToJsonSchema(RateOrderZ as any, "RateOrder");
+const RateOrderJson =
+  (_RateOrderJson.definitions &&
+    (_RateOrderJson.definitions as any).RateOrder) ||
+  _RateOrderJson;
+const _CancelOrderJson = zodToJsonSchema(CancelOrderZ as any, "CancelOrder");
+const CancelOrderJson =
+  (_CancelOrderJson.definitions &&
+    (_CancelOrderJson.definitions as any).CancelOrder) ||
+  _CancelOrderJson;
+const _UpdateOrderStatusJson = zodToJsonSchema(
   UpdateOrderStatusZ as any,
   "UpdateOrderStatus",
 );
-const OrderParamsJson = zodToJsonSchema(OrderParamsZ as any, "OrderParams");
-const ListOrdersQueryJson = zodToJsonSchema(
+const UpdateOrderStatusJson =
+  (_UpdateOrderStatusJson.definitions &&
+    (_UpdateOrderStatusJson.definitions as any).UpdateOrderStatus) ||
+  _UpdateOrderStatusJson;
+const _OrderParamsJson = zodToJsonSchema(OrderParamsZ as any, "OrderParams");
+const OrderParamsJson =
+  (_OrderParamsJson.definitions &&
+    (_OrderParamsJson.definitions as any).OrderParams) ||
+  _OrderParamsJson;
+const _ListOrdersQueryJson = zodToJsonSchema(
   ListOrdersQueryZ as any,
   "ListOrdersQuery",
 );
-const GetAvailableOrdersQueryJson = zodToJsonSchema(
+const ListOrdersQueryJson =
+  (_ListOrdersQueryJson.definitions &&
+    (_ListOrdersQueryJson.definitions as any).ListOrdersQuery) ||
+  _ListOrdersQueryJson;
+const _GetAvailableOrdersQueryJson = zodToJsonSchema(
   GetAvailableOrdersQueryZ as any,
   "GetAvailableOrdersQuery",
 );
+const GetAvailableOrdersQueryJson =
+  (_GetAvailableOrdersQueryJson.definitions &&
+    (_GetAvailableOrdersQueryJson.definitions as any)
+      .GetAvailableOrdersQuery) ||
+  _GetAvailableOrdersQueryJson;
 
 export const calculateFareSchema: FastifySchema = {
   body: CalculateFareJson,

@@ -27,18 +27,18 @@ export type TimestampedEntity = z.infer<typeof TimestampedEntityZ>;
 // ============================================================================
 
 // Base address fields shared across all address types
-export const BaseAddressZ = z
-  .object({
-    fullAddress: z.string().min(5).max(500),
-    building: z.string().max(100).optional(),
-    floor: z.string().max(50).optional(),
-    flatNumber: z.string().max(50).optional(),
-    landmark: z.string().max(200).optional(),
-    city: z.string().min(2).max(100),
-    state: z.string().min(2).max(100),
-    postalCode: z.string().min(4).max(10),
-  })
-  .extend(CoordinatesZ.shape);
+export const BaseAddressZ = z.object({
+  fullAddress: z.string().min(5).max(500),
+  city: z.string().min(2).max(100).optional(),
+  state: z.string().min(2).max(100).optional(),
+  postalCode: z.string().min(4).max(10).optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  building: z.string().max(100).nullable().optional(),
+  floor: z.string().max(10).nullable().optional(),
+  flatNumber: z.string().max(10).nullable().optional(),
+  landmark: z.string().max(255).nullable().optional(),
+});
 export type BaseAddress = z.infer<typeof BaseAddressZ>;
 
 // For user-saved addresses
@@ -57,7 +57,13 @@ export const OrderAddressZ = BaseAddressZ.extend({
   howToReach: z.string().max(500).nullable().optional(),
   contactName: z.string().min(2).max(100),
   contactPhone: z.string().min(10).max(20),
-});
+}).transform((data) => ({
+  ...data,
+  // Ensure city, state, postalCode are optional as they're nullable in DB
+  city: data.city ?? undefined,
+  state: data.state ?? undefined,
+  postalCode: data.postalCode ?? undefined,
+}));
 export type OrderAddress = z.infer<typeof OrderAddressZ>;
 
 // ============================================================================

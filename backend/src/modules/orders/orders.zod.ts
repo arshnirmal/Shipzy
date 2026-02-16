@@ -16,13 +16,13 @@ import {
 export const BaseOrderZ = z.object({
   orderId: z.number().int().positive(),
   orderUuid: z.string().uuid(),
-  orderNumber: z.string(),
-  status: z.string(),
+  orderNumber: z.string().optional(),
+  status: z.string().optional(),
   statusId: z.number().int().positive(),
   deliveryTypeId: z.number().int().positive(),
-  deliveryTypeDisplay: z.string(),
+  deliveryTypeDisplay: z.string().optional(),
   vehicleCategoryId: z.number().int().positive(),
-  vehicleCategoryDisplay: z.string(),
+  vehicleCategoryDisplay: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),
 });
@@ -55,6 +55,8 @@ export const CreateOrderRequestZ = z.object({
   scheduledPickupTime: z.string().datetime().nullable().optional(),
   scheduledDeliveryTime: z.string().datetime().nullable().optional(),
   declaredValue: z.number().nonnegative().nullable().optional(),
+  notifyRecipientSms: z.boolean().optional().default(false),
+  couponCode: z.string().max(50).nullable().optional(),
   fareBreakdown: FareBreakdownZ,
   pickup: OrderAddressZ,
   delivery: OrderAddressZ,
@@ -155,16 +157,44 @@ export const OrderDetailsZ = BaseOrderZ.extend({
   weightTierDisplay: z.string().nullable().optional(),
   specialInstructions: z.string().nullable().optional(),
 
-  pickup: OrderAddressZ,
-  delivery: OrderAddressZ,
+  pickup: z.object({
+    locationId: z.number().optional(),
+    address: z.string(),
+    building: z.string().nullable().optional(),
+    floor: z.string().nullable().optional(),
+    flat: z.string().nullable().optional(),
+    landmark: z.string().nullable().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
+    latitude: z.number(),
+    longitude: z.number(),
+    contactName: z.string().optional(),
+    contactPhone: z.string().optional(),
+  }),
+  delivery: z.object({
+    locationId: z.number().optional(),
+    address: z.string(),
+    building: z.string().nullable().optional(),
+    floor: z.string().nullable().optional(),
+    flat: z.string().nullable().optional(),
+    landmark: z.string().nullable().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
+    latitude: z.number(),
+    longitude: z.number(),
+    contactName: z.string().optional(),
+    contactPhone: z.string().optional(),
+  }),
 
   fareBreakdown: FareBreakdownZ,
 
   client: z
     .object({
       userId: z.number(),
-      name: z.string(),
-      phone: z.string(),
+      name: z.string().optional(),
+      phone: z.string().optional(),
       profilePictureUrl: z.string().url().nullable().optional(),
     })
     .optional(),
@@ -172,8 +202,8 @@ export const OrderDetailsZ = BaseOrderZ.extend({
   courier: z
     .object({
       userId: z.number(),
-      name: z.string(),
-      phone: z.string(),
+      name: z.string().optional(),
+      phone: z.string().optional(),
       profilePictureUrl: z.string().url().nullable().optional(),
       vehicle: VehicleZ.nullable().optional(),
       rating: z

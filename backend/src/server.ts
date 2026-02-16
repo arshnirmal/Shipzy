@@ -24,7 +24,10 @@ const start = async () => {
     logger.info(`Server listening on ${config.host}:${config.port}`);
     logger.info(`Environment: ${config.nodeEnv}`);
     logger.info(
-      `API Documentation: http://${config.host}:${config.port}/api/v1`,
+      `API Documentation (UI): http://${config.host}:${config.port}/docs`,
+    );
+    logger.info(
+      `OpenAPI JSON: http://${config.host}:${config.port}/documentation/json`,
     );
 
     // Self-ping to prevent sleep on free tiers

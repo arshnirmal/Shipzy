@@ -16,7 +16,7 @@ services:
       - ./src/database:/src/database
       - ./scripts/db-init.sh:/docker-entrypoint-initdb.d/init.sh
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - shipzy-network
     healthcheck:

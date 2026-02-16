@@ -125,7 +125,7 @@ class OrdersController {
         orderId: result.orderId,
         orderUuid: result.orderUuid,
         orderNumber: result.orderNumber,
-        totalPrice: result.pricing?.totalPrice,
+        totalPrice: result.fareBreakdown.totalPrice,
         responseTimeMs: responseTime,
         response: result,
       });
@@ -194,14 +194,20 @@ class OrdersController {
   ) {
     try {
       const { userId } = request.user!;
-      const { page = "1", limit = "20", status } = request.query;
-      const pageNum = Number.parseFloat(page) || 1;
-      const limitNum = Number.parseFloat(limit) || 20;
+      const {
+        page = 1,
+        limit = 20,
+        status,
+        dateFrom,
+        dateTo,
+        sortBy,
+        sortOrder,
+      } = request.query;
 
       const result = await ordersService.listOrders(
         userId,
-        pageNum,
-        limitNum,
+        page,
+        limit,
         status,
       );
 
@@ -240,10 +246,10 @@ class OrdersController {
       }
 
       const orders = await ordersService.getAvailableOrders(
-        Number.parseFloat(latitude),
-        Number.parseFloat(longitude),
-        Number.parseFloat(radius),
-        Number.parseFloat(limit),
+        latitude,
+        longitude,
+        Number(radius),
+        Number(limit),
       );
 
       return successResponse(
@@ -389,6 +395,7 @@ class OrdersController {
         orderId: Number.parseInt(id),
         customerId: userId,
         rating: parsed.rating,
+        isAnonymous: parsed.anonymous ?? false,
         comment: parsed.comment ?? undefined,
       });
 

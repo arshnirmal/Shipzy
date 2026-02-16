@@ -75,6 +75,33 @@ export const buildApp = async (
   // Rate limiting
   await app.register(rateLimit, rateLimitConfig);
 
+  // OpenAPI / Swagger (optional - register only if plugin is installed)
+  try {
+    const swagger = await import("@fastify/swagger");
+    const swaggerUi = await import("@fastify/swagger-ui");
+
+    await app.register(swagger.default, {
+      openapi: {
+        info: {
+          title: "Shipzy API",
+          version: "1.0.0",
+          description: "Shipzy hyperlocal delivery API",
+        },
+        servers: [{ url: `http://${config.host}:${config.port}/api/v1` }],
+      },
+      hideUntagged: false,
+    });
+
+    await app.register(swaggerUi.default, {
+      routePrefix: "/docs",
+      uiConfig: { docExpansion: "list", deepLinking: false },
+      staticCSP: true,
+    });
+  } catch (err) {
+    // swagger packages not installed — continue without interactive docs
+    app.log && app.log.debug && app.log.debug("Swagger plugins not available");
+  }
+
   // ============ DECORATORS ============
 
   // Add logger decorator

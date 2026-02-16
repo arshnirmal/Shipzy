@@ -95,7 +95,7 @@ type OrderRow = {
 // Use exported type for created-order DTO
 type CreatedOrder = import("../../types/orders.js").CreatedOrder;
 type OrderDetails = import("./orders.zod.js").OrderDetails;
-type ListOrderItem = import("./orders.zod.js").ListOrderItem;
+type OrderListItem = import("./orders.zod.js").OrderListItem;
 
 class OrdersService {
   /**
@@ -379,6 +379,8 @@ class OrdersService {
         weightTierId: orderData.weightTierId,
         packageTypeId: orderData.packageTypeId || null,
         paymentMethodId: orderData.paymentMethodId,
+        notifyRecipientSms: orderData.notifyRecipientSms || false,
+        couponCode: orderData.couponCode || null,
         pickup: {
           addressId: orderData.pickup.addressId || null,
           address: orderData.pickup.fullAddress,
@@ -543,7 +545,7 @@ class OrdersService {
     limit: number = 20,
     status?: string,
   ): Promise<{
-    orders: ListOrderItem[];
+    orders: import("./orders.zod.js").OrderListItem[];
     pagination: {
       page: number;
       limit: number;
@@ -614,7 +616,6 @@ class OrdersService {
             actualDurationMins,
             totalPrice: Number.parseFloat(order.total_price),
             createdAt: order.created_at,
-            statusTimestamp,
             pickup: {
               address: order.pickup_address,
             },
@@ -666,22 +667,36 @@ class OrdersService {
         orderId: order.order_id,
         orderUuid: order.order_uuid,
         orderNumber: order.order_number,
-        deliveryType: order.delivery_type,
         deliveryTypeDisplay: order.delivery_type_display,
-        vehicleCategory: order.vehicle_category,
         vehicleCategoryDisplay: order.vehicle_category_display,
-        packageType: order.package_type,
-        weightTier: order.weight_tier_name
-          ? {
-              id: order.weight_tier_id,
-              name: order.weight_tier_name,
-              minWeightKg: Number.parseFloat(order.weight_tier_min || "0"),
-              maxWeightKg: Number.parseFloat(order.weight_tier_max || "0"),
-            }
-          : null,
-        // Enhanced pricing breakdown
-        pricing: {
+        createdAt: (order.created_at as Date).toISOString(), // Ensure date to string
+        pickup: {
+          address: order.pickup_address,
+          landmark: order.pickup_landmark,
+          city: order.pickup_city,
+          coordinates: {
+            latitude: Number.parseFloat(order.pickup_latitude),
+            longitude: Number.parseFloat(order.pickup_longitude),
+          },
+        },
+        delivery: {
+          address: order.delivery_address,
+          landmark: order.delivery_landmark,
+          city: order.delivery_city,
+          coordinates: {
+            latitude: order.delivery_latitude
+              ? Number.parseFloat(order.delivery_latitude)
+              : 0,
+            longitude: order.delivery_longitude
+              ? Number.parseFloat(order.delivery_longitude)
+              : 0,
+          },
+        },
+        distanceFromDriverKm: Number.parseFloat(order.distance_from_courier_km),
+        estimatedDistanceKm: Number.parseFloat(order.estimated_distance_km),
+        fareBreakdown: {
           basePrice: Number.parseFloat(order.base_price || "0"),
+          distanceKm: Number.parseFloat(order.estimated_distance_km || "0"),
           distancePrice: Number.parseFloat(order.distance_price || "0"),
           weightSurcharge: Number.parseFloat(order.weight_surcharge || "0"),
           platformFee: Number.parseFloat(order.platform_fee || "0"),
@@ -689,40 +704,11 @@ class OrdersService {
             order.special_handling_fee || "0",
           ),
           gstAmount: Number.parseFloat(order.gst_amount || "0"),
+          totalPrice: Number.parseFloat(order.total_price || "0"),
           subtotalBeforeTax: Number.parseFloat(
             order.subtotal_before_tax || "0",
           ),
-          totalPrice: Number.parseFloat(order.total_price),
         },
-        packageDescription: order.package_description,
-        specialInstructions: order.special_instructions,
-        estimatedDistanceKm: order.estimated_distance_km
-          ? Number.parseFloat(order.estimated_distance_km)
-          : null,
-        createdAt: order.created_at,
-        pickup: {
-          address: order.pickup_address,
-          landmark: order.pickup_landmark,
-          city: order.pickup_city,
-          state: order.pickup_state,
-          latitude: Number.parseFloat(order.pickup_latitude),
-          longitude: Number.parseFloat(order.pickup_longitude),
-        },
-        delivery: {
-          address: order.delivery_address,
-          landmark: order.delivery_landmark,
-          city: order.delivery_city,
-          state: order.delivery_state,
-          latitude: order.delivery_latitude
-            ? Number.parseFloat(order.delivery_latitude)
-            : null,
-          longitude: order.delivery_longitude
-            ? Number.parseFloat(order.delivery_longitude)
-            : null,
-        },
-        distanceFromCourierKm: Number.parseFloat(
-          order.distance_from_courier_km,
-        ),
       }));
     } catch (error) {
       logger.error({
@@ -926,14 +912,14 @@ class OrdersService {
       orderUuid: order.order_uuid,
       orderNumber: order.order_number,
 
-      // Status fields (aligned with list)
+      // Status fields
       status: order.status_name,
-      statusId: order.status_id,
+      statusId: order.status_id!,
 
-      // Delivery configuration (aligned with list)
-      deliveryTypeId: order.delivery_type_id,
+      // Delivery configuration
+      deliveryTypeId: order.delivery_type_id!,
       deliveryTypeDisplay: order.delivery_type_display,
-      vehicleCategoryId: order.vehicle_category_id,
+      vehicleCategoryId: order.vehicle_category_id!,
       vehicleCategoryDisplay: order.vehicle_category_display,
 
       // Package details
@@ -941,8 +927,9 @@ class OrdersService {
       packageTypeId: order.package_type_id || null,
       weightTierId: order.weight_tier_id,
       weightTierDisplay,
+      specialInstructions: order.special_instructions,
 
-      // Distance and duration (aligned with list)
+      // Distance and duration
       estimatedDistanceKm: order.estimated_distance_km
         ? Number(order.estimated_distance_km)
         : null,
@@ -951,120 +938,87 @@ class OrdersService {
         : null,
       actualDurationMins,
 
-      // Timestamps (flattened for easy access) - normalize to ISO strings
+      // Timestamps
       createdAt: order.created_at
         ? (order.created_at as Date).toISOString()
-        : undefined,
-      statusTimestamp:
-        statusTimestamp instanceof Date
-          ? statusTimestamp.toISOString()
-          : statusTimestamp,
-      acceptedAt: order.accepted_at
-        ? (order.accepted_at as Date).toISOString()
-        : undefined,
-      pickedUpAt: order.picked_up_at
-        ? (order.picked_up_at as Date).toISOString()
-        : undefined,
-      deliveredAt: order.delivered_at
-        ? (order.delivered_at as Date).toISOString()
-        : undefined,
-      cancelledAt: order.cancelled_at
-        ? (order.cancelled_at as Date).toISOString()
-        : undefined,
+        : new Date().toISOString(),
 
-      // Pickup location (enhanced with all details)
+      timeline: {
+        confirmedAt: order.created_at
+          ? (order.created_at as Date).toISOString()
+          : new Date().toISOString(),
+        assignedAt: order.accepted_at
+          ? (order.accepted_at as Date).toISOString()
+          : undefined,
+        pickedUpAt: order.picked_up_at
+          ? (order.picked_up_at as Date).toISOString()
+          : undefined,
+        deliveredAt: order.delivered_at
+          ? (order.delivered_at as Date).toISOString()
+          : undefined,
+        cancelledAt: order.cancelled_at
+          ? (order.cancelled_at as Date).toISOString()
+          : undefined,
+      },
+
+      // Pickup location
       pickup: {
         locationId: order.pickup_location_id,
-        address: order.pickup_address,
+        address: order.pickup_address || "",
         building: order.pickup_building,
         floor: order.pickup_floor,
         flat: order.pickup_flat,
         landmark: order.pickup_landmark,
-        city: order.pickup_city,
-        state: order.pickup_state,
-        postalCode: order.pickup_postal_code,
+        city: order.pickup_city ?? undefined,
+        state: order.pickup_state ?? undefined,
+        postalCode: order.pickup_postal_code ?? undefined,
         latitude: Number(order.pickup_latitude),
         longitude: Number(order.pickup_longitude),
-        contactName: order.pickup_contact_name,
-        contactPhone: order.pickup_contact_phone,
+        contactName: order.pickup_contact_name ?? undefined,
+        contactPhone: order.pickup_contact_phone ?? undefined,
       },
 
-      // Delivery location (enhanced with all details)
+      // Delivery location
       delivery: {
         locationId: order.delivery_location_id,
-        address: order.delivery_address,
+        address: order.delivery_address || "",
         building: order.delivery_building,
         floor: order.delivery_floor,
         flat: order.delivery_flat,
         landmark: order.delivery_landmark,
-        city: order.delivery_city,
-        state: order.delivery_state,
-        postalCode: order.delivery_postal_code,
+        city: order.delivery_city ?? undefined,
+        state: order.delivery_state ?? undefined,
+        postalCode: order.delivery_postal_code ?? undefined,
         latitude: Number(order.delivery_latitude),
         longitude: Number(order.delivery_longitude),
-        contactName: order.delivery_contact_name,
-        contactPhone: order.delivery_contact_phone,
+        contactName: order.delivery_contact_name ?? undefined,
+        contactPhone: order.delivery_contact_phone ?? undefined,
       },
 
-      // Payment information (new section)
-      payment: {
-        paymentMethod: order.payment_method,
-        fareBreakdown: {
-          basePrice: Number(order.base_price),
-          distanceKm: order.estimated_distance_km
-            ? Number(order.estimated_distance_km)
-            : 0,
-          distancePrice: Number(order.distance_price),
-          weightSurcharge: Number(order.weight_surcharge),
-          platformFee: Number(order.platform_fee || 0),
-          specialHandlingFee: Number(order.special_handling_fee || 0),
-          gstAmount: Number(order.gst_amount || 0),
-          subtotalBeforeTax: Number(
-            order.subtotal_before_tax || order.total_price,
-          ),
-          totalPrice: Number(order.total_price),
-        },
+      // Payment & Pricing
+      fareBreakdown: {
+        basePrice: Number(order.base_price),
+        distanceKm: order.estimated_distance_km
+          ? Number(order.estimated_distance_km)
+          : 0,
+        distancePrice: Number(order.distance_price),
+        weightSurcharge: Number(order.weight_surcharge),
+        platformFee: Number(order.platform_fee || 0),
+        specialHandlingFee: Number(order.special_handling_fee || 0),
+        gstAmount: Number(order.gst_amount || 0),
+        subtotalBeforeTax: Number(
+          order.subtotal_before_tax || order.total_price,
+        ),
+        totalPrice: Number(order.total_price),
       },
 
-      // Enhanced pricing breakdown (direct fields for frontend Order model)
-      basePrice: Number(order.base_price ?? 0),
-      distancePrice: Number(order.distance_price ?? 0),
-      weightSurcharge: Number(order.weight_surcharge ?? 0),
-      platformFee: Number(order.platform_fee ?? 0),
-      specialHandlingFee: Number(order.special_handling_fee ?? 0),
-      gstAmount: Number(order.gst_amount ?? 0),
-      subtotalBeforeTax: Number(
-        order.subtotal_before_tax ?? order.total_price ?? 0,
-      ),
-      currency: "INR",
-
-      // Total price (for backward compatibility and quick access)
-      totalPrice: Number(order.total_price ?? 0),
-
-      // Client details (additional info not in list view)
-      client: {
-        name: order.client_name ?? undefined,
-        phone: order.client_phone ?? undefined,
-      },
-
-      // Additional details
-      specialInstructions: order.special_instructions,
-      cancellationReason: order.cancellation_reason,
-
-      // Courier details (enhanced with more info)
+      // Courier details
       courier: order.courier_id
         ? {
-            id: order.courier_id,
-            name: order.courier_name ?? undefined,
-            phone: order.courier_phone ?? undefined,
-            photo: order.courier_photo ?? undefined,
-            assignmentStatus: order.assignment_status ?? undefined,
-            assignedAt: order.assigned_at
-              ? (order.assigned_at as Date).toISOString()
-              : undefined,
-            acceptedAt: order.courier_accepted_at
-              ? (order.courier_accepted_at as Date).toISOString()
-              : undefined,
+            userId: order.courier_id,
+            name: order.courier_name || undefined,
+            phone: order.courier_phone || undefined,
+            profilePictureUrl: order.courier_photo || undefined,
           }
         : null,
     };

@@ -208,6 +208,7 @@ CREATE TABLE logistics.locations (
     postal_code VARCHAR(20),
     country VARCHAR(100) DEFAULT 'India',
     landmark VARCHAR(255),
+    how_to_reach TEXT, -- Instructions for the courier to reach the location
     contact_name VARCHAR(100),
     contact_phone VARCHAR(20),
     created_at TIMESTAMPTZ DEFAULT NOW(),

@@ -129,11 +129,11 @@ class DriversService {
               ? {
                   latitude: Number(driver.current_latitude),
                   longitude: Number(driver.current_longitude),
-                  updatedAt: (
-                    driver.last_location_update ?? new Date()
-                  ).toISOString(),
                 }
               : null,
+          lastLocationUpdate: driver.last_location_update
+            ? new Date(driver.last_location_update).toISOString()
+            : null,
         },
         vehicle: driver.vehicle_id
           ? {
@@ -219,7 +219,11 @@ class DriversService {
     updatedAt: Date;
   }> {
     try {
-      const { isAvailable, isOnline = false, location } = availabilityData;
+      const {
+        isAvailable,
+        isOnline = false,
+        currentLocation,
+      } = availabilityData;
 
       // Get current status before update
       const currentProfile = await driversRepository.findCourierById(userId);
@@ -238,11 +242,13 @@ class DriversService {
       );
 
       // Update location if provided (this updates lastActiveLocation)
-      if (location) {
+      if (currentLocation) {
+        // Explicitly cast to prevent potential global Location type collision and use correct args
+        const loc = currentLocation as { latitude: number; longitude: number };
         await driversRepository.updateLocation(
           userId,
-          location.latitude,
-          location.longitude,
+          loc.latitude,
+          loc.longitude,
         );
       }
 
@@ -253,23 +259,22 @@ class DriversService {
         isAvailable &&
         (!currentIsOnline || !currentIsAvailable)
       ) {
-        await driversRepository.createSession(
-          userId,
-          location
-            ? { latitude: location.latitude, longitude: location.longitude }
-            : undefined,
-        );
+        const loc = currentLocation as
+          | { latitude: number; longitude: number }
+          | undefined;
+        await driversRepository.createSession(userId, loc);
       }
       // End session when driver goes offline OR becomes unavailable while online
       else if (
         (!isOnline || (currentIsOnline && !isAvailable)) &&
         (currentIsOnline || currentIsAvailable)
       ) {
+        const loc = currentLocation as
+          | { latitude: number; longitude: number }
+          | undefined;
         await driversRepository.endActiveSession(
           userId,
-          location
-            ? { lat: location.latitude, lng: location.longitude }
-            : undefined,
+          loc ? { lat: loc.latitude, lng: loc.longitude } : undefined,
         );
       }
 
