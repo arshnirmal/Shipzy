@@ -482,7 +482,32 @@ class OrdersService {
         response: result.order,
       });
 
-      return result.order;
+      // Normalize DB response -> API DTO (map `pricing` -> `fareBreakdown`)
+      const createdOrder = {
+        orderId: result.order.orderId,
+        orderUuid: result.order.orderUuid,
+        orderNumber: result.order.orderNumber,
+        status: result.order.status || "pending",
+        fareBreakdown: result.order.pricing
+          ? {
+              basePrice: result.order.pricing.basePrice,
+              distanceKm: result.order.pricing.distanceKm,
+              distancePrice: result.order.pricing.distancePrice,
+              weightSurcharge: result.order.pricing.weightSurcharge,
+              platformFee: result.order.pricing.platformFee,
+              specialHandlingFee: result.order.pricing.specialHandlingFee,
+              subtotalBeforeTax: result.order.pricing.subtotalBeforeTax,
+              gstAmount: result.order.pricing.gstAmount,
+              totalPrice: result.order.pricing.totalPrice,
+              currency: result.order.pricing.currency,
+            }
+          : undefined,
+        estimatedDistanceKm: result.order.estimatedDistanceKm ?? null,
+        estimatedDurationMins: result.order.estimatedDurationMins ?? null,
+        createdAt: result.order.createdAt,
+      };
+
+      return createdOrder;
     } catch (error) {
       logger.error({
         msg: "[CREATE-ORDER-SERVICE] Error creating order",

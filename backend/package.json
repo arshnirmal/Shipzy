@@ -29,6 +29,7 @@
     "format": "prettier --write \"src/**/*.{ts,js}\"",
     "format:test": "prettier --write \"tests/**/*.{ts,js}\"",
     "db:deploy": "tsx scripts/db-deploy.ts",
+    "seed:api": "tsx scripts/seed-api.ts",
     "db:seed": "psql -U shipzy_user -d shipzy_dev -f src/database/seeds/dev-data.sql"
   },
   "keywords": [

@@ -289,25 +289,47 @@ async function seedOrders(count = 3) {
       state.staticData.packageTypes[
         Math.floor(Math.random() * state.staticData.packageTypes.length)
       ];
+
+    // Choose a supported vehicle for the selected delivery type
+    if (!dt.supportedVehicles || dt.supportedVehicles.length === 0) {
+      console.warn(
+        "No supported vehicles for delivery type, skipping this order",
+      );
+      await delay(100);
+      continue;
+    }
+
     const vc =
       dt.supportedVehicles[
         Math.floor(Math.random() * dt.supportedVehicles.length)
       ];
 
-    // Choose a weight tier compatible with the selected vehicle's max weight
-    const compatibleWeightTiers = state.staticData.weightTiers.filter(
-      (t) =>
-        typeof t.maxWeightKg === "number" &&
-        t.maxWeightKg <= (vc.maxWeightKg ?? Infinity),
-    );
+    // Prefer vehicle-specific weight tiers (from supportedVehicles) — fall back to global weight tiers filtered by maxWeight
+    let wt: any;
+    if (vc.weightTiers && vc.weightTiers.length > 0) {
+      const wtFromVc =
+        vc.weightTiers[Math.floor(Math.random() * vc.weightTiers.length)];
+      wt = {
+        tierId: wtFromVc.tierId,
+        name: wtFromVc.name,
+        minWeightKg: wtFromVc.minWeightKg,
+        maxWeightKg: wtFromVc.maxWeightKg,
+      };
+    } else {
+      const compatibleWeightTiers = state.staticData.weightTiers.filter(
+        (t) =>
+          typeof t.maxWeightKg === "number" &&
+          t.maxWeightKg <= (vc.maxWeightKg ?? Infinity),
+      );
+      wt = compatibleWeightTiers.length
+        ? compatibleWeightTiers[
+            Math.floor(Math.random() * compatibleWeightTiers.length)
+          ]
+        : state.staticData.weightTiers[
+            Math.floor(Math.random() * state.staticData.weightTiers.length)
+          ];
+    }
 
-    const wt = compatibleWeightTiers.length
-      ? compatibleWeightTiers[
-          Math.floor(Math.random() * compatibleWeightTiers.length)
-        ]
-      : state.staticData.weightTiers[
-          Math.floor(Math.random() * state.staticData.weightTiers.length)
-        ];
     const pm = state.staticData.paymentMethods[0]; // Cash
 
     const farePayload = {
@@ -333,6 +355,12 @@ async function seedOrders(count = 3) {
 
       const fareBreakdown = fareRes.data.data;
 
+      // Prepare full addresses (include both `fullAddress` and `address` for compatibility)
+      const pickupFullAddress =
+        faker.location.streetAddress({ useFullAddress: true }) + ", Mumbai";
+      const deliveryFullAddress =
+        faker.location.streetAddress({ useFullAddress: true }) + ", Mumbai";
+
       const orderData = {
         deliveryTypeId: dt.deliveryTypeId,
         vehicleCategoryId: vc.categoryId,
@@ -341,21 +369,21 @@ async function seedOrders(count = 3) {
         paymentMethodId: pm.methodId,
 
         pickup: {
-          address:
-            faker.location.streetAddress({ useFullAddress: true }) + ", Mumbai",
+          fullAddress: pickupFullAddress,
+          address: pickupFullAddress,
           city: "Mumbai",
           state: "Maharashtra",
           postalCode: "400001",
           latitude: pickup.latitude,
           longitude: pickup.longitude,
-          contactName: user.fullName,
-          contactPhone: user.phoneNumber,
-          addressId: user.addressId,
+          contactName: user.fullName || "Unknown",
+          contactPhone: user.phoneNumber || "+91" + faker.string.numeric(10),
+          addressId: user.addressId || null,
         },
 
         delivery: {
-          address:
-            faker.location.streetAddress({ useFullAddress: true }) + ", Mumbai",
+          fullAddress: deliveryFullAddress,
+          address: deliveryFullAddress,
           city: "Mumbai",
           state: "Maharashtra",
           postalCode: "400058",
@@ -363,6 +391,7 @@ async function seedOrders(count = 3) {
           longitude: delivery.longitude,
           contactName: faker.person.fullName(),
           contactPhone: "+91" + faker.string.numeric(10),
+          addressId: null,
         },
 
         fareBreakdown,
