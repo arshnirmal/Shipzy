@@ -6,7 +6,6 @@ import {
   FareBreakdownZ,
   BaseQueryZ,
   VehicleZ,
-  TimestampedEntityZ,
 } from "../../schemas/common.zod.js";
 
 // ============================================================================

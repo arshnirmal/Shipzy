@@ -1,9 +1,15 @@
 // services/backend/src/modules/drivers/drivers.repository.ts
+import { eq, and, isNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
+import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository, { DriverSession } from "./sessions.repository.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
+import { userProfiles } from "../../database/schema/users.js";
+import { courierStatus } from "../../database/schema/logistics.js";
+import { userRoles } from "../../database/schema/public.js";
 
 import type {
   DbCourier,
@@ -41,7 +47,7 @@ class DriversRepository {
   }
 
   /**
-   * Update courier profile
+   * Update courier profile (migrated to Drizzle)
    */
   async updateProfile(
     userId: number,
@@ -50,11 +56,19 @@ class DriversRepository {
     try {
       const { fullName, email, profilePictureUrl } = updateData;
 
-      const result = await db.query(driversQueries.UPDATE_COURIER_PROFILE, [
+      await drizzleDb
+        .update(userProfiles)
+        .set({
+          fullName: fullName || undefined,
+          email: email || undefined,
+          profilePictureUrl: profilePictureUrl || undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, userId));
+
+      // Fetch updated courier profile (complex query - keep as raw SQL)
+      const result = await db.query(driversQueries.FIND_COURIER_BY_USER_ID, [
         userId,
-        fullName || null,
-        email || null,
-        profilePictureUrl || null,
       ]);
 
       return result.rows[0];
@@ -68,7 +82,7 @@ class DriversRepository {
   }
 
   /**
-   * Update courier availability
+   * Update courier availability (migrated to Drizzle)
    */
   async updateAvailability(
     courierId: number,
@@ -76,12 +90,27 @@ class DriversRepository {
     isOnline: boolean,
   ): Promise<CourierAvailabilityResult> {
     try {
-      const result = await db.query(
-        driversQueries.UPDATE_COURIER_AVAILABILITY,
-        [courierId, isAvailable, isOnline],
-      );
+      const result = await drizzleDb
+        .update(courierStatus)
+        .set({
+          isAvailable,
+          isOnline,
+          updatedAt: new Date(),
+        })
+        .where(eq(courierStatus.courierId, courierId))
+        .returning({
+          courier_id: courierStatus.courierId,
+          is_available: courierStatus.isAvailable,
+          is_online: courierStatus.isOnline,
+          updated_at: courierStatus.updatedAt,
+        });
 
-      return result.rows[0] as CourierAvailabilityResult;
+      return {
+        courier_id: result[0].courier_id,
+        is_available: result[0].is_available,
+        is_online: result[0].is_online,
+        updated_at: result[0].updated_at,
+      } as CourierAvailabilityResult;
     } catch (error) {
       logger.error({
         msg: "Error updating courier availability",

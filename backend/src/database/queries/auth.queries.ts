@@ -153,15 +153,7 @@ export default {
         created_at
     `,
 
-  /**
-   * Update Firebase UID for existing user
-   */
-  UPDATE_FIREBASE_UID: `
-      UPDATE users.profiles
-      SET firebase_uid = $2, updated_at = NOW()
-      WHERE user_id = $1
-      RETURNING user_id, firebase_uid
-    `,
+  // NOTE: UPDATE_FIREBASE_UID removed - not used anywhere, can be done via Drizzle if needed
 
   // ============ JWT TOKEN MANAGEMENT ============
 

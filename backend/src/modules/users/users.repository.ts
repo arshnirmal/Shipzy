@@ -1,7 +1,12 @@
 // services/backend/src/modules/users/users.repository.ts
+import { eq, and, isNull } from "drizzle-orm";
 import logger from "../../config/logger.js";
+import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
 import usersQueries from "../../database/queries/users.queries.js";
+import { userProfiles } from "../../database/schema/users.js";
+import { userRoles } from "../../database/schema/public.js";
+import { userAddresses } from "../../database/schema/users.js";
 
 import type { DbUser } from "../../types/user.js";
 
@@ -38,12 +43,35 @@ type AddressData = SaveAddress;
 
 class UsersRepository {
   /**
-   * Find user by UUID
+   * Find user by UUID (migrated to Drizzle)
    */
   async findByUuid(userUuid: string): Promise<User | null> {
     try {
-      const result = await db.query(usersQueries.FIND_USER_BY_UUID, [userUuid]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+          roleId: userProfiles.roleId,
+          roleName: userRoles.name,
+          phoneNumber: userProfiles.phoneNumber,
+          email: userProfiles.email,
+          fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
+          isVerified: userProfiles.isVerified,
+          isActive: userProfiles.isActive,
+          createdAt: userProfiles.createdAt,
+        })
+        .from(userProfiles)
+        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
+        .where(
+          and(
+            eq(userProfiles.userUuid, userUuid),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      return (result[0] as User) || null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
@@ -54,7 +82,7 @@ class UsersRepository {
   }
 
   /**
-   * Update user profile
+   * Update user profile (migrated to Drizzle)
    */
   async updateProfile(
     userId: number,
@@ -63,14 +91,23 @@ class UsersRepository {
     try {
       const { fullName, email, profilePictureUrl } = updateData;
 
-      const result = await db.query(usersQueries.UPDATE_USER_PROFILE, [
-        userId,
-        fullName || null,
-        email || null,
-        profilePictureUrl || null,
-      ]);
+      const result = await drizzleDb
+        .update(userProfiles)
+        .set({
+          fullName: fullName || undefined,
+          email: email || undefined,
+          profilePictureUrl: profilePictureUrl || undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, userId))
+        .returning();
 
-      return result.rows[0];
+      // Fetch full user with role for return type compatibility
+      const updatedUser = await this.findByUuid(result[0].userUuid);
+      if (!updatedUser) {
+        throw new Error("User not found after update");
+      }
+      return updatedUser;
     } catch (error) {
       logger.error({
         msg: "Error updating user profile",
@@ -164,18 +201,24 @@ class UsersRepository {
   }
 
   /**
-   * Delete address
+   * Delete address (migrated to Drizzle)
    */
   async deleteAddress(
     addressId: number,
     userId: number,
   ): Promise<{ address_id: number } | null> {
     try {
-      const result = await db.query(usersQueries.DELETE_ADDRESS, [
-        addressId,
-        userId,
-      ]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .delete(userAddresses)
+        .where(
+          and(
+            eq(userAddresses.addressId, addressId),
+            eq(userAddresses.userId, userId),
+          ),
+        )
+        .returning({ address_id: userAddresses.addressId });
+
+      return result[0] || null;
     } catch (error) {
       logger.error({
         msg: "Error deleting address",

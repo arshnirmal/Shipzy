@@ -209,7 +209,8 @@ COMMENT ON FUNCTION orders.calculate_fare IS 'Calculate delivery fare based on d
 
 -- ========================================
 -- Function: create_order_with_locations
--- Description: Create order with pickup and delivery locations (atomic transaction)
+-- Description: Create order with pickup and delivery locations as JSONB (atomic transaction)
+-- OPTIMIZED: Uses JSONB columns instead of separate location records
 -- Returns: JSON with created order details
 -- ========================================
 CREATE OR REPLACE FUNCTION orders.create_order_with_locations(
@@ -223,8 +224,6 @@ DECLARE
     v_delivery_type_id INT;
     v_vehicle_category_id INT;
     v_payment_method_id INT;
-    v_pickup_location_id INT;
-    v_delivery_location_id INT;
     v_order_id INT;
     v_order_uuid UUID;
     v_base_price NUMERIC;
@@ -236,6 +235,10 @@ DECLARE
     v_subtotal_before_tax NUMERIC;
     v_total_price NUMERIC;
     v_status_id INT;
+    v_pickup_location JSONB;
+    v_delivery_location JSONB;
+    v_items JSONB;
+    v_labels JSONB;
     result JSON;
 
 BEGIN 
@@ -284,64 +287,49 @@ BEGIN
 
     v_total_price := (p_order_data -> 'fareBreakdown' ->> 'totalPrice') :: NUMERIC;
 
-    -- Create pickup location
-    INSERT INTO logistics.locations (
-        address, latitude, longitude, location, city, state, postal_code, 
-        landmark, building_name, floor_number, flat_number, how_to_reach,
-        contact_name, contact_phone
-    )
-    VALUES (
-        p_order_data -> 'pickup' ->> 'address',
-        (p_order_data -> 'pickup' ->> 'latitude') :: NUMERIC,
-        (p_order_data -> 'pickup' ->> 'longitude') :: NUMERIC,
-        ST_SetSRID(ST_MakePoint(
-            (p_order_data -> 'pickup' ->> 'longitude') :: NUMERIC,
-            (p_order_data -> 'pickup' ->> 'latitude') :: NUMERIC
-        ), 4326) :: geography,
-        p_order_data -> 'pickup' ->> 'city',
-        p_order_data -> 'pickup' ->> 'state',
-        p_order_data -> 'pickup' ->> 'postalCode',
-        p_order_data -> 'pickup' ->> 'landmark',
-        p_order_data -> 'pickup' ->> 'building',
-        p_order_data -> 'pickup' ->> 'floor',
-        p_order_data -> 'pickup' ->> 'flatNumber',
-        p_order_data -> 'pickup' ->> 'howToReach',
-        p_order_data -> 'pickup' ->> 'contactName',
-        p_order_data -> 'pickup' ->> 'contactPhone'
-    ) RETURNING location_id INTO v_pickup_location_id;
+    -- OPTIMIZED: Build JSONB location objects (no separate location records)
+    v_pickup_location := jsonb_build_object(
+        'fullAddress', p_order_data -> 'pickup' ->> 'fullAddress',
+        'city', p_order_data -> 'pickup' ->> 'city',
+        'state', p_order_data -> 'pickup' ->> 'state',
+        'postalCode', p_order_data -> 'pickup' ->> 'postalCode',
+        'latitude', (p_order_data -> 'pickup' ->> 'latitude') :: NUMERIC,
+        'longitude', (p_order_data -> 'pickup' ->> 'longitude') :: NUMERIC,
+        'building', p_order_data -> 'pickup' ->> 'building',
+        'floor', p_order_data -> 'pickup' ->> 'floor',
+        'flatNumber', p_order_data -> 'pickup' ->> 'flatNumber',
+        'landmark', p_order_data -> 'pickup' ->> 'landmark',
+        'howToReach', p_order_data -> 'pickup' ->> 'howToReach',
+        'contactName', p_order_data -> 'pickup' ->> 'contactName',
+        'contactPhone', p_order_data -> 'pickup' ->> 'contactPhone'
+    );
 
-    -- Create delivery location
-    INSERT INTO logistics.locations (
-        address, latitude, longitude, location, city, state, postal_code, 
-        landmark, building_name, floor_number, flat_number, how_to_reach,
-        contact_name, contact_phone
-    )
-    VALUES (
-        p_order_data -> 'delivery' ->> 'address',
-        (p_order_data -> 'delivery' ->> 'latitude') :: NUMERIC,
-        (p_order_data -> 'delivery' ->> 'longitude') :: NUMERIC,
-        ST_SetSRID(ST_MakePoint(
-            (p_order_data -> 'delivery' ->> 'longitude') :: NUMERIC,
-            (p_order_data -> 'delivery' ->> 'latitude') :: NUMERIC
-        ), 4326) :: geography,
-        p_order_data -> 'delivery' ->> 'city',
-        p_order_data -> 'delivery' ->> 'state',
-        p_order_data -> 'delivery' ->> 'postalCode',
-        p_order_data -> 'delivery' ->> 'landmark',
-        p_order_data -> 'delivery' ->> 'building',
-        p_order_data -> 'delivery' ->> 'floor',
-        p_order_data -> 'delivery' ->> 'flatNumber',
-        p_order_data -> 'delivery' ->> 'howToReach',
-        p_order_data -> 'delivery' ->> 'contactName',
-        p_order_data -> 'delivery' ->> 'contactPhone'
-    ) RETURNING location_id INTO v_delivery_location_id;
+    v_delivery_location := jsonb_build_object(
+        'fullAddress', p_order_data -> 'delivery' ->> 'fullAddress',
+        'city', p_order_data -> 'delivery' ->> 'city',
+        'state', p_order_data -> 'delivery' ->> 'state',
+        'postalCode', p_order_data -> 'delivery' ->> 'postalCode',
+        'latitude', (p_order_data -> 'delivery' ->> 'latitude') :: NUMERIC,
+        'longitude', (p_order_data -> 'delivery' ->> 'longitude') :: NUMERIC,
+        'building', p_order_data -> 'delivery' ->> 'building',
+        'floor', p_order_data -> 'delivery' ->> 'floor',
+        'flatNumber', p_order_data -> 'delivery' ->> 'flatNumber',
+        'landmark', p_order_data -> 'delivery' ->> 'landmark',
+        'howToReach', p_order_data -> 'delivery' ->> 'howToReach',
+        'contactName', p_order_data -> 'delivery' ->> 'contactName',
+        'contactPhone', p_order_data -> 'delivery' ->> 'contactPhone'
+    );
 
-    -- Create order
+    -- OPTIMIZED: Extract items as JSONB array (replaces orders.items table)
+    v_items := COALESCE(p_order_data -> 'items', '[]'::jsonb);
+
+    -- OPTIMIZED: Extract labels as JSONB array (replaces orders.order_labels table)
+    v_labels := COALESCE(p_order_data -> 'labels', '[]'::jsonb);
+
+    -- Create order with JSONB locations, items, and labels
     INSERT INTO orders.requests (
         client_id, delivery_type_id, vehicle_category_id, weight_tier_id, status_id,
-        pickup_location_id, delivery_location_id,
-        pickup_contact_name, pickup_contact_phone,
-        delivery_contact_name, delivery_contact_phone,
+        pickup_location, delivery_location, items, labels,
         package_description, package_type_id, special_instructions, declared_value,
         notify_recipient_sms, coupon_code,
         estimated_distance_km, base_price, distance_price, weight_surcharge,
@@ -350,11 +338,7 @@ BEGIN
     )
     VALUES (
         v_client_id, v_delivery_type_id, v_vehicle_category_id, (p_order_data ->> 'weightTierId') :: INT, v_status_id,
-        v_pickup_location_id, v_delivery_location_id,
-        p_order_data -> 'pickup' ->> 'contactName',
-        p_order_data -> 'pickup' ->> 'contactPhone',
-        p_order_data -> 'delivery' ->> 'contactName',
-        p_order_data -> 'delivery' ->> 'contactPhone',
+        v_pickup_location, v_delivery_location, v_items, v_labels,
         p_order_data ->> 'packageDescription',
         (p_order_data ->> 'packageTypeId') :: INT,
         p_order_data ->> 'specialInstructions',

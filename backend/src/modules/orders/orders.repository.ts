@@ -1,7 +1,11 @@
-// services/backend/src/modules/orders/orders.repository.js
+// services/backend/src/modules/orders/orders.repository.ts
+import { eq, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
+import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
 import ordersQueries from "../../database/queries/orders.queries.js";
+import { orderRequests } from "../../database/schema/orders.js";
+import { orderStatuses } from "../../database/schema/public.js";
 
 class OrdersRepository {
   /**
@@ -218,21 +222,41 @@ class OrdersRepository {
   }
 
   /**
-   * Update order status (picked up / delivered)
+   * Update order status (picked up / delivered) - migrated to Drizzle
    */
   async updateOrderStatus(orderId: number, status: string) {
     try {
-      let result;
+      // Get status ID from status name
+      const statusResult = await drizzleDb
+        .select({ statusId: orderStatuses.statusId })
+        .from(orderStatuses)
+        .where(eq(orderStatuses.name, status))
+        .limit(1);
 
-      if (status === "picked_up") {
-        result = await db.query(ordersQueries.MARK_ORDER_PICKED_UP, [orderId]);
-      } else if (status === "delivered") {
-        result = await db.query(ordersQueries.MARK_ORDER_DELIVERED, [orderId]);
-      } else {
-        throw new Error("Invalid status");
+      if (statusResult.length === 0) {
+        throw new Error(`Invalid status: ${status}`);
       }
 
-      return result.rows[0];
+      const statusId = statusResult[0].statusId;
+      const updateData: any = {
+        statusId,
+        updatedAt: new Date(),
+      };
+
+      // Set timestamp based on status
+      if (status === "picked_up") {
+        updateData.pickedUpAt = new Date();
+      } else if (status === "delivered") {
+        updateData.deliveredAt = new Date();
+      }
+
+      const result = await drizzleDb
+        .update(orderRequests)
+        .set(updateData)
+        .where(eq(orderRequests.orderId, orderId))
+        .returning();
+
+      return result[0];
     } catch (error) {
       logger.error({
         msg: "Error updating order status",

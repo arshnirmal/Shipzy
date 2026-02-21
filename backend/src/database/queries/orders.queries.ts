@@ -32,7 +32,7 @@ export default {
   // ============ ORDER RETRIEVAL ============
 
   /**
-   * Find order by ID with full details
+   * Find order by ID with full details (OPTIMIZED - uses JSONB columns)
    */
   FIND_ORDER_BY_ID: `
     SELECT
@@ -80,35 +80,37 @@ export default {
           wt.min_weight_kg AS weight_tier_min,
           wt.max_weight_kg AS weight_tier_max,
           
-          -- Pickup details
-          pl.location_id AS pickup_location_id,
-          pl.building_name AS pickup_building,
-          pl.floor_number AS pickup_floor,
-          pl.flat_number AS pickup_flat,
-          pl.address AS pickup_address,
-          pl.landmark AS pickup_landmark,
-          pl.city AS pickup_city,
-          pl.state AS pickup_state,
-          pl.postal_code AS pickup_postal_code,
-          ST_Y(pl.location::geometry) AS pickup_latitude,
-          ST_X(pl.location::geometry) AS pickup_longitude,
-          o.pickup_contact_name,
-          o.pickup_contact_phone,
+          -- OPTIMIZED: Pickup details from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          o.pickup_location->>'building' AS pickup_building,
+          o.pickup_location->>'floor' AS pickup_floor,
+          o.pickup_location->>'flatNumber' AS pickup_flat,
+          o.pickup_location->>'landmark' AS pickup_landmark,
+          o.pickup_location->>'city' AS pickup_city,
+          o.pickup_location->>'state' AS pickup_state,
+          o.pickup_location->>'postalCode' AS pickup_postal_code,
+          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
+          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
+          o.pickup_location->>'contactName' AS pickup_contact_name,
+          o.pickup_location->>'contactPhone' AS pickup_contact_phone,
 
-          -- Delivery details
-          dl.location_id AS delivery_location_id,
-          dl.building_name AS delivery_building,
-          dl.floor_number AS delivery_floor,
-          dl.flat_number AS delivery_flat,
-          dl.address AS delivery_address,
-          dl.landmark AS delivery_landmark,
-          dl.city AS delivery_city,
-          dl.state AS delivery_state,
-          dl.postal_code AS delivery_postal_code,
-          ST_Y(dl.location::geometry) AS delivery_latitude,
-          ST_X(dl.location::geometry) AS delivery_longitude,
-          o.delivery_contact_name,
-          o.delivery_contact_phone,
+          -- OPTIMIZED: Delivery details from JSONB
+          o.delivery_location->>'fullAddress' AS delivery_address,
+          o.delivery_location->>'building' AS delivery_building,
+          o.delivery_location->>'floor' AS delivery_floor,
+          o.delivery_location->>'flatNumber' AS delivery_flat,
+          o.delivery_location->>'landmark' AS delivery_landmark,
+          o.delivery_location->>'city' AS delivery_city,
+          o.delivery_location->>'state' AS delivery_state,
+          o.delivery_location->>'postalCode' AS delivery_postal_code,
+          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
+          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
+          o.delivery_location->>'contactName' AS delivery_contact_name,
+          o.delivery_location->>'contactPhone' AS delivery_contact_phone,
+          
+          -- OPTIMIZED: Items and labels from JSONB
+          o.items AS order_items,
+          o.labels AS order_labels,
           
           -- Courier details (if assigned)
           ca.assignment_id,
@@ -126,8 +128,6 @@ export default {
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       JOIN payments.payment_methods pm ON o.payment_method_id = pm.method_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       JOIN users.profiles u ON o.client_id = u.user_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
@@ -139,7 +139,7 @@ export default {
   `,
 
   /**
-   * Find orders by client (user's orders)
+   * Find orders by client (user's orders) - OPTIMIZED (uses JSONB columns)
    */
   FIND_ORDERS_BY_CLIENT: `
       SELECT
@@ -164,8 +164,9 @@ export default {
           o.accepted_at,
           o.picked_up_at,
           o.delivered_at,
-          pl.address AS pickup_address,
-          dl.address AS delivery_address,
+          -- OPTIMIZED: Locations from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          o.delivery_location->>'fullAddress' AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
           cu.profile_picture_url AS courier_photo,
@@ -177,8 +178,6 @@ export default {
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
@@ -233,27 +232,27 @@ export default {
           o.estimated_distance_km,
           o.created_at,
 
-          -- Pickup location
-          pl.address AS pickup_address,
-          pl.landmark AS pickup_landmark,
-          pl.city AS pickup_city,
-          pl.state AS pickup_state,
-          ST_Y(pl.location::geometry) AS pickup_latitude,
-          ST_X(pl.location::geometry) AS pickup_longitude,
+          -- OPTIMIZED: Pickup location from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          o.pickup_location->>'landmark' AS pickup_landmark,
+          o.pickup_location->>'city' AS pickup_city,
+          o.pickup_location->>'state' AS pickup_state,
+          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
+          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
 
-          -- Delivery location
-          dl.address AS delivery_address,
-          dl.landmark AS delivery_landmark,
-          dl.city AS delivery_city,
-          dl.state AS delivery_state,
-          dl.postal_code AS delivery_postal_code,
-          ST_Y(dl.location::geometry) AS delivery_latitude,
-          ST_X(dl.location::geometry) AS delivery_longitude,
+          -- OPTIMIZED: Delivery location from JSONB
+          o.delivery_location->>'fullAddress' AS delivery_address,
+          o.delivery_location->>'landmark' AS delivery_landmark,
+          o.delivery_location->>'city' AS delivery_city,
+          o.delivery_location->>'state' AS delivery_state,
+          o.delivery_location->>'postalCode' AS delivery_postal_code,
+          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
+          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
 
-          -- Distance from courier
+          -- OPTIMIZED: Distance from courier using computed PostGIS column (pickup_point)
           ROUND(
               ST_Distance(
-                  pl.location,
+                  o.pickup_point,
                   ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
               )::numeric / 1000, 2
           ) AS distance_from_courier_km
@@ -263,8 +262,6 @@ export default {
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       WHERE o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'pending')
           AND o.deleted_at IS NULL
           AND NOT EXISTS (
@@ -275,8 +272,9 @@ export default {
                       WHERE name IN ('rejected', 'cancelled')
                   )
           )
+          -- OPTIMIZED: Use computed pickup_point column for spatial query
           AND ST_DWithin(
-              pl.location,
+              o.pickup_point,
               ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
               $3 * 1000
           )
@@ -286,45 +284,8 @@ export default {
 
   // ============ ORDER STATUS UPDATES ============
 
-  /**
-   * Update order status
-   */
-  UPDATE_ORDER_STATUS: `
-      UPDATE orders.requests
-      SET 
-          status_id = $2,
-          updated_at = NOW()
-      WHERE order_id = $1
-      RETURNING order_id, status_id, updated_at
-  `,
-
-  /**
-   * Mark order as picked up
-   */
-  MARK_ORDER_PICKED_UP: `
-      UPDATE orders.requests
-      SET 
-          status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'picked_up'),
-          actual_pickup_time = NOW(),
-          picked_up_at = NOW(),
-          updated_at = NOW()
-      WHERE order_id = $1
-      RETURNING order_id, picked_up_at
-  `,
-
-  /**
-   * Mark order as delivered
-   */
-  MARK_ORDER_DELIVERED: `
-      UPDATE orders.requests
-      SET 
-          status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'delivered'),
-          actual_delivery_time = NOW(),
-          delivered_at = NOW(),
-          updated_at = NOW()
-      WHERE order_id = $1
-      RETURNING order_id, delivered_at
-  `,
+  // NOTE: UPDATE_ORDER_STATUS, MARK_ORDER_PICKED_UP, and MARK_ORDER_DELIVERED
+  // have been removed - these are now handled by Drizzle ORM in orders.repository.ts
 
   // ============ COURIER ASSIGNMENTS ============
 
@@ -400,7 +361,7 @@ export default {
   `,
 
   /**
-   * Find courier's active assignments
+   * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
    */
   FIND_COURIER_ACTIVE_ASSIGNMENTS: `
       SELECT 
@@ -411,12 +372,14 @@ export default {
           os.name AS order_status,
           ca.assignment_status_id,
           ast.name AS assignment_status,
-          pl.address AS pickup_address,
-          ST_Y(pl.location::geometry) AS pickup_latitude,
-          ST_X(pl.location::geometry) AS pickup_longitude,
-          dl.address AS delivery_address,
-          ST_Y(dl.location::geometry) AS delivery_latitude,
-          ST_X(dl.location::geometry) AS delivery_longitude,
+          -- OPTIMIZED: Pickup location from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
+          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
+          -- OPTIMIZED: Delivery location from JSONB
+          o.delivery_location->>'fullAddress' AS delivery_address,
+          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
+          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
           o.total_price,
           ca.assigned_at,
           ca.accepted_at
@@ -424,8 +387,6 @@ export default {
       JOIN orders.requests o ON ca.order_id = o.order_id
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       WHERE ca.courier_id = $1
           AND ca.assignment_status_id NOT IN (
               SELECT status_id FROM public.assignment_statuses 
@@ -435,7 +396,7 @@ export default {
   `,
 
   /**
-   * Find active orders by client (pending, accepted, picked_up)
+   * Find active orders by client (pending, accepted, picked_up) - OPTIMIZED (uses JSONB)
    */
   FIND_ACTIVE_ORDERS_BY_CLIENT: `
       SELECT
@@ -460,8 +421,9 @@ export default {
           o.accepted_at,
           o.picked_up_at,
           o.delivered_at,
-          pl.address AS pickup_address,
-          dl.address AS delivery_address,
+          -- OPTIMIZED: Locations from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          o.delivery_location->>'fullAddress' AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
           cu.profile_picture_url AS courier_photo,
@@ -473,8 +435,6 @@ export default {
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
@@ -561,7 +521,7 @@ export default {
   `,
 
   /**
-   * Find cancelled orders by client (cancelled, failed)
+   * Find cancelled orders by client (cancelled, failed) - OPTIMIZED (uses JSONB)
    */
   FIND_CANCELLED_ORDERS_BY_CLIENT: `
       SELECT
@@ -586,8 +546,9 @@ export default {
           o.accepted_at,
           o.picked_up_at,
           o.delivered_at,
-          pl.address AS pickup_address,
-          dl.address AS delivery_address,
+          -- OPTIMIZED: Locations from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          o.delivery_location->>'fullAddress' AS delivery_address,
           ca.courier_id,
           cu.full_name AS courier_name,
           cu.profile_picture_url AS courier_photo,
@@ -599,8 +560,6 @@ export default {
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id

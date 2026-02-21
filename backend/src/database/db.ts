@@ -9,18 +9,18 @@ const pool = new Pool(config.database);
 
 // Connection event handlers
 pool.on("connect", (client) => {
-  logger.debug("New database connection established");
+  logger.debug("New database connection established (raw SQL)");
 });
 
 pool.on("error", (err, client) => {
   logger.error({
-    msg: "Unexpected database error on idle client",
+    msg: "Unexpected database error on idle client (raw SQL)",
     error: err.message,
   });
 });
 
 pool.on("remove", () => {
-  logger.debug("Database connection removed from pool");
+  logger.debug("Database connection removed from pool (raw SQL)");
 });
 
 /**
@@ -35,7 +35,7 @@ const query = async (
 ): Promise<pg.QueryResult> => {
   const start = Date.now();
 
-  // ✅ Validate query text
+  // Validate query text
   if (!text || typeof text !== "string") {
     logger.error({
       msg: "Database query called with invalid text",
@@ -55,13 +55,13 @@ const query = async (
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
 
-    // ✅ Safe logging
+    // Safe logging
     if (config?.logging?.logQueries) {
       const queryPreview =
         text.length > 100 ? text.substring(0, 100) + "..." : text;
 
       logger.debug({
-        msg: "Query executed",
+        msg: "Query executed (raw SQL)",
         query: queryPreview,
         duration: `${duration}ms`,
         rows: result.rowCount,
@@ -74,7 +74,7 @@ const query = async (
       text.length > 100 ? text.substring(0, 100) + "..." : text;
 
     logger.error({
-      msg: "Database query error",
+      msg: "Database query error (raw SQL)",
       query: queryPreview,
       params,
       error: (error as Error).message,
@@ -112,20 +112,20 @@ const getClient = async (): Promise<pg.PoolClient> => {
  */
 const closePool = async () => {
   await pool.end();
-  logger.info("Database connection pool closed");
+  logger.info("Database connection pool closed (raw SQL)");
 };
 
 // Test connection on startup
 pool.query("SELECT NOW()", (err, res) => {
   if (err) {
     logger.error({
-      msg: "Failed to connect to database",
+      msg: "Failed to connect to database (raw SQL)",
       error: err.message,
     });
     process.exit(1);
   } else {
     logger.info({
-      msg: "Database connection successful",
+      msg: "Database connection successful (raw SQL)",
       time: res?.rows[0].now,
     });
   }

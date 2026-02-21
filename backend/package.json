@@ -28,6 +28,7 @@
     "lint:test:fix": "eslint tests/ --ext .ts,.js --fix",
     "format": "prettier --write \"src/**/*.{ts,js}\"",
     "format:test": "prettier --write \"tests/**/*.{ts,js}\"",
+    "db:generate": "tsx scripts/db-generate-migration.ts",
     "db:deploy": "tsx scripts/db-deploy.ts",
     "seed:api": "tsx scripts/seed-api.ts",
     "db:seed": "psql -U shipzy_user -d shipzy_dev -f src/database/seeds/dev-data.sql"
@@ -52,6 +53,8 @@
     "axios": "^1.13.5",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "0.45.1",
     "fastify": "^5.7.4",
     "firebase-admin": "^12.3.1",
     "jsonwebtoken": "^9.0.3",

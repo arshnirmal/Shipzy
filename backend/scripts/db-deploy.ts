@@ -13,7 +13,8 @@ const __dirname = path.dirname(__filename);
 const { Pool } = pg;
 
 // Config
-const SCHEMA_DIR = path.resolve(__dirname, "../src/database/schemas");
+const SETUP_SQL = path.resolve(__dirname, "../src/database/setup.sql");
+const MIGRATIONS_DIR = path.resolve(__dirname, "../src/database/migrations");
 const FUNCTIONS_DIR = path.resolve(__dirname, "../src/database/functions");
 
 // Database connection
@@ -46,44 +47,85 @@ async function deploy() {
       );
     `);
 
-    // 2. Deploy Schemas (Run once)
-    console.log("\n📂 Checking Schemas...");
-    if (fs.existsSync(SCHEMA_DIR)) {
-      const files = fs.readdirSync(SCHEMA_DIR).sort();
+    // 2. Run Setup SQL (Extensions & Schemas) - Run once
+    console.log("\n🔧 Running Setup (Extensions & Schemas)...");
+    if (fs.existsSync(SETUP_SQL)) {
+      const { rows } = await client.query(
+        "SELECT id FROM _deployment_log WHERE filename = $1",
+        ["setup.sql"],
+      );
 
-      for (const file of files) {
-        if (!file.endsWith(".sql")) continue;
+      if (rows.length === 0) {
+        console.log("   Running: setup.sql");
+        const sql = fs.readFileSync(SETUP_SQL, "utf-8");
 
-        const { rows } = await client.query(
-          "SELECT id FROM _deployment_log WHERE filename = $1",
-          [file],
-        );
-
-        if (rows.length === 0) {
-          console.log(`   Running: ${file}`);
-          const sql = fs.readFileSync(path.join(SCHEMA_DIR, file), "utf-8");
-
-          await client.query("BEGIN");
-          try {
-            await client.query(sql);
-            await client.query(
-              "INSERT INTO _deployment_log (filename) VALUES ($1)",
-              [file],
-            );
-            await client.query("COMMIT");
-            console.log(`   ✅ Success: ${file}`);
-          } catch (err) {
-            await client.query("ROLLBACK");
-            console.error(`   ❌ Failed: ${file}`);
-            throw err;
-          }
-        } else {
-          console.log(`   ⏭️  Skipping: ${file} (already executed)`);
+        await client.query("BEGIN");
+        try {
+          await client.query(sql);
+          await client.query(
+            "INSERT INTO _deployment_log (filename) VALUES ($1)",
+            ["setup.sql"],
+          );
+          await client.query("COMMIT");
+          console.log("   ✅ Setup complete");
+        } catch (err) {
+          await client.query("ROLLBACK");
+          console.error("   ❌ Setup failed");
+          throw err;
         }
+      } else {
+        console.log("   ⏭️  Setup already executed");
       }
     }
 
-    // 3. Deploy Functions (Always run / Replace)
+    // 3. Deploy Drizzle Migrations (Generated from TypeScript schema)
+    console.log("\n📦 Deploying Migrations...");
+    if (fs.existsSync(MIGRATIONS_DIR)) {
+      const files = fs
+        .readdirSync(MIGRATIONS_DIR)
+        .filter((f) => f.endsWith(".sql"))
+        .sort();
+
+      if (files.length === 0) {
+        console.log("   ⚠️  No migrations found. Run: npm run db:generate");
+      } else {
+        for (const file of files) {
+          const { rows } = await client.query(
+            "SELECT id FROM _deployment_log WHERE filename = $1",
+            [file],
+          );
+
+          if (rows.length === 0) {
+            console.log(`   Running: ${file}`);
+            const sql = fs.readFileSync(
+              path.join(MIGRATIONS_DIR, file),
+              "utf-8",
+            );
+
+            await client.query("BEGIN");
+            try {
+              await client.query(sql);
+              await client.query(
+                "INSERT INTO _deployment_log (filename) VALUES ($1)",
+                [file],
+              );
+              await client.query("COMMIT");
+              console.log(`   ✅ Success: ${file}`);
+            } catch (err) {
+              await client.query("ROLLBACK");
+              console.error(`   ❌ Failed: ${file}`);
+              throw err;
+            }
+          } else {
+            console.log(`   ⏭️  Skipping: ${file} (already executed)`);
+          }
+        }
+      }
+    } else {
+      console.log("   ⚠️  Migrations directory not found. Run: npm run db:generate");
+    }
+
+    // 4. Deploy Functions (Always run / Replace)
     console.log("\n⚙️  Updating Functions...");
     if (fs.existsSync(FUNCTIONS_DIR)) {
       const files = fs.readdirSync(FUNCTIONS_DIR).sort();

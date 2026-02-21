@@ -61,18 +61,7 @@ export default {
       RETURNING user_id, full_name, email, profile_picture_url, updated_at
   `,
 
-  /**
-   * Toggle courier online status
-   */
-  TOGGLE_COURIER_ONLINE_STATUS: `
-      UPDATE logistics.courier_status
-      SET
-          is_online = NOT is_online,
-          is_available = CASE WHEN is_online = true THEN false ELSE is_available END,
-          updated_at = NOW()
-      WHERE courier_id = $1
-      RETURNING courier_id, is_online, is_available, updated_at
-  `,
+  // NOTE: TOGGLE_COURIER_ONLINE_STATUS removed - not used anywhere, can be done via Drizzle if needed
 
   /**
    * Get courier earnings summary
@@ -129,62 +118,13 @@ export default {
           last_location_update
   `,
 
-  /**
-   * Get courier current location
-   */
-  GET_COURIER_LOCATION: `
-      SELECT 
-          courier_id,
-          ST_Y(current_location::geometry) AS latitude,
-          ST_X(current_location::geometry) AS longitude,
-          last_location_update,
-          is_online,
-          is_available
-      FROM logistics.courier_status
-      WHERE courier_id = $1
-  `,
-
-  // ============ COURIER VEHICLE ============
-
-  /**
-   * Get courier active vehicle
-   */
-  GET_COURIER_VEHICLE: `
-      SELECT 
-          cv.vehicle_id,
-          cv.vehicle_number,
-          cv.model,
-          cv.year,
-          vc.name AS category,
-          cv.insurance_expiry,
-          cv.is_active
-      FROM logistics.courier_vehicles cv
-      JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
-      WHERE cv.courier_id = $1
-          AND cv.is_active = true
-      LIMIT 1
-  `,
-
-  /**
-   * Update courier vehicle
-   */
-  UPDATE_COURIER_VEHICLE: `
-      UPDATE logistics.courier_vehicles
-      SET
-          vehicle_number = COALESCE($2, vehicle_number),
-          model = COALESCE($3, model),
-          year = COALESCE($4, year),
-          category_id = COALESCE($5, category_id),
-          updated_at = NOW()
-      WHERE courier_id = $1
-          AND is_active = true
-      RETURNING vehicle_id, vehicle_number, model, updated_at
-  `,
+  // NOTE: GET_COURIER_LOCATION, GET_COURIER_VEHICLE, UPDATE_COURIER_VEHICLE removed - not used anywhere
+  // These can be implemented via Drizzle ORM if needed in the future
 
   // ============ COURIER ASSIGNMENTS ============
 
   /**
-   * Find courier's active assignments
+   * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
    */
   FIND_COURIER_ACTIVE_ASSIGNMENTS: `
       SELECT
@@ -206,29 +146,29 @@ export default {
           wt.min_weight_kg AS weight_tier_min,
           wt.max_weight_kg AS weight_tier_max,
 
-          -- Pickup location
-          pl.address AS pickup_address,
-          pl.building_name AS pickup_building,
-          pl.landmark AS pickup_landmark,
-          pl.city AS pickup_city,
-          pl.state AS pickup_state,
-          pl.postal_code AS pickup_postal_code,
-          ST_Y(pl.location::geometry) AS pickup_latitude,
-          ST_X(pl.location::geometry) AS pickup_longitude,
-          o.pickup_contact_name,
-          o.pickup_contact_phone,
+          -- OPTIMIZED: Pickup location from JSONB
+          o.pickup_location->>'fullAddress' AS pickup_address,
+          o.pickup_location->>'building' AS pickup_building,
+          o.pickup_location->>'landmark' AS pickup_landmark,
+          o.pickup_location->>'city' AS pickup_city,
+          o.pickup_location->>'state' AS pickup_state,
+          o.pickup_location->>'postalCode' AS pickup_postal_code,
+          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
+          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
+          o.pickup_location->>'contactName' AS pickup_contact_name,
+          o.pickup_location->>'contactPhone' AS pickup_contact_phone,
 
-          -- Delivery location
-          dl.address AS delivery_address,
-          dl.building_name AS delivery_building,
-          dl.landmark AS delivery_landmark,
-          dl.city AS delivery_city,
-          dl.state AS delivery_state,
-          dl.postal_code AS delivery_postal_code,
-          ST_Y(dl.location::geometry) AS delivery_latitude,
-          ST_X(dl.location::geometry) AS delivery_longitude,
-          o.delivery_contact_name,
-          o.delivery_contact_phone,
+          -- OPTIMIZED: Delivery location from JSONB
+          o.delivery_location->>'fullAddress' AS delivery_address,
+          o.delivery_location->>'building' AS delivery_building,
+          o.delivery_location->>'landmark' AS delivery_landmark,
+          o.delivery_location->>'city' AS delivery_city,
+          o.delivery_location->>'state' AS delivery_state,
+          o.delivery_location->>'postalCode' AS delivery_postal_code,
+          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
+          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
+          o.delivery_location->>'contactName' AS delivery_contact_name,
+          o.delivery_location->>'contactPhone' AS delivery_contact_phone,
 
           o.package_description,
           o.special_instructions,
@@ -252,8 +192,6 @@ export default {
       JOIN orders.requests o ON ca.order_id = o.order_id
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
