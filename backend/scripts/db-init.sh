@@ -4,44 +4,29 @@ export PAGER=cat
 
 echo "🚀 Initialize Database..."
 
-# 1. Extensions
-echo "🔌 Enabling Extensions..."
 # Default to standard PG env vars if Docker-specific ones are present
 export PGUSER="${PGUSER:-$POSTGRES_USER}"
 export PGDATABASE="${PGDATABASE:-$POSTGRES_DB}"
 
-# 1. Extensions
-echo "🔌 Enabling Extensions..."
-psql -v ON_ERROR_STOP=1 <<-EOSQL
-    CREATE EXTENSION IF NOT EXISTS postgis;
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-EOSQL
-
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
 
-# 2. Schemas
-echo "🏗️  Creating Schemas..."
-SCHEMA_DIR="$BACKEND_DIR/src/database/schemas"
+# 1. Run Setup SQL (Extensions & Schemas)
+echo "🔧 Running Setup (Extensions & Schemas)..."
+SETUP_SQL="$BACKEND_DIR/src/database/setup.sql"
 # Also check absolute path for Docker
-if [ ! -d "$SCHEMA_DIR" ] && [ -d "/src/database/schemas" ]; then
-    SCHEMA_DIR="/src/database/schemas"
+if [ ! -f "$SETUP_SQL" ] && [ -f "/src/database/setup.sql" ]; then
+    SETUP_SQL="/src/database/setup.sql"
 fi
 
-if [ -d "$SCHEMA_DIR" ]; then
-    echo "   Using schemas from: $SCHEMA_DIR"
-    for f in "$SCHEMA_DIR"/*.sql; do
-        if [ -f "$f" ]; then
-            echo "   -- Loading $(basename "$f") --"
-            psql -v ON_ERROR_STOP=1 -f "$f"
-        fi
-    done
+if [ -f "$SETUP_SQL" ]; then
+    echo "   Loading: setup.sql"
+    psql -v ON_ERROR_STOP=1 -f "$SETUP_SQL"
 else
-    echo "⚠️  Schemas directory not found at $SCHEMA_DIR or /src/database/schemas!"
+    echo "⚠️  Setup SQL not found at $SETUP_SQL or /src/database/setup.sql!"
 fi
 
-# 3. Functions
+# 2. Functions (Always run / Replace)
 echo "⚙️  Installing Functions..."
 FUNC_DIR="$BACKEND_DIR/src/database/functions"
 # Also check absolute path for Docker
@@ -61,7 +46,7 @@ else
     echo "⚠️  Functions directory not found at $FUNC_DIR or /src/database/functions!"
 fi
 
-# 4. User Permissions
+# 3. User Permissions
 echo "🔒 Configure Permissions..."
 # Create user if not exists
 psql -v ON_ERROR_STOP=0 -c "CREATE USER shipzy_user WITH PASSWORD 'password123';" 2>/dev/null || echo "   User 'shipzy_user' may already exist."
@@ -81,4 +66,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
     \$\$;
 EOSQL
 
+echo ""
 echo "✅ Database Initialization Complete!"
+echo "📝 Note: Migrations will be deployed when backend starts or run manually:"
+echo "   npm run db:deploy"
