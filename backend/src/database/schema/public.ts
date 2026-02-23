@@ -10,13 +10,12 @@ import {
   boolean,
   integer,
   timestamp,
-  pgSchema,
 } from "drizzle-orm/pg-core";
 
-const publicSchema = pgSchema("public");
+// Tables in PostgreSQL default "public" schema — use pgTable() directly (no pgSchema("public")).
 
 // User Roles
-export const userRoles = publicSchema.table("user_roles", {
+export const userRoles = pgTable("user_roles", {
   roleId: serial("role_id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   description: text("description"),
@@ -26,7 +25,7 @@ export const userRoles = publicSchema.table("user_roles", {
 });
 
 // Weight Tiers
-export const weightTiers = publicSchema.table("weight_tiers", {
+export const weightTiers = pgTable("weight_tiers", {
   tierId: serial("tier_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   minWeightKg: numeric("min_weight_kg", { precision: 10, scale: 2 }).notNull(),
@@ -41,7 +40,7 @@ export const weightTiers = publicSchema.table("weight_tiers", {
 });
 
 // Delivery Types
-export const deliveryTypes = publicSchema.table("delivery_types", {
+export const deliveryTypes = pgTable("delivery_types", {
   deliveryTypeId: serial("delivery_type_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
   displayName: varchar("display_name", { length: 100 }).notNull(),
@@ -59,7 +58,7 @@ export const deliveryTypes = publicSchema.table("delivery_types", {
 });
 
 // Package Types
-export const packageTypes = publicSchema.table("package_types", {
+export const packageTypes = pgTable("package_types", {
   packageTypeId: serial("package_type_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
   description: text("description"),
@@ -79,7 +78,7 @@ export const packageTypes = publicSchema.table("package_types", {
 });
 
 // Delivery Type Capabilities
-export const deliveryTypeCapabilities = publicSchema.table(
+export const deliveryTypeCapabilities = pgTable(
   "delivery_type_capabilities",
   {
     capabilityId: serial("capability_id").primaryKey(),
@@ -106,7 +105,7 @@ export const deliveryTypeCapabilities = publicSchema.table(
 );
 
 // Labels
-export const labels = publicSchema.table("labels", {
+export const labels = pgTable("labels", {
   labelId: serial("label_id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
   displayText: varchar("display_text", { length: 100 }).notNull(),
@@ -119,7 +118,7 @@ export const labels = publicSchema.table("labels", {
 });
 
 // Delivery Type Labels
-export const deliveryTypeLabels = publicSchema.table(
+export const deliveryTypeLabels = pgTable(
   "delivery_type_labels",
   {
     deliveryTypeId: integer("delivery_type_id")
@@ -136,7 +135,7 @@ export const deliveryTypeLabels = publicSchema.table(
 );
 
 // Pricing Config
-export const pricingConfig = publicSchema.table("pricing_config", {
+export const pricingConfig = pgTable("pricing_config", {
   configId: serial("config_id").primaryKey(),
   configKey: varchar("config_key", { length: 50 }).notNull().unique(),
   configValue: numeric("config_value", { precision: 10, scale: 4 }).notNull(),
@@ -152,7 +151,7 @@ export const pricingConfig = publicSchema.table("pricing_config", {
 });
 
 // Vehicle Categories
-export const vehicleCategories = publicSchema.table("vehicle_categories", {
+export const vehicleCategories = pgTable("vehicle_categories", {
   categoryId: serial("category_id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   displayName: varchar("display_name", { length: 100 }).notNull(),
@@ -166,7 +165,7 @@ export const vehicleCategories = publicSchema.table("vehicle_categories", {
 });
 
 // Order Statuses
-export const orderStatuses = publicSchema.table("order_statuses", {
+export const orderStatuses = pgTable("order_statuses", {
   statusId: serial("status_id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   description: text("description"),
@@ -177,7 +176,7 @@ export const orderStatuses = publicSchema.table("order_statuses", {
 });
 
 // Assignment Statuses
-export const assignmentStatuses = publicSchema.table("assignment_statuses", {
+export const assignmentStatuses = pgTable("assignment_statuses", {
   statusId: serial("status_id").primaryKey(),
   name: varchar("name", { length: 50 }).notNull().unique(),
   description: text("description"),
@@ -187,7 +186,7 @@ export const assignmentStatuses = publicSchema.table("assignment_statuses", {
 });
 
 // Notification Channels
-export const notificationChannels = publicSchema.table(
+export const notificationChannels = pgTable(
   "notification_channels",
   {
     channelId: serial("channel_id").primaryKey(),
@@ -200,7 +199,7 @@ export const notificationChannels = publicSchema.table(
 );
 
 // Notification Statuses
-export const notificationStatuses = publicSchema.table(
+export const notificationStatuses = pgTable(
   "notification_statuses",
   {
     statusId: serial("status_id").primaryKey(),
