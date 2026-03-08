@@ -171,3 +171,19 @@ This runs pending migrations from `migrations/`
 
 - `npm run db:generate` - Generate SQL migrations from TypeScript schema
 - `npm run db:deploy` - Deploy pending migrations to database
+
+## Verification After Init (Docker)
+
+After `docker compose up` with a fresh volume, the **postgres** container runs `db-init.sh`, which:
+
+| Step | Created | Source |
+|------|---------|--------|
+| 1 | Extensions: postgis, btree_gist, uuid-ossp, pg_stat_statements | `setup.sql` |
+| 2 | Schemas: users, logistics, orders, payments, tracking, notifications | `setup.sql` |
+| 3 | Stored functions (auth, logistics, orders, payments, tracking) | `functions/*.sql` |
+| 4 | Role `shipzy_user` and grants | `db-init.sh` |
+
+**Tables** are **not** created by init. They come from Drizzle migrations. Ensure you have migration files and deploy:
+
+1. Generate migrations (if none): `npm run db:generate`
+2. Deploy (from host or backend container): `npm run db:deploy`

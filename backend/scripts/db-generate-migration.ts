@@ -5,9 +5,9 @@
  * Run: npm run db:generate
  */
 
-import { execSync } from "child_process";
-import path from "path";
-import { fileURLToPath } from "url";
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,15 +19,13 @@ console.log("🔄 Generating SQL migration from TypeScript schema...");
 console.log(`📁 Working directory: ${databaseDir}`);
 
 try {
-  // Run drizzle-kit generate from database directory
-  execSync(
-    `npx drizzle-kit generate`,
-    {
-      cwd: databaseDir,
-      stdio: "inherit",
-      env: { ...process.env },
-    }
-  );
+  // Use CJS config so drizzle-kit (which uses require) loads without ESM errors
+  const configPath = path.join(databaseDir, "drizzle.config.cjs");
+  execSync(`npx drizzle-kit generate --config=${configPath}`, {
+    cwd: databaseDir,
+    stdio: "inherit",
+    env: { ...process.env },
+  });
 
   console.log("\n✅ Migration generated successfully!");
   console.log("📝 Review the generated SQL in: src/database/migrations/");

@@ -1,13 +1,8 @@
-// services/backend/src/database/drizzle.config.ts
-import { defineConfig } from "drizzle-kit";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
+// Drizzle Kit config (CommonJS) so npx drizzle-kit can load it without ESM/require conflicts
+const path = require("node:path");
+require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
-export default defineConfig({
+module.exports = {
   schema: "./schema/index.ts",
   out: "./migrations",
   dialect: "postgresql",
@@ -26,4 +21,4 @@ export default defineConfig({
   },
   verbose: true,
   strict: true,
-});
+};

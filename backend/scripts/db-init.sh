@@ -10,6 +10,8 @@ export PGDATABASE="${PGDATABASE:-$POSTGRES_DB}"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
+# Avoid "//path" when running in Docker (SCRIPT_DIR=/docker-entrypoint-initdb.d → BACKEND_DIR=/)
+BACKEND_DIR="${BACKEND_DIR%/}"
 
 # 1. Run Setup SQL (Extensions & Schemas)
 echo "🔧 Running Setup (Extensions & Schemas)..."
