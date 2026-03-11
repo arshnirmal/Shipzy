@@ -5,8 +5,8 @@ export PAGER=cat
 echo "🚀 Initialize Database..."
 
 # Default to standard PG env vars if Docker-specific ones are present
-export PGUSER="${PGUSER:-$POSTGRES_USER}"
-export PGDATABASE="${PGDATABASE:-$POSTGRES_DB}"
+export PGUSER="${PGUSER:-$DB_USER}"
+export PGDATABASE="${PGDATABASE:-$DB_NAME}"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"

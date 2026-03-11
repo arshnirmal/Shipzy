@@ -92,11 +92,11 @@ const config: Config = {
 const requiredEnvVars = [
   "JWT_SECRET",
   "MAPBOX_ACCESS_TOKEN",
+  "DB_PASSWORD",
   // Firebase credentials (optional if using service account file, required for cloud deployment)
   // 'FIREBASE_PROJECT_ID',
   // 'FIREBASE_CLIENT_EMAIL',
   // 'FIREBASE_PRIVATE_KEY',
-  // DB_PASSWORD is optional and defaults to empty string
 ];
 
 const missingEnvVars = requiredEnvVars.filter(

@@ -5,7 +5,21 @@ import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+// Load environment variables from multiple possible locations
+const envPaths = [
+  path.resolve(__dirname, "../../.env"),
+  path.resolve(__dirname, "../../../.env"),
+  "/app/.env", // Docker container path
+  ".env" // Current directory
+];
+
+for (const envPath of envPaths) {
+  if (dotenv.config({ path: envPath }).error === undefined) {
+    // Successfully loaded .env file
+    break;
+  }
+}
 
 export default defineConfig({
   schema: "./schema/index.ts",

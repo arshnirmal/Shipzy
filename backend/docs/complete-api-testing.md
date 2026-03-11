@@ -46,25 +46,24 @@ export TEST_SESSION_TOKEN="1234567890_abcdef123456"
 ### **Database Setup**
 
 ```bash
-# Start PostgreSQL and Redis (if using Docker)
-docker-compose up -d postgres redis
+# Start PostgreSQL (if using Docker)
+docker compose -f docker-compose.dev.yml up -d postgres
 
 # Run database migrations
-npm run db:init
-npm run db:functions
+pnpm run db:deploy
 
 # Seed test data (optional)
-npm run db:seed
+pnpm run db:seed
 ```
 
 ### **Start Server**
 
 ```bash
 # Development mode
-npm run dev
+pnpm run dev
 
 # Or production mode
-npm start
+pnpm start
 ```
 
 ---

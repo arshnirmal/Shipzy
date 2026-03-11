@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production node dist/server.js",
     "dev": "NODE_ENV=development tsx watch src/server.ts",
     "dev:debug": "NODE_ENV=development tsx --inspect=0.0.0.0:9229 src/server.ts",
+    
     "test": "NODE_ENV=test node --experimental-vm-modules node_modules/.bin/jest --config jest.config.cjs --coverage --verbose",
     "test:watch": "NODE_ENV=test node --experimental-vm-modules node_modules/.bin/jest --config jest.config.cjs --watch --verbose",
     "test:all": "NODE_ENV=test node tests/test-runner.js",
@@ -22,16 +23,28 @@
     "test:coverage": "NODE_ENV=test jest --coverage --coverageDirectory=coverage --coverageReporters=html,text,lcov,json-summary",
     "test:db:setup": "NODE_ENV=test node tests/database.js setup",
     "test:db:cleanup": "NODE_ENV=test node tests/database.js cleanup",
+    
     "lint": "eslint src/ --ext .ts,.js",
     "lint:fix": "eslint src/ --ext .ts,.js --fix",
     "lint:test": "eslint tests/ --ext .ts,.js",
     "lint:test:fix": "eslint tests/ --ext .ts,.js --fix",
     "format": "prettier --write \"src/**/*.{ts,js}\"",
     "format:test": "prettier --write \"tests/**/*.{ts,js}\"",
+    
     "db:generate": "tsx scripts/db-generate-migration.ts",
     "db:deploy": "tsx scripts/db-deploy.ts",
-    "seed:api": "tsx scripts/seed-api.ts",
-    "db:seed": "psql -U shipzy_user -d shipzy_dev -f src/database/seeds/dev-data.sql"
+    "db:reset": "./scripts/db-reset.sh",
+    "db:backup": "./scripts/db-backup.sh",
+    "db:restore": "./scripts/db-restore.sh",
+    "db:seed": "tsx scripts/seed-api.ts",
+    "db:seed:dev": "psql -U shipzy_user -d shipzy_dev -f src/database/seeds/dev-data.sql",
+    
+    "dev:setup": "./scripts/startup.sh",
+    "dev:reset": "FORCE_RESET=true ./scripts/db-reset.sh && pnpm run dev",
+    "dev:start": "docker compose -f docker-compose.dev.yml up -d --build",
+    "dev:stop": "docker compose -f docker-compose.dev.yml down",
+    "dev:logs": "docker compose -f docker-compose.dev.yml logs -f",
+    "dev:clean": "docker compose -f docker-compose.dev.yml down -v"
   },
   "keywords": [
     "delivery",

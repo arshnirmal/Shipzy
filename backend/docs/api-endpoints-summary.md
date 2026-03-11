@@ -107,23 +107,25 @@
 ### **Automated Testing**
 
 ```bash
-# Run all automated tests (static endpoints only)
-./test-apis.sh
+# Run all automated tests
+pnpm test
 
 # Run specific test suites
-npm run test:static    # Static data tests
-npm run test:addresses # Address/location tests
-npm run test:auth      # Authentication tests
+pnpm run test:static    # Static data tests
+pnpm run test:addresses # Address/location tests
+pnpm run test:auth      # Authentication tests
+pnpm run test:users     # User management tests
+pnpm run test:drivers   # Driver management tests
+pnpm run test:orders    # Order management tests
 ```
 
 ### **Manual Testing**
 
 ```bash
 # Use the comprehensive testing guide
-# complete-api-testing.md
+# docs/complete-api-testing.md
 
-# Or use HTTP client examples
-# test-complete-apis.http
+# Or use HTTP client with examples from the guide
 ```
 
 ### **Environment Setup**
@@ -155,7 +157,7 @@ DB_PORT=5432
 
 ```bash
 # 1. Start the server
-npm run dev
+pnpm run dev
 
 # 2. Test health check
 curl http://localhost:3000/health
@@ -164,7 +166,7 @@ curl http://localhost:3000/health
 curl http://localhost:3000/api/v1/static/delivery-types
 
 # 4. Run automated tests
-./test-apis.sh
+pnpm test
 ```
 
 ---

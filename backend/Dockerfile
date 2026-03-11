@@ -55,7 +55,10 @@ RUN apk add --no-cache python3 make g++
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-CMD ["npm", "run", "dev"]
+# Make startup script executable
+RUN chmod +x /app/scripts/startup.sh
+
+CMD ["/app/scripts/startup.sh"]
 
 # ============================================
 # Production Dependencies Stage

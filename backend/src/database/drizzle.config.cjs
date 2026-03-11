@@ -1,6 +1,21 @@
 // Drizzle Kit config (CommonJS) so npx drizzle-kit can load it without ESM/require conflicts
 const path = require("node:path");
-require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
+
+// Load environment variables from multiple possible locations
+const dotenv = require("dotenv");
+const envPaths = [
+  path.resolve(__dirname, "../../.env"),
+  path.resolve(__dirname, "../../../.env"),
+  "/app/.env", // Docker container path
+  ".env" // Current directory
+];
+
+for (const envPath of envPaths) {
+  if (dotenv.config({ path: envPath }).error === undefined) {
+    // Successfully loaded .env file
+    break;
+  }
+}
 
 module.exports = {
   schema: "./schema/index.ts",
