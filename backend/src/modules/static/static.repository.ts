@@ -3,6 +3,7 @@ import { eq, and, gte, lt } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
+import cacheUtil from "../../utils/cache.util.js";
 import staticQueries from "../../database/queries/static.queries.js";
 import {
   deliveryTypes,
@@ -33,10 +34,17 @@ class StaticRepository {
   }
 
   /**
-   * Get delivery type by ID (migrated to Drizzle)
+   * Get delivery type by ID (migrated to Drizzle with caching)
    */
   async getDeliveryTypeById(deliveryTypeId: number) {
     try {
+      // Check cache first
+      const cacheKey = `delivery_type:${deliveryTypeId}`;
+      const cached = await cacheUtil.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const result = await drizzleDb
         .select()
         .from(deliveryTypes)
@@ -48,12 +56,15 @@ class StaticRepository {
         )
         .limit(1);
 
-      return result[0] || null;
+      const deliveryType = result[0] || null;
+      
+      // Cache for 1 hour
+      if (deliveryType) {
+        await cacheUtil.set(cacheKey, deliveryType, 3600);
+      }
+      
+      return deliveryType;
     } catch (error) {
-      logger.error({
-        msg: "Error getting delivery type by ID",
-        error: (error as Error).message,
-      });
       throw error;
     }
   }

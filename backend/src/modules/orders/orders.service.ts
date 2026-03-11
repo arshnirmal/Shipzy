@@ -6,9 +6,11 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import { validateOrThrow, validateCoordinates, validatePositiveInt } from "../../utils/validation.util.js";
 import ordersRepository from "./orders.repository.js";
 
 import type { CalculateFare, CreateOrder } from "./orders.zod.js";
+import { CalculateFareZ, CreateOrderRequestZ } from "./orders.zod.js";
 import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
 
 type FareData = CalculateFare;
@@ -103,6 +105,9 @@ class OrdersService {
    */
   async calculateFare(fareData: FareData): Promise<FareBreakdown> {
     try {
+      // Validate input using Zod schema
+      const validatedData = validateOrThrow(CalculateFareZ, fareData, "calculateFare");
+
       const {
         deliveryTypeId,
         vehicleCategoryId,
@@ -110,20 +115,16 @@ class OrdersService {
         packageTypeId,
         pickup,
         drop,
-      } = fareData;
+      } = validatedData;
 
-      // Validate inputs
-      if (
-        !deliveryTypeId ||
-        !vehicleCategoryId ||
-        !weightTierId ||
-        !pickup ||
-        !drop
-      ) {
-        throw new ValidationError(
-          "Delivery type, vehicle category, weight tier, pickup, and drop locations are required",
-        );
-      }
+      // Validate coordinates
+      validateCoordinates(pickup.latitude, pickup.longitude, "pickup location");
+      validateCoordinates(drop.latitude, drop.longitude, "drop location");
+
+      // Validate positive integers
+      validatePositiveInt(deliveryTypeId, "delivery type ID");
+      validatePositiveInt(vehicleCategoryId, "vehicle category ID");
+      validatePositiveInt(weightTierId, "weight tier ID");
 
       // Lazy import addresses service to avoid circular dependencies
       const addressesService = await import(

@@ -7,7 +7,7 @@ import config from "../../config/env.js";
 
 /**
  * Execute a raw SQL query with type safety
- * @param queryText - SQL query text with $1, $2, etc. placeholders or ? for auto-conversion
+ * @param queryText - SQL query text with PostgreSQL $1, $2, etc. placeholders ONLY
  * @param params - Query parameters array
  * @returns Array of typed results
  */
@@ -18,20 +18,28 @@ export const executeRaw = async <T extends Record<string, unknown> = Record<stri
   const start = Date.now();
 
   try {
-    // Convert ? placeholders to PostgreSQL $1, $2, etc. format if needed
-    let finalQuery = queryText;
-    if (queryText.includes("?") && !queryText.includes("$")) {
-      let paramIndex = 1;
-      finalQuery = queryText.replace(/\?/g, () => `$${paramIndex++}`);
+    // Validate query format - only allow PostgreSQL placeholders
+    if (queryText.includes("?")) {
+      throw new Error(
+        "Invalid query format: Only PostgreSQL $1, $2 placeholders are supported. Use parameterized queries only."
+      );
     }
 
-    const result = await db.query(finalQuery, params);
+    // Validate parameter count matches placeholders
+    const placeholderCount = (queryText.match(/\$\d+/g) || []).length;
+    if (placeholderCount !== params.length) {
+      throw new Error(
+        `Parameter count mismatch: Query has ${placeholderCount} placeholders but ${params.length} parameters provided`
+      );
+    }
+
+    const result = await db.query(queryText, params);
     const duration = Date.now() - start;
 
     // Safe logging
     if (config?.logging?.logQueries) {
       const queryPreview =
-        finalQuery.length > 100 ? finalQuery.substring(0, 100) + "..." : finalQuery;
+        queryText.length > 100 ? queryText.substring(0, 100) + "..." : queryText;
 
       logger.debug({
         msg: "Raw SQL query executed",

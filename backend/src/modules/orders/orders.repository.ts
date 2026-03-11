@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
+import { rawTransaction } from "../../database/transaction.js";
 import ordersQueries from "../../database/queries/orders.queries.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { orderStatuses } from "../../database/schema/public.js";
@@ -178,47 +179,42 @@ class OrdersRepository {
   }
 
   /**
-   * Accept order (driver accepts)
+   * Accept order (driver accepts) - using proper transaction
    */
   async acceptOrder(orderId: number, courierId: number) {
-    const client = await db.getClient();
+    return await rawTransaction(async (client) => {
+      try {
+        // Create assignment
+        const assignmentResult = await client.query(
+          ordersQueries.CREATE_COURIER_ASSIGNMENT,
+          [orderId, courierId],
+        );
 
-    try {
-      await client.query("BEGIN");
+        // Update assignment to accepted
+        await client.query(ordersQueries.ACCEPT_ASSIGNMENT, [orderId, courierId]);
 
-      // Create assignment
-      const assignmentResult = await client.query(
-        ordersQueries.CREATE_COURIER_ASSIGNMENT,
-        [orderId, courierId],
-      );
+        // Update order status to assigned
+        await client.query(ordersQueries.UPDATE_ORDER_STATUS_TO_ASSIGNED, [
+          orderId,
+        ]);
 
-      // Update assignment to accepted
-      await client.query(ordersQueries.ACCEPT_ASSIGNMENT, [orderId, courierId]);
+        // Update courier status
+        await client.query(ordersQueries.UPDATE_COURIER_CURRENT_ASSIGNMENT, [
+          courierId,
+          assignmentResult.rows[0].assignment_id,
+        ]);
 
-      // Update order status to assigned
-      await client.query(ordersQueries.UPDATE_ORDER_STATUS_TO_ASSIGNED, [
-        orderId,
-      ]);
-
-      // Update courier status
-      await client.query(ordersQueries.UPDATE_COURIER_CURRENT_ASSIGNMENT, [
-        courierId,
-        assignmentResult.rows[0].assignment_id,
-      ]);
-
-      await client.query("COMMIT");
-
-      return assignmentResult.rows[0];
-    } catch (error) {
-      await client.query("ROLLBACK");
-      logger.error({
-        msg: "Error accepting order",
-        error: (error as Error).message,
-      });
-      throw error;
-    } finally {
-      client.release();
-    }
+        return assignmentResult.rows[0];
+      } catch (error) {
+        logger.error({
+          msg: "Error in acceptOrder transaction",
+          error: (error as Error).message,
+          orderId,
+          courierId,
+        });
+        throw error;
+      }
+    });
   }
 
   /**
@@ -233,7 +229,7 @@ class OrdersRepository {
         .where(eq(orderStatuses.name, status))
         .limit(1);
 
-      if (statusResult.length === 0) {
+      if (!statusResult || statusResult.length === 0) {
         throw new Error(`Invalid status: ${status}`);
       }
 
@@ -256,11 +252,17 @@ class OrdersRepository {
         .where(eq(orderRequests.orderId, orderId))
         .returning();
 
+      if (!result || result.length === 0) {
+        throw new Error(`Order not found or update failed: ${orderId}`);
+      }
+
       return result[0];
     } catch (error) {
       logger.error({
         msg: "Error updating order status",
         error: (error as Error).message,
+        orderId,
+        status,
       });
       throw error;
     }
