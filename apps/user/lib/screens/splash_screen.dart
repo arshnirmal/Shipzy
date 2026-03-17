@@ -1,146 +1,105 @@
-import 'package:flutter/material.dart';
+// lib/screens/splash_screen.dart
 
-class SplashScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const primaryColor = Color(0xFF137FEC);
-    final bgColor = isDark ? const Color(0xFF101922) : const Color(0xFFF6F7F8);
-    final textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+  State<SplashScreen> createState() => _SplashScreenState();
+}
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Stack(
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _navigateToHome();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  void _navigateToHome() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      // Use context.go instead of Navigator.pushReplacement for GoRouter
+      // This will be handled by the router's redirect logic
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFFfcfcfc),
+    body: SafeArea(
+      child: Column(
         children: [
-          // Background Decor
-          Positioned.fill(
-            child: Opacity(
-              opacity: isDark ? 0.1 : 0.05,
-              child: Image.asset(
-                'assets/images/splash_bg.png',
-                fit: BoxFit.cover,
+          const Expanded(child: SizedBox()), // Top spacer
+          // Main content
+          Column(
+            children: [
+              // Logo container
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 30, offset: const Offset(0, 8))],
+                  border: Border.all(color: const Color(0xFFf1f5f9)),
+                ),
+                child: SvgPicture.asset('assets/app_logo.svg', width: 32, height: 32),
               ),
-            ),
+
+              const SizedBox(height: 24),
+
+              // Brand name
+              Text(
+                'Shipzy',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF6366F1),
+                  letterSpacing: -1.05,
+                  height: 1,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Tagline
+              Text(
+                'Fast local delivery',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF64748B),
+                  letterSpacing: 0.375,
+                  height: 1,
+                ),
+              ),
+            ],
           ),
-          
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Top spacer
-                  const SizedBox(height: 48, width: double.infinity),
 
-                  // Center Content
-                  Column(
-                    children: [
-                      // Stylized Icon Container
-                      Container(
-                        width: 96,
-                        height: 96,
-                        decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Transform.rotate(
-                              angle: 0.1, // subtle rotation
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.bolt,
-                              size: 60,
-                              color: primaryColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Brand Name and Tagline
-                      Text(
-                        'Shipzy',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Fast local delivery',
-                        style: TextStyle(
-                          color: subtitleColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Bottom Content
-                  Column(
-                    children: [
-                      // Loading section
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          color: primaryColor,
-                          strokeWidth: 2,
-                          backgroundColor: primaryColor.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'INITIALIZING...',
-                        style: TextStyle(
-                          color: subtitleColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      // Progress Bar
-                      Container(
-                        width: 160,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: 0.33,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-                    ],
-                  ),
-                ],
+          const Expanded(child: SizedBox()), // Bottom spacer
+          // Loading indicator
+          Padding(
+            padding: const EdgeInsets.only(bottom: 96),
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }

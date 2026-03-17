@@ -8,7 +8,7 @@ import '../../providers/orders_provider.dart';
 import '../../utils/app_routes.dart';
 import 'widgets/active_deliveries_section.dart';
 import 'widgets/cta_card.dart';
-import 'widgets/home_app_bar.dart';
+import 'widgets/custom_home_app_bar.dart';
 import 'widgets/recent_activity_section.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -20,58 +20,67 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const HomeAppBar(),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => ref.read(ordersProvider.notifier).refresh(),
-          child: ordersState.when(
-            data: (orders) {
-              final ordersNotifier = ref.read(ordersProvider.notifier);
-              final activeOrders = ordersNotifier.activeOrders;
-              final completedOrders = ordersNotifier.completedOrders;
+        child: Column(
+          children: [
+            // Custom Header
+            const CustomHomeAppBar(),
+            
+            // Content
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => ref.read(ordersProvider.notifier).refresh(),
+                child: ordersState.when(
+                  data: (orders) {
+                    final ordersNotifier = ref.read(ordersProvider.notifier);
+                    final activeOrders = ordersNotifier.activeOrders;
+                    final completedOrders = ordersNotifier.completedOrders;
 
-              return CustomScrollView(
-                slivers: [
-                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    return CustomScrollView(
+                      slivers: [
+                        const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-                  // CTA Card
-                  const SliverToBoxAdapter(child: CTACard()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        // CTA Card
+                        const SliverToBoxAdapter(child: CTACard()),
+                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-                  // Active Deliveries Section
-                  SliverToBoxAdapter(
-                    child: ActiveDeliveriesSection(orders: activeOrders, onViewAll: () => context.go(AppRoutes.orderList)),
+                        // Active Deliveries Section
+                        SliverToBoxAdapter(
+                          child: ActiveDeliveriesSection(orders: activeOrders, onViewAll: () => context.go(AppRoutes.orderList)),
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+                        // Recent Activity Section
+                        SliverToBoxAdapter(
+                          child: RecentActivitySection(orders: completedOrders, onViewAll: () => context.go(AppRoutes.orderList)),
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+                        const SizedBox(height: 16),
+                        Text('Failed to load orders', style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Text(error.toString(), style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.read(ordersProvider.notifier).refresh(),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-                  // Recent Activity Section
-                  SliverToBoxAdapter(
-                    child: RecentActivitySection(orders: completedOrders, onViewAll: () => context.go(AppRoutes.orderList)),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
-                  const SizedBox(height: 16),
-                  Text('Failed to load orders', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(error.toString(), style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => ref.read(ordersProvider.notifier).refresh(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

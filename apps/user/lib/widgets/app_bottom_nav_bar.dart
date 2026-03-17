@@ -15,14 +15,14 @@ class AppBottomNavBar extends StatelessWidget {
     final currentIndex = _getCurrentIndex(currentLocation);
 
     return Container(
-      height: 80,
+      height: 87,
       padding: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
+        border: Border(top: BorderSide(color: theme.colorScheme.outline, width: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: theme.brightness == Brightness.light ? 0.05 : 0.2),
+            color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.2 : 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -44,7 +44,7 @@ class AppBottomNavBar extends StatelessWidget {
             label: 'New Order',
             isActive: currentIndex == 1,
             onTap: () => context.go(AppRoutes.createOrder),
-            isHighlighted: true, // Make "New Order" stand out
+            isHighlighted: true,
           ),
           _NavItem(
             icon: Icons.receipt_long_outlined,
@@ -56,7 +56,7 @@ class AppBottomNavBar extends StatelessWidget {
           _NavItem(
             icon: Icons.person_outline_rounded,
             activeIcon: Icons.person_rounded,
-            label: 'Profile',
+            label: 'Account',
             isActive: currentIndex == 3,
             onTap: () => context.go(AppRoutes.profile),
           ),
@@ -103,19 +103,19 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Special styling for highlighted items (like "New Order")
-    final effectiveColor = isHighlighted && isActive
+    // Color based on theme and active state
+    final effectiveColor = isActive
         ? theme.colorScheme.primary
-        : isActive
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
+        : theme.brightness == Brightness.dark
+        ? theme.colorScheme.onSurfaceVariant
+        : const Color(0xFF94A3B8);
 
     return Expanded(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
           highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
           child: Padding(
@@ -124,28 +124,28 @@ class _NavItem extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon Container with Animation
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
+                // Icon Container
+                Container(
                   padding: EdgeInsets.all(isActive ? 6 : 4),
                   decoration: BoxDecoration(
                     color: isActive ? theme.colorScheme.primary.withValues(alpha: 0.12) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    isActive ? activeIcon : icon,
-                    color: effectiveColor,
-                    size: 26, // Slightly larger for better visibility
-                  ),
+                  child: Icon(isActive ? activeIcon : icon, color: effectiveColor, size: 20),
                 ),
                 const SizedBox(height: 4),
 
                 // Label Text
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(fontSize: 11, fontWeight: isActive ? FontWeight.w600 : FontWeight.w500, color: effectiveColor, letterSpacing: 0.1),
-                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    color: effectiveColor,
+                    letterSpacing: 0.25,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

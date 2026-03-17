@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../utils/app_routes.dart';
@@ -13,7 +15,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
-  int _currentPageIndex = 0;
+  final int _currentPageIndex = 0;
 
   @override
   void dispose() {
@@ -39,282 +41,186 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Extracted Tailwind Colors
-    const primaryColor = Color(0xFF137FEC);
-    final bgColor = isDark ? const Color(0xFF101922) : const Color(0xFFF6F7F8);
-    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white; // Slate 800 vs White
-    final textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-    final subtitleColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Nav / Skip Button
-            Padding(
-              padding: const EdgeInsets.only(top: 8, right: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (_currentPageIndex < 2)
-                    TextButton(
-                      onPressed: _finishOnboarding,
-                      style: TextButton.styleFrom(
-                        foregroundColor: subtitleColor,
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                      ),
-                      child: const Text('Skip'),
-                    )
-                  else
-                    const SizedBox(height: 48), // Spacer to maintain consistent layout
-                ],
-              ),
-            ),
-
-            // Expanded PageView
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const BouncingScrollPhysics(),
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPageIndex = index;
-                  });
-                },
-                children: [
-                  // Step 1: Browse
-                  _buildPage(
-                    imagePath: 'assets/images/onboarding/step1.png',
-                    title: 'Book a Fast Courier',
-                    subtitle: 'Send anything across town instantly or schedule a delivery for later.',
-                    isDark: isDark,
-                    surfaceColor: surfaceColor,
-                    textColor: textColor,
-                    subtitleColor: subtitleColor,
-                    imageBgDecoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
-                    ),
-                    paddingTop: 16,
-                    marginHorizontal: 16,
-                    useImageDecoration: true,
-                  ),
-
-                  // Step 2: Delivery
-                  _buildPage(
-                    imagePath: 'assets/images/onboarding/step2.png',
-                    title: 'Fastest Delivery',
-                    subtitle: 'Our fleet of local riders ensures your order reaches you in record time.',
-                    isDark: isDark,
-                    surfaceColor: surfaceColor,
-                    textColor: textColor,
-                    subtitleColor: subtitleColor,
-                    imageBgDecoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: isDark ? 0.2 : 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    paddingTop: 40,
-                    marginHorizontal: 32,
-                    useImageDecoration: false,
-                    imageSquare: true,
-                  ),
-
-                  // Step 3: Get Started
-                  _buildPage(
-                    imagePath: 'assets/images/onboarding/step3.png',
-                    title: 'Get Started with Shipzy',
-                    subtitle: 'Join thousands of locals getting everything they need delivered fast.',
-                    isDark: isDark,
-                    surfaceColor: surfaceColor,
-                    textColor: textColor,
-                    subtitleColor: subtitleColor,
-                    imageBgDecoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9), // Slate 800 / Slate 100
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    paddingTop: 16,
-                    marginHorizontal: 16,
-                    useImageDecoration: false,
-                    imageSquare: true,
-                  ),
-                ],
-              ),
-            ),
-
-            // Bottom Navigation & Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Progress Indicators
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      3,
-                      (index) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        height: 8,
-                        width: _currentPageIndex == index ? 32 : 8,
-                        decoration: BoxDecoration(
-                          color: _currentPageIndex == index
-                              ? primaryColor
-                              : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)), // Slate 700 / Slate 300
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Action Buttons based on page
-                  if (_currentPageIndex < 2) _buildNextButton(primaryColor) else _buildGetStartedButtons(primaryColor),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNextButton(Color primaryColor) => SizedBox(
-    width: double.infinity,
-    height: 56,
-    child: ElevatedButton(
-      onPressed: _onNext,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 4,
-        shadowColor: primaryColor.withValues(alpha: 0.25),
-      ),
-      child: const Text('Next', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-    ),
-  );
-
-  Widget _buildGetStartedButtons(Color primaryColor) => Column(
-    children: [
-      SizedBox(
-        width: double.infinity,
-        height: 56,
-        child: ElevatedButton(
-          onPressed: _finishOnboarding,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 2,
-          ),
-          child: const Text('Get Started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        ),
-      ),
-      const SizedBox(height: 24),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.white,
+    body: SafeArea(
+      child: Column(
         children: [
-          Text(
-            'Already have an account?',
-            style: TextStyle(
-              color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-              fontSize: 14,
-            ),
-          ),
-          TextButton(
-            onPressed: _finishOnboarding,
-            style: TextButton.styleFrom(
-              foregroundColor: primaryColor,
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            child: const Text('Sign In'),
-          ),
-        ],
-      ),
-    ],
-  );
-
-  Widget _buildPage({
-    required String imagePath,
-    required String title,
-    required String subtitle,
-    required bool isDark,
-    required Color surfaceColor,
-    required Color textColor,
-    required Color subtitleColor,
-    required BoxDecoration imageBgDecoration,
-    required double paddingTop,
-    required double marginHorizontal,
-    required bool useImageDecoration,
-    bool imageSquare = false,
-  }) => Column(
-    children: [
-      Expanded(
-        flex: 5,
-        child: Padding(
-          padding: EdgeInsets.only(top: paddingTop, left: marginHorizontal, right: marginHorizontal),
-          child: Container(
-            width: double.infinity,
-            decoration: imageBgDecoration,
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
+          // Header with Skip button
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Align(
-                  alignment: imageSquare ? Alignment.center : Alignment.topCenter,
-                  child: imageSquare
-                      ? ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 280, maxHeight: 280),
-                          child: Image.asset(imagePath, fit: BoxFit.cover),
-                        )
-                      : Image.asset(imagePath, fit: BoxFit.cover),
-                ),
-                if (useImageDecoration)
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [Colors.black.withValues(alpha: 0.2), Colors.transparent],
-                          stops: const [0.0, 0.4],
-                        ),
-                      ),
-                    ),
+                TextButton(
+                  onPressed: _finishOnboarding,
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF94A3B8),
+                    textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.5),
                   ),
+                  child: const Text('Skip'),
+                ),
               ],
             ),
           ),
-        ),
-      ),
-      Expanded(
-        flex: 3,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-          child: Column(
-            children: [
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: textColor, fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -0.5, height: 1.2),
+
+          // Main content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Icon container with decorative layers
+                  SizedBox(
+                    width: 320,
+                    height: 320,
+                    child: Stack(
+                      children: [
+                        // Background layer 1
+                        Positioned.fill(
+                          child: Transform.rotate(
+                            angle: -0.052, // -3 degrees
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Background layer 2
+                        Positioned.fill(
+                          child: Transform.rotate(
+                            angle: 0.035, // 2 degrees
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Main container
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(24)),
+                            child: Stack(
+                              children: [
+                                // Main icon
+                                Center(child: SvgPicture.asset('assets/app_logo.svg', width: 140, height: 140)),
+                                // Secondary icon badge
+                                Positioned(
+                                  bottom: 40,
+                                  right: 40,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(color: const Color(0xFFCBD5E1).withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 4)),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.inventory_2, size: 24, color: Color(0xFFF59E0B)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Title and subtitle
+                  Column(
+                    children: [
+                      Text(
+                        'Book a Fast Courier',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E293B),
+                          letterSpacing: -0.5,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Get your packages delivered quickly and safely across the city with our trusted hyperlocal delivery network.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF64748B), height: 1.5),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: subtitleColor, fontSize: 16, fontWeight: FontWeight.w500, height: 1.5),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // Bottom section
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                // Progress indicators
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 10,
+                      decoration: BoxDecoration(color: const Color(0xFF6366F1), borderRadius: BorderRadius.circular(5)),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(5)),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(5)),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 40),
+
+                // Next button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _onNext,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      elevation: 8,
+                      shadowColor: const Color(0xFF6366F1).withValues(alpha: 0.25),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Next', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    ],
+    ),
   );
 }
