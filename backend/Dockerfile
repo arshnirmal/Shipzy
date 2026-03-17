@@ -58,6 +58,9 @@ COPY . .
 # Make startup script executable
 RUN chmod +x /app/scripts/startup.sh
 
+# Use dumb-init as PID 1 and override base image entrypoint
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
 CMD ["/app/scripts/startup.sh"]
 
 # ============================================

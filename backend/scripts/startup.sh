@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 echo "🚀 Shipzy Backend Startup Sequence..."
@@ -6,10 +6,11 @@ echo "🚀 Shipzy Backend Startup Sequence..."
 # Configuration
 MAX_RETRIES=30
 RETRY_INTERVAL=2
-DB_HOST="${DB_HOST:-postgres}"
-DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_NAME:-shipzy_dev}"
-DB_USER="${DB_USER:-shipzy_user}"
+DB_HOST="${DB_HOST}"
+DB_PORT="${DB_PORT}"
+DB_NAME="${DB_NAME}"
+DB_USER="${DB_USER}"
+DB_PASSWORD="${DB_PASSWORD}"
 
 # Colors for output
 RED='\033[0;31m'

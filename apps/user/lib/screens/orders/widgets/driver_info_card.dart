@@ -46,7 +46,7 @@ class DriverInfoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(courier.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(courier.name ?? 'Unknown Driver', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -68,7 +68,10 @@ class DriverInfoCard extends StatelessWidget {
               ),
 
               // Call Button
-              IconButton.filledTonal(onPressed: () => _makePhoneCall(courier.phone), icon: const Icon(Icons.phone)),
+              IconButton.filledTonal(
+                onPressed: courier.phone != null ? () => _makePhoneCall(courier.phone!) : null,
+                icon: const Icon(Icons.phone),
+              ),
             ],
           ),
         ],

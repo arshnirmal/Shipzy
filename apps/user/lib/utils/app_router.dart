@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
+import '../providers/storage_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/new_order/address_form_screen.dart';
 import '../screens/new_order/new_order_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/orders/order_details_screen.dart';
 import '../screens/orders/order_list_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -22,6 +24,7 @@ part 'app_router.g.dart';
 @riverpod
 GoRouter router(Ref ref) {
   final authState = ref.watch(authStateProvider);
+  final sharedPrefs = ref.watch(sharedPreferencesProvider).value;
 
   return GoRouter(
     debugLogDiagnostics: true,
@@ -37,7 +40,11 @@ GoRouter router(Ref ref) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
             authenticated: (user, {required bool isNewUser}) => AppRoutes.home,
-            unauthenticated: () => AppRoutes.login,
+            unauthenticated: () {
+              // Check if user has seen onboarding
+              final hasSeenOnboarding = sharedPrefs?.getBool('has_seen_onboarding') ?? false;
+              return hasSeenOnboarding ? AppRoutes.login : AppRoutes.onboarding;
+            },
             orElse: () => AppRoutes.login,
           ),
           orElse: () => null, // Stay on splash while loading
@@ -64,6 +71,9 @@ GoRouter router(Ref ref) {
     routes: [
       // ============ SPLASH ============
       GoRoute(path: AppRoutes.splash, name: 'splash', builder: (context, state) => const SplashScreen()),
+
+      // ============ ONBOARDING ============
+      GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (context, state) => const OnboardingScreen()),
 
       // ============ AUTHENTICATION ============
       GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
