@@ -26,7 +26,7 @@ class ActiveOrderCard extends StatelessWidget {
           gradient: LinearGradient(
             colors: isDark
                 ? [theme.colorScheme.surfaceContainerHighest, theme.cardColor]
-                : [theme.colorScheme.primaryContainer.withOpacity(0.3), theme.cardColor],
+                : [theme.colorScheme.primaryContainer.withValues(alpha: 0.3), theme.cardColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -42,7 +42,7 @@ class ActiveOrderCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? theme.dividerColor : theme.colorScheme.primary.withOpacity(0.2)),
+                  border: Border.all(color: isDark ? theme.dividerColor : theme.colorScheme.primary.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   children: [
@@ -68,11 +68,11 @@ class ActiveOrderCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.timer, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        Icon(Icons.timer, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text('⏱️ ETA: ${order.estimatedDeliveryTime} mins', style: theme.textTheme.bodyMedium),
                         const SizedBox(width: 16),
-                        Icon(Icons.attach_money, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        Icon(Icons.attach_money, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text('💰 Earning: ₹${order.driverEarnings.toStringAsFixed(0)}', style: theme.textTheme.bodyMedium),
                       ],
@@ -122,25 +122,28 @@ class ActiveOrderCard extends StatelessWidget {
                       children: [
                         const Text('👤 ', style: TextStyle(fontSize: 16)),
                         Expanded(
-                          child: Text(order.delivery.contactName ?? 'Customer', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          child: Text(
+                            order.delivery.contactName ?? 'Customer',
+                            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.phone, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        Icon(Icons.phone, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
                           order.delivery.contactPhone ?? '',
-                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         ),
                         const Spacer(),
                         IconButton(
                           onPressed: onCall,
                           icon: const Icon(Icons.call),
                           color: Colors.green, // Keep semantic color
-                          style: IconButton.styleFrom(backgroundColor: Colors.green.withOpacity(0.1)),
+                          style: IconButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.1)),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
@@ -149,7 +152,7 @@ class ActiveOrderCard extends StatelessWidget {
                           },
                           icon: const Icon(Icons.message),
                           color: theme.colorScheme.primary,
-                          style: IconButton.styleFrom(backgroundColor: theme.colorScheme.primary.withOpacity(0.1)),
+                          style: IconButton.styleFrom(backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1)),
                         ),
                       ],
                     ),
@@ -161,7 +164,7 @@ class ActiveOrderCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '${order.delivery.address}\n${order.delivery.building ?? ''} ${order.delivery.landmark ?? ''}',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                           ),
                         ),
                       ],
@@ -171,9 +174,9 @@ class ActiveOrderCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.yellow.withOpacity(isDark ? 0.1 : 0.1), // Semantic warning color
+                          color: Colors.yellow.withValues(alpha: isDark ? 0.1 : 0.1), // Semantic warning color
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.yellow.withOpacity(0.5)),
+                          border: Border.all(color: Colors.yellow.withValues(alpha: 0.5)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +185,7 @@ class ActiveOrderCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 order.specialInstructions!,
-                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.8)),
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.8)),
                               ),
                             ),
                           ],
@@ -224,7 +227,7 @@ class ActiveOrderCard extends StatelessWidget {
                         const Text('🚚 ', style: TextStyle(fontSize: 16)),
                         Text(
                           'Vehicle: ${order.vehicleCategoryDisplay}',
-                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -237,7 +240,7 @@ class ActiveOrderCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               order.specialInstructions!,
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                             ),
                           ),
                         ],
@@ -388,13 +391,13 @@ class ActiveOrderCard extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                             color: isCompleted || step['title'] == 'In Transit'
                                 ? theme.colorScheme.onSurface
-                                : theme.colorScheme.onSurface.withOpacity(0.5),
+                                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                         if (step['time'] != '')
                           Text(
                             step['time'] as String,
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                           ),
                       ],
                     ),

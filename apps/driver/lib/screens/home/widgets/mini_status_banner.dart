@@ -19,11 +19,11 @@ class MiniStatusBanner extends StatelessWidget {
     final offlineColor = isDark ? theme.colorScheme.error : Colors.red;
 
     final containerColor = isOnline
-        ? (isDark ? Colors.green.withOpacity(0.1) : Colors.green.shade50)
+        ? (isDark ? Colors.green.withValues(alpha: 0.1) : Colors.green.shade50)
         : (isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade50);
 
     final borderColor = isOnline
-        ? (isDark ? Colors.green.withOpacity(0.3) : Colors.green.shade200)
+        ? (isDark ? Colors.green.withValues(alpha: 0.3) : Colors.green.shade200)
         : (isDark ? theme.dividerColor : Colors.grey.shade300);
 
     return Container(
