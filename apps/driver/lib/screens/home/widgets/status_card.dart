@@ -24,7 +24,6 @@ class StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOnline = status == DriverStatus.online;
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Card(
       elevation: 0,
