@@ -202,7 +202,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
                                     ref.invalidate(activeOrderProvider);
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    }
                                   }
                                 },
                                 onMarkDelivered: () async {
@@ -211,7 +213,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ref.invalidate(activeOrderProvider);
                                     ref.invalidate(dailyStatsProvider);
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    }
                                   }
                                 },
                               )
@@ -304,7 +308,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
                                       ref.invalidate(activeOrderProvider);
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      }
                                     }
                                   },
                                   onMarkDelivered: () async {
@@ -313,7 +319,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ref.invalidate(activeOrderProvider);
                                       ref.invalidate(dailyStatsProvider);
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      }
                                     }
                                   },
                                 )

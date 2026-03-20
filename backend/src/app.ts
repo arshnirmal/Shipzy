@@ -142,13 +142,15 @@ export const buildApp = async (
 
   // ============ ROUTES ============
 
-  // Health check with database connectivity
+  // Health check with database connectivity and server uptime
   app.get("/health", async (request, reply) => {
     try {
       // Test database connectivity
       const dbTest = await db.query("SELECT 1 as test");
-      const drizzleTest = await drizzleDb.execute<{ test: number }>("SELECT 1 as test");
-      
+      const drizzleTest = await drizzleDb.execute<{ test: number }>(
+        "SELECT 1 as test",
+      );
+
       return {
         status: "ok",
         timestamp: new Date().toISOString(),
@@ -176,7 +178,7 @@ export const buildApp = async (
         msg: "Health check failed",
         error: (error as Error).message,
       });
-      
+
       return reply.status(503).send({
         status: "error",
         timestamp: new Date().toISOString(),
