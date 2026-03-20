@@ -26,8 +26,8 @@ class _SplashScreenState extends State<SplashScreen> {
   void _navigateToHome() async {
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
-      // Use context.go instead of Navigator.pushReplacement for GoRouter
-      // This will be handled by the router's redirect logic
+      // Navigation is handled by GoRouter redirect logic in app_router.dart
+      // No need to manually navigate here
     }
   }
 
@@ -35,60 +35,55 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: const Color(0xFFfcfcfc),
     body: SafeArea(
-      child: Column(
-        children: [
-          const Expanded(child: SizedBox()), // Top spacer
-          // Main content
-          Column(
-            children: [
-              // Logo container
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 30, offset: const Offset(0, 8))],
-                  border: Border.all(color: const Color(0xFFf1f5f9)),
-                ),
-                child: SvgPicture.asset('assets/app_logo.svg', width: 32, height: 32),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Logo container
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 30, offset: const Offset(0, 8))],
+                border: Border.all(color: const Color(0xFFf1f5f9)),
               ),
+              child: SvgPicture.asset('assets/app_logo.svg', width: 32, height: 32),
+            ),
 
-              const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-              // Brand name
-              Text(
-                'Shipzy',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 42,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF6366F1),
-                  letterSpacing: -1.05,
-                  height: 1,
-                ),
+            // Brand name
+            Text(
+              'Shipzy',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 42,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF6366F1),
+                letterSpacing: -1.05,
+                height: 1,
               ),
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-              // Tagline
-              Text(
-                'Fast local delivery',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF64748B),
-                  letterSpacing: 0.375,
-                  height: 1,
-                ),
+            // Tagline
+            Text(
+              'Fast local delivery',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+                letterSpacing: 0.375,
+                height: 1,
               ),
-            ],
-          ),
+            ),
 
-          const Expanded(child: SizedBox()), // Bottom spacer
-          // Loading indicator
-          Padding(
-            padding: const EdgeInsets.only(bottom: 96),
-            child: SizedBox(
+            const SizedBox(height: 48),
+
+            // Loading indicator
+            SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
@@ -97,8 +92,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );

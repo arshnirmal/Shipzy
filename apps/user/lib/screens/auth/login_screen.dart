@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/auth_utils.dart';
+import '../../utils/font_utils.dart';
 import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
 
@@ -27,6 +27,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   bool _isGoogleSigningIn = false;
 
+  // Validation state variables
+  bool _isEmailValid = true;
+  bool _isPasswordValid = true;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -36,6 +40,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _togglePasswordVisibility() {
     setState(() => _obscurePassword = !_obscurePassword);
+  }
+
+  // Helper method to get border color based on validation state
+  Color _getBorderColor(bool isValid, bool isDark) {
+    if (!isValid) {
+      return const Color(0xFFEF4444); // Red for error
+    }
+    return isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0); // Default colors
   }
 
   Future<void> _signInWithGoogle() async {
@@ -130,7 +142,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(color: const Color(0xFF6366F1).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-                    child: Center(child: SvgPicture.asset('assets/app_logo.svg', width: 32, height: 32)),
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: SvgPicture.asset('assets/app_logo.svg', width: 64, height: 64),
+                      ),
+                    ),
                   ),
                 ),
 
@@ -139,7 +156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Welcome Text
                 Text(
                   'Welcome Back',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: FontUtils.getPlusJakartaSans(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -151,68 +168,116 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 Text(
                   'Log in to your Shipzy account to continue.',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 15, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                  style: FontUtils.getPlusJakartaSans(fontSize: 15, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                   textAlign: TextAlign.center,
                 ),
 
                 const SizedBox(height: 40),
 
                 // Email Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _emailController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Enter email address',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.email_outlined, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getBorderColor(_isEmailValid, isDark)),
+                      ),
+                      child: TextFormField(
+                        controller: _emailController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        style: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Enter email address',
+                          hintStyle: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(Icons.email_outlined, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isEmailValid = AuthValidators.validateEmail(value) == null;
+                          });
+                        },
+                        validator: (value) {
+                          final error = AuthValidators.validateEmail(value);
+                          setState(() {
+                            _isEmailValid = error == null;
+                          });
+                          return error;
+                        },
+                      ),
                     ),
-                    validator: AuthValidators.validateEmail,
-                  ),
+                    if (!_isEmailValid)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 12),
+                        child: Text(
+                          'Please enter a valid email address',
+                          style: FontUtils.getPlusJakartaSans(fontSize: 12, color: const Color(0xFFEF4444)),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
 
                 // Password Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _passwordController,
-                    enabled: !_isLoading,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Enter password',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      suffixIcon: IconButton(
-                        onPressed: _togglePasswordVisibility,
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getBorderColor(_isPasswordValid, isDark)),
+                      ),
+                      child: TextFormField(
+                        controller: _passwordController,
+                        enabled: !_isLoading,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        style: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Enter password',
+                          hintStyle: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          suffixIcon: IconButton(
+                            onPressed: _togglePasswordVisibility,
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                            ),
+                          ),
                         ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isPasswordValid = AuthValidators.validatePassword(value) == null;
+                          });
+                        },
+                        validator: (value) {
+                          final error = AuthValidators.validatePassword(value);
+                          setState(() {
+                            _isPasswordValid = error == null;
+                          });
+                          return error;
+                        },
                       ),
                     ),
-                    validator: AuthValidators.validatePassword,
-                  ),
+                    if (!_isPasswordValid)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 12),
+                        child: Text(
+                          'Password must be at least 8 characters long',
+                          style: FontUtils.getPlusJakartaSans(fontSize: 12, color: const Color(0xFFEF4444)),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
@@ -231,7 +296,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     child: Text(
                       'Forgot password?',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF6366F1)),
+                      style: FontUtils.getPlusJakartaSans(fontSize: 14, fontWeight: FontWeight.w500, color: const Color(0xFF6366F1)),
                     ),
                   ),
                 ),
@@ -256,7 +321,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                           )
-                        : Text('Sign In', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600)),
+                        : Text('Sign In', style: FontUtils.getPlusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
 
@@ -270,7 +335,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'OR',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: FontUtils.getPlusJakartaSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
@@ -326,7 +391,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const SizedBox(width: 12),
                               Text(
                                 'Continue with Google',
-                                style: GoogleFonts.plusJakartaSans(
+                                style: FontUtils.getPlusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -345,14 +410,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Text(
                       "Don't have an account?",
-                      style: GoogleFonts.plusJakartaSans(fontSize: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      style: FontUtils.getPlusJakartaSans(fontSize: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                     ),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.push(AppRoutes.register),
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
                       child: Text(
                         'Create Account',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1)),
+                        style: FontUtils.getPlusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1)),
                       ),
                     ),
                   ],

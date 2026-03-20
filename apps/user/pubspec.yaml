@@ -81,6 +81,8 @@ flutter:
     - assets/icons/
     - assets/animations/
     - assets/mapbox/
+    - assets/app_logo.png
+    - assets/app_logo.svg
     - .env
 
   fonts:

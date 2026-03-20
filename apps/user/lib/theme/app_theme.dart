@@ -4,7 +4,7 @@ class AppTheme {
   // ==================== FIGMA DESIGN SYSTEM ====================
 
   // Light mode colors
-  static const Color _primaryLight = Color(0xFF6764f2);
+  static const Color _primaryLight = Color(0xFF6366F1);
   static const Color _backgroundLight = Color(0xFFFFFFFF);
   static const Color _surfaceLight = Color(0xFFFFFFFF);
   static const Color _surfaceVariantLight = Color(0xFFF1F5F9);
@@ -14,7 +14,7 @@ class AppTheme {
   static const Color _textTertiaryLight = Color(0xFF94A3B8);
 
   // Dark mode colors
-  static const Color _primaryDark = Color(0xFF6764f2);
+  static const Color _primaryDark = Color(0xFF6366F1);
   static const Color _backgroundDark = Color(0xFF0F172A);
   static const Color _surfaceDark = Color(0xFF1E293B);
   static const Color _surfaceVariantDark = Color(0xFF334155);

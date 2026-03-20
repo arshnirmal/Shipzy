@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../providers/auth_state_provider.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/auth_utils.dart';
+import '../../utils/font_utils.dart';
 import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
 
@@ -25,12 +25,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _isGoogleSigningIn = false;
+
+  // Validation state variables
+  bool _isFullNameValid = true;
+  bool _isEmailValid = true;
+  bool _isPhoneValid = true;
+  bool _isPasswordValid = true;
 
   @override
   void dispose() {
@@ -38,7 +42,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -46,8 +49,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     setState(() => _obscurePassword = !_obscurePassword);
   }
 
-  void _toggleConfirmPasswordVisibility() {
-    setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+  // Helper method to get border color based on validation state
+  Color _getBorderColor(bool isValid, bool isDark) {
+    if (!isValid) {
+      return const Color(0xFFEF4444); // Red for error
+    }
+    return isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0); // Default colors
   }
 
   Future<void> _signInWithGoogle() async {
@@ -132,7 +139,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFFF8F6F6) : const Color(0xFFF8F6F6),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
@@ -148,7 +155,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(color: const Color(0xFF6366F1).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-                    child: Center(child: SvgPicture.asset('assets/app_logo.svg', width: 32, height: 32)),
+                    child: Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: SvgPicture.asset('assets/app_logo.svg', width: 64, height: 64),
+                      ),
+                    ),
                   ),
                 ),
 
@@ -157,7 +169,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Welcome Text
                 Text(
                   'Create Account',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: FontUtils.getPlusJakartaSans(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -169,179 +181,228 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                 Text(
                   'Sign up to get started with Shipzy.',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 15, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                  style: FontUtils.getPlusJakartaSans(fontSize: 15, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                   textAlign: TextAlign.center,
                 ),
 
                 const SizedBox(height: 32),
 
                 // Full Name Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _fullNameController,
-                    enabled: !_isLoading,
-                    textInputAction: TextInputAction.next,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Enter full name',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.person_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getBorderColor(_isFullNameValid, isDark)),
+                      ),
+                      child: TextFormField(
+                        controller: _fullNameController,
+                        enabled: !_isLoading,
+                        textInputAction: TextInputAction.next,
+                        style: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Enter full name',
+                          hintStyle: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(Icons.person_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isFullNameValid = value.trim().isNotEmpty && value.trim().length >= 2;
+                          });
+                        },
+                        validator: (value) {
+                          setState(() {
+                            _isFullNameValid = value != null && value.trim().isNotEmpty && value.trim().length >= 2;
+                          });
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your full name';
+                          }
+                          if (value.trim().length < 2) {
+                            return 'Name must be at least 2 characters';
+                          }
+                          return null;
+                        },
+                      ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your full name';
-                      }
-                      if (value.trim().length < 2) {
-                        return 'Name must be at least 2 characters';
-                      }
-                      return null;
-                    },
-                  ),
+                    if (!_isFullNameValid)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 12),
+                        child: Text(
+                          _fullNameController.text.trim().isEmpty ? 'Please enter your full name' : 'Name must be at least 2 characters',
+                          style: FontUtils.getPlusJakartaSans(fontSize: 12, color: const Color(0xFFEF4444)),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
 
                 // Email Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _emailController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Enter email address',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.email_outlined, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getBorderColor(_isEmailValid, isDark)),
+                      ),
+                      child: TextFormField(
+                        controller: _emailController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        style: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Enter email address',
+                          hintStyle: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(Icons.email_outlined, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isEmailValid = AuthValidators.validateEmail(value) == null;
+                          });
+                        },
+                        validator: (value) {
+                          final error = AuthValidators.validateEmail(value);
+                          setState(() {
+                            _isEmailValid = error == null;
+                          });
+                          return error;
+                        },
+                      ),
                     ),
-                    validator: AuthValidators.validateEmail,
-                  ),
+                    if (!_isEmailValid)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 12),
+                        child: Text(
+                          'Please enter a valid email address',
+                          style: FontUtils.getPlusJakartaSans(fontSize: 12, color: const Color(0xFFEF4444)),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
 
                 // Phone Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _phoneController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.next,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Enter phone number',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.phone_outlined, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getBorderColor(_isPhoneValid, isDark)),
+                      ),
+                      child: TextFormField(
+                        controller: _phoneController,
+                        enabled: !_isLoading,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        style: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Enter phone number',
+                          hintStyle: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(Icons.phone_outlined, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isPhoneValid = value.trim().isNotEmpty && RegExp(r'^[0-9]{10}$').hasMatch(value.trim());
+                          });
+                        },
+                        validator: (value) {
+                          setState(() {
+                            _isPhoneValid = value != null && value.trim().isNotEmpty && RegExp(r'^[0-9]{10}$').hasMatch(value.trim());
+                          });
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your phone number';
+                          }
+                          if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+                            return 'Please enter a valid 10-digit phone number';
+                          }
+                          return null;
+                        },
+                      ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your phone number';
-                      }
-                      if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
-                        return 'Please enter a valid 10-digit phone number';
-                      }
-                      return null;
-                    },
-                  ),
+                    if (!_isPhoneValid)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 12),
+                        child: Text(
+                          _phoneController.text.trim().isEmpty ? 'Please enter your phone number' : 'Please enter a valid 10-digit phone number',
+                          style: FontUtils.getPlusJakartaSans(fontSize: 12, color: const Color(0xFFEF4444)),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
 
                 // Password Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _passwordController,
-                    enabled: !_isLoading,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.next,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Enter password',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      suffixIcon: IconButton(
-                        onPressed: _togglePasswordVisibility,
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _getBorderColor(_isPasswordValid, isDark)),
+                      ),
+                      child: TextFormField(
+                        controller: _passwordController,
+                        enabled: !_isLoading,
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        style: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Enter password',
+                          hintStyle: FontUtils.getPlusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                          suffixIcon: IconButton(
+                            onPressed: _togglePasswordVisibility,
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                            ),
+                          ),
                         ),
+                        onChanged: (value) {
+                          setState(() {
+                            _isPasswordValid = AuthValidators.validatePassword(value) == null;
+                          });
+                        },
+                        validator: (value) {
+                          final error = AuthValidators.validatePassword(value);
+                          setState(() {
+                            _isPasswordValid = error == null;
+                          });
+                          return error;
+                        },
                       ),
                     ),
-                    validator: AuthValidators.validatePassword,
-                  ),
+                    if (!_isPasswordValid)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 12),
+                        child: Text(
+                          'Password must be at least 8 characters long',
+                          style: FontUtils.getPlusJakartaSans(fontSize: 12, color: const Color(0xFFEF4444)),
+                        ),
+                      ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
-
-                // Confirm Password Field
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextFormField(
-                    controller: _confirmPasswordController,
-                    enabled: !_isLoading,
-                    obscureText: _obscureConfirmPassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                    decoration: InputDecoration(
-                      hintText: 'Confirm password',
-                      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 16, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                      prefixIcon: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                      suffixIcon: IconButton(
-                        onPressed: _toggleConfirmPasswordVisibility,
-                        icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                          color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                        ),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 32),
 
                 // Sign Up Button
                 SizedBox(
@@ -361,7 +422,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                           )
-                        : Text('Create Account', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600)),
+                        : Text('Create Account', style: FontUtils.getPlusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
 
@@ -375,7 +436,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'OR',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: FontUtils.getPlusJakartaSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
@@ -431,7 +492,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               const SizedBox(width: 12),
                               Text(
                                 'Continue with Google',
-                                style: GoogleFonts.plusJakartaSans(
+                                style: FontUtils.getPlusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: isDark ? Colors.white : const Color(0xFF0F172A),
@@ -450,14 +511,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     Text(
                       'Already have an account?',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                      style: FontUtils.getPlusJakartaSans(fontSize: 14, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                     ),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.pop(),
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
                       child: Text(
                         'Sign In',
-                        style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1)),
+                        style: FontUtils.getPlusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1)),
                       ),
                     ),
                   ],
