@@ -18,6 +18,42 @@ type User = DbUser & {
   password_hash?: string | null;
 };
 
+type ProfileSelectBase = {
+  userId: number;
+  userUuid: string;
+  roleId: number;
+  roleName: string;
+  firebaseUid: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  fullName: string;
+  profilePictureUrl: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function mapProfileRowToUser(
+  row: ProfileSelectBase & { passwordHash?: string | null },
+): User {
+  return {
+    user_id: row.userId,
+    user_uuid: row.userUuid,
+    full_name: row.fullName,
+    email: row.email ?? undefined,
+    phone_number: row.phoneNumber ?? "",
+    profile_picture_url: row.profilePictureUrl ?? undefined,
+    role_name: row.roleName,
+    is_verified: row.isVerified,
+    is_active: row.isActive,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+    firebase_uid: row.firebaseUid ?? undefined,
+    password_hash: row.passwordHash ?? null,
+  };
+}
+
 interface Session {
   session_id: number;
   user_id: number;
@@ -78,6 +114,7 @@ class AuthRepository {
           isVerified: userProfiles.isVerified,
           isActive: userProfiles.isActive,
           createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
         .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
@@ -89,7 +126,8 @@ class AuthRepository {
         )
         .limit(1);
 
-      return (result[0] as User) || null;
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by Firebase UID",
@@ -118,6 +156,7 @@ class AuthRepository {
           isVerified: userProfiles.isVerified,
           isActive: userProfiles.isActive,
           createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
         .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
@@ -130,7 +169,8 @@ class AuthRepository {
         )
         .limit(1);
 
-      return (result[0] as User) || null;
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
@@ -155,10 +195,12 @@ class AuthRepository {
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
           fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
           passwordHash: userProfiles.passwordHash,
           isVerified: userProfiles.isVerified,
           isActive: userProfiles.isActive,
           createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
         .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
@@ -170,7 +212,8 @@ class AuthRepository {
         )
         .limit(1);
 
-      return (result[0] as User) || null;
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by phone",
@@ -195,10 +238,12 @@ class AuthRepository {
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
           fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
           passwordHash: userProfiles.passwordHash,
           isVerified: userProfiles.isVerified,
           isActive: userProfiles.isActive,
           createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
         .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
@@ -207,7 +252,8 @@ class AuthRepository {
         )
         .limit(1);
 
-      return (result[0] as User) || null;
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by email",
@@ -245,6 +291,9 @@ class AuthRepository {
         .returning();
 
       const createdUser = result[0];
+      if (!createdUser) {
+        throw new Error("User insert returned no row");
+      }
       const roleName = getUserRoleName(roleId);
 
       // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
@@ -296,6 +345,9 @@ class AuthRepository {
         .returning();
 
       const createdUser = result[0];
+      if (!createdUser) {
+        throw new Error("User insert returned no row");
+      }
       const roleName = getUserRoleName(roleId);
 
       // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
@@ -361,11 +413,16 @@ class AuthRepository {
           expires_at: authSessions.expiresAt,
         });
 
+      const inserted = result[0];
+      if (!inserted) {
+        throw new Error("Session insert returned no row");
+      }
+
       return {
-        session_id: result[0].session_id,
+        session_id: inserted.session_id,
         user_id: userId,
         token_hash: tokenHash,
-        expires_at: result[0].expires_at,
+        expires_at: inserted.expires_at,
         is_revoked: false,
         created_at: new Date(),
         last_activity_at: new Date(),

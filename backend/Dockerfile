@@ -5,7 +5,7 @@
 # ============================================
 # Base Stage
 # ============================================
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Install system dependencies and pnpm
 RUN apk add --no-cache \

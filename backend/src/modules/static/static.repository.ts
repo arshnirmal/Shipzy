@@ -1,5 +1,5 @@
 // services/backend/src/modules/static/static.repository.ts
-import { eq, and, gte, lt } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
@@ -99,8 +99,8 @@ class StaticRepository {
         .from(weightTiers)
         .where(
           and(
-            gte(weightKg, weightTiers.minWeightKg),
-            lt(weightKg, weightTiers.maxWeightKg),
+            sql`${weightTiers.minWeightKg}::numeric <= ${String(weightKg)}::numeric`,
+            sql`${weightTiers.maxWeightKg}::numeric > ${String(weightKg)}::numeric`,
           ),
         )
         .limit(1);

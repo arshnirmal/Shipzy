@@ -12,18 +12,13 @@ import {
   numeric,
   bigserial,
   timestamp,
-  customType,
 } from "drizzle-orm/pg-core";
 import { userProfiles } from "./users.js";
 import { vehicleCategories } from "./public.js";
 import { courierAssignments } from "./orders.js";
+import { geographyPoint4326 as geography } from "./postgisGeography.js";
 
 const logisticsSchema = pgSchema("logistics");
-
-// Custom type for PostGIS geography
-const geography = customType<{ data: { lat: number; lng: number } }>({
-  dataType: () => "geography(POINT, 4326)",
-});
 
 // Locations (for courier current locations - kept separate for spatial indexing)
 export const locations = logisticsSchema.table("locations", {

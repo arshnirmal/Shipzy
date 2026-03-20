@@ -11,17 +11,12 @@ import {
   numeric,
   timestamp,
   jsonb,
-  customType,
 } from "drizzle-orm/pg-core";
 import { courierAssignments, orderRequests } from "./orders.js";
 import { userProfiles } from "./users.js";
+import { geographyPoint4326 as geography } from "./postgisGeography.js";
 
 const trackingSchema = pgSchema("tracking");
-
-// Custom type for PostGIS geography
-const geography = customType<{ data: { lat: number; lng: number } }>({
-  dataType: () => "geography(POINT, 4326)",
-});
 
 // Tracking Events (optimized - no redundant lat/lng)
 export const trackingEvents = trackingSchema.table("events", {

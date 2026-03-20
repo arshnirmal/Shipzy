@@ -233,7 +233,12 @@ class OrdersRepository {
         throw new Error(`Invalid status: ${status}`);
       }
 
-      const statusId = statusResult[0].statusId;
+      const statusRow = statusResult[0];
+      if (!statusRow) {
+        throw new Error(`Invalid status: ${status}`);
+      }
+
+      const statusId = statusRow.statusId;
       const updateData: any = {
         statusId,
         updatedAt: new Date(),

@@ -22,7 +22,7 @@ tests/
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24.10+
 - PostgreSQL 14+
 - Running backend server (for integration tests)
 

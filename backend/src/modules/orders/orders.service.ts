@@ -471,41 +471,69 @@ class OrdersService {
         throw new AppError(result.error || "Order creation failed", 400);
       }
 
+      const orderRow = result.order;
+      if (!orderRow) {
+        throw new AppError(
+          "Order creation succeeded but order payload is missing",
+          500,
+        );
+      }
+
+      const toNum = (v: unknown, fallback = 0): number => {
+        if (v == null) return fallback;
+        const n = typeof v === "number" ? v : Number.parseFloat(String(v));
+        return Number.isFinite(n) ? n : fallback;
+      };
+
       // Step 6: Return successful result
       logger.info({
         msg: "[CREATE-ORDER-SERVICE] Order created successfully",
         operationId,
         clientId,
-        orderId: result.order.orderId,
-        orderUuid: result.order.orderUuid,
-        orderNumber: result.order.orderNumber,
-        totalPrice: result.order.pricing?.totalPrice,
-        response: result.order,
+        orderId: orderRow.orderId,
+        orderUuid: orderRow.orderUuid,
+        orderNumber: orderRow.orderNumber,
+        totalPrice: orderRow.pricing?.totalPrice,
+        response: orderRow,
       });
 
       // Normalize DB response -> API DTO (map `pricing` -> `fareBreakdown`)
-      const createdOrder = {
-        orderId: result.order.orderId,
-        orderUuid: result.order.orderUuid,
-        orderNumber: result.order.orderNumber,
-        status: result.order.status || "pending",
-        fareBreakdown: result.order.pricing
-          ? {
-              basePrice: result.order.pricing.basePrice,
-              distanceKm: result.order.pricing.distanceKm,
-              distancePrice: result.order.pricing.distancePrice,
-              weightSurcharge: result.order.pricing.weightSurcharge,
-              platformFee: result.order.pricing.platformFee,
-              specialHandlingFee: result.order.pricing.specialHandlingFee,
-              subtotalBeforeTax: result.order.pricing.subtotalBeforeTax,
-              gstAmount: result.order.pricing.gstAmount,
-              totalPrice: result.order.pricing.totalPrice,
-              currency: result.order.pricing.currency,
-            }
-          : undefined,
-        estimatedDistanceKm: result.order.estimatedDistanceKm ?? null,
-        estimatedDurationMins: result.order.estimatedDurationMins ?? null,
-        createdAt: result.order.createdAt,
+      const pricing = orderRow.pricing;
+      const fareBreakdown = pricing
+        ? {
+            basePrice: toNum(pricing.basePrice),
+            distanceKm: toNum(pricing.distanceKm),
+            distancePrice: toNum(pricing.distancePrice),
+            weightSurcharge: toNum(pricing.weightSurcharge),
+            platformFee: toNum(pricing.platformFee),
+            specialHandlingFee: toNum(pricing.specialHandlingFee),
+            subtotalBeforeTax: toNum(pricing.subtotalBeforeTax),
+            gstAmount: toNum(pricing.gstAmount),
+            totalPrice: toNum(pricing.totalPrice),
+            currency: pricing.currency,
+          }
+        : orderData.fareBreakdown;
+
+      const createdAtRaw = orderRow.createdAt;
+      const createdAtStr =
+        typeof createdAtRaw === "string"
+          ? createdAtRaw
+          : createdAtRaw instanceof Date
+            ? createdAtRaw.toISOString()
+            : new Date(createdAtRaw as string | number).toISOString();
+
+      const createdOrder: CreatedOrder = {
+        orderId: orderRow.orderId,
+        orderUuid: orderRow.orderUuid,
+        orderNumber: orderRow.orderNumber,
+        status: orderRow.status || "pending",
+        fareBreakdown,
+        estimatedDistanceKm: toNum(orderRow.estimatedDistanceKm),
+        estimatedDurationMins:
+          orderRow.estimatedDurationMins != null
+            ? toNum(orderRow.estimatedDurationMins)
+            : undefined,
+        createdAt: createdAtStr,
       };
 
       return createdOrder;
@@ -884,13 +912,21 @@ class OrdersService {
         throw new ValidationError("Order must be picked up before delivery");
       }
 
-      const result = await ordersRepository.updateOrderStatus(orderId, status);
+      const updated = await ordersRepository.updateOrderStatus(orderId, status);
+      if (!updated) {
+        throw new NotFoundError("Order not found or update failed");
+      }
+
+      const timestamp =
+        status === "picked_up" ? updated.pickedUpAt : updated.deliveredAt;
+      if (!timestamp) {
+        throw new AppError("Status timestamp missing after update", 500);
+      }
 
       return {
-        orderId: result.order_id,
+        orderId: updated.orderId,
         status,
-        timestamp:
-          status === "picked_up" ? result.picked_up_at : result.delivered_at,
+        timestamp,
       };
     } catch (error) {
       logger.error({

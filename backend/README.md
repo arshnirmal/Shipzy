@@ -2,7 +2,7 @@
 
 > Production-ready backend API for the Shipzy hyperlocal delivery platform
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24+-green.svg)](https://nodejs.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-4.28-blue.svg)](https://www.fastify.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://www.postgresql.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth-orange.svg)](https://firebase.google.com/)

@@ -13,17 +13,12 @@ import {
   timestamp,
   inet,
   jsonb,
-  customType,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { userRoles } from "./public.js";
+import { geographyPoint4326 as geography } from "./postgisGeography.js";
 
 const usersSchema = pgSchema("users");
-
-// Custom type for PostGIS geography
-const geography = customType<{ data: { lat: number; lng: number } }>({
-  dataType: () => "geography(POINT, 4326)",
-});
 
 // User Profiles
 export const userProfiles = usersSchema.table("profiles", {

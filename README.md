@@ -37,7 +37,7 @@ This is a **monorepo** containing:
 
 ### Prerequisites
 
-- **Backend**: Node.js 18+, PostgreSQL 14+, Firebase project
+- **Backend**: Node.js 24.10+, PostgreSQL 14+, Firebase project
 - **Mobile Apps**: Flutter 3.0+, Android Studio/XCode
 - **Development**: Docker & Docker Compose (recommended)
 
@@ -115,7 +115,7 @@ shipzy/
 
 ### Backend
 
-- **Runtime**: Node.js 18+ with ES Modules
+- **Runtime**: Node.js 24.10+ with ES Modules
 - **Framework**: Fastify 4.28 (high-performance web framework)
 - **Database**: PostgreSQL 14+ with PostGIS
 - **Authentication**: Firebase Auth + JWT

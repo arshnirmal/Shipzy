@@ -155,7 +155,10 @@ export const buildApp = async (
         uptime: process.uptime(),
         environment: config.nodeEnv,
         database: {
-          connected: dbTest.rows.length > 0 && drizzleTest.length > 0,
+          connected:
+            dbTest.rows.length > 0 &&
+            Array.isArray(drizzleTest.rows) &&
+            drizzleTest.rows.length > 0,
           pool: {
             totalConnections: (drizzlePool as any)?.totalCount || 0,
             idleConnections: (drizzlePool as any)?.idleCount || 0,

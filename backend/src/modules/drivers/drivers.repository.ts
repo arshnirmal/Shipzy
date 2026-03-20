@@ -105,11 +105,16 @@ class DriversRepository {
           updated_at: courierStatus.updatedAt,
         });
 
+      const row = result[0];
+      if (!row) {
+        throw new Error("Courier availability update returned no row");
+      }
+
       return {
-        courier_id: result[0].courier_id,
-        is_available: result[0].is_available,
-        is_online: result[0].is_online,
-        updated_at: result[0].updated_at,
+        courier_id: row.courier_id,
+        is_available: row.is_available,
+        is_online: row.is_online,
+        updated_at: row.updated_at,
       } as CourierAvailabilityResult;
     } catch (error) {
       logger.error({

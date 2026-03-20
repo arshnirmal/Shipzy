@@ -36,13 +36,35 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Try DB connectivity: psql if installed (local dev), else Node + pg (Docker Alpine has no psql)
+_db_ping() {
+    if command -v psql >/dev/null 2>&1; then
+        PGPASSWORD="${DB_PASSWORD}" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" >/dev/null 2>&1
+        return $?
+    fi
+
+    if [ -f "/app/package.json" ] && [ -f "/app/scripts/db-ping.mjs" ]; then
+        (cd /app && node /app/scripts/db-ping.mjs) >/dev/null 2>&1
+        return $?
+    fi
+
+    _ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+    if [ -f "$_ROOT/node_modules/pg/package.json" ] && [ -f "$_ROOT/scripts/db-ping.mjs" ]; then
+        (cd "$_ROOT" && node "$_ROOT/scripts/db-ping.mjs") >/dev/null 2>&1
+        return $?
+    fi
+
+    print_error "Cannot check database: install psql or ensure pg is in node_modules and scripts/db-ping.mjs exists"
+    return 1
+}
+
 # Function to check database readiness
 check_database_ready() {
     print_status "Checking database readiness..."
     
     local retry=0
     while [ $retry -lt $MAX_RETRIES ]; do
-        if PGPASSWORD="${DB_PASSWORD}" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" > /dev/null 2>&1; then
+        if _db_ping; then
             print_success "Database is ready!"
             return 0
         fi
@@ -53,6 +75,7 @@ check_database_ready() {
     done
     
     print_error "Database failed to become ready after $MAX_RETRIES attempts"
+    print_warning "Check DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD and that Postgres accepts connections from this container."
     return 1
 }
 

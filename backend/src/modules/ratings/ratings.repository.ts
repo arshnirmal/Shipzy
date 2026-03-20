@@ -36,14 +36,19 @@ class RatingsRepository {
         })
         .returning();
 
+      const row = result[0];
+      if (!row) {
+        throw new Error("Rating insert returned no row");
+      }
+
       return {
-        rating_id: result[0].ratingId,
-        order_id: result[0].orderId,
-        driver_id: result[0].driverId,
-        customer_id: result[0].customerId,
-        rating: result[0].rating,
-        comment: result[0].comment || null,
-        created_at: result[0].createdAt,
+        rating_id: row.ratingId,
+        order_id: row.orderId,
+        driver_id: row.driverId,
+        customer_id: row.customerId,
+        rating: row.rating,
+        comment: row.comment || null,
+        created_at: row.createdAt,
       } as RatingRow;
     } catch (error) {
       logger.error({
@@ -143,13 +148,18 @@ class RatingsRepository {
         return false;
       }
 
+      const deliveredRow = deliveredStatus[0];
+      if (!deliveredRow) {
+        return false;
+      }
+
       const result = await drizzleDb
         .select()
         .from(orderRequests)
         .where(
           and(
             eq(orderRequests.orderId, orderId),
-            eq(orderRequests.statusId, deliveredStatus[0].statusId),
+            eq(orderRequests.statusId, deliveredRow.statusId),
             isNotNull(orderRequests.deliveredAt),
           ),
         )

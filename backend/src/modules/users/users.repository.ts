@@ -12,6 +12,35 @@ import type { DbUser } from "../../types/user.js";
 
 type User = DbUser;
 
+function mapProfileRowToDbUser(row: {
+  userId: number;
+  userUuid: string;
+  roleId: number;
+  roleName: string;
+  phoneNumber: string | null;
+  email: string | null;
+  fullName: string;
+  profilePictureUrl: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): User {
+  return {
+    user_id: row.userId,
+    user_uuid: row.userUuid,
+    full_name: row.fullName,
+    email: row.email ?? undefined,
+    phone_number: row.phoneNumber ?? "",
+    profile_picture_url: row.profilePictureUrl ?? undefined,
+    role_name: row.roleName,
+    is_verified: row.isVerified,
+    is_active: row.isActive,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  };
+}
+
 interface Address {
   address_id: number;
   user_id: number;
@@ -60,6 +89,7 @@ class UsersRepository {
           isVerified: userProfiles.isVerified,
           isActive: userProfiles.isActive,
           createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
         .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
@@ -71,7 +101,8 @@ class UsersRepository {
         )
         .limit(1);
 
-      return (result[0] as User) || null;
+      const row = result[0];
+      return row ? mapProfileRowToDbUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
@@ -102,8 +133,13 @@ class UsersRepository {
         .where(eq(userProfiles.userId, userId))
         .returning();
 
+      const updatedRow = result[0];
+      if (!updatedRow) {
+        throw new Error("User update returned no row");
+      }
+
       // Fetch full user with role for return type compatibility
-      const updatedUser = await this.findByUuid(result[0].userUuid);
+      const updatedUser = await this.findByUuid(updatedRow.userUuid);
       if (!updatedUser) {
         throw new Error("User not found after update");
       }
