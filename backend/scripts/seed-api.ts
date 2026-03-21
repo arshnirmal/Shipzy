@@ -194,7 +194,7 @@ async function seedUsers(count = 3) {
 
         if (addrRes.data.success) {
           console.log(`   📍 Address added: ${addressData.fullAddress}`);
-          state.users[state.users.length - 1].addressId =
+          state.users.at(-1).addressId =
             addrRes.data.data.addressId;
         }
       }

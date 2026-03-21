@@ -101,7 +101,7 @@ export const buildApp = async (
     });
   } catch (err) {
     // swagger packages not installed — continue without interactive docs
-    app.log && app.log.debug && app.log.debug("Swagger plugins not available");
+    app.log?.debug?.("Swagger plugins not available")
   }
 
   // ============ DECORATORS ============

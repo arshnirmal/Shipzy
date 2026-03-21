@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const functionsDir = path.join(__dirname, "../src/database/functions");
-const seedsPath = path.join(__dirname, "../src/database/seeds/dev-data.sql");
+const seedsPath = path.join(__dirname, "../src/database/seeds/master-data.sql");
 
 // Test database connection pool
 const testPool = new Pool(testConfig.database);

@@ -91,8 +91,7 @@ setup_database() {
 # Function to seed data (optional)
 seed_data() {
     if [ "$SKIP_SEEDING" != "true" ]; then
-        print_status "Seeding development data..."
-        
+        print_status "Seeding via API (seed-api.ts)..."
         if pnpm run db:seed; then
             print_success "Development data seeded successfully!"
         else

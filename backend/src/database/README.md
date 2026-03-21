@@ -47,6 +47,14 @@ import { orderRequests } from "../../database/schema/orders.js";
 
 **⚠️ DEPRECATED**: The `schemas/` folder is deprecated. Use Drizzle migrations instead.
 
+### 📁 `seeds/` (SQL - Reference data)
+**Purpose**: Idempotent `INSERT` scripts for lookup tables.
+
+**Contents**:
+- `master-data.sql` — reference rows (`user_roles`, `delivery_types`, `weight_tiers`, `payments.payment_methods`, capabilities, labels, `pricing_config`, etc.). Applied automatically at the end of `db:deploy`.
+
+**Used by**: `scripts/db-deploy.ts`, `scripts/seed-master.ts`, `tests/database.js` (`runSeeds`)
+
 ### 📄 `setup.sql` (SQL - One-time Setup)
 **Purpose**: Extensions and schema creation (run once per database).
 
@@ -124,7 +132,10 @@ This generates SQL migration files in `migrations/`
 ```bash
 npm run db:deploy
 ```
-This runs pending migrations from `migrations/`
+This runs `setup.sql` (once), pending migrations from `migrations/`, refreshes `functions/*.sql`, then applies `seeds/master-data.sql` (idempotent reference data).
+
+### 4. Optional: API-driven seed
+`pnpm run db:seed` calls the HTTP API (`seed-api.ts`) and expects master data to exist first (via `db:deploy` or `db:seed:master`).
 
 ## Key Differences: `schema/` vs `migrations/`
 
@@ -162,15 +173,18 @@ This runs pending migrations from `migrations/`
 
 ```
 1. Edit TypeScript Schema (schema/*.ts)
-2. Generate Migration (npm run db:generate) → Creates migrations/*.sql
-3. Deploy (npm run db:deploy) → Runs setup.sql + migrations/*.sql + functions/*.sql
-4. TypeScript Schemas imported at runtime by application code
+2. Generate Migration (pnpm run db:generate) → Creates migrations/*.sql
+3. Deploy (pnpm run db:deploy) → setup.sql + migrations/*.sql + functions/*.sql + seeds/master-data.sql
+4. Optional: pnpm run db:seed → HTTP API seed (seed-api.ts)
+5. TypeScript schemas imported at runtime by application code
 ```
 
 ## Commands
 
-- `npm run db:generate` - Generate SQL migrations from TypeScript schema
-- `npm run db:deploy` - Deploy pending migrations to database
+- `pnpm run db:generate` - Generate SQL migrations from TypeScript schema
+- `pnpm run db:deploy` - Deploy setup, migrations, functions, and master reference data
+- `pnpm run db:seed:master` - Apply `seeds/master-data.sql` only (e.g. if DB existed before master seed was added)
+- `pnpm run db:seed` - Seed via API (`seed-api.ts`)
 
 ## Verification After Init (Docker)
 
@@ -185,5 +199,7 @@ After `docker compose up` with a fresh volume, the **postgres** container runs `
 
 **Tables** are **not** created by init. They come from Drizzle migrations. Ensure you have migration files and deploy:
 
-1. Generate migrations (if none): `npm run db:generate`
-2. Deploy (from host or backend container): `npm run db:deploy`
+1. Generate migrations (if none): `pnpm run db:generate`
+2. Deploy (from host or backend container): `pnpm run db:deploy` (also loads `seeds/master-data.sql`)
+
+Static API routes expect reference rows from `master-data.sql`; without deploy’s seed step, `/static/*` responses may be empty.

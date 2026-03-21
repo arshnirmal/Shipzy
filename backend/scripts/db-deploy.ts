@@ -16,6 +16,10 @@ const { Pool } = pg;
 const SETUP_SQL = path.resolve(__dirname, "../src/database/setup.sql");
 const MIGRATIONS_DIR = path.resolve(__dirname, "../src/database/migrations");
 const FUNCTIONS_DIR = path.resolve(__dirname, "../src/database/functions");
+const MASTER_DATA_SQL = path.resolve(
+  __dirname,
+  "../src/database/seeds/master-data.sql",
+);
 
 // Database connection
 const pool = new Pool({
@@ -145,6 +149,24 @@ async function deploy() {
           throw err;
         }
       }
+    }
+
+    // 5. Reference / master data (idempotent — safe on every deploy)
+    console.log("\n🌱 Applying master reference data...");
+    if (fs.existsSync(MASTER_DATA_SQL)) {
+      const sql = fs.readFileSync(MASTER_DATA_SQL, "utf-8");
+      await client.query("BEGIN");
+      try {
+        await client.query(sql);
+        await client.query("COMMIT");
+        console.log("   ✅ master-data.sql applied");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        console.error("   ❌ master-data.sql failed");
+        throw err;
+      }
+    } else {
+      console.log("   ⚠️  master-data.sql not found — skipping");
     }
 
     console.log("\n✅ Deployment Complete!");

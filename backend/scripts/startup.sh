@@ -112,8 +112,7 @@ deploy_migrations() {
 # Function to seed development data (optional)
 seed_development_data() {
     if [ "$NODE_ENV" = "development" ] && [ "$SKIP_SEEDING" != "true" ]; then
-        print_status "Seeding development data..."
-        
+        print_status "Seeding via API (seed-api.ts)..."
         if pnpm run db:seed; then
             print_success "Development data seeded successfully!"
         else
