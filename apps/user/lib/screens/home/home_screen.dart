@@ -9,7 +9,7 @@ import '../../utils/app_routes.dart';
 import 'widgets/active_deliveries_section.dart';
 import 'widgets/cta_card.dart';
 import 'widgets/custom_home_app_bar.dart';
-import 'widgets/recent_activity_section.dart';
+import 'widgets/recent_activity_section.dart'; // We should probably rename this file, but keeping the import for now
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -20,12 +20,13 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             // Custom Header
             const CustomHomeAppBar(),
-            
+
             // Content
             Expanded(
               child: RefreshIndicator(
@@ -34,15 +35,15 @@ class HomeScreen extends ConsumerWidget {
                   data: (orders) {
                     final ordersNotifier = ref.read(ordersProvider.notifier);
                     final activeOrders = ordersNotifier.activeOrders;
-                    final completedOrders = ordersNotifier.completedOrders;
 
                     return CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
-                        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                        const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
                         // CTA Card
                         const SliverToBoxAdapter(child: CTACard()),
-                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        const SliverToBoxAdapter(child: SizedBox(height: 32)),
 
                         // Active Deliveries Section
                         SliverToBoxAdapter(
@@ -50,11 +51,9 @@ class HomeScreen extends ConsumerWidget {
                         ),
                         const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-                        // Recent Activity Section
-                        SliverToBoxAdapter(
-                          child: RecentActivitySection(orders: completedOrders, onViewAll: () => context.go(AppRoutes.orderList)),
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        // Recent Locations Section
+                        const SliverToBoxAdapter(child: RecentLocationsSection()),
+                        const SliverToBoxAdapter(child: SizedBox(height: 32)),
                       ],
                     );
                   },

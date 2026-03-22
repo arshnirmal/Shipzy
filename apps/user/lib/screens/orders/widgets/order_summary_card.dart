@@ -63,21 +63,31 @@ class OrderSummaryCard extends StatelessWidget {
                     Text('Fare Breakdown', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
 
-                    _PricingRow(label: 'Base Fare', value: breakdown.basePrice),
-                    _PricingRow(label: 'Distance (${breakdown.distanceKm} km)', value: breakdown.distancePrice),
-                    if (breakdown.weightSurcharge > 0) _PricingRow(label: 'Weight Surcharge', value: breakdown.weightSurcharge),
-                    if (breakdown.specialHandlingFee > 0) _PricingRow(label: 'Special Handling', value: breakdown.specialHandlingFee),
-
-                    const Divider(height: 12),
-                    _PricingRow(label: 'Subtotal (before GST)', value: breakdown.subtotalBeforeTax, isSubtotal: true),
-
-                    _PricingRow(label: 'Platform Fee', value: breakdown.platformFee),
-                    _PricingRow(label: 'GST (${(breakdown.gstAmount / breakdown.subtotalBeforeTax * 100).round()}%)', value: breakdown.gstAmount),
+                    _PaymentRow(label: 'Base Fare', value: '₹${order!.fareBreakdown.basePrice}'),
+                    if (order!.fareBreakdown.distancePrice > 0) ...[
+                      _PaymentRow(label: 'Distance Charge', value: '₹${order!.fareBreakdown.distancePrice}'),
+                    ],
+                    if (order!.fareBreakdown.weightSurcharge > 0) ...[
+                      _PaymentRow(label: 'Weight Surcharge', value: '₹${order!.fareBreakdown.weightSurcharge}'),
+                    ],
+                    if (order!.fareBreakdown.platformFee > 0) ...[_PaymentRow(label: 'Platform Fee', value: '₹${order!.fareBreakdown.platformFee}')],
+                    if (order!.fareBreakdown.gstAmount > 0) ...[_PaymentRow(label: 'GST', value: '₹${order!.fareBreakdown.gstAmount}')],
+                    _PricingRow(
+                      label: 'Subtotal (before GST)',
+                      value:
+                          order!.fareBreakdown.subtotalBeforeTax ??
+                          (order!.fareBreakdown.basePrice +
+                              order!.fareBreakdown.distancePrice +
+                              order!.fareBreakdown.weightSurcharge +
+                              order!.fareBreakdown.platformFee +
+                              order!.fareBreakdown.specialHandlingFee!),
+                      isSubtotal: true,
+                    ),
 
                     const Divider(height: 12),
                     _PricingRow(
                       label: 'Total Amount',
-                      value: breakdown.totalPrice,
+                      value: order!.totalPrice,
                       isTotal: true,
                       valueStyle: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                     ),
@@ -109,25 +119,35 @@ class OrderSummaryCard extends StatelessWidget {
     // Try to create FareBreakdown from Order first
     if (order != null) {
       final dist = order!.actualDistanceKm ?? order!.estimatedDistanceKm;
-      if (order!.basePrice != null && order!.distancePrice != null && order!.weightSurcharge != null && dist != null) {
+      if (dist != null) {
         // Calculate missing values if needed
-        final platformFee = order!.platformFee ?? 10.0;
-        final specialHandlingFee = order!.specialHandlingFee ?? 0.0;
+        final platformFee = order!.fareBreakdown.platformFee ?? 10.0;
+        final specialHandlingFee = order!.fareBreakdown.specialHandlingFee ?? 0.0;
         final subtotalBeforeTax =
-            order!.subtotalBeforeTax ?? (order!.basePrice! + order!.distancePrice! + order!.weightSurcharge! + platformFee + specialHandlingFee);
-        final gstAmount = order!.gstAmount ?? (subtotalBeforeTax * 0.18);
+            order!.fareBreakdown.subtotalBeforeTax ??
+            (order!.fareBreakdown.basePrice +
+                order!.fareBreakdown.distancePrice +
+                order!.fareBreakdown.weightSurcharge +
+                platformFee +
+                specialHandlingFee);
+        final gstAmount = order!.fareBreakdown.gstAmount ?? (subtotalBeforeTax * 0.18);
 
         return FareBreakdown(
-          basePrice: order!.basePrice!,
-          distanceKm: dist,
-          distancePrice: order!.distancePrice!,
-          weightSurcharge: order!.weightSurcharge!,
-          platformFee: platformFee,
-          specialHandlingFee: specialHandlingFee,
-          subtotalBeforeTax: subtotalBeforeTax,
-          gstAmount: gstAmount,
+          basePrice: order!.fareBreakdown.basePrice,
+          distancePrice: order!.fareBreakdown.distancePrice,
+          weightSurcharge: order!.fareBreakdown.weightSurcharge,
+          platformFee: order!.fareBreakdown.platformFee,
+          specialHandlingFee: order!.fareBreakdown.specialHandlingFee!,
+          subtotalBeforeTax:
+              order!.fareBreakdown.subtotalBeforeTax ??
+              (order!.fareBreakdown.basePrice +
+                  order!.fareBreakdown.distancePrice +
+                  order!.fareBreakdown.weightSurcharge +
+                  order!.fareBreakdown.platformFee +
+                  order!.fareBreakdown.specialHandlingFee!),
+          gstAmount: order!.fareBreakdown.gstAmount ?? (subtotalBeforeTax * 0.18),
           totalPrice: order!.totalPrice,
-          currency: order!.currency ?? 'INR',
+          currency: order!.fareBreakdown.currency ?? 'INR',
         );
       }
     }
@@ -136,13 +156,23 @@ class OrderSummaryCard extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.icon, required this.label, required this.value, this.subtitle, this.valueStyle});
+  const _SummaryRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.subtitle,
+    this.valueStyle,
+    this.isSubtotal = false,
+    this.isTotal = false,
+  });
 
   final IconData icon;
   final String label;
-  final String value;
+  final double value;
   final String? subtitle;
   final TextStyle? valueStyle;
+  final bool isSubtotal;
+  final bool isTotal;
 
   @override
   Widget build(BuildContext context) {
@@ -169,13 +199,35 @@ class _SummaryRow extends StatelessWidget {
   }
 }
 
+class _PaymentRow extends StatelessWidget {
+  const _PaymentRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ),
+          Text('₹${value.toStringAsFixed(2)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
 class _PricingRow extends StatelessWidget {
-  const _PricingRow({required this.label, required this.value, this.isSubtotal = false, this.isTotal = false, this.valueStyle});
+  const _PricingRow({required this.label, required this.value, required this.valueStyle, this.isSubtotal = false, this.isTotal = false});
 
   final String label;
   final double value;
-  final bool isSubtotal;
-  final bool isTotal;
   final TextStyle? valueStyle;
 
   @override

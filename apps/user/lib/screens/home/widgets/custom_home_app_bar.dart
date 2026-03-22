@@ -10,47 +10,44 @@ class CustomHomeAppBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.9),
-        border: Border(bottom: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5), width: 0.5)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      color: theme.colorScheme.surface.withValues(alpha: 0.9),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Menu icon
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: IconButton(
-              onPressed: () => Scaffold.of(context).openDrawer(),
-              icon: Icon(Icons.menu, size: 20, color: theme.colorScheme.onSurface),
-            ),
-          ),
-
-          // Title
-          Expanded(
-            child: Center(
-              child: Text(
-                'Shipzy',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurface,
-                  letterSpacing: -0.27,
-                ),
+          // Logo and Title
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.local_shipping, color: Colors.white, size: 20),
               ),
-            ),
+              const SizedBox(width: 12),
+              Text(
+                'Shipzy',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface, letterSpacing: -0.5),
+              ),
+            ],
           ),
 
           // Notification icon
-          SizedBox(
-            width: 48,
-            height: 48,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.surface,
+              border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+            ),
             child: IconButton(
+              padding: EdgeInsets.zero,
               onPressed: () {
                 // TODO: Handle notifications
               },
-              icon: Icon(Icons.notifications_outlined, size: 20, color: theme.colorScheme.onSurface),
+              icon: Icon(Icons.notifications_outlined, size: 22, color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         ],

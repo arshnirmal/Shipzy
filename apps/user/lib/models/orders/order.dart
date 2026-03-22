@@ -13,42 +13,39 @@ abstract class Order with _$Order {
     required int orderId,
     required String orderUuid,
     required String orderNumber,
-    required OrderStatus status,
+    required String status,
     required int statusId,
     required int deliveryTypeId,
+    required String deliveryTypeDisplay,
     required int vehicleCategoryId,
+    required String vehicleCategoryDisplay,
     required double totalPrice,
     required DateTime createdAt,
+    required DateTime updatedAt,
     required OrderLocation pickup,
     required OrderLocation delivery,
-    String? deliveryTypeDisplay,
-    String? vehicleCategoryDisplay,
+    // Client information
+    required OrderClient client, // Fare breakdown
+    required OrderFareBreakdown fareBreakdown,
     String? packageDescription,
     int? packageTypeId,
     int? weightTierId,
     String? weightTierDisplay,
+    String? specialInstructions,
     double? estimatedDistanceKm,
     double? actualDistanceKm,
     int? actualDurationMins,
-    DateTime? statusTimestamp,
-    DateTime? acceptedAt,
-    DateTime? pickedUpAt,
-    DateTime? deliveredAt,
-    DateTime? cancelledAt,
-    OrderPayment? payment,
-    OrderClient? client,
-    String? specialInstructions,
-    String? cancellationReason,
+    double? estimatedDurationMins,
+    // Timeline fields
+    String? confirmedAt,
+    String? assignedAt,
+    String? pickedUpAt,
+    String? deliveredAt,
+    String? cancelledAt,
+    // Courier information (when assigned)
     OrderCourier? courier,
-    // Enhanced pricing breakdown
-    double? basePrice,
-    double? distancePrice,
-    double? weightSurcharge,
-    double? platformFee,
-    double? specialHandlingFee,
-    double? gstAmount,
-    double? subtotalBeforeTax,
-    String? currency,
+    // Rating information
+    OrderRating? rating,
   }) = _Order;
 
   const Order._();
@@ -64,10 +61,6 @@ abstract class Order with _$Order {
   double get totalFare => totalPrice;
   double? get distance => actualDistanceKm ?? estimatedDistanceKm;
   String? get packageWeight => weightTierDisplay;
-  double? get baseFare => basePrice;
-  double? get distanceCharge => distancePrice;
-
-  String? get paymentMethod => payment?.paymentMethod;
 }
 
 @freezed
@@ -86,6 +79,7 @@ abstract class OrderLocation with _$OrderLocation {
     double? longitude,
     String? contactName,
     String? contactPhone,
+    String? howToReach,
   }) = _OrderLocation;
 
   factory OrderLocation.fromJson(Map<String, dynamic> json) => _$OrderLocationFromJson(json);
@@ -102,13 +96,14 @@ abstract class OrderPayment with _$OrderPayment {
 abstract class OrderFareBreakdown with _$OrderFareBreakdown {
   const factory OrderFareBreakdown({
     required double basePrice,
+    required double distanceKm,
     required double distancePrice,
     required double weightSurcharge,
     required double platformFee,
-    required double specialHandlingFee,
-    required double gstAmount,
     required double subtotalBeforeTax,
+    required double gstAmount,
     required double totalPrice,
+    required String currency,
   }) = _OrderFareBreakdown;
 
   factory OrderFareBreakdown.fromJson(Map<String, dynamic> json) => _$OrderFareBreakdownFromJson(json);
@@ -116,7 +111,7 @@ abstract class OrderFareBreakdown with _$OrderFareBreakdown {
 
 @freezed
 abstract class OrderClient with _$OrderClient {
-  const factory OrderClient({required String name, required String phone}) = _OrderClient;
+  const factory OrderClient({required int userId, required String name, required String phone, String? profilePictureUrl}) = _OrderClient;
 
   factory OrderClient.fromJson(Map<String, dynamic> json) => _$OrderClientFromJson(json);
 }
@@ -124,14 +119,49 @@ abstract class OrderClient with _$OrderClient {
 @freezed
 abstract class OrderCourier with _$OrderCourier {
   const factory OrderCourier({
-    int? id,
-    String? name,
-    String? phone,
-    String? photo,
-    String? assignmentStatus,
-    DateTime? assignedAt,
-    DateTime? acceptedAt,
+    required int userId,
+    required String name,
+    required String phone,
+    required OrderCourierVehicle vehicle,
+    required OrderCourierRating rating,
+    String? profilePictureUrl,
   }) = _OrderCourier;
 
   factory OrderCourier.fromJson(Map<String, dynamic> json) => _$OrderCourierFromJson(json);
+}
+
+@freezed
+abstract class OrderCourierVehicle with _$OrderCourierVehicle {
+  const factory OrderCourierVehicle({
+    required int vehicleId,
+    required int categoryId,
+    required String category,
+    required bool isActive,
+    required String vehicleNumber,
+    required String model,
+    required int year,
+  }) = _OrderCourierVehicle;
+
+  factory OrderCourierVehicle.fromJson(Map<String, dynamic> json) => _$OrderCourierVehicleFromJson(json);
+}
+
+@freezed
+abstract class OrderCourierRating with _$OrderCourierRating {
+  const factory OrderCourierRating({required double averageRating, required int totalRatings}) = _OrderCourierRating;
+
+  factory OrderCourierRating.fromJson(Map<String, dynamic> json) => _$OrderCourierRatingFromJson(json);
+}
+
+@freezed
+abstract class OrderRating with _$OrderRating {
+  const factory OrderRating({
+    required int ratingId,
+    required int orderId,
+    required int rating,
+    required bool isAnonymous,
+    required String createdAt,
+    String? comment,
+  }) = _OrderRating;
+
+  factory OrderRating.fromJson(Map<String, dynamic> json) => _$OrderRatingFromJson(json);
 }

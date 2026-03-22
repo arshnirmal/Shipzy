@@ -2,7 +2,8 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../models/orders/order.dart';
+import '../../../models/orders/order.dart';
+import '../../../models/orders/order_status.dart';
 import 'order_service_provider.dart';
 
 part 'orders_provider.g.dart';
@@ -27,7 +28,23 @@ class Orders extends _$Orders {
     state = await AsyncValue.guard(() async => fetchOrders());
   }
 
-  List<Order> get activeOrders => state.maybeWhen(data: (orders) => orders.where((order) => order.status.isActive).toList(), orElse: () => []);
+  List<Order> get activeOrders => state.maybeWhen(
+    data: (orders) => orders
+        .where(
+          (order) =>
+              order.status == OrderStatus.pending ||
+              order.status == OrderStatus.accepted ||
+              order.status == OrderStatus.pickedUp ||
+              order.status == OrderStatus.inTransit,
+        )
+        .toList(),
+    orElse: () => [],
+  );
 
-  List<Order> get completedOrders => state.maybeWhen(data: (orders) => orders.where((order) => order.status.isCompleted).toList(), orElse: () => []);
+  List<Order> get completedOrders => state.maybeWhen(
+    data: (orders) => orders
+        .where((order) => order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled || order.status == OrderStatus.rejected)
+        .toList(),
+    orElse: () => [],
+  );
 }

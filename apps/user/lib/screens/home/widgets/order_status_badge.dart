@@ -35,7 +35,7 @@ class OrderStatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            status.label,
+            status.name,
             style: TextStyle(color: colors.text, fontSize: fontSize, fontWeight: FontWeight.w600),
           ),
         ],

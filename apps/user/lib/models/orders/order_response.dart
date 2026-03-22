@@ -24,8 +24,7 @@ abstract class OrdersResponse with _$OrdersResponse {
 
 @freezed
 abstract class Pagination with _$Pagination {
-  const factory Pagination({required int page, required int limit, required int total, @JsonKey(name: 'totalPages') required int pages}) =
-      _Pagination;
+  const factory Pagination({required int page, required int limit, required int total, required int totalPages}) = _Pagination;
 
   factory Pagination.fromJson(Map<String, dynamic> json) => _$PaginationFromJson(json);
 }
