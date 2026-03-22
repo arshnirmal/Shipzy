@@ -2,7 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../theme/design_tokens.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFfcfcfc),
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(
       child: Center(
         child: Column(
@@ -44,43 +45,29 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 30, offset: const Offset(0, 8))],
-                border: Border.all(color: const Color(0xFFf1f5f9)),
+                color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                borderRadius: AppRadius.radiusLg,
+                boxShadow: AppDepth.ambientShadow(Theme.of(context).brightness),
               ),
               child: SvgPicture.asset('assets/app_logo.svg', width: 32, height: 32),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
 
             // Brand name
             Text(
               'Shipzy',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 42,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF6366F1),
-                letterSpacing: -1.05,
-                height: 1,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.displayLarge?.copyWith(fontSize: 62, color: Theme.of(context).colorScheme.primary, letterSpacing: -1.2),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
             // Tagline
-            Text(
-              'Fast local delivery',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF64748B),
-                letterSpacing: 0.375,
-                height: 1,
-              ),
-            ),
+            Text('Fast local delivery', style: Theme.of(context).textTheme.bodyLarge),
 
-            const SizedBox(height: 48),
+            const SizedBox(height: AppSpacing.xxl),
 
             // Loading indicator
             SizedBox(
@@ -88,8 +75,8 @@ class _SplashScreenState extends State<SplashScreen> {
               height: 28,
               child: CircularProgressIndicator(
                 strokeWidth: 1.5,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
-                backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
               ),
             ),
           ],

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../theme/design_tokens.dart';
 import '../../utils/app_routes.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -15,7 +14,25 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
-  final int _currentPageIndex = 0;
+  int _currentPageIndex = 0;
+
+  static const _pages = [
+    _OnboardingPageData(
+      imagePath: 'assets/images/onboarding/step1.png',
+      title: 'Book a Fast Courier',
+      subtitle: 'Send anything across town instantly or schedule a delivery for later.',
+    ),
+    _OnboardingPageData(
+      imagePath: 'assets/images/onboarding/step2.png',
+      title: 'Fastest Delivery',
+      subtitle: 'Our fleet of local riders ensures your order reaches you in record time.',
+    ),
+    _OnboardingPageData(
+      imagePath: 'assets/images/onboarding/step3.png',
+      title: 'Get Started with Shipzy',
+      subtitle: 'Join thousands of locals getting everything they need delivered fast.',
+    ),
+  ];
 
   @override
   void dispose() {
@@ -42,177 +59,98 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.white,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
     body: SafeArea(
       child: Column(
         children: [
-          // Header with Skip button
+          // Header
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _finishOnboarding,
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF94A3B8),
-                    textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.5),
-                  ),
-                  child: const Text('Skip'),
-                ),
-              ],
+              children: [if (_currentPageIndex < _pages.length - 1) TextButton(onPressed: _finishOnboarding, child: const Text('Skip'))],
             ),
           ),
 
           // Main content
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Icon container with decorative layers
-                  SizedBox(
-                    width: 320,
-                    height: 320,
-                    child: Stack(
-                      children: [
-                        // Background layer 1
-                        Positioned.fill(
-                          child: Transform.rotate(
-                            angle: -0.052, // -3 degrees
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF6366F1).withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Background layer 2
-                        Positioned.fill(
-                          child: Transform.rotate(
-                            angle: 0.035, // 2 degrees
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Main container
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(24)),
-                            child: Stack(
-                              children: [
-                                // Main icon
-                                Center(child: SvgPicture.asset('assets/app_logo.svg', width: 140, height: 140)),
-                                // Secondary icon badge
-                                Positioned(
-                                  bottom: 40,
-                                  right: 40,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(color: const Color(0xFFCBD5E1).withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 4)),
-                                      ],
-                                    ),
-                                    child: const Icon(Icons.inventory_2, size: 24, color: Color(0xFFF59E0B)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
-
-                  // Title and subtitle
-                  Column(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _pages.length,
+              onPageChanged: (value) {
+                setState(() {
+                  _currentPageIndex = value;
+                });
+              },
+              itemBuilder: (context, index) {
+                final page = _pages[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Book a Fast Courier',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1E293B),
-                          letterSpacing: -0.5,
-                          height: 1.2,
-                        ),
+                      ClipRRect(
+                        borderRadius: AppRadius.radiusLg,
+                        child: Image.asset(page.imagePath, width: double.infinity, height: 260, fit: BoxFit.cover),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Get your packages delivered quickly and safely across the city with our trusted hyperlocal delivery network.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w500, color: const Color(0xFF64748B), height: 1.5),
-                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(page.title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(page.subtitle, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
 
           // Bottom section
           Padding(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               children: [
                 // Progress indicators
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 10,
-                      decoration: BoxDecoration(color: const Color(0xFF6366F1), borderRadius: BorderRadius.circular(5)),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(5)),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(5)),
-                    ),
-                  ],
+                  children: List.generate(_pages.length, (index) {
+                    final isActive = index == _currentPageIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+                      width: isActive ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    );
+                  }),
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Next button
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _onNext,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 8,
-                      shadowColor: const Color(0xFF6366F1).withValues(alpha: 0.25),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Next', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward, size: 20),
-                      ],
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: AppRadius.radiusLg,
+                    gradient: AppGradients.primaryCta,
+                    boxShadow: AppDepth.ambientShadow(Theme.of(context).brightness),
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _onNext,
+                        borderRadius: AppRadius.radiusLg,
+                        child: Center(
+                          child: Text(
+                            _currentPageIndex == _pages.length - 1 ? 'Get Started' : 'Next',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -223,4 +161,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     ),
   );
+}
+
+class _OnboardingPageData {
+  const _OnboardingPageData({required this.imagePath, required this.title, required this.subtitle});
+
+  final String imagePath;
+  final String title;
+  final String subtitle;
 }

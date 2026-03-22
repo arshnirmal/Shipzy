@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../theme/design_tokens.dart';
+
 /// A divider widget used in authentication screens with text in the middle
 class AuthDivider extends StatelessWidget {
   const AuthDivider({required this.text, super.key});
@@ -12,13 +14,13 @@ class AuthDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.outline.withValues(alpha: 0.2);
+    final dividerColor = theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity);
 
     return Row(
       children: [
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text(
             text,
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
@@ -51,9 +53,9 @@ class SocialButton extends StatelessWidget {
       ),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
-        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+        backgroundColor: theme.colorScheme.surfaceContainerLowest,
       ),
     );
   }
@@ -84,7 +86,7 @@ class AuthLoadingButton extends StatelessWidget {
               )
             : Text(
                 text,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: Colors.white),
               ),
       ),
     );
@@ -133,9 +135,9 @@ class AuthTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -148,7 +150,7 @@ class AuthTextField extends StatelessWidget {
           style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
           ),

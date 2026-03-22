@@ -8,6 +8,8 @@ class FontUtils {
     double? fontSize,
     FontWeight? fontWeight,
     Color? color,
+    double? height,
+    double? letterSpacing,
     TextDecoration? decoration,
   }) {
     try {
@@ -15,6 +17,8 @@ class FontUtils {
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
+        height: height,
+        letterSpacing: letterSpacing,
         decoration: decoration,
       );
     } catch (e) {
@@ -23,9 +27,13 @@ class FontUtils {
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
+        height: height,
+        letterSpacing: letterSpacing,
         decoration: decoration,
         fontFamily: 'system-ui',
       );
     }
   }
+
+  static TextStyle get buttonText => getPlusJakartaSans(fontWeight: FontWeight.w500);
 }
