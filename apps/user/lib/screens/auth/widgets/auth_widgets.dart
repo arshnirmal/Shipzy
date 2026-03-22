@@ -1,4 +1,4 @@
-// lib/utils/auth_widgets.dart
+// lib/screens/auth/widgets/auth_widgets.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,28 +34,39 @@ class AuthDivider extends StatelessWidget {
 
 /// A social login button widget used in authentication screens
 class SocialButton extends StatelessWidget {
-  const SocialButton({required this.label, required this.icon, required this.onPressed, super.key});
+  const SocialButton({required this.label, required this.icon, required this.onPressed, this.isLoading = false, super.key});
 
   final String label;
   final Widget icon;
   final VoidCallback? onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: icon,
-      label: Text(
-        label,
-        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface),
-      ),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
-        backgroundColor: theme.colorScheme.surfaceContainerLowest,
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary)),
+              )
+            : icon,
+        label: Text(
+          label,
+          style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onSurfaceVariant),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+          backgroundColor: theme.colorScheme.surfaceContainerLowest,
+        ),
       ),
     );
   }
@@ -79,14 +90,14 @@ class AuthLoadingButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 24,
                 width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.onPrimary)),
               )
             : Text(
                 text,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: Colors.white),
+                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onPrimary),
               ),
       ),
     );
@@ -135,7 +146,7 @@ class AuthTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: AppSpacing.xs),
         TextFormField(
@@ -150,9 +161,18 @@ class AuthTextField extends StatelessWidget {
           style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
+            prefixIcon: prefixIcon == null
+                ? null
+                : IconTheme.merge(
+                    data: IconThemeData(color: theme.colorScheme.onSurfaceVariant),
+                    child: prefixIcon!,
+                  ),
+            suffixIcon: suffixIcon == null
+                ? null
+                : IconTheme.merge(
+                    data: IconThemeData(color: theme.colorScheme.onSurfaceVariant),
+                    child: suffixIcon!,
+                  ),
           ),
           validator: validator,
         ),

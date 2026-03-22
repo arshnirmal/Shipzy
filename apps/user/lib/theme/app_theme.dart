@@ -36,7 +36,8 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: AppColors.primary.withValues(alpha: 0.35),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         textStyle: AppTypography.lightTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
@@ -119,7 +120,8 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: AppColors.primary.withValues(alpha: 0.35),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         textStyle: AppTypography.darkTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),

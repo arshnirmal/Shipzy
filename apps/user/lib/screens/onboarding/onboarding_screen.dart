@@ -68,7 +68,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: [if (_currentPageIndex < _pages.length - 1) TextButton(onPressed: _finishOnboarding, child: const Text('Skip'))],
+              children: [if (_currentPageIndex == 1) TextButton(onPressed: _finishOnboarding, child: const Text('Skip'))],
             ),
           ),
 
@@ -89,9 +89,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ClipRRect(
-                        borderRadius: AppRadius.radiusLg,
-                        child: Image.asset(page.imagePath, width: double.infinity, height: 260, fit: BoxFit.cover),
+                      SizedBox(
+                        width: 320,
+                        child: AspectRatio(
+                          aspectRatio: 48 / 41,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(page.imagePath, fit: BoxFit.cover),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       Text(page.title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
@@ -117,8 +123,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 220),
                       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
-                      width: isActive ? 18 : 6,
-                      height: 6,
+                      width: isActive ? 32 : 10,
+                      height: 10,
                       decoration: BoxDecoration(
                         color: isActive ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(99),
@@ -129,31 +135,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                 const SizedBox(height: AppSpacing.lg),
 
-                // Next button
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: AppRadius.radiusLg,
-                    gradient: AppGradients.primaryCta,
-                    boxShadow: AppDepth.ambientShadow(Theme.of(context).brightness),
-                  ),
-                  child: SizedBox(
+                if (_currentPageIndex == 0)
+                  Row(
+                    children: [
+                      TextButton(onPressed: _finishOnboarding, child: const Text('Skip')),
+                      const Spacer(),
+                      _OnboardingCtaButton(label: 'Next', width: 120, onTap: _onNext),
+                    ],
+                  )
+                else ...[
+                  _OnboardingCtaButton(
+                    label: _currentPageIndex == _pages.length - 1 ? 'Get Started' : 'Next',
                     width: double.infinity,
-                    height: 56,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _onNext,
-                        borderRadius: AppRadius.radiusLg,
-                        child: Center(
-                          child: Text(
-                            _currentPageIndex == _pages.length - 1 ? 'Get Started' : 'Next',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ),
-                    ),
+                    onTap: _onNext,
+                    showArrow: _currentPageIndex == 1,
                   ),
-                ),
+                  if (_currentPageIndex == _pages.length - 1) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Already have an account? ', style: Theme.of(context).textTheme.bodyMedium),
+                        TextButton(onPressed: () => context.go(AppRoutes.login), child: const Text('Sign In')),
+                      ],
+                    ),
+                  ],
+                ],
               ],
             ),
           ),
@@ -169,4 +176,45 @@ class _OnboardingPageData {
   final String imagePath;
   final String title;
   final String subtitle;
+}
+
+class _OnboardingCtaButton extends StatelessWidget {
+  const _OnboardingCtaButton({required this.label, required this.width, required this.onTap, this.showArrow = false});
+
+  final String label;
+  final double width;
+  final VoidCallback onTap;
+  final bool showArrow;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      borderRadius: AppRadius.radiusLg,
+      gradient: AppGradients.primaryCta,
+      boxShadow: AppDepth.ambientShadow(Theme.of(context).brightness),
+    ),
+    child: SizedBox(
+      width: width,
+      height: 56,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.radiusLg,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18),
+                ),
+                if (showArrow) ...[const SizedBox(width: AppSpacing.xs), const Icon(Icons.arrow_forward, color: Colors.white, size: 18)],
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

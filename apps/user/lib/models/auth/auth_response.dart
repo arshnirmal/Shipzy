@@ -7,6 +7,51 @@ import '../user.dart';
 part 'auth_response.freezed.dart';
 part 'auth_response.g.dart';
 
+int _expiresInFromJson(dynamic value) {
+  if (value is num) {
+    return value.toInt();
+  }
+
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+
+    final direct = int.tryParse(normalized);
+    if (direct != null) {
+      return direct;
+    }
+
+    final durationMatch = RegExp(r'^(\d+)\s*(ms|s|m|h|d|w)$').firstMatch(normalized);
+    if (durationMatch != null) {
+      final amount = int.parse(durationMatch.group(1)!);
+      final unit = durationMatch.group(2)!;
+
+      switch (unit) {
+        case 'ms':
+          return (amount / 1000).ceil();
+        case 's':
+          return amount;
+        case 'm':
+          return amount * 60;
+        case 'h':
+          return amount * 60 * 60;
+        case 'd':
+          return amount * 60 * 60 * 24;
+        case 'w':
+          return amount * 60 * 60 * 24 * 7;
+      }
+    }
+
+    final numericPart = RegExp(r'\d+').firstMatch(normalized)?.group(0);
+    if (numericPart != null) {
+      return int.parse(numericPart);
+    }
+  }
+
+  throw FormatException('Invalid expiresIn value: $value');
+}
+
+int _expiresInToJson(int value) => value;
+
 /// Login/Register API Response
 @freezed
 abstract class LoginResponse with _$LoginResponse {
@@ -47,7 +92,7 @@ abstract class AuthTokens with _$AuthTokens {
   const factory AuthTokens({
     @JsonKey(name: 'accessToken') required String accessToken,
     @JsonKey(name: 'refreshToken') required String refreshToken,
-    @JsonKey(name: 'expiresIn') required int expiresIn,
+    @JsonKey(name: 'expiresIn', fromJson: _expiresInFromJson, toJson: _expiresInToJson) required int expiresIn,
     @JsonKey(name: 'tokenType') @Default('Bearer') String tokenType,
   }) = _AuthTokens;
 
@@ -69,7 +114,7 @@ abstract class RefreshTokenData with _$RefreshTokenData {
   const factory RefreshTokenData({
     required String accessToken,
     required String refreshToken,
-    required int expiresIn,
+    @JsonKey(fromJson: _expiresInFromJson, toJson: _expiresInToJson) required int expiresIn,
     @Default('Bearer') String tokenType,
   }) = _RefreshTokenData;
 
