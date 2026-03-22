@@ -44,8 +44,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('Setup Profile')),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -99,5 +98,4 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
         ),
       ),
     );
-  }
 }

@@ -76,7 +76,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                               latitude: position.latitude,
                               longitude: position.longitude,
                               addressType: 'current',
-                              createdAt: DateTime.now().toIso8601String(),
+                              createdAt: DateTime.now(),
                             ),
                           );
                       if (context.mounted) {
@@ -135,8 +135,8 @@ class LocationSelectorSheet extends ConsumerWidget {
                       final isSelected = selectedLocation.value?.addressId == address.addressId;
 
                       return _LocationTile(
-                        icon: _getIconForLabel(address.label),
-                        label: address.label,
+                        icon: _getIconForLabel(address.label ?? ''),
+                        label: address.label ?? 'Saved Location',
                         address: address.fullAddress,
                         isSelected: isSelected,
                         onTap: () {

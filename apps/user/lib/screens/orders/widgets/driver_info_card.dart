@@ -70,7 +70,10 @@ class DriverInfoCard extends StatelessWidget {
               ),
 
               // Call Button
-              IconButton.filledTonal(onPressed: () => _makePhoneCall(courier.phone), icon: const Icon(Icons.phone)),
+              IconButton.filledTonal(
+                onPressed: courier.phone == null ? null : () => _makePhoneCall(courier.phone!),
+                icon: const Icon(Icons.phone),
+              ),
             ],
           ),
         ],

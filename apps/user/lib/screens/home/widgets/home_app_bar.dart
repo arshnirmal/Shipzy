@@ -75,7 +75,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                                     children: [
                                       Flexible(
                                         child: Text(
-                                          location.label,
+                                          location.label ?? 'Saved Location',
                                           style: theme.textTheme.titleSmall?.copyWith(
                                             fontWeight: FontWeight.w600,
                                             color: theme.colorScheme.onSurface,

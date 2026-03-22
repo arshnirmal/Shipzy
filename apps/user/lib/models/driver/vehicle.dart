@@ -11,10 +11,7 @@ abstract class Vehicle with _$Vehicle {
     @JsonKey(name: 'vehicleId') required int vehicleId,
     @JsonKey(name: 'categoryId') required int categoryId,
     @JsonKey(name: 'category') required String category,
-    @JsonKey(name: 'isActive') @Default(false) bool isActive,
-    @JsonKey(name: 'vehicleNumber') required String vehicleNumber,
-    @JsonKey(name: 'model') required String model,
-    @JsonKey(name: 'year') required int year,
+    @JsonKey(name: 'vehicleNumber') required String vehicleNumber, @JsonKey(name: 'model') required String model, @JsonKey(name: 'year') required int year, @JsonKey(name: 'isActive') @Default(false) bool isActive,
   }) = _Vehicle;
 
   factory Vehicle.fromJson(Map<String, dynamic> json) =>

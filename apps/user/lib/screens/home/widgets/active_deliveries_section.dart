@@ -93,7 +93,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   Text('Order #${order.orderNumber}', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 2),
                   Text(
-                    '${order.deliveryTypeDisplay ?? "Standard"} Delivery • ${order.distance?.toStringAsFixed(1) ?? "--"}km',
+                    '${order.deliveryTypeDisplay} Delivery • ${order.distance?.toStringAsFixed(1) ?? "--"}km',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],

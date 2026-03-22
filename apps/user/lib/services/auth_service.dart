@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../models/auth/auth_response.dart';
 import '../models/user.dart';
 import 'dio/api_client.dart';
+import 'dio/api_exception.dart';
 
 class AuthService {
   AuthService(this._apiClient);
@@ -157,21 +158,6 @@ class AuthService {
   }
 
   /// Handle Dio errors
-  Exception _handleDioError(DioException e, String operation) {
-    if (e.response != null) {
-      final data = e.response!.data;
-      final message = data is Map<String, dynamic>
-          ? data['message'] ?? data['error']
-          : 'Unknown error';
-      return Exception('$operation failed: $message');
-    } else if (e.type == DioExceptionType.connectionTimeout) {
-      return Exception('$operation failed: Connection timeout');
-    } else if (e.type == DioExceptionType.receiveTimeout) {
-      return Exception('$operation failed: Server not responding');
-    } else if (e.type == DioExceptionType.connectionError) {
-      return Exception('$operation failed: No internet connection');
-    } else {
-      return Exception('$operation failed: ${e.message}');
-    }
-  }
+  ApiException _handleDioError(DioException e, String operation) =>
+      mapDioException(e, operation);
 }

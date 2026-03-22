@@ -13,7 +13,7 @@ abstract class Order with _$Order {
     required int orderId,
     required String orderUuid,
     required String orderNumber,
-    required String status,
+    required OrderStatus status,
     required int statusId,
     required int deliveryTypeId,
     required String deliveryTypeDisplay,
@@ -36,12 +36,13 @@ abstract class Order with _$Order {
     double? actualDistanceKm,
     int? actualDurationMins,
     double? estimatedDurationMins,
-    // Timeline fields
-    String? confirmedAt,
-    String? assignedAt,
-    String? pickedUpAt,
-    String? deliveredAt,
-    String? cancelledAt,
+    @JsonKey(readValue: _readTimelineConfirmedAt) DateTime? confirmedAt,
+    @JsonKey(readValue: _readTimelineAssignedAt) DateTime? assignedAt,
+    @JsonKey(readValue: _readTimelinePickedUpAt) DateTime? pickedUpAt,
+    @JsonKey(readValue: _readTimelineDeliveredAt) DateTime? deliveredAt,
+    @JsonKey(readValue: _readTimelineCancelledAt) DateTime? cancelledAt,
+    String? cancellationReason,
+    OrderPayment? payment,
     // Courier information (when assigned)
     OrderCourier? courier,
     // Rating information
@@ -52,6 +53,24 @@ abstract class Order with _$Order {
 
   factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
+  static Object? _readTimelineField(Map<dynamic, dynamic> json, String field) {
+    final timeline = json['timeline'];
+    if (timeline is Map<dynamic, dynamic> && timeline.containsKey(field)) {
+      return timeline[field];
+    }
+    return json[field];
+  }
+
+  static Object? _readTimelineConfirmedAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'confirmedAt');
+
+  static Object? _readTimelineAssignedAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'assignedAt');
+
+  static Object? _readTimelinePickedUpAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'pickedUpAt');
+
+  static Object? _readTimelineDeliveredAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'deliveredAt');
+
+  static Object? _readTimelineCancelledAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'cancelledAt');
+
   // Convenience getters for UI compatibility
   String get pickupAddress => pickup.address;
   String get deliveryAddress => delivery.address;
@@ -61,6 +80,8 @@ abstract class Order with _$Order {
   double get totalFare => totalPrice;
   double? get distance => actualDistanceKm ?? estimatedDistanceKm;
   String? get packageWeight => weightTierDisplay;
+  DateTime? get statusTimestamp => cancelledAt ?? deliveredAt ?? pickedUpAt ?? assignedAt ?? confirmedAt ?? createdAt;
+  DateTime? get acceptedAt => assignedAt;
 }
 
 @freezed
@@ -111,7 +132,7 @@ abstract class OrderFareBreakdown with _$OrderFareBreakdown {
 
 @freezed
 abstract class OrderClient with _$OrderClient {
-  const factory OrderClient({required int userId, required String name, required String phone, String? profilePictureUrl}) = _OrderClient;
+  const factory OrderClient({required int userId, String? name, String? phone, String? profilePictureUrl}) = _OrderClient;
 
   factory OrderClient.fromJson(Map<String, dynamic> json) => _$OrderClientFromJson(json);
 }
@@ -120,10 +141,10 @@ abstract class OrderClient with _$OrderClient {
 abstract class OrderCourier with _$OrderCourier {
   const factory OrderCourier({
     required int userId,
-    required String name,
-    required String phone,
-    required OrderCourierVehicle vehicle,
-    required OrderCourierRating rating,
+    String? name,
+    String? phone,
+    OrderCourierVehicle? vehicle,
+    OrderCourierRating? rating,
     String? profilePictureUrl,
   }) = _OrderCourier;
 
@@ -159,7 +180,7 @@ abstract class OrderRating with _$OrderRating {
     required int orderId,
     required int rating,
     required bool isAnonymous,
-    required String createdAt,
+    required DateTime createdAt,
     String? comment,
   }) = _OrderRating;
 

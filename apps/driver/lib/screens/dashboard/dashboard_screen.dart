@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final StatefulNavigationShell navigationShell;
 
   const DashboardScreen({super.key, required this.navigationShell});
+  final StatefulNavigationShell navigationShell;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -16,8 +16,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       body: widget.navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: widget.navigationShell.currentIndex,
@@ -34,5 +33,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
-  }
 }

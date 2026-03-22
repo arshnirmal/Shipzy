@@ -7,6 +7,7 @@ import '../models/orders/create_order.dart';
 import '../models/orders/create_order_data.dart';
 import '../models/orders/order_response.dart';
 import 'dio/api_client.dart';
+import 'dio/api_exception.dart';
 
 class OrderService {
   OrderService(this._apiClient);
@@ -55,7 +56,10 @@ class OrderService {
 
   Future<void> cancelOrder(int orderId, String reason) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>('/orders/$orderId/cancel', data: {'reason': reason});
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/orders/$orderId/cancel',
+        data: {'cancellationReason': reason},
+      );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to cancel order');
@@ -113,21 +117,6 @@ class OrderService {
     }
   }
 
-  Exception _handleDioError(DioException e, String operation) {
-    if (e.response != null) {
-      final data = e.response!.data;
-
-      final message = data is Map<String, dynamic> ? data['message'] ?? data['error'] : 'Unknown error';
-
-      return Exception('$operation failed: $message');
-    } else if (e.type == DioExceptionType.connectionTimeout) {
-      return Exception('$operation failed: Connection timeout');
-    } else if (e.type == DioExceptionType.receiveTimeout) {
-      return Exception('$operation failed: Server not responding');
-    } else if (e.type == DioExceptionType.connectionError) {
-      return Exception('$operation failed: No internet connection');
-    } else {
-      return Exception('$operation failed: ${e.message}');
-    }
-  }
+  ApiException _handleDioError(DioException e, String operation) =>
+      mapDioException(e, operation);
 }

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../models/address_location.dart';
 import '../models/saved_address.dart';
 import 'dio/api_client.dart';
+import 'dio/api_exception.dart';
 
 class AddressService {
   AddressService(this._apiClient);
@@ -151,24 +152,6 @@ class AddressService {
     }
   }
 
-  Exception _handleDioError(DioException e, String operation) {
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return Exception('Connection timeout during $operation');
-      case DioExceptionType.badResponse:
-        final statusCode = e.response?.statusCode;
-        final message = e.response?.data?['message'] ?? e.message;
-        return Exception('Server error during $operation: $message (Status: $statusCode)');
-      case DioExceptionType.cancel:
-        return Exception('Request cancelled during $operation');
-      case DioExceptionType.connectionError:
-        return Exception('Connection error during $operation: ${e.message}');
-      case DioExceptionType.badCertificate:
-        return Exception('SSL certificate error during $operation');
-      case DioExceptionType.unknown:
-        return Exception('Unknown network error during $operation: ${e.message}');
-    }
-  }
+  ApiException _handleDioError(DioException e, String operation) =>
+      mapDioException(e, operation);
 }

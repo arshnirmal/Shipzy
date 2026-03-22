@@ -105,7 +105,7 @@ class LocationNotifier extends Notifier<AsyncValue<SavedAddress?>> {
           latitude: position.latitude,
           longitude: position.longitude,
           addressType: 'current',
-          createdAt: DateTime.now().toIso8601String(),
+          createdAt: DateTime.now(),
         ),
       );
     } catch (e) {

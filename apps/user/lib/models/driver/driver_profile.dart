@@ -14,19 +14,10 @@ abstract class DriverProfile with _$DriverProfile {
   const factory DriverProfile({
     @JsonKey(name: 'userId') required int userId,
     @JsonKey(name: 'userUuid') required String userUuid,
-    @JsonKey(name: 'role') @Default('courier') String role,
-    @JsonKey(name: 'fullName') required String fullName,
-    @JsonKey(name: 'email') required String email,
-    @JsonKey(name: 'phoneNumber') required String phoneNumber,
+    @JsonKey(name: 'fullName') required String fullName, @JsonKey(name: 'email') required String email, @JsonKey(name: 'phoneNumber') required String phoneNumber, @JsonKey(name: 'status') required DriverStatus status, @JsonKey(name: 'vehicle') required Vehicle vehicle, @JsonKey(name: 'earnings') required Earnings earnings, @JsonKey(name: 'rating') required Rating rating, @JsonKey(name: 'createdAt') required String createdAt, @JsonKey(name: 'updatedAt') required String updatedAt, @JsonKey(name: 'role') @Default('courier') String role,
     @JsonKey(name: 'profilePictureUrl') String? profilePictureUrl,
     @JsonKey(name: 'isVerified') @Default(false) bool isVerified,
     @JsonKey(name: 'isActive') @Default(false) bool isActive,
-    @JsonKey(name: 'status') required DriverStatus status,
-    @JsonKey(name: 'vehicle') required Vehicle vehicle,
-    @JsonKey(name: 'earnings') required Earnings earnings,
-    @JsonKey(name: 'rating') required Rating rating,
-    @JsonKey(name: 'createdAt') required String createdAt,
-    @JsonKey(name: 'updatedAt') required String updatedAt,
   }) = _DriverProfile;
 
   factory DriverProfile.fromJson(Map<String, dynamic> json) =>
