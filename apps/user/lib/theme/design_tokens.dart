@@ -25,6 +25,9 @@ class AppColors {
   static const Color tertiaryContainer = Color(0xFFFCE2A6);
 
   static const Color error = Color(0xFFD32F2F);
+
+  /// Labels and icons on gradient primary CTAs (contrast on indigo gradient).
+  static const Color onPrimaryCta = Color(0xFFFFFFFF);
 }
 
 class AppSpacing {
@@ -43,7 +46,10 @@ class AppRadius {
   AppRadius._();
 
   static const double lg = 8;
+  static const double onboardingHero = 24;
+
   static BorderRadius get radiusLg => BorderRadius.circular(lg);
+  static BorderRadius get radiusOnboardingHero => BorderRadius.circular(onboardingHero);
 }
 
 class AppDepth {
