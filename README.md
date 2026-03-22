@@ -37,7 +37,7 @@ This is a **monorepo** containing:
 
 ### Prerequisites
 
-- **Backend**: Node.js 24.10+, PostgreSQL 14+, Firebase project
+- **Backend**: Node.js 18+, PostgreSQL 14+, Firebase project
 - **Mobile Apps**: Flutter 3.0+, Android Studio/XCode
 - **Development**: Docker & Docker Compose (recommended)
 
@@ -87,7 +87,7 @@ shipzy/
 │   │   └── pubspec.yaml   # Flutter dependencies
 │   └── driver/            # Courier Flutter App
 │       ├── lib/          # Source code
-│       ├── android/      # Android configuration
+│       ├── android/       # Android configuration
 │       ├── ios/         # iOS configuration
 │       ├── .env.example  # Environment variables
 │       └── pubspec.yaml  # Flutter dependencies
@@ -115,16 +115,18 @@ shipzy/
 
 ### Backend
 
-- **Runtime**: Node.js 24.10+ with ES Modules
+- **Runtime**: Node.js 18+ with ES Modules
+- **Languages**: TypeScript, Dart, Kotlin, Swift
 - **Framework**: Fastify 4.28 (high-performance web framework)
 - **Database**: PostgreSQL 14+ with PostGIS
+- **ORM**: Drizzle
 - **Authentication**: Firebase Auth + JWT
 - **Testing**: Jest with Supertest
 - **Deployment**: Docker + Nginx
 
 ### Mobile Apps
 
-- **Framework**: Flutter 3.0+ (Dart)
+- **Framework**: Flutter 3.0+ (Dart), Android Native, iOS Native
 - **State Management**: Provider/Bloc pattern
 - **Networking**: Dio HTTP client
 - **Maps**: Mapbox integration
