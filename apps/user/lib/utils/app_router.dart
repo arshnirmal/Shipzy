@@ -8,7 +8,7 @@ import '../providers/auth_state_provider.dart';
 import '../providers/storage_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
-// import '../screens/home/home_screen.dart';
+import '../screens/home/home_screen.dart';
 // import '../screens/new_order/address_form_screen.dart';
 // import '../screens/new_order/new_order_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
@@ -16,7 +16,7 @@ import '../screens/onboarding/onboarding_screen.dart';
 // import '../screens/orders/order_list_screen.dart';
 // import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
-// import '../widgets/app_bottom_nav_bar.dart';
+import '../widgets/app_bottom_nav_bar.dart';
 import 'app_routes.dart';
 
 part 'app_router.g.dart';
@@ -39,8 +39,7 @@ GoRouter router(Ref ref) {
       if (isOnSplash) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
-            // Temporarily route authenticated users to login while feature slices are disabled.
-            authenticated: (user, {required bool isNewUser}) => AppRoutes.login,
+            authenticated: (user, {required bool isNewUser}) => AppRoutes.home,
             unauthenticated: () {
               // Check if user has seen onboarding
               final hasSeenOnboarding = sharedPrefs?.getBool('has_seen_onboarding') ?? false;
@@ -81,35 +80,33 @@ GoRouter router(Ref ref) {
 
       GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
 
-      // ============ FEATURE SLICES TEMPORARILY DISABLED ============
-      // Keeping only Splash + Onboarding + Auth routes active for phased implementation.
-      //
-      // ShellRoute(
-      //   builder: (context, state, child) => MainShell(child: child),
-      //   routes: [
-      //     GoRoute(
-      //       path: AppRoutes.home,
-      //       name: 'home',
-      //       pageBuilder: (context, state) => const CustomTransitionPage(child: HomeScreen(), transitionsBuilder: _fadeTransition),
-      //     ),
-      //     GoRoute(
-      //       path: AppRoutes.createOrder,
-      //       name: 'createOrder',
-      //       pageBuilder: (context, state) => const CustomTransitionPage(child: NewOrderScreen(), transitionsBuilder: _fadeTransition),
-      //     ),
-      //     GoRoute(
-      //       path: AppRoutes.orderList,
-      //       name: 'orderList',
-      //       pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersScreen(), transitionsBuilder: _fadeTransition),
-      //     ),
-      //     GoRoute(
-      //       path: AppRoutes.profile,
-      //       name: 'profile',
-      //       pageBuilder: (context, state) => const CustomTransitionPage(child: ProfileScreen(), transitionsBuilder: _fadeTransition),
-      //     ),
-      //   ],
-      // ),
-      //
+      // ============ FEATURE SLICES ============
+      ShellRoute(
+        builder: (context, state, child) => MainShell(child: child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            name: 'home',
+            pageBuilder: (context, state) => const CustomTransitionPage(child: HomeScreen(), transitionsBuilder: _fadeTransition),
+          ),
+          // GoRoute(
+          //   path: AppRoutes.createOrder,
+          //   name: 'createOrder',
+          //   pageBuilder: (context, state) => const CustomTransitionPage(child: NewOrderScreen(), transitionsBuilder: _fadeTransition),
+          // ),
+          // GoRoute(
+          //   path: AppRoutes.orderList,
+          //   name: 'orderList',
+          //   pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersScreen(), transitionsBuilder: _fadeTransition),
+          // ),
+          // GoRoute(
+          //   path: AppRoutes.profile,
+          //   name: 'profile',
+          //   pageBuilder: (context, state) => const CustomTransitionPage(child: ProfileScreen(), transitionsBuilder: _fadeTransition),
+          // ),
+        ],
+      ),
+
       // GoRoute(
       //   path: AppRoutes.orderDetailsPath,
       //   name: 'orderDetails',
@@ -118,13 +115,13 @@ GoRouter router(Ref ref) {
       //     return OrderDetailsScreen(orderId: orderId);
       //   },
       // ),
-      //
+
       // GoRoute(
       //   path: AppRoutes.addressList,
       //   name: 'addressList',
       //   builder: (context, state) => const Scaffold(body: Center(child: Text('Address List - Coming Soon'))),
       // ),
-      //
+
       // GoRoute(
       //   path: AppRoutes.addressForm,
       //   name: 'addressForm',
@@ -151,7 +148,7 @@ GoRouter router(Ref ref) {
       //     );
       //   },
       // ),
-      //
+
       // GoRoute(
       //   path: AppRoutes.payment,
       //   name: 'payment',
@@ -167,21 +164,21 @@ GoRouter router(Ref ref) {
   );
 }
 
-// Custom fade transition for smooth bottom navigation (temporarily disabled)
-// Widget _fadeTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => FadeTransition(
-//   opacity: animation.drive(CurveTween(curve: Curves.easeInOut)),
-//   child: child,
-// );
+// Custom fade transition for smooth bottom navigation
+Widget _fadeTransition(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) => FadeTransition(
+  opacity: animation.drive(CurveTween(curve: Curves.easeInOut)),
+  child: child,
+);
 
-// Main shell with bottom navigation (temporarily disabled)
-// class MainShell extends StatelessWidget {
-//   const MainShell({required this.child, super.key});
-//
-//   final Widget child;
-//
-//   @override
-//   Widget build(BuildContext context) => Scaffold(body: child, bottomNavigationBar: const AppBottomNavBar());
-// }
+// Main shell with bottom navigation
+class MainShell extends StatelessWidget {
+  const MainShell({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(body: child, bottomNavigationBar: const AppBottomNavBar());
+}
 
 // Error screen
 class ErrorScreen extends StatelessWidget {

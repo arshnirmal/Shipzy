@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../theme/design_tokens.dart';
 import '../../../utils/app_routes.dart';
 
 class CTACard extends StatelessWidget {
@@ -14,12 +15,12 @@ class CTACard extends StatelessWidget {
     final primaryColor = theme.colorScheme.primary;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: primaryColor,
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [primaryColor, primaryColor.withValues(alpha: 0.8)]),
+        borderRadius: AppRadius.radiusLg,
+        gradient: AppGradients.primaryCta,
         boxShadow: [BoxShadow(color: primaryColor.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 8))],
       ),
       child: Stack(
@@ -29,7 +30,7 @@ class CTACard extends StatelessWidget {
 
           // Content
           Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -42,15 +43,15 @@ class CTACard extends StatelessWidget {
                   'Send anything, anywhere in minutes.',
                   style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.lg),
                 Material(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: AppRadius.radiusLg,
                   child: InkWell(
                     onTap: () => context.push(AppRoutes.createOrder),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: AppRadius.radiusLg,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

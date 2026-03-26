@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../models/orders/order.dart';
+import '../../../theme/design_tokens.dart';
 import '../../../utils/app_routes.dart';
 import '../../../utils/slide_in_animation.dart';
 
@@ -22,7 +23,7 @@ class ActiveDeliveriesSection extends StatelessWidget {
       children: [
         // Section Header
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -44,7 +45,7 @@ class ActiveDeliveriesSection extends StatelessWidget {
         // Orders List or Empty State
         if (orders.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: SlideInAnimation(child: _EmptyState(onCreateOrder: () => context.go(AppRoutes.createOrder))),
           )
         else
@@ -52,7 +53,7 @@ class ActiveDeliveriesSection extends StatelessWidget {
               .take(3)
               .map(
                 (order) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md, left: AppSpacing.md, right: AppSpacing.md),
                   child: SlideInAnimation(child: _ActiveDeliveryCard(order: order)),
                 ),
               ),
@@ -75,9 +76,9 @@ class _ActiveDeliveryCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLg,
         border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: AppDepth.ambientShadow(theme.brightness),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,13 +233,13 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.colorScheme.onSurface,
                     side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                   ),
                   child: const Text('Details', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
@@ -247,8 +248,8 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     elevation: 0,
                   ),
                   child: const Text('Track Live', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -273,10 +274,10 @@ class _EmptyState extends StatelessWidget {
 
     return Container(
       width: MediaQuery.of(context).size.width,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.radiusLg,
         border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
       ),
       child: Column(

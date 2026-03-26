@@ -53,24 +53,6 @@ abstract class Order with _$Order {
 
   factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 
-  static Object? _readTimelineField(Map<dynamic, dynamic> json, String field) {
-    final timeline = json['timeline'];
-    if (timeline is Map<dynamic, dynamic> && timeline.containsKey(field)) {
-      return timeline[field];
-    }
-    return json[field];
-  }
-
-  static Object? _readTimelineConfirmedAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'confirmedAt');
-
-  static Object? _readTimelineAssignedAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'assignedAt');
-
-  static Object? _readTimelinePickedUpAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'pickedUpAt');
-
-  static Object? _readTimelineDeliveredAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'deliveredAt');
-
-  static Object? _readTimelineCancelledAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'cancelledAt');
-
   // Convenience getters for UI compatibility
   String get pickupAddress => pickup.address;
   String get deliveryAddress => delivery.address;
@@ -186,3 +168,21 @@ abstract class OrderRating with _$OrderRating {
 
   factory OrderRating.fromJson(Map<String, dynamic> json) => _$OrderRatingFromJson(json);
 }
+
+Object? _readTimelineField(Map<dynamic, dynamic> json, String field) {
+  final timeline = json['timeline'];
+  if (timeline is Map<dynamic, dynamic> && timeline.containsKey(field)) {
+    return timeline[field];
+  }
+  return json[field];
+}
+
+Object? _readTimelineConfirmedAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'confirmedAt');
+
+Object? _readTimelineAssignedAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'assignedAt');
+
+Object? _readTimelinePickedUpAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'pickedUpAt');
+
+Object? _readTimelineDeliveredAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'deliveredAt');
+
+Object? _readTimelineCancelledAt(Map<dynamic, dynamic> json, String _) => _readTimelineField(json, 'cancelledAt');
