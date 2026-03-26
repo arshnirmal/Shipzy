@@ -18,10 +18,14 @@ class GoogleAuth extends _$GoogleAuth {
   Future<GoogleSignInAccount?> signIn() async {
     try {
       final account = await _googleSignIn.signIn();
-      state = account;
+      if (ref.mounted) {
+        state = account;
+      }
       return account;
     } catch (error) {
-      state = null;
+      if (ref.mounted) {
+        state = null;
+      }
       throw Exception('Google sign-in failed: $error');
     }
   }
@@ -29,7 +33,7 @@ class GoogleAuth extends _$GoogleAuth {
   /// Get Google ID token
   Future<String?> getIdToken() async {
     try {
-      final account = _googleSignIn.currentUser ?? state;
+      final account = _googleSignIn.currentUser;
       if (account == null) {
         throw Exception('No Google account signed in');
       }
@@ -45,7 +49,9 @@ class GoogleAuth extends _$GoogleAuth {
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
-      state = null;
+      if (ref.mounted) {
+        state = null;
+      }
     } catch (error) {
       throw Exception('Google sign-out failed: $error');
     }
@@ -55,7 +61,9 @@ class GoogleAuth extends _$GoogleAuth {
   Future<void> disconnect() async {
     try {
       await _googleSignIn.disconnect();
-      state = null;
+      if (ref.mounted) {
+        state = null;
+      }
     } catch (error) {
       // Ignore disconnect errors (user might not be connected)
     }

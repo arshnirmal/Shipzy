@@ -49,7 +49,8 @@ class AuthState extends _$AuthState {
         return const AuthResult.error('Google sign-in cancelled');
       }
 
-      final idToken = await googleAuth.getIdToken();
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
       if (idToken == null) {
         return const AuthResult.error('Failed to get Google ID token');
       }
