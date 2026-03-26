@@ -114,9 +114,11 @@ class AuthService {
 
       return {
         user: mappedUser,
-        accessToken: newAccessToken,
-        refreshToken,
-        expiresIn: "7d",
+        tokens: {
+          accessToken: newAccessToken,
+          refreshToken,
+          expiresIn: "7d",
+        },
       };
     } catch (error) {
       logger.error({
@@ -177,13 +179,29 @@ class AuthService {
       if (!user) {
         isNewUser = true;
 
-        // Validate required fields for new user
-        if (!userData.roleName) {
-          throw new ValidationError("Role is required for new users");
+        // Determine role for new social users using a strict allowlist
+        const allowedSocialRoles = new Set(["client", "courier", "business"]);
+        const requestedRole = userData.roleName?.toLowerCase();
+        const roleName = requestedRole ?? "client";
+
+        if (!allowedSocialRoles.has(roleName)) {
+          throw new ValidationError("Invalid role for social login");
+        }
+
+        // Prevent email collisions with existing accounts
+        if (decodedToken.email) {
+          const existingByEmail = await authRepository.findByEmail(
+            decodedToken.email,
+          );
+          if (existingByEmail) {
+            throw new ValidationError(
+              "Email already in use. Please sign in with the existing method or link accounts.",
+            );
+          }
         }
 
         // Get role ID
-        const roleId = getRoleId(userData.roleName);
+        const roleId = getRoleId(roleName);
 
         // Create user with Google profile data
         user = await authRepository.createUser({
@@ -196,7 +214,7 @@ class AuthService {
             "Google User",
           email: decodedToken.email,
           passwordHash: null, // Social auth doesn't require password
-          roleName: userData.roleName,
+          roleName,
         });
 
         logger.info({
@@ -252,8 +270,11 @@ class AuthService {
 
       return {
         user: mappedUser,
-        accessToken,
-        refreshToken,
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn: "7d",
+        },
         isNewUser,
       };
     } catch (error) {

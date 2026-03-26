@@ -1,5 +1,6 @@
 // lib/providers/auth_state_provider.dart
 
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/user.dart';
@@ -50,13 +51,33 @@ class AuthState extends _$AuthState {
       }
 
       final auth = await account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null) {
-        return const AuthResult.error('Failed to get Google ID token');
+      final googleIdToken = auth.idToken;
+      final googleAccessToken = auth.accessToken;
+
+      if (googleIdToken == null && googleAccessToken == null) {
+        return const AuthResult.error('Failed to get Google authentication tokens');
+      }
+
+      // Sign in to Firebase Auth using Google credentials
+      final credential = firebase.GoogleAuthProvider.credential(
+        accessToken: googleAccessToken,
+        idToken: googleIdToken,
+      );
+
+      final currentFirebaseUser =
+          await firebase.FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Obtain the Firebase ID token which the backend verifies
+      final firebaseIdToken =
+          await currentFirebaseUser.user?.getIdToken(true);
+
+      if (firebaseIdToken == null) {
+        return const AuthResult.error('Failed to get Firebase ID token');
       }
 
       final authService = ref.read(authServiceProvider);
-      final response = await authService.verifyGoogleToken(idToken, role: role);
+      // Send Firebase ID Token to backend
+      final response = await authService.verifyGoogleToken(firebaseIdToken, role: role);
 
       await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
@@ -144,6 +165,13 @@ class AuthState extends _$AuthState {
       // Continue with local logout
     } finally {
       await _clearTokens();
+
+      // Sign out from Firebase securely
+      try {
+        await firebase.FirebaseAuth.instance.signOut();
+      } catch (e) {
+        AppLogger.e('Firebase signout error: $e');
+      }
 
       try {
         final googleAuth = ref.read(googleAuthProvider.notifier);
