@@ -53,6 +53,7 @@ export type AuthTokens = z.infer<typeof AuthTokensZ>;
 export const AuthResponseZ = z.object({
   user: z.union([ClientUserZ, DriverUserZ]),
   tokens: AuthTokensZ,
+  isNewUser: z.boolean().optional(),
 });
 export type AuthResponse = z.infer<typeof AuthResponseZ>;
 

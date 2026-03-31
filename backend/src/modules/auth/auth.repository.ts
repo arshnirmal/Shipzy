@@ -50,16 +50,6 @@ function mapProfileRowToUser(
   };
 }
 
-interface Session {
-  session_id: number;
-  user_id: number;
-  token_hash: string;
-  expires_at: Date;
-  is_revoked: boolean;
-  created_at: Date;
-  last_activity_at?: Date;
-}
-
 interface CreateUserData {
   roleId: number;
   firebaseUid?: string;
@@ -372,7 +362,7 @@ class AuthRepository {
   /**
    * Store JWT token hash (migrated to Drizzle)
    */
-  async storeJwtToken(sessionData: StoreJwtTokenData): Promise<Session> {
+  async storeJwtToken(sessionData: StoreJwtTokenData): Promise<void> {
     try {
       const {
         userId,
@@ -388,7 +378,7 @@ class AuthRepository {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      const result = await drizzleDb
+      await drizzleDb
         .insert(authSessions)
         .values({
           userId,
@@ -403,26 +393,7 @@ class AuthRepository {
           verifiedAt: new Date(),
           expiresAt,
           lastActivityAt: new Date(),
-        })
-        .returning({
-          session_id: authSessions.sessionId,
-          expires_at: authSessions.expiresAt,
         });
-
-      const inserted = result[0];
-      if (!inserted) {
-        throw new Error("Session insert returned no row");
-      }
-
-      return {
-        session_id: inserted.session_id,
-        user_id: userId,
-        token_hash: tokenHash,
-        expires_at: inserted.expires_at,
-        is_revoked: false,
-        created_at: new Date(),
-        last_activity_at: new Date(),
-      } as Session;
     } catch (error) {
       logger.error({
         msg: "Error storing JWT token",
@@ -435,25 +406,12 @@ class AuthRepository {
   /**
    * Validate JWT token (migrated to Drizzle)
    */
-  async validateJwtToken(tokenHash: string): Promise<Session | null> {
+  async validateJwtToken(tokenHash: string): Promise<boolean> {
     try {
       const result = await drizzleDb
-        .select({
-          session_id: authSessions.sessionId,
-          user_id: authSessions.userId,
-          phone_number: authSessions.phoneNumber,
-          expires_at: authSessions.expiresAt,
-          last_activity_at: authSessions.lastActivityAt,
-          user_uuid: userProfiles.userUuid,
-          full_name: userProfiles.fullName,
-          role_id: userProfiles.roleId,
-          role_name: userRoles.name,
-          is_active: userProfiles.isActive,
-          is_verified: userProfiles.isVerified,
-        })
+        .select({ sessionId: authSessions.sessionId })
         .from(authSessions)
         .innerJoin(userProfiles, eq(authSessions.userId, userProfiles.userId))
-        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
         .where(
           and(
             eq(authSessions.jwtTokenHash, tokenHash),
@@ -464,19 +422,7 @@ class AuthRepository {
         )
         .limit(1);
 
-      if (!result[0]) {
-        return null;
-      }
-
-      return {
-        session_id: result[0].session_id,
-        user_id: result[0].user_id,
-        token_hash: tokenHash,
-        expires_at: result[0].expires_at,
-        is_revoked: false,
-        created_at: new Date(),
-        last_activity_at: result[0].last_activity_at || undefined,
-      } as Session;
+      return result.length > 0;
     } catch (error) {
       logger.error({
         msg: "Error validating JWT token",
@@ -507,19 +453,15 @@ class AuthRepository {
   /**
    * Revoke JWT token (migrated to Drizzle)
    */
-  async revokeToken(tokenHash: string): Promise<Session | null> {
+  async revokeToken(tokenHash: string): Promise<{ sessionId: number } | null> {
     try {
       const result = await drizzleDb
         .update(authSessions)
         .set({ expiresAt: new Date() })
         .where(eq(authSessions.jwtTokenHash, tokenHash))
-        .returning({ session_id: authSessions.sessionId });
+        .returning({ sessionId: authSessions.sessionId });
 
-      return result[0]
-        ? ({
-            session_id: result[0].session_id,
-          } as Session)
-        : null;
+      return result[0] ?? null;
     } catch (error) {
       logger.error({
         msg: "Error revoking token",

@@ -13,84 +13,38 @@ import {
   verifyToken,
 } from "../../utils/jwt.util.js";
 import authRepository from "./auth.repository.js";
-import { DeviceInfo } from "../../types/index.js";
 import { getRoleId } from "../../utils/roles.utils.js";
+import type { LoginRequest, RegisterRequest, AuthResponse } from "./auth.zod.js";
+import type { DeviceInfo } from "../../types/index.js";
 
-interface UserData {
-  fullName?: string;
-  roleName?: string;
-  email?: string;
-  password?: string;
-  phoneNumber?: string;
-}
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-interface RegisterData {
-  fullName: string;
-  email: string;
-  password: string;
-  role?: string;
-  phoneNumber?: string;
-}
-
-interface AuthResult {
-  user: import("../../types/user.js").UserProfile;
-  accessToken?: string;
-  refreshToken?: string;
-  isNewUser?: boolean;
-  expiresIn?: string;
-  tokens?: {
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: string;
-  };
-}
+const JWT_ACCESS_EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
 
 class AuthService {
   /**
-   * Refresh JWT token
+   * Refresh JWT access token
    */
-  async refreshToken(refreshToken: string): Promise<AuthResult> {
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
-      // 1. Verify refresh token
       const decoded = verifyToken(refreshToken);
 
-      // 2. Find user by UUID
       const user = await authRepository.findByUuid(decoded.userUuid);
+      if (!user) throw new AuthenticationError("User not found");
+      if (!user.isActive) throw new AuthenticationError("User account is inactive");
 
-      if (!user) {
-        throw new AuthenticationError("User not found");
-      }
-
-      if (!user.isActive) {
-        throw new AuthenticationError("User account is inactive");
-      }
-
-      // 3. Generate new access token
-      const tokenPayload = {
+      const newAccessToken = generateAccessToken({
         userId: user.userId,
         userUuid: user.userUuid,
         role: user.roleName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-      };
+        email: user.email ?? undefined,
+        phoneNumber: user.phoneNumber ?? undefined,
+      });
 
-      const newAccessToken = generateAccessToken(tokenPayload);
-
-      // 4. Store new token hash
-      const tokenHash = crypto
-        .createHash("sha256")
-        .update(newAccessToken)
-        .digest("hex");
+      const tokenHash = crypto.createHash("sha256").update(newAccessToken).digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
+        email: user.email ?? undefined,
+        phoneNumber: user.phoneNumber ?? undefined,
         tokenHash,
         deviceId: null,
         deviceInfo: null,
@@ -98,33 +52,29 @@ class AuthService {
         authMethod: "refresh",
       });
 
-      const mappedUser: import("../../types/user.js").UserProfile = {
-        userId: user.userId,
-        userUuid: user.userUuid,
-        role: user.roleName,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-        fullName: user.fullName,
-        profilePictureUrl: user.profilePictureUrl,
-        isVerified: user.isVerified,
-        isActive: user.isActive,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt?.toISOString(),
-      };
-
       return {
-        user: mappedUser,
+        user: {
+          userId: user.userId,
+          userUuid: user.userUuid,
+          role: user.roleName as "client" | "courier",
+          phoneNumber: user.phoneNumber ?? undefined,
+          email: user.email ?? undefined,
+          fullName: user.fullName,
+          profilePictureUrl: user.profilePictureUrl ?? undefined,
+          isVerified: user.isVerified,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt?.toISOString(),
+        },
         tokens: {
           accessToken: newAccessToken,
           refreshToken,
-          expiresIn: "7d",
+          expiresIn: JWT_ACCESS_EXPIRES_IN,
+          tokenType: "Bearer",
         },
       };
     } catch (error) {
-      logger.error({
-        msg: "Token refresh failed",
-        error: (error as Error).message,
-      });
+      logger.error({ msg: "Token refresh failed", error: (error as Error).message });
       throw new AuthenticationError("Invalid or expired refresh token");
     }
   }
@@ -134,20 +84,13 @@ class AuthService {
    */
   async logout(tokenHash: string): Promise<{ message: string }> {
     try {
-      const result = await authRepository.revokeToken(tokenHash);
+      const revoked = await authRepository.revokeToken(tokenHash);
+      if (!revoked) throw new AuthenticationError("Token not found");
 
-      if (!result) {
-        throw new AuthenticationError("Token not found");
-      }
-
-      logger.info({ msg: "User logged out", sessionId: result.session_id });
-
+      logger.info({ msg: "User logged out", sessionId: revoked.sessionId });
       return { message: "Logged out successfully" };
     } catch (error) {
-      logger.error({
-        msg: "Logout failed",
-        error: (error as Error).message,
-      });
+      logger.error({ msg: "Logout failed", error: (error as Error).message });
       throw error;
     }
   }
@@ -157,42 +100,29 @@ class AuthService {
    */
   async verifyGoogleAndCreateUser(
     idToken: string,
-    userData: UserData,
+    userData: { roleName?: string },
     deviceInfo: DeviceInfo,
-  ): Promise<AuthResult> {
+  ): Promise<AuthResponse> {
     try {
-      // 1. Verify Firebase ID token (Google uses Firebase Auth)
       const decodedToken = await verifyFirebaseToken(idToken);
 
-      logger.info({
-        msg: "Google token verified",
-        uid: decodedToken.uid,
-        email: decodedToken.email,
-      });
+      logger.info({ msg: "Google token verified", uid: decodedToken.uid, email: decodedToken.email });
 
-      // 2. Check if user exists by Firebase UID
       let user = await authRepository.findByFirebaseUid(decodedToken.uid);
-
       let isNewUser = false;
 
-      // 3. If user doesn't exist, create new user
       if (!user) {
         isNewUser = true;
 
-        // Determine role for new social users using a strict allowlist
-        const allowedSocialRoles = new Set(["client", "courier", "business"]);
-        const requestedRole = userData.roleName?.toLowerCase();
-        const roleName = requestedRole ?? "client";
+        const allowedRoles = new Set(["client", "courier", "business"]);
+        const roleName = userData.roleName?.toLowerCase() ?? "client";
 
-        if (!allowedSocialRoles.has(roleName)) {
+        if (!allowedRoles.has(roleName)) {
           throw new ValidationError("Invalid role for social login");
         }
 
-        // Prevent email collisions with existing accounts
         if (decodedToken.email) {
-          const existingByEmail = await authRepository.findByEmail(
-            decodedToken.email,
-          );
+          const existingByEmail = await authRepository.findByEmail(decodedToken.email);
           if (existingByEmail) {
             throw new ValidationError(
               "Email already in use. Please sign in with the existing method or link accounts.",
@@ -200,52 +130,39 @@ class AuthService {
           }
         }
 
-        // Get role ID
         const roleId = getRoleId(roleName);
 
-        // Create user with Google profile data
         user = await authRepository.createUser({
           roleId,
           firebaseUid: decodedToken.uid,
-          phoneNumber: null, // Google auth doesn't provide phone
-          fullName:
-            decodedToken.name ||
-            decodedToken.email?.split("@")[0] ||
-            "Google User",
+          phoneNumber: null,
+          fullName: decodedToken.name || decodedToken.email?.split("@")[0] || "Google User",
           email: decodedToken.email,
-          passwordHash: null, // Social auth doesn't require password
+          passwordHash: null,
           roleName,
         });
 
-        logger.info({
-          msg: "New user created via Google auth",
-          userId: user.userId,
-        });
+        logger.info({ msg: "New user created via Google auth", userId: user.userId });
       }
 
-      // 4. Create JWT tokens
       const accessToken = generateAccessToken({
         userId: user.userId,
         userUuid: user.userUuid,
         role: user.roleName,
-        phoneNumber: user.phoneNumber,
+        phoneNumber: user.phoneNumber ?? undefined,
       });
 
-      const refreshToken = generateRefreshToken({
+      const newRefreshToken = generateRefreshToken({
         userId: user.userId,
         userUuid: user.userUuid,
       });
 
-      // 5. Store token hash in database
-      const tokenHash = crypto
-        .createHash("sha256")
-        .update(accessToken)
-        .digest("hex");
+      const tokenHash = crypto.createHash("sha256").update(accessToken).digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
+        email: user.email ?? undefined,
+        phoneNumber: user.phoneNumber ?? undefined,
         tokenHash,
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
@@ -253,35 +170,30 @@ class AuthService {
         authMethod: "google",
       });
 
-      // 6. Return user data and tokens
-      const mappedUser: import("../../types/user.js").UserProfile = {
-        userId: user.userId,
-        userUuid: user.userUuid,
-        role: user.roleName,
-        phoneNumber: user.phoneNumber,
-        email: user.email,
-        fullName: user.fullName,
-        profilePictureUrl: user.profilePictureUrl,
-        isVerified: user.isVerified,
-        isActive: user.isActive,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt?.toISOString(),
-      };
-
       return {
-        user: mappedUser,
+        user: {
+          userId: user.userId,
+          userUuid: user.userUuid,
+          role: user.roleName as "client" | "courier",
+          phoneNumber: user.phoneNumber ?? undefined,
+          email: user.email ?? undefined,
+          fullName: user.fullName,
+          profilePictureUrl: user.profilePictureUrl ?? undefined,
+          isVerified: user.isVerified,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt?.toISOString(),
+        },
         tokens: {
           accessToken,
-          refreshToken,
-          expiresIn: "7d",
+          refreshToken: newRefreshToken,
+          expiresIn: JWT_ACCESS_EXPIRES_IN,
+          tokenType: "Bearer",
         },
         isNewUser,
       };
     } catch (error) {
-      logger.error({
-        msg: "Google authentication service error",
-        error: (error as Error).message,
-      });
+      logger.error({ msg: "Google authentication service error", error: (error as Error).message });
       throw error;
     }
   }
@@ -289,53 +201,27 @@ class AuthService {
   /**
    * Register new user with email/password
    */
-  async registerWithEmail(
-    userData: RegisterData,
-    deviceInfo: DeviceInfo,
-  ): Promise<AuthResult> {
+  async registerWithEmail(userData: RegisterRequest, deviceInfo: DeviceInfo): Promise<AuthResponse> {
     try {
-      const {
-        fullName,
-        email,
-        password,
-        role = "client",
-        phoneNumber,
-      } = userData;
+      const { fullName, email, password, role = "client", phoneNumber } = userData;
 
-      // Validate required fields
       if (!fullName || !email || !password) {
-        throw new ValidationError(
-          "Full name, email, and password are required",
-        );
+        throw new ValidationError("Full name, email, and password are required");
       }
 
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new ValidationError("Invalid email format");
-      }
+      if (!emailRegex.test(email)) throw new ValidationError("Invalid email format");
 
-      // Validate password strength
       if (password.length < 8) {
-        throw new ValidationError(
-          "Password must be at least 8 characters long",
-        );
+        throw new ValidationError("Password must be at least 8 characters long");
       }
 
-      // Check if user already exists by email
-      const existingUserByEmail = await authRepository.findByEmail(email);
-      if (existingUserByEmail) {
-        throw new ValidationError("User with this email already exists");
-      }
+      const existingUser = await authRepository.findByEmail(email);
+      if (existingUser) throw new ValidationError("User with this email already exists");
 
-      // Get role ID
       const roleId = getRoleId(role);
+      const passwordHash = await bcrypt.hash(password, 12);
 
-      // Hash password
-      const saltRounds = 12;
-      const passwordHash = await bcrypt.hash(password, saltRounds);
-
-      // Create user
       const user = await authRepository.createEmailUser({
         roleId,
         fullName,
@@ -345,36 +231,26 @@ class AuthService {
         roleName: role,
       });
 
-      logger.info({
-        msg: "New user registered with email",
-        userId: user.userId,
-        email,
-      });
+      logger.info({ msg: "New user registered with email", userId: user.userId, email });
 
-      // Generate JWT tokens
-      const tokenPayload = {
+      const accessToken = generateAccessToken({
         userId: user.userId,
         userUuid: user.userUuid,
         role: user.roleName || role,
-        email: user.email,
-      };
+        email: user.email ?? undefined,
+      });
 
-      const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken({
         userId: user.userId,
         userUuid: user.userUuid,
       });
 
-      // Store token hash in database
-      const tokenHash = crypto
-        .createHash("sha256")
-        .update(accessToken)
-        .digest("hex");
+      const tokenHash = crypto.createHash("sha256").update(accessToken).digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
+        email: user.email ?? undefined,
+        phoneNumber: user.phoneNumber ?? undefined,
         tokenHash,
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
@@ -386,10 +262,11 @@ class AuthService {
         user: {
           userId: user.userId,
           userUuid: user.userUuid,
+          role: (user.roleName || role) as "client" | "courier",
+          phoneNumber: user.phoneNumber ?? undefined,
+          email: user.email ?? undefined,
           fullName: user.fullName,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          role: user.roleName,
+          profilePictureUrl: user.profilePictureUrl ?? undefined,
           isVerified: user.isVerified,
           isActive: user.isActive,
           createdAt: user.createdAt.toISOString(),
@@ -398,14 +275,12 @@ class AuthService {
         tokens: {
           accessToken,
           refreshToken,
-          expiresIn: "7d",
+          expiresIn: JWT_ACCESS_EXPIRES_IN,
+          tokenType: "Bearer",
         },
       };
     } catch (error) {
-      logger.error({
-        msg: "Email registration failed",
-        error: (error as Error).message,
-      });
+      logger.error({ msg: "Email registration failed", error: (error as Error).message });
       throw error;
     }
   }
@@ -413,68 +288,39 @@ class AuthService {
   /**
    * Login with email/password
    */
-  async loginWithEmail(
-    credentials: LoginCredentials,
-    deviceInfo: DeviceInfo,
-  ): Promise<AuthResult> {
+  async loginWithEmail(credentials: LoginRequest, deviceInfo: DeviceInfo): Promise<AuthResponse> {
     try {
       const { email, password } = credentials;
 
-      // Validate required fields
-      if (!email || !password) {
-        throw new ValidationError("Email and password are required");
-      }
+      if (!email || !password) throw new ValidationError("Email and password are required");
 
-      // Find user by email
       const user = await authRepository.findByEmail(email);
-      if (!user) {
-        throw new AuthenticationError("Invalid email or password");
-      }
+      if (!user) throw new AuthenticationError("Invalid email or password");
+      if (!user.isActive) throw new AuthenticationError("Account is deactivated");
 
-      // Check if user is active
-      if (!user.isActive) {
-        throw new AuthenticationError("Account is deactivated");
-      }
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash!);
+      if (!isPasswordValid) throw new AuthenticationError("Invalid email or password");
 
-      // Verify password
-      const isPasswordValid = await bcrypt.compare(
-        password,
-        user.passwordHash!,
-      );
-      if (!isPasswordValid) {
-        throw new AuthenticationError("Invalid email or password");
-      }
+      logger.info({ msg: "User logged in with email", userId: user.userId, email });
 
-      logger.info({
-        msg: "User logged in with email",
-        userId: user.userId,
-        email,
-      });
-
-      // Generate JWT tokens
-      const tokenPayload = {
+      const accessToken = generateAccessToken({
         userId: user.userId,
         userUuid: user.userUuid,
         role: user.roleName,
-        email: user.email,
-      };
+        email: user.email ?? undefined,
+      });
 
-      const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken({
         userId: user.userId,
         userUuid: user.userUuid,
       });
 
-      // Store token hash in database
-      const tokenHash = crypto
-        .createHash("sha256")
-        .update(accessToken)
-        .digest("hex");
+      const tokenHash = crypto.createHash("sha256").update(accessToken).digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
+        email: user.email ?? undefined,
+        phoneNumber: user.phoneNumber ?? undefined,
         tokenHash,
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
@@ -486,10 +332,11 @@ class AuthService {
         user: {
           userId: user.userId,
           userUuid: user.userUuid,
+          role: user.roleName as "client" | "courier",
+          phoneNumber: user.phoneNumber ?? undefined,
+          email: user.email ?? undefined,
           fullName: user.fullName,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          role: user.roleName,
+          profilePictureUrl: user.profilePictureUrl ?? undefined,
           isVerified: user.isVerified,
           isActive: user.isActive,
           createdAt: user.createdAt.toISOString(),
@@ -498,20 +345,15 @@ class AuthService {
         tokens: {
           accessToken,
           refreshToken,
-          expiresIn: "7d",
+          expiresIn: JWT_ACCESS_EXPIRES_IN,
+          tokenType: "Bearer",
         },
       };
     } catch (error) {
-      logger.error({
-        msg: "Email login failed",
-        error: (error as Error).message,
-      });
+      logger.error({ msg: "Email login failed", error: (error as Error).message });
       throw error;
     }
   }
 }
 
 export default new AuthService();
-function _getRoleId(roleName: string) {
-  throw new Error("Function not implemented.");
-}

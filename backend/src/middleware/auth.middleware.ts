@@ -41,9 +41,9 @@ export const authenticate = async (
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     // 4. Validate token in database (check if revoked)
-    const session = await authRepository.validateJwtToken(tokenHash);
+    const isValid = await authRepository.validateJwtToken(tokenHash);
 
-    if (!session) {
+    if (!isValid) {
       throw new AuthenticationError("Invalid or revoked token");
     }
 
