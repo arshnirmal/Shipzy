@@ -6,10 +6,10 @@ import { errorResponse, successResponse } from "../../utils/response.util.js";
 import authService from "./auth.service.js";
 
 import type {
-  VerifyGoogle,
-  RefreshToken,
-  Register,
-  Login,
+  GoogleAuthRequest,
+  RefreshTokenRequest,
+  RegisterRequest,
+  LoginRequest,
 } from "./auth.zod.js";
 
 class AuthController {
@@ -18,7 +18,7 @@ class AuthController {
    * Refresh JWT access token
    */
   async refreshToken(
-    request: FastifyRequest<{ Body: RefreshToken }>,
+    request: FastifyRequest<{ Body: RefreshTokenRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -43,7 +43,7 @@ class AuthController {
    * Verify Google ID token and create/login user
    */
   async verifyGoogle(
-    request: FastifyRequest<{ Body: VerifyGoogle }>,
+    request: FastifyRequest<{ Body: GoogleAuthRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -125,7 +125,7 @@ class AuthController {
    * Register new user with email/password
    */
   async register(
-    request: FastifyRequest<{ Body: Register }>,
+    request: FastifyRequest<{ Body: RegisterRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -173,7 +173,7 @@ class AuthController {
    * Login with email/password
    */
   async login(
-    request: FastifyRequest<{ Body: Login }>,
+    request: FastifyRequest<{ Body: LoginRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {

@@ -56,18 +56,3 @@ export const AuthResponseZ = z.object({
 });
 export type AuthResponse = z.infer<typeof AuthResponseZ>;
 
-// ============================================================================
-// LEGACY TYPE EXPORTS (for backward compatibility during migration)
-// ============================================================================
-
-export const RegisterZ = RegisterRequestZ;
-export type Register = RegisterRequest;
-
-export const LoginZ = LoginRequestZ;
-export type Login = LoginRequest;
-
-export const VerifyGoogleZ = GoogleAuthRequestZ;
-export type VerifyGoogle = GoogleAuthRequest;
-
-export const RefreshTokenZ = RefreshTokenRequestZ;
-export type RefreshToken = RefreshTokenRequest;
