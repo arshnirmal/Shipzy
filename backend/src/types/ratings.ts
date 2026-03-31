@@ -1,13 +1,6 @@
 // services/backend/src/types/ratings.ts
+// RatingRow is derived from the canonical Zod schema — single source of truth.
+import { RatingRowDbZ } from "../schemas/db.zod.js";
 
-export interface RatingRow {
-  ratingId: number;
-  orderId: number;
-  driverId: number;
-  customerId: number;
-  rating: number;
-  comment?: string | null;
-  createdAt: Date;
-  orderNumber?: string;
-  deliveredAt?: Date | null;
-}
+export type RatingRow = import("zod").infer<typeof RatingRowDbZ>;
+export { RatingRowDbZ };
