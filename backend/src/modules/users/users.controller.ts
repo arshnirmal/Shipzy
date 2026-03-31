@@ -61,12 +61,8 @@ class UsersController {
       }
 
       const { userId } = request.user;
-      // validate/parse using Zod schema at controller boundary
-      const updateData = (
-        await import("./users.zod.js")
-      ).UpdateProfileRequestZ.parse(request.body);
 
-      const updatedUser = await usersService.updateProfile(userId, updateData);
+      const updatedUser = await usersService.updateProfile(userId, request.body);
 
       return successResponse(
         reply,
@@ -135,11 +131,8 @@ class UsersController {
       }
 
       const { userId } = request.user;
-      const addressData = (
-        await import("./users.zod.js")
-      ).SaveAddressRequestZ.parse(request.body);
 
-      const savedAddress = await usersService.saveAddress(userId, addressData);
+      const savedAddress = await usersService.saveAddress(userId, request.body);
 
       return successResponse(
         reply,
@@ -174,9 +167,7 @@ class UsersController {
       }
 
       const { userId } = request.user;
-      const { id } = (
-        await import("./users.zod.js")
-      ).DeleteAddressParamsZ.parse(request.params);
+      const { id } = request.params;
 
       const result = await usersService.deleteAddress(
         Number.parseInt(id),

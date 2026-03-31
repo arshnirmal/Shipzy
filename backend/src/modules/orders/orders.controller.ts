@@ -19,7 +19,6 @@ import type {
   ListOrdersQuery,
   AvailableOrdersQuery,
 } from "./orders.zod.js";
-import { RateOrderRequestZ } from "./orders.zod.js";
 
 class OrdersController {
   /**
@@ -384,14 +383,14 @@ class OrdersController {
     try {
       const { userId } = request.user!;
       const { id } = request.params;
-      const parsed = RateOrderRequestZ.parse(request.body);
+      const { rating, anonymous, comment } = request.body;
 
       const result = await ratingsService.createRating({
         orderId: Number.parseInt(id),
         customerId: userId,
-        rating: parsed.rating,
-        isAnonymous: parsed.anonymous ?? false,
-        comment: parsed.comment ?? undefined,
+        rating,
+        isAnonymous: anonymous ?? false,
+        comment: comment ?? undefined,
       });
 
       return successResponse(reply, result, "Order rated successfully");

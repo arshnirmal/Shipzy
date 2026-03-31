@@ -10,11 +10,6 @@ import type {
   UpdateAvailabilityRequest,
   UpdateLocationRequest,
 } from "./drivers.zod.js";
-import {
-  UpdateDriverProfileRequestZ,
-  UpdateAvailabilityRequestZ,
-  UpdateLocationRequestZ,
-} from "./drivers.zod.js";
 
 class DriversController {
   /**
@@ -58,11 +53,9 @@ class DriversController {
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const updateData = UpdateDriverProfileRequestZ.parse(request.body);
-
       const updatedDriver = await driversService.updateProfile(
         userId,
-        updateData,
+        request.body,
       );
 
       return successResponse(
@@ -93,11 +86,9 @@ class DriversController {
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const availabilityData = UpdateAvailabilityRequestZ.parse(request.body);
-
       const result = await driversService.updateAvailability(
         userId,
-        availabilityData,
+        request.body,
       );
 
       return successResponse(
@@ -128,9 +119,7 @@ class DriversController {
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const locationData = UpdateLocationRequestZ.parse(request.body);
-
-      const result = await driversService.updateLocation(userId, locationData);
+      const result = await driversService.updateLocation(userId, request.body);
 
       return successResponse(reply, result, "Location updated successfully");
     } catch (error) {

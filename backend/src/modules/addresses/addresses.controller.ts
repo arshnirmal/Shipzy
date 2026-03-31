@@ -10,13 +10,6 @@ import type {
   Directions,
   Distance,
 } from "./addresses.zod.js";
-import {
-  SearchAddressesZ,
-  RetrievePlaceZ,
-  ReverseGeocodeZ,
-  DirectionsZ,
-  DistanceZ,
-} from "./addresses.zod.js";
 
 class AddressesController {
   /**
@@ -28,30 +21,28 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = SearchAddressesZ.parse(request.body);
+      const { query, proximity, types, limit } = request.body;
 
       logger.info({
         msg: "Address search request",
-        query: parsed.query,
-        proximity: parsed.proximity,
+        query,
+        proximity,
         userId: request.user?.userId,
       });
 
-      const suggestions = await addressesService.searchAddresses(parsed);
+      const suggestions = await addressesService.searchAddresses(request.body);
 
       return successResponse(
         reply,
         suggestions,
-        `Found ${suggestions.length} suggestions for "${parsed.query}"`,
+        `Found ${suggestions.length} suggestions for "${query}"`,
       );
     } catch (error) {
       logger.error({
         msg: "Address search controller error",
         error: (error as Error).message,
-        // Don't log sensitive query data in errors
       });
 
-      // Return generic error message to avoid leaking internal details
       const isValidationError =
         (error as any).message.includes("ValidationError") ||
         (error as any).statusCode === 400;
@@ -76,17 +67,17 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = RetrievePlaceZ.parse(request.body);
+      const { mapboxId, sessionToken } = request.body;
 
       logger.info({
         msg: "Place retrieve request",
-        mapboxId: parsed.mapboxId,
+        mapboxId,
         userId: request.user?.userId,
       });
 
       const placeDetails = await addressesService.retrievePlace(
-        parsed.mapboxId,
-        parsed.sessionToken,
+        mapboxId,
+        sessionToken,
       );
 
       return successResponse(
@@ -98,10 +89,8 @@ class AddressesController {
       logger.error({
         msg: "Place retrieve controller error",
         error: (error as Error).message,
-        // Don't log mapboxId in errors for security
       });
 
-      // Return generic error message to avoid leaking internal details
       const isValidationError =
         (error as any).message.includes("ValidationError") ||
         (error as any).statusCode === 400;
@@ -126,33 +115,31 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = ReverseGeocodeZ.parse(request.body);
+      const { latitude, longitude, types } = request.body;
 
       logger.info({
         msg: "Reverse geocoding request",
-        coordinates: { latitude: parsed.latitude, longitude: parsed.longitude },
+        coordinates: { latitude, longitude },
         userId: request.user?.userId,
       });
 
       const result = await addressesService.reverseGeocode({
-        latitude: parsed.latitude,
-        longitude: parsed.longitude,
-        types: parsed.types || ["street", "neighborhood"],
+        latitude,
+        longitude,
+        types: types || ["street", "neighborhood"],
       });
 
       return successResponse(
         reply,
         result,
-        `Reverse geocode completed for (${parsed.longitude}, ${parsed.latitude})`,
+        `Reverse geocode completed for (${longitude}, ${latitude})`,
       );
     } catch (error) {
       logger.error({
         msg: "Reverse geocoding controller error",
         error: (error as Error).message,
-        // Don't log sensitive coordinate data in errors
       });
 
-      // Return generic error message to avoid leaking internal details
       const isValidationError =
         (error as any).message.includes("ValidationError") ||
         (error as any).statusCode === 400;
@@ -177,20 +164,20 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = DirectionsZ.parse(request.body);
+      const { origin, destination, profile } = request.body;
 
       logger.info({
         msg: "Directions request",
-        origin: parsed.origin,
-        destination: parsed.destination,
-        profile: parsed.profile,
+        origin,
+        destination,
+        profile,
         userId: request.user?.userId,
       });
 
       const result = await addressesService.getDirections(
-        parsed.origin,
-        parsed.destination,
-        parsed.profile,
+        origin,
+        destination,
+        profile,
       );
 
       return successResponse(
@@ -202,10 +189,8 @@ class AddressesController {
       logger.error({
         msg: "Directions controller error",
         error: (error as Error).message,
-        // Don't log coordinate data in errors for security
       });
 
-      // Return generic error message to avoid leaking internal details
       const isValidationError =
         (error as any).message.includes("ValidationError") ||
         (error as any).statusCode === 400;
@@ -230,14 +215,9 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = DistanceZ.parse(request.body);
+      const { lat1, lon1, lat2, lon2 } = request.body;
 
-      const distance = addressesService.calculateDistance(
-        parsed.lat1,
-        parsed.lon1,
-        parsed.lat2,
-        parsed.lon2,
-      );
+      const distance = addressesService.calculateDistance(lat1, lon1, lat2, lon2);
 
       return successResponse(
         reply,
@@ -248,10 +228,8 @@ class AddressesController {
       logger.error({
         msg: "Distance calculation error",
         error: (error as Error).message,
-        // Don't log coordinate data in errors for security
       });
 
-      // Return generic error message to avoid leaking internal details
       const isValidationError =
         (error as any).message.includes("ValidationError") ||
         (error as any).statusCode === 400;

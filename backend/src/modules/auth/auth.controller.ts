@@ -11,7 +11,6 @@ import type {
   Register,
   Login,
 } from "./auth.zod.js";
-import { VerifyGoogleZ, RefreshTokenZ, RegisterZ, LoginZ } from "./auth.zod.js";
 
 class AuthController {
   /**
@@ -23,9 +22,7 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = RefreshTokenZ.parse(request.body) as RefreshToken;
-
-      const result = await authService.refreshToken(parsed.refreshToken);
+      const result = await authService.refreshToken(request.body.refreshToken);
 
       return successResponse(reply, result, "Token refreshed successfully");
     } catch (error) {
@@ -50,8 +47,7 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = VerifyGoogleZ.parse(request.body) as VerifyGoogle;
-      const { idToken, role } = parsed;
+      const { idToken, role } = request.body;
 
       // Get device info from request
       const deviceInfo: any = {
@@ -133,8 +129,7 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = RegisterZ.parse(request.body) as Register;
-      const { fullName, email, password, role, phoneNumber } = parsed;
+      const { fullName, email, password, role, phoneNumber } = request.body;
 
       // Get device info from request
       const deviceInfo: any = {
@@ -182,8 +177,7 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const parsed = LoginZ.parse(request.body) as Login;
-      const { email, password } = parsed;
+      const { email, password } = request.body;
 
       // Get device info from request
       const deviceInfo: any = {
