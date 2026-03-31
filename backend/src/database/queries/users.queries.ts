@@ -8,50 +8,6 @@ export default {
   // ============ USER PROFILE ============
 
   /**
-   * Find user by UUID (for JWT payload)
-   */
-  FIND_USER_BY_UUID: `
-    SELECT
-            u.user_id AS "userId",
-            u.user_uuid AS "userUuid",
-            u.role_id AS "roleId",
-            r.name AS "roleName",
-            u.phone_number AS "phoneNumber",
-            u.email AS "email",
-            u.full_name AS "fullName",
-            u.profile_picture_url AS "profilePictureUrl",
-            u.is_verified AS "isVerified",
-            u.is_active AS "isActive",
-            u.created_at AS "createdAt"
-    FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
-    WHERE u.user_uuid = $1
-      AND u.deleted_at IS NULL
-  `,
-
-  /**
-   * Find user by phone number
-   */
-  FIND_USER_BY_PHONE: `
-    SELECT
-            u.user_id AS "userId",
-            u.user_uuid AS "userUuid",
-            u.role_id AS "roleId",
-            r.name AS "roleName",
-            u.phone_number AS "phoneNumber",
-            u.email AS "email",
-            u.full_name AS "fullName",
-            u.profile_picture_url AS "profilePictureUrl",
-            u.is_verified AS "isVerified",
-            u.is_active AS "isActive",
-            u.created_at AS "createdAt"
-    FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
-    WHERE u.phone_number = $1
-          AND u.deleted_at IS NULL
-  `,
-
-  /**
    * Update user profile
    */
   UPDATE_USER_PROFILE: `
