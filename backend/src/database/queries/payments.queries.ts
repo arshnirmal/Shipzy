@@ -28,7 +28,7 @@ export default {
       (SELECT status_id FROM payments.payment_statuses WHERE name = 'pending'),
       $3, $4, $5, $6, $7, $8, NOW()
     )
-      RETURNING transaction_id, payment_initiated_at
+      RETURNING transaction_id AS "transactionId", payment_initiated_at AS "paymentInitiatedAt"
   `,
 
   /**
@@ -40,7 +40,7 @@ export default {
           payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed'),
           payment_completed_at = NOW()
       WHERE transaction_id = $1
-      RETURNING transaction_id, payment_completed_at
+      RETURNING transaction_id AS "transactionId", payment_completed_at AS "paymentCompletedAt"
   `,
 
   /**
@@ -53,27 +53,27 @@ export default {
           payment_failed_at = NOW(),
           failure_reason = $2
       WHERE transaction_id = $1
-      RETURNING transaction_id, payment_failed_at
+      RETURNING transaction_id AS "transactionId", payment_failed_at AS "paymentFailedAt"
   `,
 
   /**
    * Get payment transaction by order ID
    */
   GET_PAYMENT_BY_ORDER: `
-      SELECT 
-          t.transaction_id,
-          t.order_id,
-          t.amount,
-          t.currency,
-          t.external_transaction_id,
-          t.payment_gateway,
-          t.upi_vpa,
-          ps.name AS payment_status,
-          pm.name AS payment_method,
-          t.payment_initiated_at,
-          t.payment_completed_at,
-          t.payment_failed_at,
-          t.failure_reason
+      SELECT
+          t.transaction_id AS "transactionId",
+          t.order_id AS "orderId",
+          t.amount AS "amount",
+          t.currency AS "currency",
+          t.external_transaction_id AS "externalTransactionId",
+          t.payment_gateway AS "paymentGateway",
+          t.upi_vpa AS "upiVpa",
+          ps.name AS "paymentStatus",
+          pm.name AS "paymentMethod",
+          t.payment_initiated_at AS "paymentInitiatedAt",
+          t.payment_completed_at AS "paymentCompletedAt",
+          t.payment_failed_at AS "paymentFailedAt",
+          t.failure_reason AS "failureReason"
       FROM payments.transactions t
       JOIN payments.payment_statuses ps ON t.payment_status_id = ps.status_id
       JOIN payments.payment_methods pm ON t.payment_method_id = pm.method_id
@@ -88,16 +88,16 @@ export default {
    * Get refund by order ID
    */
   GET_REFUND_BY_ORDER: `
-      SELECT 
-          r.refund_id,
-          r.transaction_id,
-          r.order_id,
-          r.refund_amount,
-          r.refund_reason,
-          r.refund_status,
-          r.external_refund_id,
-          r.initiated_at,
-          r.processed_at
+      SELECT
+          r.refund_id AS "refundId",
+          r.transaction_id AS "transactionId",
+          r.order_id AS "orderId",
+          r.refund_amount AS "refundAmount",
+          r.refund_reason AS "refundReason",
+          r.refund_status AS "refundStatus",
+          r.external_refund_id AS "externalRefundId",
+          r.initiated_at AS "initiatedAt",
+          r.processed_at AS "processedAt"
       FROM payments.refunds r
       WHERE r.order_id = $1
       ORDER BY r.initiated_at DESC
@@ -114,6 +114,6 @@ export default {
           processed_at = NOW(),
           external_refund_id = $2
       WHERE refund_id = $1
-      RETURNING refund_id, processed_at
+      RETURNING refund_id AS "refundId", processed_at AS "processedAt"
   `,
 };
