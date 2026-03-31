@@ -298,4 +298,5 @@ backend/scripts/*.log
 
 # Claude Code — personal overrides
 .claude/settings.local.json
-CLAUDE.local.md
+.claude/settings.json
+.claude/CLAUDE.local.md

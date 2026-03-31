@@ -1,10 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "allow": [
-      // Add your personal tool overrides here.
-      // This file is gitignored — it never gets committed.
-      // Example: "Bash(open *)" to allow opening files in your local editor.
-    ]
+    "allow": []
   }
 }
