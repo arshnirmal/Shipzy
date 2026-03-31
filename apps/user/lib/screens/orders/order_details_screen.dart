@@ -133,6 +133,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         final duration = order.deliveredAt!.difference(order.createdAt);
         return 'Total time: ${duration.inMinutes} minutes';
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
       case OrderStatus.inTransit:
         return null;
@@ -168,6 +170,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         };
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return () {
           // TODO(arsh): Navigate to reorder
@@ -191,6 +195,8 @@ class OrderDetailsScreen extends ConsumerWidget {
       case OrderStatus.pending:
       case OrderStatus.inTransit:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return null;
     }
@@ -205,6 +211,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         return 'Track Live';
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return 'Reorder';
       case OrderStatus.inTransit:
@@ -222,6 +230,8 @@ class OrderDetailsScreen extends ConsumerWidget {
       case OrderStatus.pending:
       case OrderStatus.inTransit:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return null;
     }
@@ -236,6 +246,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         return Icons.location_on;
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return Icons.refresh;
       case OrderStatus.inTransit:
@@ -253,6 +265,8 @@ class OrderDetailsScreen extends ConsumerWidget {
       case OrderStatus.pending:
       case OrderStatus.inTransit:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return null;
     }
@@ -355,10 +369,12 @@ class OrderDetailsScreen extends ConsumerWidget {
         break;
 
       case OrderStatus.cancelled:
+      case OrderStatus.returned:
         // TODO: Add RefundStatusCard when API supports it
         // widgets.add(RefundStatusCard(amount: order.totalFare, status: 'Processed'));
         break;
 
+      case OrderStatus.undeliverable:
       case OrderStatus.rejected:
         widgets.add(
           FailureDetailsCard(

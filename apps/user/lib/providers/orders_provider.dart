@@ -2,18 +2,18 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../models/orders/order.dart';
+import '../../../models/orders/order_list_item.dart';
 import '../../../models/orders/order_status.dart';
 import 'order_service_provider.dart';
 
 part 'orders_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class Orders extends _$Orders {
   @override
-  Future<List<Order>> build() async => fetchOrders();
+  Future<List<OrderListItem>> build() async => fetchOrders();
 
-  Future<List<Order>> fetchOrders({String? status}) async {
+  Future<List<OrderListItem>> fetchOrders({String? status}) async {
     final orderService = ref.read(orderServiceProvider);
     try {
       final response = await orderService.fetchOrders(status: status);
@@ -28,7 +28,7 @@ class Orders extends _$Orders {
     state = await AsyncValue.guard(() async => fetchOrders());
   }
 
-  List<Order> get activeOrders => state.maybeWhen(
+  List<OrderListItem> get activeOrders => state.maybeWhen(
     data: (orders) => orders
         .where(
           (order) =>
@@ -41,9 +41,16 @@ class Orders extends _$Orders {
     orElse: () => [],
   );
 
-  List<Order> get completedOrders => state.maybeWhen(
+  List<OrderListItem> get completedOrders => state.maybeWhen(
     data: (orders) => orders
-        .where((order) => order.status == OrderStatus.delivered || order.status == OrderStatus.cancelled || order.status == OrderStatus.rejected)
+        .where(
+          (order) =>
+              order.status == OrderStatus.delivered ||
+              order.status == OrderStatus.cancelled ||
+              order.status == OrderStatus.rejected ||
+              order.status == OrderStatus.undeliverable ||
+              order.status == OrderStatus.returned,
+        )
         .toList(),
     orElse: () => [],
   );

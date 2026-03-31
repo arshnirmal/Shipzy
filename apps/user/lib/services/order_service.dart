@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../models/orders/calculate_fare.dart';
 import '../models/orders/create_order.dart';
 import '../models/orders/create_order_data.dart';
+import '../models/orders/order_list_item.dart';
 import '../models/orders/order_response.dart';
 import 'dio/api_client.dart';
 import 'dio/api_exception.dart';
@@ -16,7 +17,7 @@ class OrderService {
 
   /// Fetch user's orders with optional filters
 
-  Future<OrdersResponse> fetchOrders({
+  Future<OrdersListResponse> fetchOrders({
     int page = 1,
     int limit = 20,
     String? status, // 'active', 'completed', or null for all
@@ -30,7 +31,7 @@ class OrderService {
         throw Exception(response.data?['message'] ?? 'Failed to fetch orders');
       }
 
-      return OrdersResponse.fromJson(response.data!);
+      return OrdersListResponse.fromJson(response.data!);
     } on DioException catch (e) {
       throw _handleDioError(e, 'Fetch orders');
     }
@@ -56,10 +57,7 @@ class OrderService {
 
   Future<void> cancelOrder(int orderId, String reason) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>(
-        '/orders/$orderId/cancel',
-        data: {'cancellationReason': reason},
-      );
+      final response = await _apiClient.post<Map<String, dynamic>>('/orders/$orderId/cancel', data: {'cancellationReason': reason});
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to cancel order');
@@ -117,6 +115,5 @@ class OrderService {
     }
   }
 
-  ApiException _handleDioError(DioException e, String operation) =>
-      mapDioException(e, operation);
+  ApiException _handleDioError(DioException e, String operation) => mapDioException(e, operation);
 }

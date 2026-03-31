@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../models/orders/order.dart';
+import '../../models/orders/order_list_item.dart';
 import '../../models/orders/order_status.dart';
 import '../../providers/orders_provider.dart';
 import '../../utils/app_routes.dart';
@@ -144,7 +144,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     );
   }
 
-  List<Order> _getFilteredOrders(List<Order> allOrders) {
+  List<OrderListItem> _getFilteredOrders(List<OrderListItem> allOrders) {
     final ordersNotifier = ref.read(ordersProvider.notifier);
 
     switch (_selectedFilter) {
@@ -153,7 +153,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       case 'Completed':
         return ordersNotifier.completedOrders;
       case 'Cancelled':
-        return allOrders.where((order) => order.status == OrderStatus.cancelled || order.status == OrderStatus.rejected).toList();
+        return allOrders
+            .where(
+              (order) =>
+                  order.status == OrderStatus.cancelled ||
+                  order.status == OrderStatus.rejected ||
+                  order.status == OrderStatus.undeliverable ||
+                  order.status == OrderStatus.returned,
+            )
+            .toList();
       default:
         return allOrders;
     }

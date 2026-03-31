@@ -29,9 +29,9 @@ export type TimestampedEntity = z.infer<typeof TimestampedEntityZ>;
 // Base address fields shared across all address types
 export const BaseAddressZ = z.object({
   fullAddress: z.string().min(5).max(500),
-  city: z.string().min(2).max(100).optional(),
-  state: z.string().min(2).max(100).optional(),
-  postalCode: z.string().min(4).max(10).optional(),
+  city: z.string().min(2).max(100),
+  state: z.string().min(2).max(100),
+  postalCode: z.string().min(4).max(10),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   building: z.string().max(100).nullable().optional(),
@@ -243,10 +243,10 @@ export const PaginatedResponseZ = <T extends z.ZodType>(itemSchema: T) =>
 // ============================================================================
 
 export const PaginationZ = z.object({
-  page: z.number(),
-  limit: z.number(),
-  total: z.number(),
-  totalPages: z.number(),
+  page: z.coerce.number().int().positive(),
+  limit: z.coerce.number().int().positive(),
+  total: z.coerce.number().int().nonnegative(),
+  totalPages: z.coerce.number().int().nonnegative(),
 });
 export type Pagination = z.infer<typeof PaginationZ>;
 

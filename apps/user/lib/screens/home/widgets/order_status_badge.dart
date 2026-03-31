@@ -96,6 +96,22 @@ class OrderStatusBadge extends StatelessWidget {
           text: theme.colorScheme.error,
         );
 
+      case OrderStatus.undeliverable:
+        return _StatusColors(
+          background: theme.colorScheme.error.withValues(alpha: 0.1),
+          border: theme.colorScheme.error.withValues(alpha: 0.3),
+          dot: theme.colorScheme.error,
+          text: theme.colorScheme.error,
+        );
+
+      case OrderStatus.returned:
+        return _StatusColors(
+          background: theme.colorScheme.error.withValues(alpha: 0.1),
+          border: theme.colorScheme.error.withValues(alpha: 0.3),
+          dot: theme.colorScheme.error,
+          text: theme.colorScheme.error,
+        );
+
       case OrderStatus.rejected:
         return _StatusColors(
           background: theme.colorScheme.error.withValues(alpha: 0.1),

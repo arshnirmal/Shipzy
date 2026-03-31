@@ -57,6 +57,8 @@ class OrderDetails extends _$OrderDetails {
       case OrderStatus.inTransit:
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return Duration.zero; // No auto-refresh for completed/cancelled/failed
     }

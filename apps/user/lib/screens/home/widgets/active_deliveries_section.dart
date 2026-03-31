@@ -2,8 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
-import '../../../models/orders/order.dart';
+import '../../../models/orders/order_list_item.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../utils/app_routes.dart';
 import '../../../utils/slide_in_animation.dart';
@@ -11,7 +12,7 @@ import '../../../utils/slide_in_animation.dart';
 class ActiveDeliveriesSection extends StatelessWidget {
   const ActiveDeliveriesSection({required this.orders, required this.onViewAll, super.key});
 
-  final List<Order> orders;
+  final List<OrderListItem> orders;
   final VoidCallback onViewAll;
 
   @override
@@ -65,12 +66,25 @@ class ActiveDeliveriesSection extends StatelessWidget {
 class _ActiveDeliveryCard extends StatelessWidget {
   const _ActiveDeliveryCard({required this.order});
 
-  final Order order;
+  final OrderListItem order;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
+
+    final timeFormat = DateFormat('h:mm a');
+
+    // Calculate timeline strings based on order data
+    final pickedUpTime = timeFormat.format(order.createdAt);
+    final currentTime = timeFormat.format(DateTime.now());
+
+    String estDeliveryTime;
+    if (order.actualDurationMins != null && order.actualDurationMins! > 0) {
+      estDeliveryTime = timeFormat.format(order.createdAt.add(Duration(minutes: order.actualDurationMins!)));
+    } else {
+      estDeliveryTime = 'TBD';
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -94,7 +108,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   Text('Order #${order.orderNumber}', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 2),
                   Text(
-                    '${order.deliveryTypeDisplay} Delivery • ${order.distance?.toStringAsFixed(1) ?? "--"}km',
+                    '${order.deliveryTypeDisplay ?? 'Standard'} Delivery • ${order.distance?.toStringAsFixed(1) ?? "--"}km',
                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
@@ -103,7 +117,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
                 child: Text(
-                  'IN TRANSIT',
+                  order.status.label.toUpperCase(),
                   style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                 ),
               ),
@@ -146,7 +160,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
                         children: [
                           Text('Pickup point', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                           Text(
-                            '10:00 AM • ${order.pickup.address}',
+                            '$pickedUpTime • ${order.pickup.address}',
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -177,7 +191,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
                         children: [
                           Text('On the way', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                           Text(
-                            '10:15 AM • Current Location',
+                            '$currentTime • In Transit',
                             style: theme.textTheme.bodySmall?.copyWith(color: primaryColor, fontWeight: FontWeight.w500),
                           ),
                         ],
@@ -209,7 +223,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
                             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurfaceVariant),
                           ),
                           Text(
-                            'Est. 10:30 AM • ${order.delivery.address}',
+                            'Est. $estDeliveryTime • ${order.delivery.address}',
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -243,7 +257,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    // TODO: Navigate to tracking
+                    context.push(AppRoutes.orderTracking, extra: order.orderId);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,

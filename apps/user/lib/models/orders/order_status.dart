@@ -13,6 +13,10 @@ enum OrderStatus {
   delivered,
   @JsonValue('cancelled')
   cancelled,
+  @JsonValue('undeliverable')
+  undeliverable,
+  @JsonValue('returned')
+  returned,
   @JsonValue('rejected')
   rejected;
 
@@ -30,6 +34,10 @@ enum OrderStatus {
         return 'Delivered';
       case OrderStatus.cancelled:
         return 'Cancelled';
+      case OrderStatus.undeliverable:
+        return 'Undeliverable';
+      case OrderStatus.returned:
+        return 'Returned';
       case OrderStatus.rejected:
         return 'Rejected';
     }
@@ -37,5 +45,37 @@ enum OrderStatus {
 
   bool get isActive => this == OrderStatus.pending || this == OrderStatus.accepted || this == OrderStatus.pickedUp || this == OrderStatus.inTransit;
 
-  bool get isCompleted => this == OrderStatus.delivered || this == OrderStatus.cancelled || this == OrderStatus.rejected;
+  bool get isCompleted =>
+      this == OrderStatus.delivered ||
+      this == OrderStatus.cancelled ||
+      this == OrderStatus.undeliverable ||
+      this == OrderStatus.returned ||
+      this == OrderStatus.rejected;
+}
+
+extension OrderStatusX on OrderStatus {
+  static OrderStatus fromApi(String value) {
+    switch (value) {
+      case 'pending':
+        return OrderStatus.pending;
+      case 'accepted':
+        return OrderStatus.accepted;
+      case 'picked_up':
+        return OrderStatus.pickedUp;
+      case 'in_transit':
+        return OrderStatus.inTransit;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      case 'undeliverable':
+        return OrderStatus.undeliverable;
+      case 'returned':
+        return OrderStatus.returned;
+      case 'rejected':
+        return OrderStatus.rejected;
+      default:
+        return OrderStatus.pending;
+    }
+  }
 }

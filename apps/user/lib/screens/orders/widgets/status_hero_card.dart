@@ -189,6 +189,7 @@ class StatusHeroCard extends StatelessWidget {
         );
 
       case OrderStatus.cancelled:
+      case OrderStatus.returned:
         return _StatusConfig(
           title: 'ORDER CANCELLED',
           icon: Icons.cancel,
@@ -199,6 +200,7 @@ class StatusHeroCard extends StatelessWidget {
           buttonColor: Colors.orange,
         );
 
+      case OrderStatus.undeliverable:
       case OrderStatus.rejected:
         return _StatusConfig(
           title: 'DELIVERY FAILED',
