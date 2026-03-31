@@ -17,11 +17,6 @@ import type { CalculateFareRequest, CreateOrderRequest } from "./orders.zod.js";
 import { CalculateFareRequestZ } from "./orders.zod.js";
 import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
 
-type FareData = CalculateFareRequest;
-export type OrderData = CreateOrderRequest;
-
-type Location = OrderAddress;
-
 // DB row shape for order queries (only fields used by _formatOrderDetails)
 type OrderRow = {
   orderId: number;
@@ -107,7 +102,7 @@ class OrdersService {
   /**
    * Calculate fare estimate using real-time distance from Mapbox
    */
-  async calculateFare(fareData: FareData): Promise<FareBreakdown> {
+  async calculateFare(fareData: CalculateFareRequest): Promise<FareBreakdown> {
     try {
       // Validate input using Zod schema
       const validatedData = validateOrThrow(
@@ -202,7 +197,7 @@ class OrdersService {
    */
   async createOrder(
     clientId: number,
-    orderData: OrderData,
+    orderData: CreateOrderRequest,
   ): Promise<CreatedOrder> {
     const operationId = `create-order-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
@@ -272,7 +267,7 @@ class OrdersService {
         },
       });
 
-      const validateLocation = (location: Location, type: string) => {
+      const validateLocation = (location: OrderAddress, type: string) => {
         const required = [
           "address",
           "latitude",
