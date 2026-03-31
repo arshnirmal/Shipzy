@@ -18,9 +18,9 @@ class RatingsRepository {
    * Create a new driver rating (migrated to Drizzle)
    */
   async createRating(ratingData: {
-    order_id: number;
-    driver_id: number;
-    customer_id: number;
+    orderId: number;
+    driverId: number;
+    customerId: number;
     rating: number;
     comment?: string | null;
   }): Promise<RatingRow> {
@@ -28,9 +28,9 @@ class RatingsRepository {
       const result = await drizzleDb
         .insert(driverRatings)
         .values({
-          orderId: ratingData.order_id,
-          driverId: ratingData.driver_id,
-          customerId: ratingData.customer_id,
+          orderId: ratingData.orderId,
+          driverId: ratingData.driverId,
+          customerId: ratingData.customerId,
           rating: ratingData.rating,
           comment: ratingData.comment || undefined,
         })
@@ -42,20 +42,20 @@ class RatingsRepository {
       }
 
       return {
-        rating_id: row.ratingId,
-        order_id: row.orderId,
-        driver_id: row.driverId,
-        customer_id: row.customerId,
+        ratingId: row.ratingId,
+        orderId: row.orderId,
+        driverId: row.driverId,
+        customerId: row.customerId,
         rating: row.rating,
         comment: row.comment || null,
-        created_at: row.createdAt,
+        createdAt: row.createdAt,
       } as RatingRow;
     } catch (error) {
       logger.error({
         msg: "Error creating driver rating",
         error: (error as Error).message,
-        orderId: ratingData.order_id,
-        driverId: ratingData.driver_id,
+        orderId: ratingData.orderId,
+        driverId: ratingData.driverId,
       });
       throw error;
     }
@@ -121,7 +121,7 @@ class RatingsRepository {
   async getDriverForOrder(orderId: number): Promise<number | null> {
     try {
       const result = await db.query(ratingsQueries.ORDER_HAS_DRIVER, [orderId]);
-      return result.rows[0]?.courier_id || null;
+      return result.rows[0]?.courierId || null;
     } catch (error) {
       logger.error({
         msg: "Error getting driver for order",

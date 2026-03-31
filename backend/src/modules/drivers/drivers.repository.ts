@@ -99,10 +99,10 @@ class DriversRepository {
         })
         .where(eq(courierStatus.courierId, courierId))
         .returning({
-          courier_id: courierStatus.courierId,
-          is_available: courierStatus.isAvailable,
-          is_online: courierStatus.isOnline,
-          updated_at: courierStatus.updatedAt,
+          courierId: courierStatus.courierId,
+          isAvailable: courierStatus.isAvailable,
+          isOnline: courierStatus.isOnline,
+          updatedAt: courierStatus.updatedAt,
         });
 
       const row = result[0];
@@ -110,12 +110,7 @@ class DriversRepository {
         throw new Error("Courier availability update returned no row");
       }
 
-      return {
-        courier_id: row.courier_id,
-        is_available: row.is_available,
-        is_online: row.is_online,
-        updated_at: row.updated_at,
-      } as CourierAvailabilityResult;
+      return row as CourierAvailabilityResult;
     } catch (error) {
       logger.error({
         msg: "Error updating courier availability",
@@ -197,10 +192,10 @@ class DriversRepository {
    */
   async createSession(driverId: number, location?: Coordinates) {
     return sessionsRepository.createSession({
-      driver_id: driverId,
-      started_at: new Date(),
-      last_location_lat: location?.latitude,
-      last_location_lng: location?.longitude,
+      driverId: driverId,
+      startedAt: new Date(),
+      lastLocationLat: location?.latitude,
+      lastLocationLng: location?.longitude,
     });
   }
 
@@ -222,10 +217,10 @@ class DriversRepository {
     if (!activeSession) return null;
 
     return sessionsRepository.endSession({
-      session_id: activeSession.session_id,
-      ended_at: new Date(),
-      last_location_lat: location?.lat,
-      last_location_lng: location?.lng,
+      sessionId: activeSession.sessionId,
+      endedAt: new Date(),
+      lastLocationLat: location?.lat,
+      lastLocationLng: location?.lng,
     });
   }
 

@@ -59,21 +59,21 @@ class RatingsService {
 
       // Create the rating
       const newRating = await ratingsRepository.createRating({
-        order_id: orderId,
-        driver_id: driverId,
-        customer_id: customerId,
+        orderId,
+        driverId,
+        customerId,
         rating,
         comment,
       });
 
       return {
-        ratingId: newRating.rating_id,
-        orderId: newRating.order_id,
-        driverId: newRating.driver_id,
-        customerId: newRating.customer_id,
+        ratingId: newRating.ratingId,
+        orderId: newRating.orderId,
+        driverId: newRating.driverId,
+        customerId: newRating.customerId,
         rating: newRating.rating,
         comment: newRating.comment,
-        createdAt: newRating.created_at.toISOString(),
+        createdAt: newRating.createdAt.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -135,8 +135,8 @@ class RatingsService {
       let lastUpdated = new Date();
       if (ratings.length > 0) {
         const firstRating = ratings[0];
-        if (firstRating && firstRating.created_at) {
-          lastUpdated = firstRating.created_at;
+        if (firstRating && firstRating.createdAt) {
+          lastUpdated = firstRating.createdAt;
         }
       }
 

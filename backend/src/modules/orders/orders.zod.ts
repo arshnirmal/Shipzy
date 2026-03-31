@@ -115,6 +115,14 @@ export const CalculateFareResponseZ = FareBreakdownZ.extend({
 });
 export type CalculateFareResponse = z.infer<typeof CalculateFareResponseZ>;
 
+// Stored function result (camelCase) - used internally
+export const FareCalculationResultZ = z.object({
+  success: z.boolean(),
+  fareBreakdown: FareBreakdownZ.optional(),
+  error: z.string().optional(),
+});
+export type FareCalculationResult = z.infer<typeof FareCalculationResultZ>;
+
 // Create Order Response
 export const CreateOrderResponseZ = z.object({
   orderId: z.number().int().positive(),
@@ -127,6 +135,29 @@ export const CreateOrderResponseZ = z.object({
   createdAt: z.string().datetime(),
 });
 export type CreateOrderResponse = z.infer<typeof CreateOrderResponseZ>;
+
+// Stored function order payload (camelCase) used for normalization
+export const CreatedOrderRowZ = z
+  .object({
+    orderId: z.number().int().positive(),
+    orderUuid: z.string().uuid(),
+    orderNumber: z.string(),
+    status: z.string().optional(),
+    pricing: FareBreakdownZ.partial().optional(),
+    estimatedDistanceKm: z.number().nonnegative().optional(),
+    estimatedDurationMins: z.number().nonnegative().optional(),
+    createdAt: z.union([z.string().datetime(), z.date()]),
+  })
+  .passthrough();
+export type CreatedOrderRow = z.infer<typeof CreatedOrderRowZ>;
+
+// Stored function result (camelCase) - used internally
+export const OrderCreateResultZ = z.object({
+  success: z.boolean(),
+  order: CreatedOrderRowZ.optional(),
+  error: z.string().optional(),
+});
+export type OrderCreateResult = z.infer<typeof OrderCreateResultZ>;
 
 // Order List Item (minimal info for lists)
 export const OrderListItemZ = z.object({
@@ -262,29 +293,3 @@ export const OrderParamsZ = z.object({
   id: z.string().regex(/^\d+$/),
 });
 export type OrderParams = z.infer<typeof OrderParamsZ>;
-
-// ============================================================================
-// LEGACY TYPE EXPORTS (for backward compatibility during migration)
-// ============================================================================
-
-// These will be removed after all files are updated
-export const CalculateFareZ = CalculateFareRequestZ;
-export type CalculateFare = CalculateFareRequest;
-
-export const CreateOrderZ = CreateOrderRequestZ;
-export type CreateOrder = CreateOrderRequest;
-
-export const CancelOrderZ = CancelOrderRequestZ;
-export type CancelOrder = CancelOrderRequest;
-
-export const UpdateOrderStatusZ = UpdateOrderStatusRequestZ;
-export type UpdateOrderStatus = UpdateOrderStatusRequest;
-
-export const RateOrderZ = RateOrderRequestZ;
-export type RateOrder = RateOrderRequest;
-
-export const GetAvailableOrdersQueryZ = AvailableOrdersQueryZ;
-export type GetAvailableOrdersQuery = AvailableOrdersQuery;
-
-export const CreatedOrderZ = CreateOrderResponseZ;
-export type CreatedOrder = CreateOrderResponse;

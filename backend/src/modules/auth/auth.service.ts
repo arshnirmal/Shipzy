@@ -66,17 +66,17 @@ class AuthService {
         throw new AuthenticationError("User not found");
       }
 
-      if (!user.is_active) {
+      if (!user.isActive) {
         throw new AuthenticationError("User account is inactive");
       }
 
       // 3. Generate new access token
       const tokenPayload = {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName,
         email: user.email,
-        phoneNumber: user.phone_number,
+        phoneNumber: user.phoneNumber,
       };
 
       const newAccessToken = generateAccessToken(tokenPayload);
@@ -88,9 +88,9 @@ class AuthService {
         .digest("hex");
 
       await authRepository.storeJwtToken({
-        userId: user.user_id,
+        userId: user.userId,
         email: user.email,
-        phoneNumber: user.phone_number,
+        phoneNumber: user.phoneNumber,
         tokenHash,
         deviceId: null,
         deviceInfo: null,
@@ -99,17 +99,17 @@ class AuthService {
       });
 
       const mappedUser: import("../../types/user.js").UserProfile = {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
-        phoneNumber: user.phone_number,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName,
+        phoneNumber: user.phoneNumber,
         email: user.email,
-        fullName: user.full_name,
-        profilePictureUrl: user.profile_picture_url,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
+        fullName: user.fullName,
+        profilePictureUrl: user.profilePictureUrl,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt?.toISOString(),
       };
 
       return {
@@ -219,21 +219,21 @@ class AuthService {
 
         logger.info({
           msg: "New user created via Google auth",
-          userId: user.user_id,
+          userId: user.userId,
         });
       }
 
       // 4. Create JWT tokens
       const accessToken = generateAccessToken({
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
-        phoneNumber: user.phone_number,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName,
+        phoneNumber: user.phoneNumber,
       });
 
       const refreshToken = generateRefreshToken({
-        userId: user.user_id,
-        userUuid: user.user_uuid,
+        userId: user.userId,
+        userUuid: user.userUuid,
       });
 
       // 5. Store token hash in database
@@ -243,9 +243,9 @@ class AuthService {
         .digest("hex");
 
       await authRepository.storeJwtToken({
-        userId: user.user_id,
+        userId: user.userId,
         email: user.email,
-        phoneNumber: user.phone_number,
+        phoneNumber: user.phoneNumber,
         tokenHash,
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
@@ -255,17 +255,17 @@ class AuthService {
 
       // 6. Return user data and tokens
       const mappedUser: import("../../types/user.js").UserProfile = {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
-        phoneNumber: user.phone_number,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName,
+        phoneNumber: user.phoneNumber,
         email: user.email,
-        fullName: user.full_name,
-        profilePictureUrl: user.profile_picture_url,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
+        fullName: user.fullName,
+        profilePictureUrl: user.profilePictureUrl,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt?.toISOString(),
       };
 
       return {
@@ -347,22 +347,22 @@ class AuthService {
 
       logger.info({
         msg: "New user registered with email",
-        userId: user.user_id,
+        userId: user.userId,
         email,
       });
 
       // Generate JWT tokens
       const tokenPayload = {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name || role,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName || role,
         email: user.email,
       };
 
       const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken({
-        userId: user.user_id,
-        userUuid: user.user_uuid,
+        userId: user.userId,
+        userUuid: user.userUuid,
       });
 
       // Store token hash in database
@@ -372,9 +372,9 @@ class AuthService {
         .digest("hex");
 
       await authRepository.storeJwtToken({
-        userId: user.user_id,
+        userId: user.userId,
         email: user.email,
-        phoneNumber: user.phone_number,
+        phoneNumber: user.phoneNumber,
         tokenHash,
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
@@ -384,16 +384,16 @@ class AuthService {
 
       return {
         user: {
-          userId: user.user_id,
-          userUuid: user.user_uuid,
-          fullName: user.full_name,
+          userId: user.userId,
+          userUuid: user.userUuid,
+          fullName: user.fullName,
           email: user.email,
-          phoneNumber: user.phone_number,
-          role: user.role_name,
-          isVerified: user.is_verified,
-          isActive: user.is_active,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at,
+          phoneNumber: user.phoneNumber,
+          role: user.roleName,
+          isVerified: user.isVerified,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt?.toISOString(),
         },
         tokens: {
           accessToken,
@@ -432,14 +432,14 @@ class AuthService {
       }
 
       // Check if user is active
-      if (!user.is_active) {
+      if (!user.isActive) {
         throw new AuthenticationError("Account is deactivated");
       }
 
       // Verify password
       const isPasswordValid = await bcrypt.compare(
         password,
-        user.password_hash!,
+        user.passwordHash!,
       );
       if (!isPasswordValid) {
         throw new AuthenticationError("Invalid email or password");
@@ -447,22 +447,22 @@ class AuthService {
 
       logger.info({
         msg: "User logged in with email",
-        userId: user.user_id,
+        userId: user.userId,
         email,
       });
 
       // Generate JWT tokens
       const tokenPayload = {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName,
         email: user.email,
       };
 
       const accessToken = generateAccessToken(tokenPayload);
       const refreshToken = generateRefreshToken({
-        userId: user.user_id,
-        userUuid: user.user_uuid,
+        userId: user.userId,
+        userUuid: user.userUuid,
       });
 
       // Store token hash in database
@@ -472,9 +472,9 @@ class AuthService {
         .digest("hex");
 
       await authRepository.storeJwtToken({
-        userId: user.user_id,
+        userId: user.userId,
         email: user.email,
-        phoneNumber: user.phone_number,
+        phoneNumber: user.phoneNumber,
         tokenHash,
         deviceId: deviceInfo?.deviceId,
         deviceInfo: deviceInfo ? JSON.stringify(deviceInfo) : null,
@@ -484,16 +484,16 @@ class AuthService {
 
       return {
         user: {
-          userId: user.user_id,
-          userUuid: user.user_uuid,
-          fullName: user.full_name,
+          userId: user.userId,
+          userUuid: user.userUuid,
+          fullName: user.fullName,
           email: user.email,
-          phoneNumber: user.phone_number,
-          role: user.role_name,
-          isVerified: user.is_verified,
-          isActive: user.is_active,
-          createdAt: user.created_at,
-          updatedAt: user.updated_at,
+          phoneNumber: user.phoneNumber,
+          role: user.roleName,
+          isVerified: user.isVerified,
+          isActive: user.isActive,
+          createdAt: user.createdAt.toISOString(),
+          updatedAt: user.updatedAt?.toISOString(),
         },
         tokens: {
           accessToken,

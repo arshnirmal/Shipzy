@@ -6,92 +6,96 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
-import { validateOrThrow, validateCoordinates, validatePositiveInt } from "../../utils/validation.util.js";
+import {
+  validateOrThrow,
+  validateCoordinates,
+  validatePositiveInt,
+} from "../../utils/validation.util.js";
 import ordersRepository from "./orders.repository.js";
 
-import type { CalculateFare, CreateOrder } from "./orders.zod.js";
-import { CalculateFareZ, CreateOrderRequestZ } from "./orders.zod.js";
+import type { CalculateFareRequest, CreateOrderRequest } from "./orders.zod.js";
+import { CalculateFareRequestZ } from "./orders.zod.js";
 import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
 
-type FareData = CalculateFare;
-export type OrderData = CreateOrder;
+type FareData = CalculateFareRequest;
+export type OrderData = CreateOrderRequest;
 
 type Location = OrderAddress;
 
 // DB row shape for order queries (only fields used by _formatOrderDetails)
 type OrderRow = {
-  order_id: number;
-  order_uuid: string;
-  order_number: string;
-  status_id?: number;
-  status_name?: string;
-  delivery_type_id?: number;
-  delivery_type?: string;
-  delivery_type_display?: string;
-  vehicle_category_id?: number;
-  vehicle_category_display?: string;
-  package_description?: string | null;
-  package_type_id?: number | null;
-  weight_tier_id?: number | null;
-  weight_tier_name?: string | null;
-  weight_tier_min?: number | string | null;
-  weight_tier_max?: number | string | null;
-  estimated_distance_km?: number | string | null;
-  actual_distance_km?: number | string | null;
-  actual_pickup_time?: string | Date | null;
-  actual_delivery_time?: string | Date | null;
-  payment_method_id?: number;
-  payment_method?: string;
-  created_at?: Date;
-  accepted_at?: Date | null;
-  picked_up_at?: Date | null;
-  delivered_at?: Date | null;
-  cancelled_at?: Date | null;
-  cancellation_reason?: string | null;
-  pickup_location_id?: number;
-  pickup_building?: string | null;
-  pickup_floor?: string | null;
-  pickup_flat?: string | null;
-  pickup_address?: string | null;
-  pickup_landmark?: string | null;
-  pickup_city?: string | null;
-  pickup_state?: string | null;
-  pickup_postal_code?: string | null;
-  pickup_latitude?: number | string | null;
-  pickup_longitude?: number | string | null;
-  pickup_contact_name?: string | null;
-  pickup_contact_phone?: string | null;
-  delivery_location_id?: number;
-  delivery_building?: string | null;
-  delivery_floor?: string | null;
-  delivery_flat?: string | null;
-  delivery_address?: string | null;
-  delivery_landmark?: string | null;
-  delivery_city?: string | null;
-  delivery_state?: string | null;
-  delivery_postal_code?: string | null;
-  delivery_latitude?: number | string | null;
-  delivery_longitude?: number | string | null;
-  delivery_contact_name?: string | null;
-  delivery_contact_phone?: string | null;
-  base_price?: number | string | null;
-  distance_price?: number | string | null;
-  weight_surcharge?: number | string | null;
-  platform_fee?: number | string | null;
-  special_handling_fee?: number | string | null;
-  gst_amount?: number | string | null;
-  subtotal_before_tax?: number | string | null;
-  total_price?: number | string | null;
-  client_name?: string | null;
-  client_phone?: string | null;
-  special_instructions?: string | null;
-  courier_id?: number | null;
-  courier_name?: string | null;
-  courier_phone?: string | null;
-  courier_photo?: string | null;
-  assignment_status?: string | null;
-  assigned_at?: string | Date | null;
-  courier_accepted_at?: string | Date | null;
+  orderId: number;
+  orderUuid: string;
+  orderNumber: string;
+  statusId?: number;
+  statusName?: string;
+  deliveryTypeId?: number;
+  deliveryType?: string;
+  deliveryTypeDisplay?: string;
+  vehicleCategoryId?: number;
+  vehicleCategoryDisplay?: string;
+  packageDescription?: string | null;
+  packageTypeId?: number | null;
+  weightTierId?: number | null;
+  weightTierName?: string | null;
+  weightTierMin?: number | string | null;
+  weightTierMax?: number | string | null;
+  estimatedDistanceKm?: number | string | null;
+  actualDistanceKm?: number | string | null;
+  actualPickupTime?: string | Date | null;
+  actualDeliveryTime?: string | Date | null;
+  paymentMethodId?: number;
+  paymentMethod?: string;
+  createdAt?: Date;
+  acceptedAt?: Date | null;
+  pickedUpAt?: Date | null;
+  deliveredAt?: Date | null;
+  cancelledAt?: Date | null;
+  cancellationReason?: string | null;
+  pickupLocationId?: number;
+  pickupBuilding?: string | null;
+  pickupFloor?: string | null;
+  pickupFlat?: string | null;
+  pickupAddress?: string | null;
+  pickupLandmark?: string | null;
+  pickupCity?: string | null;
+  pickupState?: string | null;
+  pickupPostalCode?: string | null;
+  pickupLatitude?: number | string | null;
+  pickupLongitude?: number | string | null;
+  pickupContactName?: string | null;
+  pickupContactPhone?: string | null;
+  deliveryLocationId?: number;
+  deliveryBuilding?: string | null;
+  deliveryFloor?: string | null;
+  deliveryFlat?: string | null;
+  deliveryAddress?: string | null;
+  deliveryLandmark?: string | null;
+  deliveryCity?: string | null;
+  deliveryState?: string | null;
+  deliveryPostalCode?: string | null;
+  deliveryLatitude?: number | string | null;
+  deliveryLongitude?: number | string | null;
+  deliveryContactName?: string | null;
+  deliveryContactPhone?: string | null;
+  basePrice?: number | string | null;
+  distancePrice?: number | string | null;
+  weightSurcharge?: number | string | null;
+  platformFee?: number | string | null;
+  specialHandlingFee?: number | string | null;
+  gstAmount?: number | string | null;
+  subtotalBeforeTax?: number | string | null;
+  totalPrice?: number | string | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
+  specialInstructions?: string | null;
+  courierId?: number | null;
+  courierName?: string | null;
+  courierPhone?: string | null;
+  courierPhoto?: string | null;
+  assignmentStatus?: string | null;
+  assignedAt?: string | Date | null;
+  courierAcceptedAt?: string | Date | null;
 };
 
 // Use exported type for created-order DTO
@@ -106,7 +110,11 @@ class OrdersService {
   async calculateFare(fareData: FareData): Promise<FareBreakdown> {
     try {
       // Validate input using Zod schema
-      const validatedData = validateOrThrow(CalculateFareZ, fareData, "calculateFare");
+      const validatedData = validateOrThrow(
+        CalculateFareRequestZ,
+        fareData,
+        "calculateFare",
+      );
 
       const {
         deliveryTypeId,
@@ -127,9 +135,10 @@ class OrdersService {
       validatePositiveInt(weightTierId, "weight tier ID");
 
       // Lazy import addresses service to avoid circular dependencies
-      const addressesService = await import(
-        "../addresses/addresses.service.js"
-      ).then((m) => m.default);
+      const addressesService =
+        await import("../addresses/addresses.service.js").then(
+          (m) => m.default,
+        );
 
       const estimatedDistanceKm = addressesService.calculateDistance(
         pickup.latitude,
@@ -178,7 +187,7 @@ class OrdersService {
       }
 
       // Return the fare breakdown with camelCase keys
-      return fareResult.fare_breakdown!;
+      return fareResult.fareBreakdown!;
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",
@@ -319,7 +328,7 @@ class OrdersService {
         msg: "[CREATE-ORDER-SERVICE] Server fare calculation completed",
         operationId,
         clientId,
-        serverCalculatedFare: serverCalculatedFare.fare_breakdown,
+        serverCalculatedFare: serverCalculatedFare.fareBreakdown,
       });
 
       if (!serverCalculatedFare.success) {
@@ -332,7 +341,7 @@ class OrdersService {
         throw new ValidationError("Invalid pricing parameters");
       }
 
-      const serverPricing = serverCalculatedFare.fare_breakdown!; // asserted - success checked above
+      const serverPricing = serverCalculatedFare.fareBreakdown!; // asserted - success checked above
 
       // Allow small tolerance for rounding differences
       const tolerance = 0.01;
@@ -566,14 +575,14 @@ class OrdersService {
       }
 
       // Authorization check
-      if (userRole === "client" && order.client_id !== userId) {
+      if (userRole === "client" && order.clientId !== userId) {
         throw new AuthorizationError("You can only view your own orders");
       }
 
       if (
         userRole === "courier" &&
-        order.courier_id !== userId &&
-        order.courier_id !== null
+        order.courierId !== userId &&
+        order.courierId !== null
       ) {
         throw new AuthorizationError(
           "You can only view orders assigned to you",
@@ -621,65 +630,65 @@ class OrdersService {
         orders: orders.map((order) => {
           // Compute actual delivery duration (only if picked up)
           let actualDurationMins = null;
-          if (order.actual_pickup_time && order.actual_delivery_time) {
-            const pickupTime = new Date(order.actual_pickup_time).getTime();
-            const deliveryTime = new Date(order.actual_delivery_time).getTime();
+          if (order.actualPickupTime && order.actualDeliveryTime) {
+            const pickupTime = new Date(order.actualPickupTime).getTime();
+            const deliveryTime = new Date(order.actualDeliveryTime).getTime();
             actualDurationMins = Math.round(
               (deliveryTime - pickupTime) / (1000 * 60),
             );
-          } else if (order.actual_pickup_time && !order.actual_delivery_time) {
+          } else if (order.actualPickupTime && !order.actualDeliveryTime) {
             // Order in progress - show elapsed time since pickup
-            const pickupTime = new Date(order.actual_pickup_time).getTime();
+            const pickupTime = new Date(order.actualPickupTime).getTime();
             actualDurationMins = Math.round(
               (Date.now() - pickupTime) / (1000 * 60),
             );
           }
 
           // Compute status-specific timestamp for "X mins ago" display
-          let statusTimestamp = order.created_at;
-          if (order.delivered_at) statusTimestamp = order.delivered_at;
-          else if (order.picked_up_at) statusTimestamp = order.picked_up_at;
-          else if (order.accepted_at) statusTimestamp = order.accepted_at;
+          let statusTimestamp = order.createdAt;
+          if (order.deliveredAt) statusTimestamp = order.deliveredAt;
+          else if (order.pickedUpAt) statusTimestamp = order.pickedUpAt;
+          else if (order.acceptedAt) statusTimestamp = order.acceptedAt;
 
           // Format weight tier display (e.g., "1-5 kg", "5-10 kg")
           const weightTierDisplay =
-            order.weight_tier_name ||
-            (order.weight_tier_min != null && order.weight_tier_max != null
-              ? `${order.weight_tier_min}-${order.weight_tier_max} kg`
+            order.weightTierName ||
+            (order.weightTierMin != null && order.weightTierMax != null
+              ? `${order.weightTierMin}-${order.weightTierMax} kg`
               : null);
 
           return {
-            orderId: order.order_id,
-            orderUuid: order.order_uuid,
-            orderNumber: order.order_number,
-            status: order.status_name,
-            statusId: order.status_id,
-            deliveryTypeId: order.delivery_type_id,
-            deliveryTypeDisplay: order.delivery_type_display,
-            vehicleCategoryId: order.vehicle_category_id,
-            vehicleCategoryDisplay: order.vehicle_category_display,
-            packageDescription: order.package_description,
-            weightTierId: order.weight_tier_id,
+            orderId: order.orderId,
+            orderUuid: order.orderUuid,
+            orderNumber: order.orderNumber,
+            status: order.statusName,
+            statusId: order.statusId,
+            deliveryTypeId: order.deliveryTypeId,
+            deliveryTypeDisplay: order.deliveryTypeDisplay,
+            vehicleCategoryId: order.vehicleCategoryId,
+            vehicleCategoryDisplay: order.vehicleCategoryDisplay,
+            packageDescription: order.packageDescription,
+            weightTierId: order.weightTierId,
             weightTierDisplay,
-            estimatedDistanceKm: order.estimated_distance_km
-              ? Number.parseFloat(order.estimated_distance_km)
+            estimatedDistanceKm: order.estimatedDistanceKm
+              ? Number.parseFloat(order.estimatedDistanceKm)
               : null,
-            actualDistanceKm: order.actual_distance_km
-              ? Number.parseFloat(order.actual_distance_km)
+            actualDistanceKm: order.actualDistanceKm
+              ? Number.parseFloat(order.actualDistanceKm)
               : null,
             actualDurationMins,
-            totalPrice: Number.parseFloat(order.total_price),
-            createdAt: order.created_at,
+            totalPrice: Number.parseFloat(order.totalPrice),
+            createdAt: order.createdAt,
             pickup: {
-              address: order.pickup_address,
+              address: order.pickupAddress,
             },
             delivery: {
-              address: order.delivery_address,
+              address: order.deliveryAddress,
             },
-            courier: order.courier_id
+            courier: order.courierId
               ? {
-                  name: order.courier_name,
-                  photo: order.courier_photo,
+                  name: order.courierName,
+                  photo: order.courierPhoto,
                 }
               : null,
           };
@@ -718,50 +727,48 @@ class OrdersService {
       );
 
       return orders.map((order) => ({
-        orderId: order.order_id,
-        orderUuid: order.order_uuid,
-        orderNumber: order.order_number,
-        deliveryTypeDisplay: order.delivery_type_display,
-        vehicleCategoryDisplay: order.vehicle_category_display,
-        createdAt: (order.created_at as Date).toISOString(), // Ensure date to string
+        orderId: order.orderId,
+        orderUuid: order.orderUuid,
+        orderNumber: order.orderNumber,
+        deliveryTypeDisplay: order.deliveryTypeDisplay,
+        vehicleCategoryDisplay: order.vehicleCategoryDisplay,
+        createdAt: (order.createdAt as Date).toISOString(), // Ensure date to string
         pickup: {
-          address: order.pickup_address,
-          landmark: order.pickup_landmark,
-          city: order.pickup_city,
+          address: order.pickupAddress,
+          landmark: order.pickupLandmark,
+          city: order.pickupCity,
           coordinates: {
-            latitude: Number.parseFloat(order.pickup_latitude),
-            longitude: Number.parseFloat(order.pickup_longitude),
+            latitude: Number.parseFloat(order.pickupLatitude),
+            longitude: Number.parseFloat(order.pickupLongitude),
           },
         },
         delivery: {
-          address: order.delivery_address,
-          landmark: order.delivery_landmark,
-          city: order.delivery_city,
+          address: order.deliveryAddress,
+          landmark: order.deliveryLandmark,
+          city: order.deliveryCity,
           coordinates: {
-            latitude: order.delivery_latitude
-              ? Number.parseFloat(order.delivery_latitude)
+            latitude: order.deliveryLatitude
+              ? Number.parseFloat(order.deliveryLatitude)
               : 0,
-            longitude: order.delivery_longitude
-              ? Number.parseFloat(order.delivery_longitude)
+            longitude: order.deliveryLongitude
+              ? Number.parseFloat(order.deliveryLongitude)
               : 0,
           },
         },
-        distanceFromDriverKm: Number.parseFloat(order.distance_from_courier_km),
-        estimatedDistanceKm: Number.parseFloat(order.estimated_distance_km),
+        distanceFromDriverKm: Number.parseFloat(order.distanceFromCourierKm),
+        estimatedDistanceKm: Number.parseFloat(order.estimatedDistanceKm),
         fareBreakdown: {
-          basePrice: Number.parseFloat(order.base_price || "0"),
-          distanceKm: Number.parseFloat(order.estimated_distance_km || "0"),
-          distancePrice: Number.parseFloat(order.distance_price || "0"),
-          weightSurcharge: Number.parseFloat(order.weight_surcharge || "0"),
-          platformFee: Number.parseFloat(order.platform_fee || "0"),
+          basePrice: Number.parseFloat(order.basePrice || "0"),
+          distanceKm: Number.parseFloat(order.estimatedDistanceKm || "0"),
+          distancePrice: Number.parseFloat(order.distancePrice || "0"),
+          weightSurcharge: Number.parseFloat(order.weightSurcharge || "0"),
+          platformFee: Number.parseFloat(order.platformFee || "0"),
           specialHandlingFee: Number.parseFloat(
-            order.special_handling_fee || "0",
+            order.specialHandlingFee || "0",
           ),
-          gstAmount: Number.parseFloat(order.gst_amount || "0"),
-          totalPrice: Number.parseFloat(order.total_price || "0"),
-          subtotalBeforeTax: Number.parseFloat(
-            order.subtotal_before_tax || "0",
-          ),
+          gstAmount: Number.parseFloat(order.gstAmount || "0"),
+          totalPrice: Number.parseFloat(order.totalPrice || "0"),
+          subtotalBeforeTax: Number.parseFloat(order.subtotalBeforeTax || "0"),
         },
       }));
     } catch (error) {
@@ -791,15 +798,15 @@ class OrdersService {
       }
 
       // Authorization check
-      if (userRole === "client" && order.client_id !== userId) {
+      if (userRole === "client" && order.clientId !== userId) {
         throw new AuthorizationError("You can only cancel your own orders");
       }
 
       // Check if order can be cancelled
       const nonCancellableStatuses = ["delivered", "cancelled"];
-      if (nonCancellableStatuses.includes(order.status_name)) {
+      if (nonCancellableStatuses.includes(order.statusName)) {
         throw new ValidationError(
-          `Order cannot be cancelled in ${order.status_name} status`,
+          `Order cannot be cancelled in ${order.statusName} status`,
         );
       }
 
@@ -844,24 +851,24 @@ class OrdersService {
       }
 
       // Check if order is still pending
-      if (order.status_name !== "pending") {
+      if (order.statusName !== "pending") {
         throw new ValidationError(
-          `Order cannot be accepted in ${order.status_name} status`,
+          `Order cannot be accepted in ${order.statusName} status`,
         );
       }
 
       // Check if already assigned to someone else
-      if (order.courier_id && order.courier_id !== courierId) {
+      if (order.courierId && order.courierId !== courierId) {
         throw new ValidationError("Order already assigned to another driver");
       }
 
       const result = await ordersRepository.acceptOrder(orderId, courierId);
 
       return {
-        assignmentId: result.assignment_id,
-        orderId: result.order_id,
-        courierId: result.courier_id,
-        assignedAt: result.assigned_at,
+        assignmentId: result.assignmentId,
+        orderId: result.orderId,
+        courierId: result.courierId,
+        assignedAt: result.assignedAt,
       };
     } catch (error) {
       logger.error({
@@ -895,20 +902,20 @@ class OrdersService {
       }
 
       // Check if courier is assigned to this order
-      if (order.courier_id !== courierId) {
+      if (order.courierId !== courierId) {
         throw new AuthorizationError(
           "You can only update orders assigned to you",
         );
       }
 
       // Validate status transition
-      if (status === "picked_up" && order.status_name !== "assigned") {
+      if (status === "picked_up" && order.statusName !== "assigned") {
         throw new ValidationError(
           "Order must be in assigned status to be picked up",
         );
       }
 
-      if (status === "delivered" && order.status_name !== "picked_up") {
+      if (status === "delivered" && order.statusName !== "picked_up") {
         throw new ValidationError("Order must be picked up before delivery");
       }
 
@@ -943,144 +950,142 @@ class OrdersService {
   _formatOrderDetails(order: OrderRow): OrderDetails {
     // Compute actual delivery duration (only if picked up)
     let actualDurationMins = null;
-    if (order.actual_pickup_time && order.actual_delivery_time) {
-      const pickupTime = new Date(order.actual_pickup_time).getTime();
-      const deliveryTime = new Date(order.actual_delivery_time).getTime();
+    if (order.actualPickupTime && order.actualDeliveryTime) {
+      const pickupTime = new Date(order.actualPickupTime).getTime();
+      const deliveryTime = new Date(order.actualDeliveryTime).getTime();
       actualDurationMins = Math.round(
         (deliveryTime - pickupTime) / (1000 * 60),
       );
-    } else if (order.actual_pickup_time && !order.actual_delivery_time) {
+    } else if (order.actualPickupTime && !order.actualDeliveryTime) {
       // Order in progress - show elapsed time since pickup
-      const pickupTime = new Date(order.actual_pickup_time).getTime();
+      const pickupTime = new Date(order.actualPickupTime).getTime();
       actualDurationMins = Math.round((Date.now() - pickupTime) / (1000 * 60));
     }
 
     // Compute status-specific timestamp for "X mins ago" display
-    let statusTimestamp = order.created_at;
-    if (order.delivered_at) statusTimestamp = order.delivered_at;
-    else if (order.picked_up_at) statusTimestamp = order.picked_up_at;
-    else if (order.accepted_at) statusTimestamp = order.accepted_at;
+    let statusTimestamp = order.createdAt;
+    if (order.deliveredAt) statusTimestamp = order.deliveredAt;
+    else if (order.pickedUpAt) statusTimestamp = order.pickedUpAt;
+    else if (order.acceptedAt) statusTimestamp = order.acceptedAt;
 
     // Format weight tier display (e.g., "1-5 kg", "5-10 kg")
     const weightTierDisplay =
-      order.weight_tier_name ||
-      (order.weight_tier_min != null && order.weight_tier_max != null
-        ? `${order.weight_tier_min}-${order.weight_tier_max} kg`
+      order.weightTierName ||
+      (order.weightTierMin != null && order.weightTierMax != null
+        ? `${order.weightTierMin}-${order.weightTierMax} kg`
         : null);
 
     return {
       // Base identifiers
-      orderId: order.order_id,
-      orderUuid: order.order_uuid,
-      orderNumber: order.order_number,
+      orderId: order.orderId,
+      orderUuid: order.orderUuid,
+      orderNumber: order.orderNumber,
 
       // Status fields
-      status: order.status_name,
-      statusId: order.status_id!,
+      status: order.statusName,
+      statusId: order.statusId!,
 
       // Delivery configuration
-      deliveryTypeId: order.delivery_type_id!,
-      deliveryTypeDisplay: order.delivery_type_display,
-      vehicleCategoryId: order.vehicle_category_id!,
-      vehicleCategoryDisplay: order.vehicle_category_display,
+      deliveryTypeId: order.deliveryTypeId!,
+      deliveryTypeDisplay: order.deliveryTypeDisplay,
+      vehicleCategoryId: order.vehicleCategoryId!,
+      vehicleCategoryDisplay: order.vehicleCategoryDisplay,
 
       // Package details
-      packageDescription: order.package_description,
-      packageTypeId: order.package_type_id || null,
-      weightTierId: order.weight_tier_id,
+      packageDescription: order.packageDescription,
+      packageTypeId: order.packageTypeId || null,
+      weightTierId: order.weightTierId,
       weightTierDisplay,
-      specialInstructions: order.special_instructions,
+      specialInstructions: order.specialInstructions,
 
       // Distance and duration
-      estimatedDistanceKm: order.estimated_distance_km
-        ? Number(order.estimated_distance_km)
+      estimatedDistanceKm: order.estimatedDistanceKm
+        ? Number(order.estimatedDistanceKm)
         : null,
-      actualDistanceKm: order.actual_distance_km
-        ? Number(order.actual_distance_km)
+      actualDistanceKm: order.actualDistanceKm
+        ? Number(order.actualDistanceKm)
         : null,
       actualDurationMins,
 
       // Timestamps
-      createdAt: order.created_at
-        ? (order.created_at as Date).toISOString()
+      createdAt: order.createdAt
+        ? (order.createdAt as Date).toISOString()
         : new Date().toISOString(),
 
       timeline: {
-        confirmedAt: order.created_at
-          ? (order.created_at as Date).toISOString()
+        confirmedAt: order.createdAt
+          ? (order.createdAt as Date).toISOString()
           : new Date().toISOString(),
-        assignedAt: order.accepted_at
-          ? (order.accepted_at as Date).toISOString()
+        assignedAt: order.acceptedAt
+          ? (order.acceptedAt as Date).toISOString()
           : undefined,
-        pickedUpAt: order.picked_up_at
-          ? (order.picked_up_at as Date).toISOString()
+        pickedUpAt: order.pickedUpAt
+          ? (order.pickedUpAt as Date).toISOString()
           : undefined,
-        deliveredAt: order.delivered_at
-          ? (order.delivered_at as Date).toISOString()
+        deliveredAt: order.deliveredAt
+          ? (order.deliveredAt as Date).toISOString()
           : undefined,
-        cancelledAt: order.cancelled_at
-          ? (order.cancelled_at as Date).toISOString()
+        cancelledAt: order.cancelledAt
+          ? (order.cancelledAt as Date).toISOString()
           : undefined,
       },
 
       // Pickup location
       pickup: {
-        locationId: order.pickup_location_id,
-        address: order.pickup_address || "",
-        building: order.pickup_building,
-        floor: order.pickup_floor,
-        flat: order.pickup_flat,
-        landmark: order.pickup_landmark,
-        city: order.pickup_city ?? undefined,
-        state: order.pickup_state ?? undefined,
-        postalCode: order.pickup_postal_code ?? undefined,
-        latitude: Number(order.pickup_latitude),
-        longitude: Number(order.pickup_longitude),
-        contactName: order.pickup_contact_name ?? undefined,
-        contactPhone: order.pickup_contact_phone ?? undefined,
+        locationId: order.pickupLocationId,
+        address: order.pickupAddress || "",
+        building: order.pickupBuilding,
+        floor: order.pickupFloor,
+        flat: order.pickupFlat,
+        landmark: order.pickupLandmark,
+        city: order.pickupCity ?? undefined,
+        state: order.pickupState ?? undefined,
+        postalCode: order.pickupPostalCode ?? undefined,
+        latitude: Number(order.pickupLatitude),
+        longitude: Number(order.pickupLongitude),
+        contactName: order.pickupContactName ?? undefined,
+        contactPhone: order.pickupContactPhone ?? undefined,
       },
 
       // Delivery location
       delivery: {
-        locationId: order.delivery_location_id,
-        address: order.delivery_address || "",
-        building: order.delivery_building,
-        floor: order.delivery_floor,
-        flat: order.delivery_flat,
-        landmark: order.delivery_landmark,
-        city: order.delivery_city ?? undefined,
-        state: order.delivery_state ?? undefined,
-        postalCode: order.delivery_postal_code ?? undefined,
-        latitude: Number(order.delivery_latitude),
-        longitude: Number(order.delivery_longitude),
-        contactName: order.delivery_contact_name ?? undefined,
-        contactPhone: order.delivery_contact_phone ?? undefined,
+        locationId: order.deliveryLocationId,
+        address: order.deliveryAddress || "",
+        building: order.deliveryBuilding,
+        floor: order.deliveryFloor,
+        flat: order.deliveryFlat,
+        landmark: order.deliveryLandmark,
+        city: order.deliveryCity ?? undefined,
+        state: order.deliveryState ?? undefined,
+        postalCode: order.deliveryPostalCode ?? undefined,
+        latitude: Number(order.deliveryLatitude),
+        longitude: Number(order.deliveryLongitude),
+        contactName: order.deliveryContactName ?? undefined,
+        contactPhone: order.deliveryContactPhone ?? undefined,
       },
 
       // Payment & Pricing
       fareBreakdown: {
-        basePrice: Number(order.base_price),
-        distanceKm: order.estimated_distance_km
-          ? Number(order.estimated_distance_km)
+        basePrice: Number(order.basePrice),
+        distanceKm: order.estimatedDistanceKm
+          ? Number(order.estimatedDistanceKm)
           : 0,
-        distancePrice: Number(order.distance_price),
-        weightSurcharge: Number(order.weight_surcharge),
-        platformFee: Number(order.platform_fee || 0),
-        specialHandlingFee: Number(order.special_handling_fee || 0),
-        gstAmount: Number(order.gst_amount || 0),
-        subtotalBeforeTax: Number(
-          order.subtotal_before_tax || order.total_price,
-        ),
-        totalPrice: Number(order.total_price),
+        distancePrice: Number(order.distancePrice),
+        weightSurcharge: Number(order.weightSurcharge),
+        platformFee: Number(order.platformFee || 0),
+        specialHandlingFee: Number(order.specialHandlingFee || 0),
+        gstAmount: Number(order.gstAmount || 0),
+        subtotalBeforeTax: Number(order.subtotalBeforeTax || order.totalPrice),
+        totalPrice: Number(order.totalPrice),
       },
 
       // Courier details
-      courier: order.courier_id
+      courier: order.courierId
         ? {
-            userId: order.courier_id,
-            name: order.courier_name || undefined,
-            phone: order.courier_phone || undefined,
-            profilePictureUrl: order.courier_photo || undefined,
+            userId: order.courierId,
+            name: order.courierName || undefined,
+            phone: order.courierPhone || undefined,
+            profilePictureUrl: order.courierPhoto || undefined,
           }
         : null,
     };

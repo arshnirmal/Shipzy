@@ -2,41 +2,47 @@
 import { FastifySchema } from "fastify";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  CalculateFareZ,
-  CreateOrderZ,
-  RateOrderZ,
-  CancelOrderZ,
-  UpdateOrderStatusZ,
+  CalculateFareRequestZ,
+  CreateOrderRequestZ,
+  RateOrderRequestZ,
+  CancelOrderRequestZ,
+  UpdateOrderStatusRequestZ,
   OrderParamsZ,
   ListOrdersQueryZ,
-  GetAvailableOrdersQueryZ,
+  AvailableOrdersQueryZ,
 } from "./orders.zod.js";
 
 const _CalculateFareJson = zodToJsonSchema(
-  CalculateFareZ as any,
+  CalculateFareRequestZ as any,
   "CalculateFare",
 );
 const CalculateFareJson =
   (_CalculateFareJson.definitions &&
     (_CalculateFareJson.definitions as any).CalculateFare) ||
   _CalculateFareJson;
-const _CreateOrderJson = zodToJsonSchema(CreateOrderZ as any, "CreateOrder");
+const _CreateOrderJson = zodToJsonSchema(
+  CreateOrderRequestZ as any,
+  "CreateOrder",
+);
 const CreateOrderJson =
   (_CreateOrderJson.definitions &&
     (_CreateOrderJson.definitions as any).CreateOrder) ||
   _CreateOrderJson;
-const _RateOrderJson = zodToJsonSchema(RateOrderZ as any, "RateOrder");
+const _RateOrderJson = zodToJsonSchema(RateOrderRequestZ as any, "RateOrder");
 const RateOrderJson =
   (_RateOrderJson.definitions &&
     (_RateOrderJson.definitions as any).RateOrder) ||
   _RateOrderJson;
-const _CancelOrderJson = zodToJsonSchema(CancelOrderZ as any, "CancelOrder");
+const _CancelOrderJson = zodToJsonSchema(
+  CancelOrderRequestZ as any,
+  "CancelOrder",
+);
 const CancelOrderJson =
   (_CancelOrderJson.definitions &&
     (_CancelOrderJson.definitions as any).CancelOrder) ||
   _CancelOrderJson;
 const _UpdateOrderStatusJson = zodToJsonSchema(
-  UpdateOrderStatusZ as any,
+  UpdateOrderStatusRequestZ as any,
   "UpdateOrderStatus",
 );
 const UpdateOrderStatusJson =
@@ -57,7 +63,7 @@ const ListOrdersQueryJson =
     (_ListOrdersQueryJson.definitions as any).ListOrdersQuery) ||
   _ListOrdersQueryJson;
 const _GetAvailableOrdersQueryJson = zodToJsonSchema(
-  GetAvailableOrdersQueryZ as any,
+  AvailableOrdersQueryZ as any,
   "GetAvailableOrdersQuery",
 );
 const GetAvailableOrdersQueryJson =

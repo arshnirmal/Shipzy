@@ -13,18 +13,18 @@ export default {
    */
   FIND_USER_BY_FIREBASE_UID: `
     SELECT
-      u.user_id,
-      u.user_uuid,
-      u.role_id,
-      r.name AS role_name,
-      u.firebase_uid,
-      u.phone_number,
-      u.email,
-      u.full_name,
-      u.profile_picture_url,
-      u.is_verified,
-      u.is_active,
-      u.created_at
+      u.user_id AS "userId",
+      u.user_uuid AS "userUuid",
+      u.role_id AS "roleId",
+      r.name AS "roleName",
+      u.firebase_uid AS "firebaseUid",
+      u.phone_number AS "phoneNumber",
+      u.email AS "email",
+      u.full_name AS "fullName",
+      u.profile_picture_url AS "profilePictureUrl",
+      u.is_verified AS "isVerified",
+      u.is_active AS "isActive",
+      u.created_at AS "createdAt"
     FROM users.profiles u
     JOIN public.user_roles r ON u.role_id = r.role_id
     WHERE u.firebase_uid = $1
@@ -36,18 +36,18 @@ export default {
    */
   FIND_USER_BY_UUID: `
     SELECT
-      u.user_id,
-      u.user_uuid,
-      u.role_id,
-      r.name AS role_name,
-      u.firebase_uid,
-      u.phone_number,
-      u.email,
-      u.full_name,
-      u.profile_picture_url,
-      u.is_verified,
-      u.is_active,
-      u.created_at
+      u.user_id AS "userId",
+      u.user_uuid AS "userUuid",
+      u.role_id AS "roleId",
+      r.name AS "roleName",
+      u.firebase_uid AS "firebaseUid",
+      u.phone_number AS "phoneNumber",
+      u.email AS "email",
+      u.full_name AS "fullName",
+      u.profile_picture_url AS "profilePictureUrl",
+      u.is_verified AS "isVerified",
+      u.is_active AS "isActive",
+      u.created_at AS "createdAt"
       FROM users.profiles u
       JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.user_uuid = $1
@@ -60,18 +60,18 @@ export default {
    */
   FIND_USER_BY_PHONE: `
       SELECT
-        u.user_id,
-        u.user_uuid,
-        u.role_id,
-        r.name AS role_name,
-        u.firebase_uid,
-        u.phone_number,
-        u.email,
-        u.full_name,
-        u.password_hash,
-        u.is_verified,
-        u.is_active,
-        u.created_at
+        u.user_id AS "userId",
+        u.user_uuid AS "userUuid",
+        u.role_id AS "roleId",
+        r.name AS "roleName",
+        u.firebase_uid AS "firebaseUid",
+        u.phone_number AS "phoneNumber",
+        u.email AS "email",
+        u.full_name AS "fullName",
+        u.password_hash AS "passwordHash",
+        u.is_verified AS "isVerified",
+        u.is_active AS "isActive",
+        u.created_at AS "createdAt"
       FROM users.profiles u
       JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.phone_number = $1
@@ -83,18 +83,18 @@ export default {
    */
   FIND_USER_BY_EMAIL: `
       SELECT
-        u.user_id,
-        u.user_uuid,
-        u.role_id,
-        r.name AS role_name,
-        u.firebase_uid,
-        u.phone_number,
-        u.email,
-        u.full_name,
-        u.password_hash,
-        u.is_verified,
-        u.is_active,
-        u.created_at
+        u.user_id AS "userId",
+        u.user_uuid AS "userUuid",
+        u.role_id AS "roleId",
+        r.name AS "roleName",
+        u.firebase_uid AS "firebaseUid",
+        u.phone_number AS "phoneNumber",
+        u.email AS "email",
+        u.full_name AS "fullName",
+        u.password_hash AS "passwordHash",
+        u.is_verified AS "isVerified",
+        u.is_active AS "isActive",
+        u.created_at AS "createdAt"
       FROM users.profiles u
       JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.email = $1
@@ -118,15 +118,15 @@ export default {
       )
       VALUES ($1, $2, $3, $4, $5, $6, true)
       RETURNING
-        user_id,
-        user_uuid,
-        role_id,
-        firebase_uid,
-        phone_number,
-        full_name,
-        email,
-        is_verified,
-        created_at
+        user_id AS "userId",
+        user_uuid AS "userUuid",
+        role_id AS "roleId",
+        firebase_uid AS "firebaseUid",
+        phone_number AS "phoneNumber",
+        full_name AS "fullName",
+        email AS "email",
+        is_verified AS "isVerified",
+        created_at AS "createdAt"
     `,
 
   /**
@@ -143,14 +143,14 @@ export default {
       )
       VALUES ($1, $2, $3, $4, $5, false)
       RETURNING
-        user_id,
-        user_uuid,
-        role_id,
-        full_name,
-        email,
-        phone_number,
-        is_verified,
-        created_at
+        user_id AS "userId",
+        user_uuid AS "userUuid",
+        role_id AS "roleId",
+        full_name AS "fullName",
+        email AS "email",
+        phone_number AS "phoneNumber",
+        is_verified AS "isVerified",
+        created_at AS "createdAt"
     `,
 
   // NOTE: UPDATE_FIREBASE_UID removed - not used anywhere, can be done via Drizzle if needed
@@ -176,7 +176,7 @@ export default {
         last_activity_at
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW(), NOW() + INTERVAL '7 days', NOW())
-      RETURNING session_id, expires_at
+      RETURNING session_id AS "sessionId", expires_at AS "expiresAt"
     `,
 
   /**
@@ -184,17 +184,17 @@ export default {
    */
   VALIDATE_JWT_TOKEN: `
       SELECT
-        s.session_id,
-        s.user_id,
-        s.phone_number,
-        s.expires_at,
-        s.last_activity_at,
-        u.user_uuid,
-        u.full_name,
-        u.role_id,
-        r.name AS role_name,
-        u.is_active,
-        u.is_verified
+        s.session_id AS "sessionId",
+        s.user_id AS "userId",
+        s.phone_number AS "phoneNumber",
+        s.expires_at AS "expiresAt",
+        s.last_activity_at AS "lastActivityAt",
+        u.user_uuid AS "userUuid",
+        u.full_name AS "fullName",
+        u.role_id AS "roleId",
+        r.name AS "roleName",
+        u.is_active AS "isActive",
+        u.is_verified AS "isVerified"
       FROM users.auth_sessions s
       JOIN users.profiles u ON s.user_id = u.user_id
       JOIN public.user_roles r ON u.role_id = r.role_id
@@ -220,7 +220,7 @@ export default {
       UPDATE users.auth_sessions
       SET expires_at = NOW()
       WHERE jwt_token_hash = $1
-      RETURNING session_id
+      RETURNING session_id AS "sessionId"
     `,
 
   /**
@@ -246,6 +246,6 @@ export default {
       )
       VALUES ($1, false, false)
       ON CONFLICT (courier_id) DO NOTHING
-      RETURNING status_id, courier_id
+      RETURNING status_id AS "statusId", courier_id AS "courierId"
     `,
 };

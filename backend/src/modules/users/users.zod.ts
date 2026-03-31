@@ -48,22 +48,3 @@ export type SavedAddressResponse = z.infer<typeof SavedAddressResponseZ>;
 // Addresses Array Response
 export const AddressesArrayResponseZ = z.array(SavedAddressResponseZ);
 export type AddressesArrayResponse = z.infer<typeof AddressesArrayResponseZ>;
-
-// ============================================================================
-// LEGACY TYPE EXPORTS (for backward compatibility during migration)
-// ============================================================================
-
-export const UpdateProfileZ = UpdateProfileRequestZ;
-export type UpdateProfile = UpdateProfileRequest;
-
-export const SaveAddressZ = SaveAddressRequestZ;
-export type SaveAddress = SaveAddressRequest;
-
-export const UserResponseZ = UserProfileResponseZ;
-export type UserResponse = UserProfileResponse;
-
-export const AddressResponseZ = SavedAddressResponseZ;
-export type AddressResponse = SavedAddressResponse;
-
-export const AddressesArrayZ = AddressesArrayResponseZ;
-export type AddressesArray = AddressesArrayResponse;

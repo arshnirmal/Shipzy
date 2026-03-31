@@ -6,14 +6,14 @@ import driversService from "./drivers.service.js";
 import ratingsService from "../ratings/ratings.service.js";
 
 import type {
-  UpdateDriverProfile,
-  UpdateAvailability,
-  UpdateLocation,
+  UpdateDriverProfileRequest,
+  UpdateAvailabilityRequest,
+  UpdateLocationRequest,
 } from "./drivers.zod.js";
 import {
-  UpdateDriverProfileZ,
-  UpdateAvailabilityZ,
-  UpdateLocationZ,
+  UpdateDriverProfileRequestZ,
+  UpdateAvailabilityRequestZ,
+  UpdateLocationRequestZ,
 } from "./drivers.zod.js";
 
 class DriversController {
@@ -53,14 +53,12 @@ class DriversController {
    * Update driver profile
    */
   async updateProfile(
-    request: FastifyRequest<{ Body: UpdateDriverProfile }>,
+    request: FastifyRequest<{ Body: UpdateDriverProfileRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const updateData = UpdateDriverProfileZ.parse(
-        request.body,
-      ) as UpdateDriverProfile;
+      const updateData = UpdateDriverProfileRequestZ.parse(request.body);
 
       const updatedDriver = await driversService.updateProfile(
         userId,
@@ -90,14 +88,12 @@ class DriversController {
    * Toggle driver availability
    */
   async updateAvailability(
-    request: FastifyRequest<{ Body: UpdateAvailability }>,
+    request: FastifyRequest<{ Body: UpdateAvailabilityRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const availabilityData = UpdateAvailabilityZ.parse(
-        request.body,
-      ) as UpdateAvailability;
+      const availabilityData = UpdateAvailabilityRequestZ.parse(request.body);
 
       const result = await driversService.updateAvailability(
         userId,
@@ -127,14 +123,12 @@ class DriversController {
    * Update driver location
    */
   async updateLocation(
-    request: FastifyRequest<{ Body: UpdateLocation }>,
+    request: FastifyRequest<{ Body: UpdateLocationRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
       const { userId } = request.user!;
-      const locationData = UpdateLocationZ.parse(
-        request.body,
-      ) as UpdateLocation;
+      const locationData = UpdateLocationRequestZ.parse(request.body);
 
       const result = await driversService.updateLocation(userId, locationData);
 

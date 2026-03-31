@@ -2,14 +2,14 @@
 import { FastifySchema } from "fastify";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  UpdateDriverProfileZ,
-  UpdateAvailabilityZ,
-  UpdateLocationZ,
+  UpdateDriverProfileRequestZ,
+  UpdateAvailabilityRequestZ,
+  UpdateLocationRequestZ,
   DriverProfileResponseZ,
 } from "./drivers.zod.js";
 
 const _UpdateDriverProfileJson = zodToJsonSchema(
-  UpdateDriverProfileZ as any,
+  UpdateDriverProfileRequestZ as any,
   "UpdateDriverProfile",
 );
 const UpdateDriverProfileJson =
@@ -17,7 +17,7 @@ const UpdateDriverProfileJson =
     (_UpdateDriverProfileJson.definitions as any).UpdateDriverProfile) ||
   _UpdateDriverProfileJson;
 const _UpdateAvailabilityJson = zodToJsonSchema(
-  UpdateAvailabilityZ as any,
+  UpdateAvailabilityRequestZ as any,
   "UpdateAvailability",
 );
 const UpdateAvailabilityJson =
@@ -25,7 +25,7 @@ const UpdateAvailabilityJson =
     (_UpdateAvailabilityJson.definitions as any).UpdateAvailability) ||
   _UpdateAvailabilityJson;
 const _UpdateLocationJson = zodToJsonSchema(
-  UpdateLocationZ as any,
+  UpdateLocationRequestZ as any,
   "UpdateLocation",
 );
 const UpdateLocationJson =

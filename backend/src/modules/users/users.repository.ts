@@ -27,48 +27,44 @@ function mapProfileRowToDbUser(row: {
   updatedAt: Date;
 }): User {
   return {
-    user_id: row.userId,
-    user_uuid: row.userUuid,
-    full_name: row.fullName,
+    userId: row.userId,
+    userUuid: row.userUuid,
+    fullName: row.fullName,
     email: row.email ?? undefined,
-    phone_number: row.phoneNumber ?? "",
-    profile_picture_url: row.profilePictureUrl ?? undefined,
-    role_name: row.roleName,
-    is_verified: row.isVerified,
-    is_active: row.isActive,
-    created_at: row.createdAt,
-    updated_at: row.updatedAt,
+    phoneNumber: row.phoneNumber ?? undefined,
+    profilePictureUrl: row.profilePictureUrl ?? undefined,
+    roleName: row.roleName,
+    isVerified: row.isVerified,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
 interface Address {
-  address_id: number;
-  user_id: number;
+  addressId: number;
+  userId?: number;
   label: string;
-  full_address: string;
+  fullAddress: string;
   city: string;
   state: string;
-  postal_code: string;
+  postalCode: string;
   latitude: number;
   longitude: number;
-  address_type?: string;
-  // DB may return snake_case or camelCase keys depending on query mapping
+  addressType?: string;
   building?: string;
-  building_name?: string;
   floor?: string;
-  floor_number?: string;
-  flat_number?: string;
-  room_number?: string;
+  flatNumber?: string;
   landmark?: string;
-  is_default: boolean;
-  created_at: Date;
-  updated_at: Date;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
 }
 
-import type { UpdateProfile, SaveAddress } from "./users.zod.js";
+import type { UpdateProfileRequest, SaveAddressRequest } from "./users.zod.js";
 
-type UpdateProfileData = UpdateProfile;
-type AddressData = SaveAddress;
+type UpdateProfileData = UpdateProfileRequest;
+type AddressData = SaveAddressRequest;
 
 class UsersRepository {
   /**
@@ -242,7 +238,7 @@ class UsersRepository {
   async deleteAddress(
     addressId: number,
     userId: number,
-  ): Promise<{ address_id: number } | null> {
+  ): Promise<{ addressId: number } | null> {
     try {
       const result = await drizzleDb
         .delete(userAddresses)
@@ -252,7 +248,7 @@ class UsersRepository {
             eq(userAddresses.userId, userId),
           ),
         )
-        .returning({ address_id: userAddresses.addressId });
+        .returning({ addressId: userAddresses.addressId });
 
       return result[0] || null;
     } catch (error) {

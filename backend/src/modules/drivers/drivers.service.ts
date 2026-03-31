@@ -9,9 +9,10 @@ import driversRepository from "./drivers.repository.js";
 
 import type { DriverProfileResponse } from "./drivers.zod.js";
 
-type UpdateProfileData = import("./drivers.zod.js").UpdateDriverProfile;
-type UpdateAvailabilityData = import("./drivers.zod.js").UpdateAvailability;
-type LocationData = import("./drivers.zod.js").UpdateLocation;
+type UpdateProfileData = import("./drivers.zod.js").UpdateDriverProfileRequest;
+type UpdateAvailabilityData =
+  import("./drivers.zod.js").UpdateAvailabilityRequest;
+type LocationData = import("./drivers.zod.js").UpdateLocationRequest;
 
 type DriverProfile = DriverProfileResponse;
 
@@ -111,39 +112,39 @@ class DriversService {
       }
 
       return {
-        userId: driver.user_id,
-        userUuid: driver.user_uuid,
-        phoneNumber: driver.phone_number,
-        fullName: driver.full_name,
+        userId: driver.userId,
+        userUuid: driver.userUuid,
+        phoneNumber: driver.phoneNumber ?? null,
+        fullName: driver.fullName,
         email: driver.email || "",
-        role: (driver as any).role_name || "courier",
-        profilePictureUrl: driver.profile_picture_url,
-        isVerified: driver.is_verified,
-        isActive: driver.is_active,
+        role: driver.roleName || "courier",
+        profilePictureUrl: driver.profilePictureUrl ?? null,
+        isVerified: driver.isVerified,
+        isActive: driver.isActive,
         status: {
-          isAvailable: driver.is_available,
-          isOnline: driver.is_online,
-          totalDeliveriesToday: driver.total_deliveries_today,
+          isAvailable: driver.isAvailable,
+          isOnline: driver.isOnline,
+          totalDeliveriesToday: driver.totalDeliveriesToday,
           currentLocation:
-            driver.current_latitude && driver.current_longitude
+            driver.currentLatitude && driver.currentLongitude
               ? {
-                  latitude: Number(driver.current_latitude),
-                  longitude: Number(driver.current_longitude),
+                  latitude: Number(driver.currentLatitude),
+                  longitude: Number(driver.currentLongitude),
                 }
               : null,
-          lastLocationUpdate: driver.last_location_update
-            ? new Date(driver.last_location_update).toISOString()
+          lastLocationUpdate: driver.lastLocationUpdate
+            ? new Date(driver.lastLocationUpdate).toISOString()
             : null,
         },
-        vehicle: driver.vehicle_id
+        vehicle: driver.vehicleId
           ? {
-              vehicleId: driver.vehicle_id,
-              categoryId: driver.vehicle_category_id,
-              category: driver.vehicle_category || "",
-              isActive: Boolean(driver.vehicle_is_active),
-              vehicleNumber: driver.vehicle_number || "",
-              model: driver.vehicle_model || "",
-              year: driver.vehicle_year || 0,
+              vehicleId: driver.vehicleId,
+              categoryId: driver.vehicleCategoryId ?? undefined,
+              category: driver.vehicleCategory || "",
+              isActive: Boolean(driver.vehicleIsActive),
+              vehicleNumber: driver.vehicleNumber || "",
+              model: driver.vehicleModel || "",
+              year: driver.vehicleYear || 0,
             }
           : null,
         earnings: {
@@ -154,8 +155,8 @@ class DriversService {
           averageOrderValue: 0,
           totalDistanceKm: 0,
         },
-        createdAt: driver.created_at.toISOString(),
-        updatedAt: driver.updated_at.toISOString(),
+        createdAt: driver.createdAt.toISOString(),
+        updatedAt: driver.updatedAt.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -191,11 +192,11 @@ class DriversService {
       );
 
       return {
-        userId: updatedDriver.user_id,
-        fullName: updatedDriver.full_name,
-        email: updatedDriver.email,
-        profilePictureUrl: updatedDriver.profile_picture_url,
-        updatedAt: updatedDriver.updated_at.toISOString(),
+        userId: updatedDriver.userId,
+        fullName: updatedDriver.fullName,
+        email: updatedDriver.email ?? null,
+        profilePictureUrl: updatedDriver.profilePictureUrl ?? null,
+        updatedAt: updatedDriver.updatedAt.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -231,8 +232,8 @@ class DriversService {
         throw new NotFoundError("Driver profile not found");
       }
 
-      const currentIsOnline = currentProfile.is_online;
-      const currentIsAvailable = currentProfile.is_available;
+      const currentIsOnline = currentProfile.isOnline;
+      const currentIsAvailable = currentProfile.isAvailable;
 
       // Update availability in database
       const result = await driversRepository.updateAvailability(
@@ -279,10 +280,10 @@ class DriversService {
       }
 
       return {
-        courierId: result.courier_id,
-        isAvailable: result.is_available,
-        isOnline: result.is_online,
-        updatedAt: result.updated_at,
+        courierId: result.courierId,
+        isAvailable: result.isAvailable,
+        isOnline: result.isOnline,
+        updatedAt: result.updatedAt,
       };
     } catch (error) {
       logger.error({
@@ -323,10 +324,10 @@ class DriversService {
       );
 
       return {
-        courierId: result.courier_id,
+        courierId: result.courierId,
         latitude: Number(result.latitude),
         longitude: Number(result.longitude),
-        lastLocationUpdate: result.last_location_update,
+        lastLocationUpdate: result.lastLocationUpdate,
       };
     } catch (error) {
       logger.error({
@@ -349,65 +350,65 @@ class DriversService {
         assignments.map(async (assignment) => {
           const earnings = await this.calculateDriverEarnings(assignment);
           return {
-            assignmentId: assignment.assignment_id,
-            orderId: assignment.order_id,
-            orderUuid: assignment.order_uuid,
-            orderNumber: assignment.order_number,
-            orderStatus: assignment.order_status,
-            assignmentStatus: assignment.assignment_status,
-            vehicleCategory: assignment.vehicle_category,
-            vehicleCategoryDisplay: assignment.vehicle_category_display,
-            packageType: assignment.package_type,
-            weightTier: assignment.weight_tier_name
+            assignmentId: assignment.assignmentId,
+            orderId: assignment.orderId,
+            orderUuid: assignment.orderUuid,
+            orderNumber: assignment.orderNumber,
+            orderStatus: assignment.orderStatus,
+            assignmentStatus: assignment.assignmentStatus,
+            vehicleCategory: assignment.vehicleCategory,
+            vehicleCategoryDisplay: assignment.vehicleCategoryDisplay,
+            packageType: assignment.packageType,
+            weightTier: assignment.weightTierName
               ? {
-                  id: assignment.weight_tier_id,
-                  name: assignment.weight_tier_name,
-                  minWeightKg: Number(assignment.weight_tier_min || 0),
-                  maxWeightKg: Number(assignment.weight_tier_max || 0),
+                  id: assignment.weightTierId,
+                  name: assignment.weightTierName,
+                  minWeightKg: Number(assignment.weightTierMin || 0),
+                  maxWeightKg: Number(assignment.weightTierMax || 0),
                 }
               : null,
             pickup: {
-              address: assignment.pickup_address,
-              building: assignment.pickup_building,
-              landmark: assignment.pickup_landmark,
-              city: assignment.pickup_city,
-              state: assignment.pickup_state,
-              postalCode: assignment.pickup_postal_code,
-              latitude: Number(assignment.pickup_latitude),
-              longitude: Number(assignment.pickup_longitude),
-              contactName: assignment.pickup_contact_name,
-              contactPhone: assignment.pickup_contact_phone,
+              address: assignment.pickupAddress,
+              building: assignment.pickupBuilding,
+              landmark: assignment.pickupLandmark,
+              city: assignment.pickupCity,
+              state: assignment.pickupState,
+              postalCode: assignment.pickupPostalCode,
+              latitude: Number(assignment.pickupLatitude),
+              longitude: Number(assignment.pickupLongitude),
+              contactName: assignment.pickupContactName,
+              contactPhone: assignment.pickupContactPhone,
             },
             delivery: {
-              address: assignment.delivery_address,
-              building: assignment.delivery_building,
-              landmark: assignment.delivery_landmark,
-              city: assignment.delivery_city,
-              state: assignment.delivery_state,
-              postalCode: assignment.delivery_postal_code,
-              latitude: Number(assignment.delivery_latitude),
-              longitude: Number(assignment.delivery_longitude),
-              contactName: assignment.delivery_contact_name,
-              contactPhone: assignment.delivery_contact_phone,
+              address: assignment.deliveryAddress,
+              building: assignment.deliveryBuilding,
+              landmark: assignment.deliveryLandmark,
+              city: assignment.deliveryCity,
+              state: assignment.deliveryState,
+              postalCode: assignment.deliveryPostalCode,
+              latitude: Number(assignment.deliveryLatitude),
+              longitude: Number(assignment.deliveryLongitude),
+              contactName: assignment.deliveryContactName,
+              contactPhone: assignment.deliveryContactPhone,
             },
-            packageDescription: assignment.package_description,
-            specialInstructions: assignment.special_instructions,
-            declaredValue: assignment.declared_value
-              ? Number(assignment.declared_value)
+            packageDescription: assignment.packageDescription,
+            specialInstructions: assignment.specialInstructions,
+            declaredValue: assignment.declaredValue
+              ? Number(assignment.declaredValue)
               : null,
-            estimatedDistanceKm: assignment.estimated_distance_km
-              ? Number(assignment.estimated_distance_km)
+            estimatedDistanceKm: assignment.estimatedDistanceKm
+              ? Number(assignment.estimatedDistanceKm)
               : null,
-            actualDistanceKm: assignment.actual_distance_km
-              ? Number(assignment.actual_distance_km)
+            actualDistanceKm: assignment.actualDistanceKm
+              ? Number(assignment.actualDistanceKm)
               : null,
             driverEarnings: earnings.netEarning,
             earningsBreakdown: earnings.earningsBreakdown,
             estimatedDeliveryTime: Math.ceil(
-              (Number(assignment.estimated_distance_km || 10) / 25) * 60,
+              (Number(assignment.estimatedDistanceKm || 10) / 25) * 60,
             ), // Estimate based on 25km/h average speed
-            assignedAt: assignment.assigned_at,
-            acceptedAt: assignment.accepted_at,
+            assignedAt: assignment.assignedAt,
+            acceptedAt: assignment.acceptedAt,
           };
         }),
       );
@@ -471,9 +472,9 @@ class DriversService {
         (await pricingRepo.getPricingConfigValue("quality_bonus_amount")) ||
         5.0;
 
-      const basePrice = Number(assignment.base_price || 0);
-      const distancePrice = Number(assignment.distance_price || 0);
-      const weightSurcharge = Number(assignment.weight_surcharge || 0);
+      const basePrice = Number(assignment.basePrice || 0);
+      const distancePrice = Number(assignment.distancePrice || 0);
+      const weightSurcharge = Number(assignment.weightSurcharge || 0);
 
       // Base earnings using configurable rates
       const basePayout = basePrice * commissionRate;
@@ -481,7 +482,7 @@ class DriversService {
       const weightCompensation = weightSurcharge * weightRate;
 
       // Peak hour bonus
-      const pickupTime = new Date(assignment.assigned_at ?? Date.now());
+      const pickupTime = new Date(assignment.assignedAt ?? Date.now());
       const hour = pickupTime.getHours();
       const isPeakHour =
         (hour >= 8 && hour < 10) ||
@@ -491,7 +492,7 @@ class DriversService {
 
       // Urgency bonus for "Deliver Now"
       const urgencyBonus =
-        assignment.delivery_type === "deliver_now" ? urgencyBonusAmount : 0;
+        assignment.deliveryType === "deliver_now" ? urgencyBonusAmount : 0;
 
       // On-time delivery bonus (simplified)
       const onTimeBonus =
@@ -539,12 +540,12 @@ class DriversService {
     } catch (error) {
       logger.error({
         msg: "Error calculating driver earnings",
-        assignmentId: assignment.assignment_id,
+        assignmentId: assignment.assignmentId,
         error: (error as Error).message,
       });
       // Fallback to simple calculation
       const fallbackNetEarning = Math.round(
-        Number(assignment.total_price) * 0.7,
+        Number(assignment.totalPrice) * 0.7,
       );
       return {
         netEarning: fallbackNetEarning,
@@ -580,31 +581,31 @@ class DriversService {
       if (period === "today") {
         return {
           deliveries: {
-            today: Number(earnings.today_deliveries),
+            today: Number(earnings.todayDeliveries),
           },
           earnings: {
-            today: Number(earnings.today_earnings),
+            today: Number(earnings.todayEarnings),
           },
-          totalDistanceKm: Number(earnings.total_distance_km),
+          totalDistanceKm: Number(earnings.totalDistanceKm),
         };
       }
 
       // For detailed screens - full response
       return {
         deliveries: {
-          total: Number(earnings.total_deliveries),
-          today: Number(earnings.today_deliveries),
-          thisWeek: Number(earnings.week_deliveries),
-          thisMonth: Number(earnings.month_deliveries),
+          total: Number(earnings.totalDeliveries),
+          today: Number(earnings.todayDeliveries),
+          thisWeek: Number(earnings.weekDeliveries),
+          thisMonth: Number(earnings.monthDeliveries),
         },
         earnings: {
-          total: Number(earnings.total_earnings),
-          today: Number(earnings.today_earnings),
-          thisWeek: Number(earnings.week_earnings),
-          thisMonth: Number(earnings.month_earnings),
-          averageOrderValue: Number(earnings.avg_order_value),
+          total: Number(earnings.totalEarnings),
+          today: Number(earnings.todayEarnings),
+          thisWeek: Number(earnings.weekEarnings),
+          thisMonth: Number(earnings.monthEarnings),
+          averageOrderValue: Number(earnings.avgOrderValue),
         },
-        totalDistanceKm: Number(earnings.total_distance_km),
+        totalDistanceKm: Number(earnings.totalDistanceKm),
       };
     } catch (error) {
       logger.error({

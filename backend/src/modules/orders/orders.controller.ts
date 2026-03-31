@@ -10,21 +10,16 @@ import {
 import ordersService from "./orders.service.js";
 import ratingsService from "../ratings/ratings.service.js";
 import type {
-  CreateOrder as OrderData,
-  CalculateFare,
-  CancelOrder,
-  RateOrder,
-  UpdateOrderStatus,
+  CreateOrderRequest as OrderData,
+  CalculateFareRequest,
+  CancelOrderRequest,
+  RateOrderRequest,
+  UpdateOrderStatusRequest,
   OrderParams,
   ListOrdersQuery,
-  GetAvailableOrdersQuery,
+  AvailableOrdersQuery,
 } from "./orders.zod.js";
-import {
-  CalculateFareZ,
-  CancelOrderZ,
-  RateOrderZ,
-  UpdateOrderStatusZ,
-} from "./orders.zod.js";
+import { RateOrderRequestZ } from "./orders.zod.js";
 
 class OrdersController {
   /**
@@ -32,7 +27,7 @@ class OrdersController {
    * Calculate fare estimate
    */
   async calculateFare(
-    request: FastifyRequest<{ Body: CalculateFare }>,
+    request: FastifyRequest<{ Body: CalculateFareRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -230,7 +225,7 @@ class OrdersController {
    * Get available orders for drivers
    */
   async getAvailableOrders(
-    request: FastifyRequest<{ Querystring: GetAvailableOrdersQuery }>,
+    request: FastifyRequest<{ Querystring: AvailableOrdersQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -275,7 +270,7 @@ class OrdersController {
    * Cancel order
    */
   async cancelOrder(
-    request: FastifyRequest<{ Params: OrderParams; Body: CancelOrder }>,
+    request: FastifyRequest<{ Params: OrderParams; Body: CancelOrderRequest }>,
     reply: FastifyReply,
   ) {
     try {
@@ -342,7 +337,7 @@ class OrdersController {
   async updateOrderStatus(
     request: FastifyRequest<{
       Params: OrderParams;
-      Body: UpdateOrderStatus;
+      Body: UpdateOrderStatusRequest;
     }>,
     reply: FastifyReply,
   ) {
@@ -382,14 +377,14 @@ class OrdersController {
   async rateOrder(
     request: FastifyRequest<{
       Params: OrderParams;
-      Body: RateOrder;
+      Body: RateOrderRequest;
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { userId } = request.user!;
       const { id } = request.params;
-      const parsed = RateOrderZ.parse(request.body);
+      const parsed = RateOrderRequestZ.parse(request.body);
 
       const result = await ratingsService.createRating({
         orderId: Number.parseInt(id),

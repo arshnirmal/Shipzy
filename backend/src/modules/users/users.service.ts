@@ -7,17 +7,17 @@ import {
 } from "../../utils/error.util.js";
 import usersRepository from "./users.repository.js";
 
-import type { UserProfile } from "../../types/user.js";
+import type { UserProfileResponse } from "./users.zod.js";
 import type {
-  UpdateProfile as UpdateProfileData,
-  SaveAddress as AddressData,
+  UpdateProfileRequest as UpdateProfileData,
+  SaveAddressRequest as AddressData,
 } from "./users.zod.js";
 
 class UsersService {
   /**
    * Get current user profile
    */
-  async getCurrentUser(userUuid: string): Promise<UserProfile> {
+  async getCurrentUser(userUuid: string): Promise<UserProfileResponse> {
     try {
       const user = await usersRepository.findByUuid(userUuid);
 
@@ -26,17 +26,17 @@ class UsersService {
       }
 
       return {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
-        phoneNumber: user.phone_number,
-        email: user.email,
-        fullName: user.full_name,
-        profilePictureUrl: user.profile_picture_url,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName as UserProfileResponse["role"],
+        phoneNumber: user.phoneNumber ?? null,
+        email: user.email ?? null,
+        fullName: user.fullName,
+        profilePictureUrl: user.profilePictureUrl ?? null,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt?.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -53,7 +53,7 @@ class UsersService {
   async updateProfile(
     userId: number,
     updateData: UpdateProfileData,
-  ): Promise<UserProfile> {
+  ): Promise<UserProfileResponse> {
     try {
       // Validate email format if provided
       if (updateData.email) {
@@ -69,17 +69,17 @@ class UsersService {
       );
 
       return {
-        userId: updatedUser.user_id,
-        userUuid: updatedUser.user_uuid,
-        fullName: updatedUser.full_name,
-        email: updatedUser.email,
-        profilePictureUrl: updatedUser.profile_picture_url,
-        role: updatedUser.role_name,
-        phoneNumber: updatedUser.phone_number,
-        isVerified: updatedUser.is_verified,
-        isActive: updatedUser.is_active,
-        createdAt: updatedUser.created_at,
-        updatedAt: updatedUser.updated_at,
+        userId: updatedUser.userId,
+        userUuid: updatedUser.userUuid,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email ?? null,
+        profilePictureUrl: updatedUser.profilePictureUrl ?? null,
+        role: updatedUser.roleName as UserProfileResponse["role"],
+        phoneNumber: updatedUser.phoneNumber ?? null,
+        isVerified: updatedUser.isVerified,
+        isActive: updatedUser.isActive,
+        createdAt: updatedUser.createdAt.toISOString(),
+        updatedAt: updatedUser.updatedAt?.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -95,27 +95,27 @@ class UsersService {
    */
   async getAddresses(
     userId: number,
-  ): Promise<import("./users.zod.js").AddressResponse[]> {
+  ): Promise<import("./users.zod.js").SavedAddressResponse[]> {
     try {
       const addresses = await usersRepository.getAddresses(userId);
 
       return addresses.map((addr) => ({
-        addressId: addr.address_id,
+        addressId: addr.addressId,
         addressType:
-          addr.address_type as import("./users.zod.js").AddressResponse["addressType"],
+          addr.addressType as import("./users.zod.js").SavedAddressResponse["addressType"],
         label: addr.label,
-        fullAddress: addr.full_address,
-        building: addr.building_name || addr.building || undefined,
-        floor: addr.floor_number || addr.floor || undefined,
-        flatNumber: addr.flat_number || addr.room_number || undefined,
+        fullAddress: addr.fullAddress,
+        building: addr.building || undefined,
+        floor: addr.floor || undefined,
+        flatNumber: addr.flatNumber || undefined,
         landmark: addr.landmark,
         city: addr.city,
         state: addr.state,
-        postalCode: addr.postal_code,
+        postalCode: addr.postalCode,
         latitude: addr.latitude,
         longitude: addr.longitude,
-        isDefault: addr.is_default,
-        createdAt: addr.created_at.toISOString(),
+        isDefault: addr.isDefault,
+        createdAt: addr.createdAt.toISOString(),
       }));
     } catch (error) {
       logger.error({
@@ -132,7 +132,7 @@ class UsersService {
   async saveAddress(
     userId: number,
     addressData: AddressData,
-  ): Promise<import("./users.zod.js").AddressResponse> {
+  ): Promise<import("./users.zod.js").SavedAddressResponse> {
     try {
       // Validate required fields
       const requiredFields = [
@@ -169,24 +169,22 @@ class UsersService {
       );
 
       return {
-        addressId: savedAddress.address_id,
+        addressId: savedAddress.addressId,
         addressType:
-          savedAddress.address_type as import("./users.zod.js").AddressResponse["addressType"],
+          savedAddress.addressType as import("./users.zod.js").SavedAddressResponse["addressType"],
         label: savedAddress.label,
-        fullAddress: savedAddress.full_address,
-        building:
-          savedAddress.building_name || savedAddress.building || undefined,
-        floor: savedAddress.floor_number || savedAddress.floor || undefined,
-        flatNumber:
-          savedAddress.flat_number || savedAddress.room_number || undefined,
+        fullAddress: savedAddress.fullAddress,
+        building: savedAddress.building || undefined,
+        floor: savedAddress.floor || undefined,
+        flatNumber: savedAddress.flatNumber || undefined,
         landmark: savedAddress.landmark || undefined,
         city: savedAddress.city,
         state: savedAddress.state,
-        postalCode: savedAddress.postal_code,
+        postalCode: savedAddress.postalCode,
         latitude: savedAddress.latitude,
         longitude: savedAddress.longitude,
-        isDefault: savedAddress.is_default,
-        createdAt: savedAddress.created_at.toISOString(),
+        isDefault: savedAddress.isDefault,
+        createdAt: savedAddress.createdAt.toISOString(),
       };
     } catch (error) {
       logger.error({
@@ -212,7 +210,7 @@ class UsersService {
         throw new NotFoundError("Address not found");
       }
 
-      if (address.user_id !== userId) {
+      if (address.userId !== userId) {
         throw new AuthorizationError("You can only delete your own addresses");
       }
 

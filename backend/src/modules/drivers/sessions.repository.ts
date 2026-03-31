@@ -4,28 +4,28 @@ import db from "../../database/db.js";
 import sessionsQueries from "../../database/queries/sessions.queries.js";
 
 export interface DriverSession {
-  session_id: number;
-  driver_id: number;
-  started_at: Date;
-  ended_at?: Date;
-  total_online_minutes?: number;
-  last_location_lat?: number;
-  last_location_lng?: number;
-  created_at: Date;
+  sessionId: number;
+  driverId: number;
+  startedAt: Date;
+  endedAt?: Date;
+  totalOnlineMinutes?: number;
+  lastLocationLat?: number;
+  lastLocationLng?: number;
+  createdAt: Date;
 }
 
 interface CreateSessionData {
-  driver_id: number;
-  started_at: Date;
-  last_location_lat?: number;
-  last_location_lng?: number;
+  driverId: number;
+  startedAt: Date;
+  lastLocationLat?: number;
+  lastLocationLng?: number;
 }
 
 interface EndSessionData {
-  session_id: number;
-  ended_at: Date;
-  last_location_lat?: number;
-  last_location_lng?: number;
+  sessionId: number;
+  endedAt: Date;
+  lastLocationLat?: number;
+  lastLocationLng?: number;
 }
 
 class SessionsRepository {
@@ -35,17 +35,17 @@ class SessionsRepository {
   async createSession(sessionData: CreateSessionData): Promise<DriverSession> {
     try {
       const result = await db.query(sessionsQueries.CREATE_SESSION, [
-        sessionData.driver_id,
-        sessionData.started_at,
-        sessionData.last_location_lat || null,
-        sessionData.last_location_lng || null,
+        sessionData.driverId,
+        sessionData.startedAt,
+        sessionData.lastLocationLat || null,
+        sessionData.lastLocationLng || null,
       ]);
       return result.rows[0];
     } catch (error) {
       logger.error({
         msg: "Error creating driver session",
         error: (error as Error).message,
-        driverId: sessionData.driver_id,
+        driverId: sessionData.driverId,
       });
       throw error;
     }
@@ -76,17 +76,17 @@ class SessionsRepository {
   async endSession(endData: EndSessionData): Promise<DriverSession> {
     try {
       const result = await db.query(sessionsQueries.END_SESSION, [
-        endData.session_id,
-        endData.ended_at,
-        endData.last_location_lat || null,
-        endData.last_location_lng || null,
+        endData.sessionId,
+        endData.endedAt,
+        endData.lastLocationLat || null,
+        endData.lastLocationLng || null,
       ]);
       return result.rows[0];
     } catch (error) {
       logger.error({
         msg: "Error ending driver session",
         error: (error as Error).message,
-        sessionId: endData.session_id,
+        sessionId: endData.sessionId,
       });
       throw error;
     }

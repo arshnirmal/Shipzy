@@ -1,30 +1,38 @@
 // services/backend/src/database/schema/types.ts
 // TypeScript types for JSONB structures used in Drizzle schemas
 
-import type { z } from "zod";
-import type { OrderAddressZ } from "../../schemas/common.zod.js";
+import { z } from "zod";
+import { OrderAddressZ } from "../../schemas/common.zod.js";
 
-// JSONB structure types
-export type OrderLocationJSONB = z.infer<typeof OrderAddressZ>;
+// JSONB structure schemas + types
+export const OrderLocationJSONBZ = OrderAddressZ;
+export type OrderLocationJSONB = z.infer<typeof OrderLocationJSONBZ>;
 
-export type OrderItemJSONB = {
-  itemName: string;
-  quantity: number;
-  weightKg?: number | null;
-  dimensions?: {
-    length?: number;
-    width?: number;
-    height?: number;
-  } | null;
-  description?: string | null;
-  value?: number | null;
-};
+export const OrderItemJSONBZ = z.object({
+  itemName: z.string().min(1),
+  quantity: z.number().int().positive(),
+  weightKg: z.number().nonnegative().nullable().optional(),
+  dimensions: z
+    .object({
+      length: z.number().nonnegative().optional(),
+      width: z.number().nonnegative().optional(),
+      height: z.number().nonnegative().optional(),
+    })
+    .nullable()
+    .optional(),
+  description: z.string().max(500).nullable().optional(),
+  value: z.number().nonnegative().nullable().optional(),
+});
+export type OrderItemJSONB = z.infer<typeof OrderItemJSONBZ>;
 
-export type OrderLabelsJSONB = string[]; // Array of label names: ["new", "fastest", "popular"]
+export const OrderLabelsJSONBZ = z.array(z.string().min(1));
+export type OrderLabelsJSONB = z.infer<typeof OrderLabelsJSONBZ>;
 
-export type OrderMetadataJSONB = {
-  couponCode?: string | null;
-  notifyRecipientSms?: boolean;
-  specialInstructions?: string | null;
-  [key: string]: unknown;
-};
+export const OrderMetadataJSONBZ = z
+  .object({
+    couponCode: z.string().max(50).nullable().optional(),
+    notifyRecipientSms: z.boolean().optional(),
+    specialInstructions: z.string().max(1000).nullable().optional(),
+  })
+  .catchall(z.unknown());
+export type OrderMetadataJSONB = z.infer<typeof OrderMetadataJSONBZ>;

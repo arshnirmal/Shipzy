@@ -10,13 +10,9 @@ import { userRoles } from "../../database/schema/public.js";
 import { authSessions } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
 
-import type { DbUser } from "../../types/user.js";
+import type { AuthUser } from "../../types/user.js";
 
-type User = DbUser & {
-  firebase_uid?: string;
-  profile_complete?: boolean;
-  password_hash?: string | null;
-};
+type User = AuthUser;
 
 type ProfileSelectBase = {
   userId: number;
@@ -38,19 +34,19 @@ function mapProfileRowToUser(
   row: ProfileSelectBase & { passwordHash?: string | null },
 ): User {
   return {
-    user_id: row.userId,
-    user_uuid: row.userUuid,
-    full_name: row.fullName,
+    userId: row.userId,
+    userUuid: row.userUuid,
+    fullName: row.fullName,
     email: row.email ?? undefined,
-    phone_number: row.phoneNumber ?? "",
-    profile_picture_url: row.profilePictureUrl ?? undefined,
-    role_name: row.roleName,
-    is_verified: row.isVerified,
-    is_active: row.isActive,
-    created_at: row.createdAt,
-    updated_at: row.updatedAt,
-    firebase_uid: row.firebaseUid ?? undefined,
-    password_hash: row.passwordHash ?? null,
+    phoneNumber: row.phoneNumber ?? undefined,
+    profilePictureUrl: row.profilePictureUrl ?? undefined,
+    roleName: row.roleName,
+    isVerified: row.isVerified,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    firebaseUid: row.firebaseUid ?? undefined,
+    passwordHash: row.passwordHash ?? null,
   };
 }
 
@@ -309,7 +305,7 @@ class AuthRepository {
         throw new Error("User not found after creation");
       }
 
-      return { ...user, role_name: roleName } as User;
+      return { ...user, roleName } as User;
     } catch (error) {
       logger.error({
         msg: "Error creating user",
@@ -363,7 +359,7 @@ class AuthRepository {
         throw new Error("User not found after creation");
       }
 
-      return { ...user, role_name: roleName } as User;
+      return { ...user, roleName } as User;
     } catch (error) {
       logger.error({
         msg: "Error creating email user",

@@ -70,16 +70,3 @@ export const ActiveAssignmentZ = z.object({
   status: z.string(),
 });
 export type ActiveAssignment = z.infer<typeof ActiveAssignmentZ>;
-
-// ============================================================================
-// LEGACY TYPE EXPORTS (for backward compatibility during migration)
-// ============================================================================
-
-export const UpdateDriverProfileZ = UpdateDriverProfileRequestZ;
-export type UpdateDriverProfile = UpdateDriverProfileRequest;
-
-export const UpdateAvailabilityZ = UpdateAvailabilityRequestZ;
-export type UpdateAvailability = UpdateAvailabilityRequest;
-
-export const UpdateLocationZ = UpdateLocationRequestZ;
-export type UpdateLocation = UpdateLocationRequest;

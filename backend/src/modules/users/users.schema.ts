@@ -2,23 +2,26 @@
 import { FastifySchema } from "fastify";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  UpdateProfileZ,
-  SaveAddressZ,
+  UpdateProfileRequestZ,
+  SaveAddressRequestZ,
   DeleteAddressParamsZ,
-  UserResponseZ,
-  AddressResponseZ,
-  AddressesArrayZ,
+  UserProfileResponseZ,
+  SavedAddressResponseZ,
+  AddressesArrayResponseZ,
 } from "./users.zod.js";
 
 const _UpdateProfileJson = zodToJsonSchema(
-  UpdateProfileZ as any,
+  UpdateProfileRequestZ as any,
   "UpdateProfile",
 );
 const UpdateProfileJson =
   (_UpdateProfileJson.definitions &&
     (_UpdateProfileJson.definitions as any).UpdateProfile) ||
   _UpdateProfileJson;
-const _SaveAddressJson = zodToJsonSchema(SaveAddressZ as any, "SaveAddress");
+const _SaveAddressJson = zodToJsonSchema(
+  SaveAddressRequestZ as any,
+  "SaveAddress",
+);
 const SaveAddressJson =
   (_SaveAddressJson.definitions &&
     (_SaveAddressJson.definitions as any).SaveAddress) ||
@@ -31,13 +34,16 @@ const DeleteAddressParamsJson =
   (_DeleteAddressParamsJson.definitions &&
     (_DeleteAddressParamsJson.definitions as any).DeleteAddressParams) ||
   _DeleteAddressParamsJson;
-const _UserResponseJson = zodToJsonSchema(UserResponseZ as any, "UserResponse");
+const _UserResponseJson = zodToJsonSchema(
+  UserProfileResponseZ as any,
+  "UserResponse",
+);
 const UserResponseJson =
   (_UserResponseJson.definitions &&
     (_UserResponseJson.definitions as any).UserResponse) ||
   _UserResponseJson;
 const _AddressResponseJson = zodToJsonSchema(
-  AddressResponseZ as any,
+  SavedAddressResponseZ as any,
   "AddressResponse",
 );
 const AddressResponseJson =
@@ -45,7 +51,7 @@ const AddressResponseJson =
     (_AddressResponseJson.definitions as any).AddressResponse) ||
   _AddressResponseJson;
 const _AddressesArrayJson = zodToJsonSchema(
-  AddressesArrayZ as any,
+  AddressesArrayResponseZ as any,
   "AddressesArray",
 );
 const AddressesArrayJson =

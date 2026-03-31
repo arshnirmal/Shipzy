@@ -6,8 +6,8 @@ import { AuthenticationError } from "../../utils/error.util.js";
 import usersService from "./users.service.js";
 
 import type {
-  UpdateProfile,
-  SaveAddress,
+  UpdateProfileRequest,
+  SaveAddressRequest,
   DeleteAddressParams,
 } from "./users.zod.js";
 
@@ -52,7 +52,7 @@ class UsersController {
    * Update user profile
    */
   async updateProfile(
-    request: FastifyRequest<{ Body: UpdateProfile }>,
+    request: FastifyRequest<{ Body: UpdateProfileRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -62,9 +62,9 @@ class UsersController {
 
       const { userId } = request.user;
       // validate/parse using Zod schema at controller boundary
-      const updateData = (await import("./users.zod.js")).UpdateProfileZ.parse(
-        request.body,
-      );
+      const updateData = (
+        await import("./users.zod.js")
+      ).UpdateProfileRequestZ.parse(request.body);
 
       const updatedUser = await usersService.updateProfile(userId, updateData);
 
@@ -126,7 +126,7 @@ class UsersController {
    * Save new address
    */
   async saveAddress(
-    request: FastifyRequest<{ Body: SaveAddress }>,
+    request: FastifyRequest<{ Body: SaveAddressRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -135,9 +135,9 @@ class UsersController {
       }
 
       const { userId } = request.user;
-      const addressData = (await import("./users.zod.js")).SaveAddressZ.parse(
-        request.body,
-      );
+      const addressData = (
+        await import("./users.zod.js")
+      ).SaveAddressRequestZ.parse(request.body);
 
       const savedAddress = await usersService.saveAddress(userId, addressData);
 

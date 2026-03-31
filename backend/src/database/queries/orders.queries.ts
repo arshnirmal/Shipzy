@@ -36,93 +36,93 @@ export default {
    */
   FIND_ORDER_BY_ID: `
     SELECT
-      o.order_id,
-      o.order_uuid,
-      o.order_number,
-      o.client_id,
-      u.full_name AS client_name,
-      u.phone_number AS client_phone,
-      o.status_id,
-      os.name AS status_name,
-      o.delivery_type_id,
-      dt.name AS delivery_type,
-      dt.display_name AS delivery_type_display,
-      o.vehicle_category_id,
-          vc.name AS vehicle_category, 
-          vc.display_name AS vehicle_category_display,
-          o.package_description,
-          o.package_type_id,
-          o.special_instructions,
-          o.base_price,
-          o.distance_price,
-          o.weight_surcharge,
-          o.platform_fee,
-          o.special_handling_fee,
-          o.gst_amount,
-          o.subtotal_before_tax,
-          o.total_price,
-          o.estimated_distance_km,
-          o.actual_distance_km,
-          o.actual_pickup_time,
-          o.actual_delivery_time,
-          o.payment_method_id,
-          pm.name AS payment_method,
-          o.created_at,
-          o.accepted_at,
-          o.picked_up_at,
-          o.delivered_at,
-          o.cancelled_at,
-          o.cancellation_reason,
-          
+            o.order_id AS "orderId",
+            o.order_uuid AS "orderUuid",
+            o.order_number AS "orderNumber",
+            o.client_id AS "clientId",
+            u.full_name AS "clientName",
+            u.phone_number AS "clientPhone",
+            o.status_id AS "statusId",
+            os.name AS "statusName",
+            o.delivery_type_id AS "deliveryTypeId",
+            dt.name AS "deliveryType",
+            dt.display_name AS "deliveryTypeDisplay",
+            o.vehicle_category_id AS "vehicleCategoryId",
+            vc.name AS "vehicleCategory",
+            vc.display_name AS "vehicleCategoryDisplay",
+            o.package_description AS "packageDescription",
+            o.package_type_id AS "packageTypeId",
+            o.special_instructions AS "specialInstructions",
+            o.base_price AS "basePrice",
+            o.distance_price AS "distancePrice",
+            o.weight_surcharge AS "weightSurcharge",
+            o.platform_fee AS "platformFee",
+            o.special_handling_fee AS "specialHandlingFee",
+            o.gst_amount AS "gstAmount",
+            o.subtotal_before_tax AS "subtotalBeforeTax",
+            o.total_price AS "totalPrice",
+            o.estimated_distance_km AS "estimatedDistanceKm",
+            o.actual_distance_km AS "actualDistanceKm",
+            o.actual_pickup_time AS "actualPickupTime",
+            o.actual_delivery_time AS "actualDeliveryTime",
+            o.payment_method_id AS "paymentMethodId",
+            pm.name AS "paymentMethod",
+            o.created_at AS "createdAt",
+            o.accepted_at AS "acceptedAt",
+            o.picked_up_at AS "pickedUpAt",
+            o.delivered_at AS "deliveredAt",
+            o.cancelled_at AS "cancelledAt",
+            o.cancellation_reason AS "cancellationReason",
+
           -- Weight tier details
-          wt.tier_id AS weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max,
-          
+      wt.tier_id AS "weightTierId",
+      wt.name AS "weightTierName",
+      wt.min_weight_kg AS "weightTierMin",
+      wt.max_weight_kg AS "weightTierMax",
+
           -- OPTIMIZED: Pickup details from JSONB
-          o.pickup_location->>'fullAddress' AS pickup_address,
-          o.pickup_location->>'building' AS pickup_building,
-          o.pickup_location->>'floor' AS pickup_floor,
-          o.pickup_location->>'flatNumber' AS pickup_flat,
-          o.pickup_location->>'landmark' AS pickup_landmark,
-          o.pickup_location->>'city' AS pickup_city,
-          o.pickup_location->>'state' AS pickup_state,
-          o.pickup_location->>'postalCode' AS pickup_postal_code,
-          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
-          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
-          o.pickup_location->>'contactName' AS pickup_contact_name,
-          o.pickup_location->>'contactPhone' AS pickup_contact_phone,
+      o.pickup_location->>'fullAddress' AS "pickupAddress",
+      o.pickup_location->>'building' AS "pickupBuilding",
+      o.pickup_location->>'floor' AS "pickupFloor",
+      o.pickup_location->>'flatNumber' AS "pickupFlat",
+      o.pickup_location->>'landmark' AS "pickupLandmark",
+      o.pickup_location->>'city' AS "pickupCity",
+      o.pickup_location->>'state' AS "pickupState",
+      o.pickup_location->>'postalCode' AS "pickupPostalCode",
+      (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
+      (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
+      o.pickup_location->>'contactName' AS "pickupContactName",
+      o.pickup_location->>'contactPhone' AS "pickupContactPhone",
 
           -- OPTIMIZED: Delivery details from JSONB
-          o.delivery_location->>'fullAddress' AS delivery_address,
-          o.delivery_location->>'building' AS delivery_building,
-          o.delivery_location->>'floor' AS delivery_floor,
-          o.delivery_location->>'flatNumber' AS delivery_flat,
-          o.delivery_location->>'landmark' AS delivery_landmark,
-          o.delivery_location->>'city' AS delivery_city,
-          o.delivery_location->>'state' AS delivery_state,
-          o.delivery_location->>'postalCode' AS delivery_postal_code,
-          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
-          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
-          o.delivery_location->>'contactName' AS delivery_contact_name,
-          o.delivery_location->>'contactPhone' AS delivery_contact_phone,
-          
+      o.delivery_location->>'fullAddress' AS "deliveryAddress",
+      o.delivery_location->>'building' AS "deliveryBuilding",
+      o.delivery_location->>'floor' AS "deliveryFloor",
+      o.delivery_location->>'flatNumber' AS "deliveryFlat",
+      o.delivery_location->>'landmark' AS "deliveryLandmark",
+      o.delivery_location->>'city' AS "deliveryCity",
+      o.delivery_location->>'state' AS "deliveryState",
+      o.delivery_location->>'postalCode' AS "deliveryPostalCode",
+      (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
+      (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
+      o.delivery_location->>'contactName' AS "deliveryContactName",
+      o.delivery_location->>'contactPhone' AS "deliveryContactPhone",
+
           -- OPTIMIZED: Items and labels from JSONB
-          o.items AS order_items,
-          o.labels AS order_labels,
-          
+      o.items AS "orderItems",
+      o.labels AS "orderLabels",
+
           -- Courier details (if assigned)
-          ca.assignment_id,
-          ca.courier_id,
-          cu.full_name AS courier_name,
-          cu.phone_number AS courier_phone,
-          cu.profile_picture_url AS courier_photo,
-          ca.assignment_status_id,
-          ast.name AS assignment_status,
-          ca.assigned_at,
-          ca.accepted_at AS courier_accepted_at
-          
+      ca.assignment_id AS "assignmentId",
+      ca.courier_id AS "courierId",
+      cu.full_name AS "courierName",
+      cu.phone_number AS "courierPhone",
+      cu.profile_picture_url AS "courierPhoto",
+      ca.assignment_status_id AS "assignmentStatusId",
+      ast.name AS "assignmentStatus",
+      ca.assigned_at AS "assignedAt",
+      ca.accepted_at AS "courierAcceptedAt"
+
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -143,37 +143,37 @@ export default {
    */
   FIND_ORDERS_BY_CLIENT: `
       SELECT
-          o.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.status_id,
-          os.name AS status_name,
-          o.delivery_type_id,
-          dt.name AS delivery_type,
-          dt.display_name AS delivery_type_display,
-          o.vehicle_category_id,
-          vc.name AS vehicle_category,
-          vc.display_name AS vehicle_category_display,
-          o.package_description,
-          o.estimated_distance_km,
-          o.actual_distance_km,
-          o.total_price,
-          o.created_at,
-          o.actual_pickup_time,
-          o.actual_delivery_time,
-          o.accepted_at,
-          o.picked_up_at,
-          o.delivered_at,
+          o.order_id AS "orderId",
+          o.order_uuid AS "orderUuid",
+          o.order_number AS "orderNumber",
+          o.status_id AS "statusId",
+          os.name AS "statusName",
+          o.delivery_type_id AS "deliveryTypeId",
+          dt.name AS "deliveryType",
+          dt.display_name AS "deliveryTypeDisplay",
+          o.vehicle_category_id AS "vehicleCategoryId",
+          vc.name AS "vehicleCategory",
+          vc.display_name AS "vehicleCategoryDisplay",
+          o.package_description AS "packageDescription",
+          o.estimated_distance_km AS "estimatedDistanceKm",
+          o.actual_distance_km AS "actualDistanceKm",
+          o.total_price AS "totalPrice",
+          o.created_at AS "createdAt",
+          o.actual_pickup_time AS "actualPickupTime",
+          o.actual_delivery_time AS "actualDeliveryTime",
+          o.accepted_at AS "acceptedAt",
+          o.picked_up_at AS "pickedUpAt",
+          o.delivered_at AS "deliveredAt",
           -- OPTIMIZED: Locations from JSONB
-          o.pickup_location->>'fullAddress' AS pickup_address,
-          o.delivery_location->>'fullAddress' AS delivery_address,
-          ca.courier_id,
-          cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo,
-          wt.tier_id AS weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max
+          o.pickup_location->>'fullAddress' AS "pickupAddress",
+          o.delivery_location->>'fullAddress' AS "deliveryAddress",
+          ca.courier_id AS "courierId",
+          cu.full_name AS "courierName",
+          cu.profile_picture_url AS "courierPhoto",
+          wt.tier_id AS "weightTierId",
+          wt.name AS "weightTierName",
+          wt.min_weight_kg AS "weightTierMin",
+          wt.max_weight_kg AS "weightTierMax"
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -202,52 +202,52 @@ export default {
    */
   FIND_AVAILABLE_ORDERS_FOR_COURIER: `
       SELECT
-          o.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.delivery_type_id,
-          dt.name AS delivery_type,
-          dt.display_name AS delivery_type_display,
-          o.vehicle_category_id,
-          vc.name AS vehicle_category,
-          vc.display_name AS vehicle_category_display,
-          o.package_type_id,
-          pt.name AS package_type,
-          o.weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max,
+          o.order_id AS "orderId",
+          o.order_uuid AS "orderUuid",
+          o.order_number AS "orderNumber",
+          o.delivery_type_id AS "deliveryTypeId",
+          dt.name AS "deliveryType",
+          dt.display_name AS "deliveryTypeDisplay",
+          o.vehicle_category_id AS "vehicleCategoryId",
+          vc.name AS "vehicleCategory",
+          vc.display_name AS "vehicleCategoryDisplay",
+          o.package_type_id AS "packageTypeId",
+          pt.name AS "packageType",
+          o.weight_tier_id AS "weightTierId",
+          wt.name AS "weightTierName",
+          wt.min_weight_kg AS "weightTierMin",
+          wt.max_weight_kg AS "weightTierMax",
           -- Pricing details
-          o.base_price,
-          o.distance_price,
-          o.weight_surcharge,
-          o.platform_fee,
-          o.special_handling_fee,
-          o.gst_amount,
-          o.subtotal_before_tax,
-          o.total_price,
+          o.base_price AS "basePrice",
+          o.distance_price AS "distancePrice",
+          o.weight_surcharge AS "weightSurcharge",
+          o.platform_fee AS "platformFee",
+          o.special_handling_fee AS "specialHandlingFee",
+          o.gst_amount AS "gstAmount",
+          o.subtotal_before_tax AS "subtotalBeforeTax",
+          o.total_price AS "totalPrice",
 
-          o.package_description,
-          o.special_instructions,
-          o.estimated_distance_km,
-          o.created_at,
+          o.package_description AS "packageDescription",
+          o.special_instructions AS "specialInstructions",
+          o.estimated_distance_km AS "estimatedDistanceKm",
+          o.created_at AS "createdAt",
 
           -- OPTIMIZED: Pickup location from JSONB
-          o.pickup_location->>'fullAddress' AS pickup_address,
-          o.pickup_location->>'landmark' AS pickup_landmark,
-          o.pickup_location->>'city' AS pickup_city,
-          o.pickup_location->>'state' AS pickup_state,
-          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
-          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
+          o.pickup_location->>'fullAddress' AS "pickupAddress",
+          o.pickup_location->>'landmark' AS "pickupLandmark",
+          o.pickup_location->>'city' AS "pickupCity",
+          o.pickup_location->>'state' AS "pickupState",
+          (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
+          (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
 
           -- OPTIMIZED: Delivery location from JSONB
-          o.delivery_location->>'fullAddress' AS delivery_address,
-          o.delivery_location->>'landmark' AS delivery_landmark,
-          o.delivery_location->>'city' AS delivery_city,
-          o.delivery_location->>'state' AS delivery_state,
-          o.delivery_location->>'postalCode' AS delivery_postal_code,
-          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
-          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
+          o.delivery_location->>'fullAddress' AS "deliveryAddress",
+          o.delivery_location->>'landmark' AS "deliveryLandmark",
+          o.delivery_location->>'city' AS "deliveryCity",
+          o.delivery_location->>'state' AS "deliveryState",
+          o.delivery_location->>'postalCode' AS "deliveryPostalCode",
+          (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
+          (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
 
           -- OPTIMIZED: Distance from courier using computed PostGIS column (pickup_point)
           ROUND(
@@ -255,7 +255,7 @@ export default {
                   o.pickup_point,
                   ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
               )::numeric / 1000, 2
-          ) AS distance_from_courier_km
+          ) AS "distanceFromCourierKm"
 
       FROM orders.requests o
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -303,7 +303,11 @@ export default {
           $2,
           (SELECT status_id FROM public.assignment_statuses WHERE name = 'assigned')
       )
-      RETURNING assignment_id, order_id, courier_id, assigned_at
+      RETURNING
+          assignment_id AS "assignmentId",
+          order_id AS "orderId",
+          courier_id AS "courierId",
+          assigned_at AS "assignedAt"
   `,
 
   /**
@@ -317,7 +321,9 @@ export default {
           updated_at = NOW()
       WHERE order_id = $1
           AND courier_id = $2
-      RETURNING assignment_id, accepted_at
+      RETURNING
+          assignment_id AS "assignmentId",
+          accepted_at AS "acceptedAt"
   `,
 
   /**
@@ -350,7 +356,7 @@ export default {
    */
   REJECT_ASSIGNMENT: `
       UPDATE orders.courier_assignments
-      SET 
+      SET
           assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'rejected'),
           rejected_at = NOW(),
           rejection_reason = $3,
@@ -364,7 +370,7 @@ export default {
    * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
    */
   FIND_COURIER_ACTIVE_ASSIGNMENTS: `
-      SELECT 
+      SELECT
           ca.assignment_id,
           ca.order_id,
           o.order_uuid,
@@ -389,7 +395,7 @@ export default {
       JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       WHERE ca.courier_id = $1
           AND ca.assignment_status_id NOT IN (
-              SELECT status_id FROM public.assignment_statuses 
+              SELECT status_id FROM public.assignment_statuses
               WHERE name IN ('delivered', 'cancelled', 'rejected')
           )
       ORDER BY ca.assigned_at DESC
@@ -400,37 +406,37 @@ export default {
    */
   FIND_ACTIVE_ORDERS_BY_CLIENT: `
       SELECT
-          o.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.status_id,
-          os.name AS status_name,
-          o.delivery_type_id,
-          dt.name AS delivery_type,
-          dt.display_name AS delivery_type_display,
-          o.vehicle_category_id,
-          vc.name AS vehicle_category,
-          vc.display_name AS vehicle_category_display,
-          o.package_description,
-          o.estimated_distance_km,
-          o.actual_distance_km,
-          o.total_price,
-          o.created_at,
-          o.actual_pickup_time,
-          o.actual_delivery_time,
-          o.accepted_at,
-          o.picked_up_at,
-          o.delivered_at,
+          o.order_id AS "orderId",
+          o.order_uuid AS "orderUuid",
+          o.order_number AS "orderNumber",
+          o.status_id AS "statusId",
+          os.name AS "statusName",
+          o.delivery_type_id AS "deliveryTypeId",
+          dt.name AS "deliveryType",
+          dt.display_name AS "deliveryTypeDisplay",
+          o.vehicle_category_id AS "vehicleCategoryId",
+          vc.name AS "vehicleCategory",
+          vc.display_name AS "vehicleCategoryDisplay",
+          o.package_description AS "packageDescription",
+          o.estimated_distance_km AS "estimatedDistanceKm",
+          o.actual_distance_km AS "actualDistanceKm",
+          o.total_price AS "totalPrice",
+          o.created_at AS "createdAt",
+          o.actual_pickup_time AS "actualPickupTime",
+          o.actual_delivery_time AS "actualDeliveryTime",
+          o.accepted_at AS "acceptedAt",
+          o.picked_up_at AS "pickedUpAt",
+          o.delivered_at AS "deliveredAt",
           -- OPTIMIZED: Locations from JSONB
-          o.pickup_location->>'fullAddress' AS pickup_address,
-          o.delivery_location->>'fullAddress' AS delivery_address,
-          ca.courier_id,
-          cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo,
-          wt.tier_id AS weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max
+          o.pickup_location->>'fullAddress' AS "pickupAddress",
+          o.delivery_location->>'fullAddress' AS "deliveryAddress",
+          ca.courier_id AS "courierId",
+          cu.full_name AS "courierName",
+          cu.profile_picture_url AS "courierPhoto",
+          wt.tier_id AS "weightTierId",
+          wt.name AS "weightTierName",
+          wt.min_weight_kg AS "weightTierMin",
+          wt.max_weight_kg AS "weightTierMax"
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -462,36 +468,36 @@ export default {
    */
   FIND_COMPLETED_ORDERS_BY_CLIENT: `
       SELECT
-          o.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.status_id,
-          os.name AS status_name,
-          o.delivery_type_id,
-          dt.name AS delivery_type,
-          dt.display_name AS delivery_type_display,
-          o.vehicle_category_id,
-          vc.name AS vehicle_category,
-          vc.display_name AS vehicle_category_display,
-          o.package_description,
-          o.estimated_distance_km,
-          o.actual_distance_km,
-          o.total_price,
-          o.created_at,
-          o.actual_pickup_time,
-          o.actual_delivery_time,
-          o.accepted_at,
-          o.picked_up_at,
-          o.delivered_at,
-          pl.address AS pickup_address,
-          dl.address AS delivery_address,
-          ca.courier_id,
-          cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo,
-          wt.tier_id AS weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max
+          o.order_id AS "orderId",
+          o.order_uuid AS "orderUuid",
+          o.order_number AS "orderNumber",
+          o.status_id AS "statusId",
+          os.name AS "statusName",
+          o.delivery_type_id AS "deliveryTypeId",
+          dt.name AS "deliveryType",
+          dt.display_name AS "deliveryTypeDisplay",
+          o.vehicle_category_id AS "vehicleCategoryId",
+          vc.name AS "vehicleCategory",
+          vc.display_name AS "vehicleCategoryDisplay",
+          o.package_description AS "packageDescription",
+          o.estimated_distance_km AS "estimatedDistanceKm",
+          o.actual_distance_km AS "actualDistanceKm",
+          o.total_price AS "totalPrice",
+          o.created_at AS "createdAt",
+          o.actual_pickup_time AS "actualPickupTime",
+          o.actual_delivery_time AS "actualDeliveryTime",
+          o.accepted_at AS "acceptedAt",
+          o.picked_up_at AS "pickedUpAt",
+          o.delivered_at AS "deliveredAt",
+          pl.address AS "pickupAddress",
+          dl.address AS "deliveryAddress",
+          ca.courier_id AS "courierId",
+          cu.full_name AS "courierName",
+          cu.profile_picture_url AS "courierPhoto",
+          wt.tier_id AS "weightTierId",
+          wt.name AS "weightTierName",
+          wt.min_weight_kg AS "weightTierMin",
+          wt.max_weight_kg AS "weightTierMax"
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
@@ -525,37 +531,37 @@ export default {
    */
   FIND_CANCELLED_ORDERS_BY_CLIENT: `
       SELECT
-          o.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.status_id,
-          os.name AS status_name,
-          o.delivery_type_id,
-          dt.name AS delivery_type,
-          dt.display_name AS delivery_type_display,
-          o.vehicle_category_id,
-          vc.name AS vehicle_category,
-          vc.display_name AS vehicle_category_display,
-          o.package_description,
-          o.estimated_distance_km,
-          o.actual_distance_km,
-          o.total_price,
-          o.created_at,
-          o.actual_pickup_time,
-          o.actual_delivery_time,
-          o.accepted_at,
-          o.picked_up_at,
-          o.delivered_at,
+          o.order_id AS "orderId",
+          o.order_uuid AS "orderUuid",
+          o.order_number AS "orderNumber",
+          o.status_id AS "statusId",
+          os.name AS "statusName",
+          o.delivery_type_id AS "deliveryTypeId",
+          dt.name AS "deliveryType",
+          dt.display_name AS "deliveryTypeDisplay",
+          o.vehicle_category_id AS "vehicleCategoryId",
+          vc.name AS "vehicleCategory",
+          vc.display_name AS "vehicleCategoryDisplay",
+          o.package_description AS "packageDescription",
+          o.estimated_distance_km AS "estimatedDistanceKm",
+          o.actual_distance_km AS "actualDistanceKm",
+          o.total_price AS "totalPrice",
+          o.created_at AS "createdAt",
+          o.actual_pickup_time AS "actualPickupTime",
+          o.actual_delivery_time AS "actualDeliveryTime",
+          o.accepted_at AS "acceptedAt",
+          o.picked_up_at AS "pickedUpAt",
+          o.delivered_at AS "deliveredAt",
           -- OPTIMIZED: Locations from JSONB
-          o.pickup_location->>'fullAddress' AS pickup_address,
-          o.delivery_location->>'fullAddress' AS delivery_address,
-          ca.courier_id,
-          cu.full_name AS courier_name,
-          cu.profile_picture_url AS courier_photo,
-          wt.tier_id AS weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max
+          o.pickup_location->>'fullAddress' AS "pickupAddress",
+          o.delivery_location->>'fullAddress' AS "deliveryAddress",
+          ca.courier_id AS "courierId",
+          cu.full_name AS "courierName",
+          cu.profile_picture_url AS "courierPhoto",
+          wt.tier_id AS "weightTierId",
+          wt.name AS "weightTierName",
+          wt.min_weight_kg AS "weightTierMin",
+          wt.max_weight_kg AS "weightTierMax"
       FROM orders.requests o
       JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id

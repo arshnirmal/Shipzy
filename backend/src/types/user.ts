@@ -1,39 +1,20 @@
 // services/backend/src/types/user.ts
 
-// DB row for users.profiles (snake_case)
-export interface DbUser {
-  user_id: number;
-  user_uuid: string;
-  full_name: string;
-  email?: string;
-  phone_number: string;
-  profile_picture_url?: string;
-  role_name: string;
-  is_verified: boolean;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
+import type { z } from "zod";
+import type { UserProfileResponse } from "../modules/users/users.zod.js";
+import {
+  AuthUserDbZ,
+  RequestUserZ,
+  UserProfileDbZ,
+} from "../schemas/db.zod.js";
 
-// Canonical API user profile (camelCase)
-export interface UserProfile {
-  userId: number;
-  userUuid: string;
-  role: string;
-  phoneNumber: string;
-  email?: string;
-  fullName: string;
-  profilePictureUrl?: string;
-  isVerified: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
-}
+export type DbUser = z.infer<typeof UserProfileDbZ>;
+export type AuthUser = z.infer<typeof AuthUserDbZ>;
+
+// Canonical API user profile (camelCase, API response)
+export type UserProfile = UserProfileResponse;
 
 // Lightweight user object attached to request after authentication
-export interface RequestUser {
-  userId: number;
-  userUuid: string;
-  role: string;
-  phoneNumber?: string | null;
-}
+export type RequestUser = z.infer<typeof RequestUserZ>;
+
+export { AuthUserDbZ, RequestUserZ, UserProfileDbZ };

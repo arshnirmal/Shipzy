@@ -7,6 +7,7 @@ import { rawTransaction } from "../../database/transaction.js";
 import ordersQueries from "../../database/queries/orders.queries.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { orderStatuses } from "../../database/schema/public.js";
+import { FareCalculationResultZ, OrderCreateResultZ } from "./orders.zod.js";
 
 class OrdersRepository {
   /**
@@ -28,8 +29,14 @@ class OrdersRepository {
         packageTypeId,
       ]);
 
-      return result.rows[0]
-        .result as import("../../types/orders.js").FareCalculationResult;
+      const rawResult = result.rows[0]?.result as any;
+      const mappedResult = {
+        success: Boolean(rawResult?.success),
+        fareBreakdown: rawResult?.fare_breakdown ?? rawResult?.fareBreakdown,
+        error: rawResult?.error,
+      };
+
+      return FareCalculationResultZ.parse(mappedResult);
     } catch (error) {
       logger.error({
         msg: "Error calculating fare",
@@ -50,8 +57,8 @@ class OrdersRepository {
         JSON.stringify(orderData),
       ]);
 
-      return result.rows[0]
-        .result as import("../../types/orders.js").OrderCreateResult;
+      const rawResult = result.rows[0]?.result as any;
+      return OrderCreateResultZ.parse(rawResult);
     } catch (error) {
       logger.error({
         msg: "Error creating order",
@@ -191,7 +198,10 @@ class OrdersRepository {
         );
 
         // Update assignment to accepted
-        await client.query(ordersQueries.ACCEPT_ASSIGNMENT, [orderId, courierId]);
+        await client.query(ordersQueries.ACCEPT_ASSIGNMENT, [
+          orderId,
+          courierId,
+        ]);
 
         // Update order status to assigned
         await client.query(ordersQueries.UPDATE_ORDER_STATUS_TO_ASSIGNED, [

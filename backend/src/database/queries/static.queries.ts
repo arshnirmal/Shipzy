@@ -119,12 +119,12 @@ export default {
    */
   GET_DELIVERY_TYPE_BY_ID: `
     SELECT
-        delivery_type_id,
-        name,
-        description,
-        base_rate,
-        per_km_rate,
-        is_active
+      delivery_type_id AS "deliveryTypeId",
+      name AS "name",
+      description AS "description",
+      base_rate AS "baseRate",
+      per_km_rate AS "perKmRate",
+      is_active AS "isActive"
     FROM public.delivery_types
     WHERE delivery_type_id = $1
         AND is_active = true
@@ -134,12 +134,12 @@ export default {
    * Get all weight tiers
    */
   GET_WEIGHT_TIERS: `
-    SELECT 
-        tier_id,
-        name,
-        min_weight_kg,
-        max_weight_kg,
-        additional_charge
+    SELECT
+        tier_id AS "tierId",
+        name AS "name",
+        min_weight_kg AS "minWeightKg",
+        max_weight_kg AS "maxWeightKg",
+        additional_charge AS "additionalCharge"
     FROM public.weight_tiers
     ORDER BY min_weight_kg ASC
     `,
@@ -149,10 +149,10 @@ export default {
    */
   GET_LABELS: `
     SELECT
-        label_id,
-        name,
-        icon,
-        color
+        label_id AS "labelId",
+        name AS "name",
+        icon AS "icon",
+        color AS "color"
     FROM public.labels
     ORDER BY name ASC
     `,
@@ -162,9 +162,9 @@ export default {
    */
   GET_ORDER_STATUSES: `
     SELECT
-        status_id,
-        name,
-        description
+        status_id AS "statusId",
+        name AS "name",
+        description AS "description"
     FROM public.order_statuses
     ORDER BY status_id ASC
     `,
@@ -174,9 +174,9 @@ export default {
    */
   GET_ASSIGNMENT_STATUSES: `
     SELECT
-        status_id,
-        name,
-        description
+        status_id AS "statusId",
+        name AS "name",
+        description AS "description"
     FROM public.assignment_statuses
     ORDER BY status_id ASC
     `,
@@ -186,11 +186,11 @@ export default {
    */
   GET_WEIGHT_TIER_FOR_WEIGHT: `
     SELECT
-        tier_id,
-        name,
-        min_weight_kg,
-        max_weight_kg,
-        additional_charge
+      tier_id AS "tierId",
+      name AS "name",
+      min_weight_kg AS "minWeightKg",
+      max_weight_kg AS "maxWeightKg",
+      additional_charge AS "additionalCharge"
     FROM public.weight_tiers
     WHERE $1 >= min_weight_kg
         AND $1 < max_weight_kg
@@ -202,13 +202,13 @@ export default {
    */
   GET_VEHICLE_CATEGORIES: `
       SELECT
-        category_id,
-        name,
-        display_name,
-        description,
-        max_weight_kg,
-        icon_url,
-        is_active
+        category_id AS "categoryId",
+        name AS "name",
+        display_name AS "displayName",
+        description AS "description",
+        max_weight_kg AS "maxWeightKg",
+        icon_url AS "iconUrl",
+        is_active AS "isActive"
       FROM public.vehicle_categories
       WHERE is_active = TRUE
       ORDER BY max_weight_kg ASC
@@ -219,9 +219,9 @@ export default {
    */
   GET_PACKAGE_TYPES: `
       SELECT
-        package_type_id,
-        name,
-        description
+        package_type_id AS "packageTypeId",
+        name AS "name",
+        description AS "description"
       FROM public.package_types
       ORDER BY name ASC
     `,
@@ -231,10 +231,10 @@ export default {
    */
   GET_PAYMENT_METHODS: `
       SELECT
-        method_id,
-        name,
-        description,
-        is_active
+        method_id AS "methodId",
+        name AS "name",
+        description AS "description",
+        is_active AS "isActive"
       FROM payments.payment_methods
       WHERE is_active = TRUE
       ORDER BY method_id ASC
