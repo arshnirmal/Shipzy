@@ -64,7 +64,6 @@ export const authMethodEnum = pgEnum("auth_method", [
   "phone",
   "google",
   "firebase",
-  "refresh",
 ]);
 export const notificationPriorityEnum = pgEnum("notification_priority", [
   "low",

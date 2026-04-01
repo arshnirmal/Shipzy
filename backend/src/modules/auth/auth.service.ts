@@ -40,6 +40,12 @@ class AuthService {
       });
 
       const tokenHash = crypto.createHash("sha256").update(newAccessToken).digest("hex");
+      const refreshAuthMethod: "email" | "phone" | "google" | "firebase" =
+        user.firebaseUid
+          ? "firebase"
+          : user.email
+            ? "email"
+            : "phone";
 
       await authRepository.storeJwtToken({
         userId: user.userId,
@@ -49,7 +55,7 @@ class AuthService {
         deviceId: null,
         deviceInfo: null,
         ipAddress: null,
-        authMethod: "refresh",
+        authMethod: refreshAuthMethod,
       });
 
       return {

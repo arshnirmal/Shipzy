@@ -73,7 +73,7 @@ interface StoreJwtTokenData {
   deviceId?: string | null;
   deviceInfo?: any;
   ipAddress?: string | null;
-  authMethod?: "email" | "phone" | "google" | "firebase" | "refresh";
+  authMethod?: "email" | "phone" | "google" | "firebase";
 }
 
 class AuthRepository {
