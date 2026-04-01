@@ -85,7 +85,9 @@ export const deliveryTypeCapabilities = pgTable(
     deliveryTypeId: integer("delivery_type_id")
       .notNull()
       .references(() => deliveryTypes.deliveryTypeId, { onDelete: "cascade" }),
-    vehicleCategoryId: integer("vehicle_category_id").notNull(),
+    vehicleCategoryId: integer("vehicle_category_id")
+      .notNull()
+      .references(() => vehicleCategories.categoryId, { onDelete: "cascade" }),
     weightTierId: integer("weight_tier_id")
       .notNull()
       .references(() => weightTiers.tierId, { onDelete: "cascade" }),

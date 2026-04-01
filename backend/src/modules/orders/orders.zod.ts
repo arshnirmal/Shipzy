@@ -70,7 +70,7 @@ export type CancelOrderRequest = z.infer<typeof CancelOrderRequestZ>;
 
 // Update Order Status Request
 export const UpdateOrderStatusRequestZ = z.object({
-  status: z.enum(["picked_up", "delivered"]),
+  status: z.enum(["picked_up", "in_transit", "delivered"]),
 });
 export type UpdateOrderStatusRequest = z.infer<
   typeof UpdateOrderStatusRequestZ

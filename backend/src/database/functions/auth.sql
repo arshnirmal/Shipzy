@@ -19,6 +19,7 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_otp_code VARCHAR(6);
+    v_otp_code_hash VARCHAR(64);
     v_session_id INT;
     v_existing_attempts INT;
     result JSON;
@@ -51,11 +52,12 @@ BEGIN
     
     -- Generate 6-digit OTP
     v_otp_code := LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
+    v_otp_code_hash := encode(digest(v_otp_code, 'sha256'), 'hex');
     
     -- Insert or update auth session
     INSERT INTO users.auth_sessions (
         phone_number,
-        otp_code,
+        otp_code_hash,
         otp_expires_at,
         device_id,
         device_info,
@@ -65,7 +67,7 @@ BEGIN
     )
     VALUES (
         p_phone_number,
-        v_otp_code,
+        v_otp_code_hash,
         NOW() + INTERVAL '10 minutes',
         p_device_id,
         p_device_info,
@@ -76,7 +78,7 @@ BEGIN
     ON CONFLICT (phone_number)
     WHERE is_verified = false AND otp_expires_at > NOW()
     DO UPDATE SET
-        otp_code = v_otp_code,
+        otp_code_hash = v_otp_code_hash,
         otp_expires_at = NOW() + INTERVAL '10 minutes',
         device_id = p_device_id,
         device_info = p_device_info,
@@ -136,7 +138,7 @@ BEGIN
         verified_at = NOW(),
         verification_attempts = verification_attempts + 1
     WHERE phone_number = p_phone_number
-        AND otp_code = p_otp_code
+        AND otp_code_hash = encode(digest(p_otp_code, 'sha256'), 'hex')
         AND otp_expires_at > NOW()
         AND is_verified = false
         AND verification_attempts < 5

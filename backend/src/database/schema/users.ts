@@ -50,9 +50,9 @@ export const authSessions = usersSchema.table("auth_sessions", {
   userId: integer("user_id").references(() => userProfiles.userId, {
     onDelete: "cascade",
   }),
-  email: varchar("email", { length: 100 }).notNull(),
+  email: varchar("email", { length: 100 }),
   phoneNumber: varchar("phone_number", { length: 20 }),
-  otpCode: varchar("otp_code", { length: 6 }),
+  otpCodeHash: varchar("otp_code_hash", { length: 64 }),
   otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
   isVerified: boolean("is_verified").default(false).notNull(),
   verificationAttempts: integer("verification_attempts").default(0).notNull(),

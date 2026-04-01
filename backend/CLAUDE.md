@@ -145,6 +145,16 @@ pnpm run dev:logs
 - NEVER read secrets from committed files.
 - NEVER modify base schema behavior without migration planning.
 
+## Order Status Flow
+
+Courier-facing order progression must enforce this sequence:
+
+1. `accepted` -> `picked_up`
+2. `picked_up` -> `in_transit`
+3. `in_transit` -> `delivered`
+
+`delivered` is only valid after `in_transit`. Skip transitions are not allowed.
+
 ## Backend Testing Rules
 
 - Keep tests in tests with module-oriented grouping.

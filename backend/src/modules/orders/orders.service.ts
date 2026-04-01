@@ -582,14 +582,22 @@ class OrdersService {
       );
     }
 
-    if (status === "picked_up" && order.statusName !== "assigned") {
+    if (status === "picked_up" && order.statusName !== "accepted") {
       throw new ValidationError(
-        "Order must be in assigned status to be picked up",
+        "Order must be in accepted status to be picked up",
       );
     }
 
-    if (status === "delivered" && order.statusName !== "picked_up") {
-      throw new ValidationError("Order must be picked up before delivery");
+    if (status === "in_transit" && order.statusName !== "picked_up") {
+      throw new ValidationError(
+        "Order must be picked up before marking in transit",
+      );
+    }
+
+    if (status === "delivered" && order.statusName !== "in_transit") {
+      throw new ValidationError(
+        "Order must be in transit before marking delivered",
+      );
     }
 
     const updated = await ordersRepository.updateOrderStatus(orderId, status);
@@ -598,7 +606,11 @@ class OrdersService {
     }
 
     const timestamp =
-      status === "picked_up" ? updated.pickedUpAt : updated.deliveredAt;
+      status === "picked_up"
+        ? updated.pickedUpAt
+        : status === "delivered"
+          ? updated.deliveredAt
+          : updated.updatedAt;
     if (!timestamp) {
       throw new AppError("Status timestamp missing after update", 500);
     }

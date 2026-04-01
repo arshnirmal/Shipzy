@@ -37,7 +37,7 @@ const ordersSchema = pgSchema("orders");
 export const orderRequests = ordersSchema.table("requests", {
   orderId: serial("order_id").primaryKey(),
   orderUuid: uuid("order_uuid").defaultRandom().notNull().unique(),
-  orderNumber: varchar("order_number", { length: 50 }),
+  orderNumber: varchar("order_number", { length: 50 }).unique(),
   clientId: integer("client_id")
     .notNull()
     .references(() => userProfiles.userId, { onDelete: "cascade" }),
@@ -97,6 +97,7 @@ export const orderRequests = ordersSchema.table("requests", {
     precision: 6,
     scale: 2,
   }),
+  actualDurationMins: integer("actual_duration_mins"),
   basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
   distancePrice: numeric("distance_price", { precision: 10, scale: 2 })
     .default("0.00")
@@ -104,9 +105,7 @@ export const orderRequests = ordersSchema.table("requests", {
   weightSurcharge: numeric("weight_surcharge", { precision: 10, scale: 2 })
     .default("0.00")
     .notNull(),
-  platformFee: numeric("platform_fee", { precision: 10, scale: 2 })
-    .default("10.00")
-    .notNull(),
+  platformFee: numeric("platform_fee", { precision: 10, scale: 2 }).notNull(),
   specialHandlingFee: numeric("special_handling_fee", {
     precision: 10,
     scale: 2,

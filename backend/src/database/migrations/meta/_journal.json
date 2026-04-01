@@ -8,6 +8,13 @@
       "when": 1771867799135,
       "tag": "0000_aspiring_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771977600000,
+      "tag": "0001_phase1_schema_hardening",
+      "breakpoints": true
     }
   ]
 }

@@ -319,6 +319,7 @@ export const RatingRowDbZ = z.object({
   driverId: z.number().int().positive(),
   customerId: z.number().int().positive(),
   rating: z.number().int().min(1).max(5),
+  isAnonymous: z.boolean().optional(),
   comment: z.string().nullable().optional(),
   createdAt: z.date(),
   orderNumber: z.string().nullable().optional(),

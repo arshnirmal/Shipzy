@@ -9,6 +9,7 @@ import {
   text,
   integer,
   smallint,
+  boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { orderRequests } from "./orders.js";
@@ -31,6 +32,7 @@ export const driverRatings = logisticsSchema.table("driver_ratings", {
     .notNull()
     .references(() => userProfiles.userId),
   rating: smallint("rating").notNull(), // 1-5
+  isAnonymous: boolean("is_anonymous").default(false).notNull(),
   comment: text("comment"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

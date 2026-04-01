@@ -24,7 +24,7 @@ class RatingsService {
     ratingData: CreateRating,
   ): Promise<import("./ratings.zod.js").RatingResponse> {
     try {
-      const { orderId, customerId, rating, comment } = ratingData;
+      const { orderId, customerId, rating, isAnonymous, comment } = ratingData;
 
       // Validate rating range
       if (rating < 1 || rating > 5) {
@@ -63,6 +63,7 @@ class RatingsService {
         driverId,
         customerId,
         rating,
+        isAnonymous,
         comment,
       });
 
@@ -72,6 +73,7 @@ class RatingsService {
         driverId: newRating.driverId,
         customerId: newRating.customerId,
         rating: newRating.rating,
+        isAnonymous: newRating.isAnonymous ?? false,
         comment: newRating.comment,
         createdAt: newRating.createdAt.toISOString(),
       };

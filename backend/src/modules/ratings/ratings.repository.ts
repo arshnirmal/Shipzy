@@ -22,6 +22,7 @@ class RatingsRepository {
     driverId: number;
     customerId: number;
     rating: number;
+    isAnonymous?: boolean;
     comment?: string | null;
   }): Promise<RatingRow> {
     try {
@@ -32,6 +33,7 @@ class RatingsRepository {
           driverId: ratingData.driverId,
           customerId: ratingData.customerId,
           rating: ratingData.rating,
+          isAnonymous: ratingData.isAnonymous ?? false,
           comment: ratingData.comment || undefined,
         })
         .returning();
@@ -47,6 +49,7 @@ class RatingsRepository {
         driverId: row.driverId,
         customerId: row.customerId,
         rating: row.rating,
+        isAnonymous: row.isAnonymous,
         comment: row.comment || null,
         createdAt: row.createdAt,
       } as RatingRow;

@@ -121,7 +121,7 @@ class OrdersRepository {
       // Build status WHERE clause
       let statusWhere = "";
       if (status === "active") {
-        statusWhere = `AND os.name IN ('pending', 'accepted', 'picked_up')`;
+        statusWhere = `AND os.name IN ('pending', 'accepted', 'picked_up', 'in_transit')`;
       } else if (status === "completed") {
         statusWhere = `AND os.name = 'delivered'`;
       } else if (status === "cancelled") {
@@ -327,7 +327,7 @@ class OrdersRepository {
   }
 
   /**
-   * Update order status (picked up / delivered) - Drizzle ORM
+   * Update order status (picked_up / in_transit / delivered) - Drizzle ORM
    */
   async updateOrderStatus(orderId: number, status: string) {
     try {

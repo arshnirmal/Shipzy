@@ -26,8 +26,6 @@ export default {
           courier_id,
           event_type,
           location,
-          latitude,
-          longitude,
           accuracy_meters,
           speed_kmph,
           bearing_degrees,
@@ -37,7 +35,7 @@ export default {
       VALUES (
           $1, $2, $3, $4,
           ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography,
-          $5, $6, $7, $8, $9, $10, $11
+          $7, $8, $9, $10, $11
       )
       RETURNING event_id AS "eventId", timestamp AS "timestamp"
   `,
