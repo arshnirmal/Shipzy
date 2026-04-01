@@ -5,6 +5,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ratingsRepository from "./ratings.repository.js";
 
 import type { CreateRating } from "./ratings.zod.js";
@@ -13,7 +14,7 @@ interface DriverRatingStats {
   averageRating: number;
   totalRatings: number;
   ratingDistribution: { [key: number]: number };
-  lastUpdated: Date;
+  lastUpdated: string;
 }
 
 class RatingsService {
@@ -75,7 +76,7 @@ class RatingsService {
         rating: newRating.rating,
         isAnonymous: newRating.isAnonymous ?? false,
         comment: newRating.comment,
-        createdAt: newRating.createdAt.toISOString(),
+        createdAt: toIsoDateTime(newRating.createdAt),
       };
     } catch (error) {
       logger.error({
@@ -106,7 +107,7 @@ class RatingsService {
           averageRating: 0,
           totalRatings: 0,
           ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-          lastUpdated: new Date(),
+          lastUpdated: toIsoDateTime(new Date()),
         };
       }
 
@@ -146,7 +147,7 @@ class RatingsService {
         averageRating,
         totalRatings: ratings.length,
         ratingDistribution: distribution,
-        lastUpdated,
+        lastUpdated: toIsoDateTime(lastUpdated),
       };
     } catch (error) {
       logger.error({

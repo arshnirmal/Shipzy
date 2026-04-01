@@ -5,6 +5,10 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import {
+  toIsoDateTime,
+  toIsoDateTimeOrNull,
+} from "../../utils/datetime.util.js";
 import driversRepository from "./drivers.repository.js";
 
 import type { DriverProfileResponse } from "./drivers.zod.js";
@@ -95,8 +99,8 @@ type ActiveAssignment = {
     netEarning: number;
   };
   estimatedDeliveryTime: number;
-  assignedAt?: Date | null;
-  acceptedAt?: Date | null;
+  assignedAt?: string | null;
+  acceptedAt?: string | null;
 };
 
 class DriversService {
@@ -117,7 +121,7 @@ class DriversService {
         phoneNumber: driver.phoneNumber ?? null,
         fullName: driver.fullName,
         email: driver.email || "",
-        role: driver.roleName || "courier",
+        role: "courier",
         profilePictureUrl: driver.profilePictureUrl ?? null,
         isVerified: driver.isVerified,
         isActive: driver.isActive,
@@ -132,9 +136,7 @@ class DriversService {
                   longitude: Number(driver.currentLongitude),
                 }
               : null,
-          lastLocationUpdate: driver.lastLocationUpdate
-            ? new Date(driver.lastLocationUpdate).toISOString()
-            : null,
+          lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
         },
         vehicle: driver.vehicleId
           ? {
@@ -155,8 +157,8 @@ class DriversService {
           averageOrderValue: 0,
           totalDistanceKm: 0,
         },
-        createdAt: driver.createdAt.toISOString(),
-        updatedAt: driver.updatedAt.toISOString(),
+        createdAt: toIsoDateTime(driver.createdAt),
+        updatedAt: toIsoDateTime(driver.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -196,7 +198,7 @@ class DriversService {
         fullName: updatedDriver.fullName,
         email: updatedDriver.email ?? null,
         profilePictureUrl: updatedDriver.profilePictureUrl ?? null,
-        updatedAt: updatedDriver.updatedAt.toISOString(),
+        updatedAt: toIsoDateTime(updatedDriver.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -217,7 +219,7 @@ class DriversService {
     courierId: number;
     isAvailable: boolean;
     isOnline: boolean;
-    updatedAt: Date;
+    updatedAt: string;
   }> {
     try {
       const {
@@ -283,7 +285,7 @@ class DriversService {
         courierId: result.courierId,
         isAvailable: result.isAvailable,
         isOnline: result.isOnline,
-        updatedAt: result.updatedAt,
+        updatedAt: toIsoDateTime(result.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -304,7 +306,7 @@ class DriversService {
     courierId: number;
     latitude: number;
     longitude: number;
-    lastLocationUpdate: Date;
+    lastLocationUpdate: string;
   }> {
     try {
       const { latitude, longitude } = locationData;
@@ -327,7 +329,7 @@ class DriversService {
         courierId: result.courierId,
         latitude: Number(result.latitude),
         longitude: Number(result.longitude),
-        lastLocationUpdate: result.lastLocationUpdate,
+        lastLocationUpdate: toIsoDateTime(result.lastLocationUpdate),
       };
     } catch (error) {
       logger.error({
@@ -352,16 +354,16 @@ class DriversService {
           return {
             assignmentId: assignment.assignmentId,
             orderId: assignment.orderId,
-            orderUuid: assignment.orderUuid,
-            orderNumber: assignment.orderNumber,
-            orderStatus: assignment.orderStatus,
-            assignmentStatus: assignment.assignmentStatus,
+            orderUuid: assignment.orderUuid ?? undefined,
+            orderNumber: assignment.orderNumber ?? undefined,
+            orderStatus: assignment.orderStatus ?? undefined,
+            assignmentStatus: assignment.assignmentStatus ?? undefined,
             vehicleCategory: assignment.vehicleCategory,
             vehicleCategoryDisplay: assignment.vehicleCategoryDisplay,
             packageType: assignment.packageType,
             weightTier: assignment.weightTierName
               ? {
-                  id: assignment.weightTierId,
+                  id: assignment.weightTierId ?? undefined,
                   name: assignment.weightTierName,
                   minWeightKg: Number(assignment.weightTierMin || 0),
                   maxWeightKg: Number(assignment.weightTierMax || 0),
@@ -407,8 +409,8 @@ class DriversService {
             estimatedDeliveryTime: Math.ceil(
               (Number(assignment.estimatedDistanceKm || 10) / 25) * 60,
             ), // Estimate based on 25km/h average speed
-            assignedAt: assignment.assignedAt,
-            acceptedAt: assignment.acceptedAt,
+            assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
+            acceptedAt: toIsoDateTimeOrNull(assignment.acceptedAt),
           };
         }),
       );

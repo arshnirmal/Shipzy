@@ -16,9 +16,9 @@ export type Coordinates = z.infer<typeof CoordinatesZ>;
 // ============================================================================
 
 export const TimestampedEntityZ = z.object({
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().optional(),
-  deletedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime().optional(),
+  deletedAt: z.iso.datetime().nullable().optional(),
 });
 export type TimestampedEntity = z.infer<typeof TimestampedEntityZ>;
 
@@ -47,7 +47,7 @@ export const SavedAddressZ = BaseAddressZ.extend({
   addressType: z.enum(["home", "work", "other"]).optional(),
   label: z.string().optional(),
   isDefault: z.boolean().optional(),
-  createdAt: z.string().optional(),
+  createdAt: z.iso.datetime().optional(),
 });
 export type SavedAddress = z.infer<typeof SavedAddressZ>;
 
@@ -128,8 +128,8 @@ export const BaseUserZ = z.object({
   profilePictureUrl: z.string().nullable().optional(),
   isVerified: z.boolean(),
   isActive: z.boolean(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
+  createdAt: z.iso.datetime().optional(),
+  updatedAt: z.iso.datetime().optional(),
 });
 export type BaseUser = z.infer<typeof BaseUserZ>;
 
@@ -146,7 +146,7 @@ export const DriverUserZ = BaseUserZ.extend({
     isOnline: z.boolean(),
     totalDeliveriesToday: z.number().int().nonnegative().optional(),
     currentLocation: CoordinatesZ.nullable().optional(),
-    lastLocationUpdate: z.string().datetime().nullable().optional(),
+    lastLocationUpdate: z.iso.datetime().nullable().optional(),
   }),
   vehicle: VehicleZ.nullable().optional(),
   earnings: EarningsZ.optional(),

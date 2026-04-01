@@ -29,7 +29,7 @@ export const RatingResponseZ = z.object({
   rating: z.number().int().min(1).max(5),
   isAnonymous: z.boolean().optional(),
   comment: z.string().nullable().optional(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 export type RatingResponse = z.infer<typeof RatingResponseZ>;
 
@@ -49,11 +49,11 @@ export const DriverRatingStatsZ = z.object({
       z.object({
         rating: z.number().int().min(1).max(5),
         comment: z.string().nullable().optional(),
-        createdAt: z.string().datetime(),
+        createdAt: z.iso.datetime(),
       }),
     )
     .optional(),
-  lastUpdated: z.string().datetime(),
+  lastUpdated: z.iso.datetime(),
 });
 export type DriverRatingStats = z.infer<typeof DriverRatingStatsZ>;
 

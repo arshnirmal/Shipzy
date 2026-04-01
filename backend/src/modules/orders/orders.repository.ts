@@ -7,6 +7,7 @@ import { rawTransaction } from "../../database/transaction.js";
 import ordersQueries from "../../database/queries/orders.queries.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { FareCalculationResultZ, OrderCreateResultZ } from "./orders.zod.js";
+import { toIsoDateTime } from "../../utils/datetime.util.js";
 import type {
   FareCalculationResult,
   OrderCreateResult,
@@ -72,6 +73,9 @@ class OrdersRepository {
       ]);
 
       const rawResult = result.rows[0]?.result as any;
+      if (rawResult?.order?.createdAt != null) {
+        rawResult.order.createdAt = toIsoDateTime(rawResult.order.createdAt);
+      }
       return OrderCreateResultZ.parse(rawResult);
     } catch (error) {
       logger.error({

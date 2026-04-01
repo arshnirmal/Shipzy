@@ -5,6 +5,10 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import {
+  toIsoDateTime,
+  toIsoDateTimeOrUndefined,
+} from "../../utils/datetime.util.js";
 import usersRepository from "./users.repository.js";
 
 import type { UserProfileResponse } from "./users.zod.js";
@@ -35,8 +39,8 @@ class UsersService {
         profilePictureUrl: user.profilePictureUrl ?? null,
         isVerified: user.isVerified,
         isActive: user.isActive,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt?.toISOString(),
+        createdAt: toIsoDateTime(user.createdAt),
+        updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -78,8 +82,8 @@ class UsersService {
         phoneNumber: updatedUser.phoneNumber ?? null,
         isVerified: updatedUser.isVerified,
         isActive: updatedUser.isActive,
-        createdAt: updatedUser.createdAt.toISOString(),
-        updatedAt: updatedUser.updatedAt?.toISOString(),
+        createdAt: toIsoDateTime(updatedUser.createdAt),
+        updatedAt: toIsoDateTimeOrUndefined(updatedUser.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -115,7 +119,7 @@ class UsersService {
         latitude: addr.latitude,
         longitude: addr.longitude,
         isDefault: addr.isDefault,
-        createdAt: addr.createdAt.toISOString(),
+        createdAt: toIsoDateTime(addr.createdAt),
       }));
     } catch (error) {
       logger.error({
@@ -184,7 +188,7 @@ class UsersService {
         latitude: savedAddress.latitude,
         longitude: savedAddress.longitude,
         isDefault: savedAddress.isDefault,
-        createdAt: savedAddress.createdAt.toISOString(),
+        createdAt: toIsoDateTime(savedAddress.createdAt),
       };
     } catch (error) {
       logger.error({

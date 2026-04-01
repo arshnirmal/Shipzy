@@ -22,8 +22,8 @@ export const BaseOrderZ = z.object({
   deliveryTypeDisplay: z.string().optional(),
   vehicleCategoryId: z.number().int().positive(),
   vehicleCategoryDisplay: z.string().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime().optional(),
 });
 export type BaseOrder = z.infer<typeof BaseOrderZ>;
 
@@ -51,8 +51,8 @@ export const CreateOrderRequestZ = z.object({
   paymentMethodId: z.number().int().positive(),
   packageDescription: z.string().max(500).nullable().optional(),
   specialInstructions: z.string().max(1000).nullable().optional(),
-  scheduledPickupTime: z.string().datetime().nullable().optional(),
-  scheduledDeliveryTime: z.string().datetime().nullable().optional(),
+  scheduledPickupTime: z.iso.datetime().nullable().optional(),
+  scheduledDeliveryTime: z.iso.datetime().nullable().optional(),
   declaredValue: z.number().nonnegative().nullable().optional(),
   notifyRecipientSms: z.boolean().optional().default(false),
   couponCode: z.string().max(50).nullable().optional(),
@@ -102,8 +102,8 @@ export type CancelOrderResult = z.infer<typeof CancelOrderResultZ>;
 // List Orders Query
 export const ListOrdersQueryZ = BaseQueryZ.extend({
   status: z.enum(["active", "completed", "cancelled"]).optional(),
-  dateFrom: z.string().datetime().optional(),
-  dateTo: z.string().datetime().optional(),
+  dateFrom: z.iso.datetime().optional(),
+  dateTo: z.iso.datetime().optional(),
 });
 export type ListOrdersQuery = z.infer<typeof ListOrdersQueryZ>;
 
@@ -143,7 +143,7 @@ export const CreateOrderResponseZ = z.object({
   fareBreakdown: FareBreakdownZ,
   estimatedDistanceKm: z.number().nonnegative(),
   estimatedDurationMins: z.number().nonnegative().optional(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 export type CreateOrderResponse = z.infer<typeof CreateOrderResponseZ>;
 
@@ -157,7 +157,7 @@ export const CreatedOrderRowZ = z
     pricing: FareBreakdownZ.partial().optional(),
     estimatedDistanceKm: z.number().nonnegative().optional(),
     estimatedDurationMins: z.number().nonnegative().optional(),
-    createdAt: z.union([z.string().datetime(), z.date()]),
+    createdAt: z.iso.datetime(),
   })
   .passthrough();
 export type CreatedOrderRow = z.infer<typeof CreatedOrderRowZ>;
@@ -188,7 +188,7 @@ export const OrderListItemZ = z.object({
   actualDistanceKm: z.number().nullable().optional(),
   actualDurationMins: z.number().nullable().optional(),
   totalPrice: z.number().nonnegative(),
-  createdAt: z.union([z.string().datetime(), z.date()]),
+  createdAt: z.iso.datetime(),
   pickup: z.object({
     address: z.string().nullable().optional(),
     city: z.string().nullable().optional(),
@@ -275,11 +275,11 @@ export const OrderDetailsZ = BaseOrderZ.extend({
     .optional(),
 
   timeline: z.object({
-    confirmedAt: z.string().datetime(),
-    assignedAt: z.string().datetime().nullable().optional(),
-    pickedUpAt: z.string().datetime().nullable().optional(),
-    deliveredAt: z.string().datetime().nullable().optional(),
-    cancelledAt: z.string().datetime().nullable().optional(),
+    confirmedAt: z.iso.datetime(),
+    assignedAt: z.iso.datetime().nullable().optional(),
+    pickedUpAt: z.iso.datetime().nullable().optional(),
+    deliveredAt: z.iso.datetime().nullable().optional(),
+    cancelledAt: z.iso.datetime().nullable().optional(),
   }),
 
   estimatedDistanceKm: z.number().nullable().optional(),
@@ -295,7 +295,7 @@ export const AvailableOrderItemZ = z.object({
   orderNumber: z.string(),
   deliveryTypeDisplay: z.string(),
   vehicleCategoryDisplay: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   pickup: z.object({
     address: z.string(),
     landmark: z.string().nullable().optional(),

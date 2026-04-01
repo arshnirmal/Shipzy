@@ -52,7 +52,7 @@ export const DriverEarningsResponseZ = EarningsZ.extend({
       z.object({
         orderId: z.number(),
         orderNumber: z.string(),
-        completedAt: z.string().datetime(),
+        completedAt: z.iso.datetime(),
         earnings: z.number().nonnegative(),
         distanceKm: z.number().nonnegative(),
       }),
@@ -65,8 +65,8 @@ export type DriverEarningsResponse = z.infer<typeof DriverEarningsResponseZ>;
 export const ActiveAssignmentZ = z.object({
   assignmentId: z.number().int().positive(),
   order: OrderDetailsZ,
-  assignedAt: z.string().datetime(),
-  acceptedAt: z.string().datetime().nullable().optional(),
+  assignedAt: z.iso.datetime(),
+  acceptedAt: z.iso.datetime().nullable().optional(),
   status: z.string(),
 });
 export type ActiveAssignment = z.infer<typeof ActiveAssignmentZ>;

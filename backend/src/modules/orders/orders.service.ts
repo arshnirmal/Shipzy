@@ -6,6 +6,10 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import {
+  toIsoDateTime,
+  toIsoDateTimeOrUndefined,
+} from "../../utils/datetime.util.js";
 import ordersRepository from "./orders.repository.js";
 
 import type {
@@ -272,13 +276,12 @@ class OrdersService {
         }
       : orderData.fareBreakdown;
 
-    const createdAtRaw = orderRow.createdAt;
-    const createdAtStr =
-      typeof createdAtRaw === "string"
-        ? createdAtRaw
-        : createdAtRaw instanceof Date
-          ? createdAtRaw.toISOString()
-          : new Date(createdAtRaw as string | number).toISOString();
+    let createdAtStr: string;
+    try {
+      createdAtStr = toIsoDateTime(orderRow.createdAt);
+    } catch {
+      throw new AppError("Invalid createdAt value from order creation", 500);
+    }
 
     return {
       orderId: orderRow.orderId,
@@ -401,7 +404,7 @@ class OrdersService {
             : null,
           actualDurationMins,
           totalPrice: Number.parseFloat(order.totalPrice ?? "0"),
-          createdAt: order.createdAt,
+          createdAt: toIsoDateTime(order.createdAt),
           pickup: {
             address: order.pickupAddress,
             city: order.pickupCity ?? undefined,
@@ -446,7 +449,7 @@ class OrdersService {
       orderNumber: order.orderNumber,
       deliveryTypeDisplay: order.deliveryTypeDisplay,
       vehicleCategoryDisplay: order.vehicleCategoryDisplay,
-      createdAt: (order.createdAt as Date).toISOString(),
+      createdAt: toIsoDateTime(order.createdAt),
       pickup: {
         address: order.pickupAddress,
         landmark: order.pickupLandmark,
@@ -534,7 +537,7 @@ class OrdersService {
     assignmentId: number;
     orderId: number;
     courierId: number;
-    assignedAt: Date;
+    assignedAt: string;
   }> {
     const order = await ordersRepository.findById(orderId);
 
@@ -558,7 +561,7 @@ class OrdersService {
       assignmentId: result.assignmentId,
       orderId: result.orderId,
       courierId: result.courierId,
-      assignedAt: result.assignedAt,
+      assignedAt: toIsoDateTime(result.assignedAt),
     };
   }
 
@@ -569,7 +572,7 @@ class OrdersService {
     orderId: number,
     status: string,
     courierId: number,
-  ): Promise<{ orderId: number; status: string; timestamp: Date }> {
+  ): Promise<{ orderId: number; status: string; timestamp: string }> {
     const order = await ordersRepository.findById(orderId);
 
     if (!order) {
@@ -615,7 +618,11 @@ class OrdersService {
       throw new AppError("Status timestamp missing after update", 500);
     }
 
-    return { orderId: updated.orderId, status, timestamp };
+    return {
+      orderId: updated.orderId,
+      status,
+      timestamp: toIsoDateTime(timestamp),
+    };
   }
 
   /**
@@ -668,25 +675,17 @@ class OrdersService {
       actualDurationMins,
 
       createdAt: order.createdAt
-        ? (order.createdAt as Date).toISOString()
-        : new Date().toISOString(),
+        ? toIsoDateTime(order.createdAt)
+        : toIsoDateTime(new Date()),
 
       timeline: {
         confirmedAt: order.createdAt
-          ? (order.createdAt as Date).toISOString()
-          : new Date().toISOString(),
-        assignedAt: order.acceptedAt
-          ? (order.acceptedAt as Date).toISOString()
-          : undefined,
-        pickedUpAt: order.pickedUpAt
-          ? (order.pickedUpAt as Date).toISOString()
-          : undefined,
-        deliveredAt: order.deliveredAt
-          ? (order.deliveredAt as Date).toISOString()
-          : undefined,
-        cancelledAt: order.cancelledAt
-          ? (order.cancelledAt as Date).toISOString()
-          : undefined,
+          ? toIsoDateTime(order.createdAt)
+          : toIsoDateTime(new Date()),
+        assignedAt: toIsoDateTimeOrUndefined(order.acceptedAt),
+        pickedUpAt: toIsoDateTimeOrUndefined(order.pickedUpAt),
+        deliveredAt: toIsoDateTimeOrUndefined(order.deliveredAt),
+        cancelledAt: toIsoDateTimeOrUndefined(order.cancelledAt),
       },
 
       pickup: {

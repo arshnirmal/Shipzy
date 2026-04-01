@@ -12,6 +12,10 @@ import {
   generateRefreshToken,
   verifyToken,
 } from "../../utils/jwt.util.js";
+import {
+  toIsoDateTime,
+  toIsoDateTimeOrUndefined,
+} from "../../utils/datetime.util.js";
 import authRepository from "./auth.repository.js";
 import { getRoleId } from "../../utils/roles.utils.js";
 import type { LoginRequest, RegisterRequest, AuthResponse } from "./auth.zod.js";
@@ -69,8 +73,8 @@ class AuthService {
           profilePictureUrl: user.profilePictureUrl ?? undefined,
           isVerified: user.isVerified,
           isActive: user.isActive,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt?.toISOString(),
+          createdAt: toIsoDateTime(user.createdAt),
+          updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
         },
         tokens: {
           accessToken: newAccessToken,
@@ -187,8 +191,8 @@ class AuthService {
           profilePictureUrl: user.profilePictureUrl ?? undefined,
           isVerified: user.isVerified,
           isActive: user.isActive,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt?.toISOString(),
+          createdAt: toIsoDateTime(user.createdAt),
+          updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
         },
         tokens: {
           accessToken,
@@ -275,8 +279,8 @@ class AuthService {
           profilePictureUrl: user.profilePictureUrl ?? undefined,
           isVerified: user.isVerified,
           isActive: user.isActive,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt?.toISOString(),
+          createdAt: toIsoDateTime(user.createdAt),
+          updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
         },
         tokens: {
           accessToken,
@@ -345,8 +349,8 @@ class AuthService {
           profilePictureUrl: user.profilePictureUrl ?? undefined,
           isVerified: user.isVerified,
           isActive: user.isActive,
-          createdAt: user.createdAt.toISOString(),
-          updatedAt: user.updatedAt?.toISOString(),
+          createdAt: toIsoDateTime(user.createdAt),
+          updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
         },
         tokens: {
           accessToken,
