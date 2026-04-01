@@ -41,28 +41,31 @@ BEGIN
         WHERE assignment_id = p_assignment_id;
     END IF;
 
-    -- Insert tracking event
-    INSERT INTO tracking.events (
-        assignment_id,
-        order_id,
-        courier_id,
-        event_type,
-        location,
-        accuracy_meters,
-        speed_kmph,
-        bearing_degrees,
-        event_description
-    ) VALUES (
-        p_assignment_id,
-        v_order_id,
-        p_courier_id,
-        'location_update',
-        v_location,
-        p_accuracy_meters,
-        p_speed_kmph,
-        p_bearing_degrees,
-        'Location update from mobile app'
-    );
+    -- Insert tracking event only when assignment context exists.
+    -- tracking.events has NOT NULL assignment_id/order_id.
+    IF p_assignment_id IS NOT NULL AND v_order_id IS NOT NULL THEN
+        INSERT INTO tracking.events (
+            assignment_id,
+            order_id,
+            courier_id,
+            event_type,
+            location,
+            accuracy_meters,
+            speed_kmph,
+            bearing_degrees,
+            event_description
+        ) VALUES (
+            p_assignment_id,
+            v_order_id,
+            p_courier_id,
+            'location_update',
+            v_location,
+            p_accuracy_meters,
+            p_speed_kmph,
+            p_bearing_degrees,
+            'Location update from mobile app'
+        );
+    END IF;
 
     RETURN TRUE;
 

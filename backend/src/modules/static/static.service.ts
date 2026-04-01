@@ -19,7 +19,6 @@ class StaticService {
           baseRate: Number.parseFloat(dt.base_rate),
           perKmRate: Number.parseFloat(dt.per_km_rate),
         },
-        labels: dt.labels || [],
         supportedVehicles: dt.supported_vehicles || [],
         sortOrder: dt.sort_order,
         isActive: dt.is_active,

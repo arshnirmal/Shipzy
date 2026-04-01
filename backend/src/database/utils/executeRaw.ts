@@ -1,7 +1,7 @@
 // services/backend/src/database/utils/executeRaw.ts
 // Type-safe raw SQL query wrapper using raw database connection
 
-import db from "../db.js";
+import { drizzlePool } from "../drizzle.js";
 import logger from "../../config/logger.js";
 import config from "../../config/env.js";
 
@@ -33,7 +33,7 @@ export const executeRaw = async <T extends Record<string, unknown> = Record<stri
       );
     }
 
-    const result = await db.query(queryText, params);
+    const result = await drizzlePool.query(queryText, params);
     const duration = Date.now() - start;
 
     // Safe logging

@@ -7,7 +7,6 @@ export const DeliveryTypeZ = z.object({
   displayName: z.string().optional(),
   description: z.string().nullable().optional(),
   pricing: z.object({ baseRate: z.number(), perKmRate: z.number() }).optional(),
-  labels: z.array(z.string()).optional(),
   supportedVehicles: z.array(z.string()).optional(),
   sortOrder: z.number().optional(),
   isActive: z.boolean().optional(),

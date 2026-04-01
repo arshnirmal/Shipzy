@@ -5,8 +5,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify, { FastifyInstance } from "fastify";
 import config from "./config/env.js";
 import logger from "./config/logger.js";
-import db from "./database/db.js";
-import drizzleDb, { drizzlePool } from "./database/drizzle.js";
+import { drizzlePool } from "./database/drizzle.js";
 import { authenticate } from "./middleware/auth.middleware.js";
 import {
   errorHandler,
@@ -146,10 +145,7 @@ export const buildApp = async (
   app.get("/health", async (request, reply) => {
     try {
       // Test database connectivity
-      const dbTest = await db.query("SELECT 1 as test");
-      const drizzleTest = await drizzleDb.execute<{ test: number }>(
-        "SELECT 1 as test",
-      );
+      const dbTest = await drizzlePool.query("SELECT 1 as test");
 
       return {
         status: "ok",
@@ -157,10 +153,7 @@ export const buildApp = async (
         uptime: process.uptime(),
         environment: config.nodeEnv,
         database: {
-          connected:
-            dbTest.rows.length > 0 &&
-            Array.isArray(drizzleTest.rows) &&
-            drizzleTest.rows.length > 0,
+          connected: dbTest.rows.length > 0,
           pool: {
             totalConnections: (drizzlePool as any)?.totalCount || 0,
             idleConnections: (drizzlePool as any)?.idleCount || 0,

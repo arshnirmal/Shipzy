@@ -54,30 +54,9 @@ BEGIN
     v_otp_code := LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
     v_otp_code_hash := encode(digest(v_otp_code, 'sha256'), 'hex');
     
-    -- Insert or update auth session
-    INSERT INTO users.auth_sessions (
-        phone_number,
-        otp_code_hash,
-        otp_expires_at,
-        device_id,
-        device_info,
-        ip_address,
-        is_verified,
-        verification_attempts
-    )
-    VALUES (
-        p_phone_number,
-        v_otp_code_hash,
-        NOW() + INTERVAL '10 minutes',
-        p_device_id,
-        p_device_info,
-        p_ip_address,
-        false,
-        0
-    )
-    ON CONFLICT (phone_number)
-    WHERE is_verified = false AND otp_expires_at > NOW()
-    DO UPDATE SET
+    -- Update active unverified session if present, else insert a new one.
+    UPDATE users.auth_sessions
+    SET
         otp_code_hash = v_otp_code_hash,
         otp_expires_at = NOW() + INTERVAL '10 minutes',
         device_id = p_device_id,
@@ -85,15 +64,47 @@ BEGIN
         ip_address = p_ip_address,
         verification_attempts = 0,
         created_at = NOW()
+    WHERE session_id = (
+        SELECT session_id
+        FROM users.auth_sessions
+        WHERE phone_number = p_phone_number
+            AND is_verified = false
+            AND otp_expires_at > NOW()
+        ORDER BY created_at DESC
+        LIMIT 1
+    )
     RETURNING session_id INTO v_session_id;
+
+    IF NOT FOUND THEN
+        INSERT INTO users.auth_sessions (
+            phone_number,
+            otp_code_hash,
+            otp_expires_at,
+            device_id,
+            device_info,
+            ip_address,
+            is_verified,
+            verification_attempts
+        )
+        VALUES (
+            p_phone_number,
+            v_otp_code_hash,
+            NOW() + INTERVAL '10 minutes',
+            p_device_id,
+            p_device_info,
+            p_ip_address,
+            false,
+            0
+        )
+        RETURNING session_id INTO v_session_id;
+    END IF;
     
     -- Build success response
     SELECT json_build_object(
         'success', true,
         'session_id', v_session_id,
         'phone_number', p_phone_number,
-        'otp_expires_at', NOW() + INTERVAL '10 minutes',
-        'otp_code', v_otp_code  -- REMOVE IN PRODUCTION, only for development
+        'otp_expires_at', NOW() + INTERVAL '10 minutes'
     ) INTO result;
     
     RETURN result;

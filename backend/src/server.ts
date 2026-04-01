@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { buildApp } from "./app.js";
 import config from "./config/env.js";
 import logger from "./config/logger.js";
-import db from "./database/db.js";
+import { cleanupDrizzlePool } from "./database/drizzle.js";
 import * as cron from "node-cron";
 
 /**
@@ -67,7 +67,7 @@ const start = async () => {
       logger.info("Server closed");
 
       // Close database connections
-      await db.closePool();
+      await cleanupDrizzlePool();
       logger.info("Database connections closed");
 
       logger.info("Graceful shutdown completed");

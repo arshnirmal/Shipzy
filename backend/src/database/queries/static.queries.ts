@@ -79,7 +79,6 @@ export default {
         COALESCE(d.per_km_rate, 0) AS "perKmRate",
         COALESCE(d.sort_order, 0) AS "sortOrder",
         COALESCE(d.is_active, false) AS "isActive",
-        '[]'::jsonb AS labels,
         COALESCE(v.supported_vehicles, '[]'::jsonb) AS "supportedVehicles"
       FROM dt d
       LEFT JOIN vehicles v ON v.delivery_type_id = d.delivery_type_id
@@ -306,7 +305,6 @@ export default {
               'perKmRate', d.per_km_rate,
               'sortOrder', d.sort_order,
               'isActive', d.is_active,
-              'labels', '[]'::jsonb,
               'supportedVehicles', COALESCE(v.supported_vehicles, '[]'::jsonb)
             )
             ORDER BY d.sort_order

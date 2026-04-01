@@ -5,6 +5,8 @@ import {
   pgTable,
   pgSchema,
   serial,
+  index,
+  check,
   uuid,
   varchar,
   text,
@@ -40,7 +42,17 @@ export const userProfiles = usersSchema.table("profiles", {
     .defaultNow()
     .notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("idx_users_profiles_uuid_active")
+    .on(table.userUuid)
+    .where(sql`${table.deletedAt} IS NULL`),
+  index("idx_users_profiles_phone_active")
+    .on(table.phoneNumber)
+    .where(sql`${table.deletedAt} IS NULL`),
+  index("idx_users_profiles_email_active")
+    .on(table.email)
+    .where(sql`${table.deletedAt} IS NULL`),
+]);
 
 // Auth Sessions
 export const authSessions = usersSchema.table("auth_sessions", {
@@ -67,7 +79,12 @@ export const authSessions = usersSchema.table("auth_sessions", {
   lastActivityAt: timestamp("last_activity_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-});
+}, (table) => [
+  check(
+    "auth_sessions_contact_present_chk",
+    sql`${table.email} IS NOT NULL OR ${table.phoneNumber} IS NOT NULL`,
+  ),
+]);
 
 // User Addresses (for saved addresses - uses PostGIS)
 export const userAddresses = usersSchema.table("addresses", {

@@ -235,6 +235,8 @@ DECLARE
     v_subtotal_before_tax NUMERIC;
     v_total_price NUMERIC;
     v_status order_status := 'pending';
+    v_platform_fee_default NUMERIC := 0;
+    v_order_number VARCHAR(50);
     v_pickup_location JSONB;
     v_delivery_location JSONB;
     v_items JSONB;
@@ -262,11 +264,18 @@ BEGIN
         RETURN json_build_object('success', false, 'error', 'Vehicle category not supported for this delivery type');
     END IF;
 
+    -- Load platform fee fallback from pricing config (no hardcoded default)
+    SELECT config_value INTO v_platform_fee_default
+    FROM public.pricing_config
+    WHERE config_key = 'platform_fee'
+      AND is_active = TRUE
+    LIMIT 1;
+
     -- Extract fare values from provided fareBreakdown
     v_base_price := (p_order_data -> 'fareBreakdown' ->> 'basePrice') :: NUMERIC;
     v_distance_price := (p_order_data -> 'fareBreakdown' ->> 'distancePrice') :: NUMERIC;
     v_weight_surcharge := (p_order_data -> 'fareBreakdown' ->> 'weightSurcharge') :: NUMERIC;
-    v_platform_fee := COALESCE((p_order_data -> 'fareBreakdown' ->> 'platformFee') :: NUMERIC, 10.00);
+    v_platform_fee := COALESCE((p_order_data -> 'fareBreakdown' ->> 'platformFee') :: NUMERIC, v_platform_fee_default);
     v_special_handling_fee := COALESCE((p_order_data -> 'fareBreakdown' ->> 'specialHandlingFee') :: NUMERIC, 0.00);
     
     -- Calculate subtotal before tax
@@ -346,13 +355,23 @@ BEGIN
         (p_order_data ->> 'scheduledDeliveryTime') :: TIMESTAMPTZ
     ) RETURNING order_id, order_uuid INTO v_order_id, v_order_uuid;
 
+    -- Generate deterministic human-readable order number post-insert
+    v_order_number := format('ORD-%s-%s',
+        to_char(NOW(), 'YYYYMMDD'),
+        LPAD(v_order_id::TEXT, 6, '0')
+    );
+
+    UPDATE orders.requests
+    SET order_number = v_order_number
+    WHERE order_id = v_order_id;
+
     -- Build success response with enhanced pricing details
     result := json_build_object(
         'success', true,
         'order', json_build_object(
             'orderId', v_order_id,
             'orderUuid', v_order_uuid,
-            'orderNumber', (SELECT order_number FROM orders.requests WHERE order_id = v_order_id),
+            'orderNumber', v_order_number,
             'status', 'pending',
             'pricing', json_build_object(
                 'basePrice', v_base_price,
