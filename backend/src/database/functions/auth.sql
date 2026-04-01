@@ -128,7 +128,7 @@ DECLARE
     v_user_id INT;
     v_user_uuid UUID;
     v_is_new_user BOOLEAN := false;
-    v_role_id INT;
+    v_role user_role;
     result JSON;
 BEGIN
     -- Verify OTP
@@ -170,18 +170,15 @@ BEGIN
     IF NOT FOUND THEN
         v_is_new_user := true;
         
-        -- Get role_id
-        SELECT role_id INTO v_role_id
-        FROM public.user_roles
-        WHERE name = p_role_name;
-        
-        IF NOT FOUND THEN
+        BEGIN
+            v_role := p_role_name::user_role;
+        EXCEPTION WHEN invalid_text_representation THEN
             RETURN json_build_object(
                 'success', false,
                 'error', 'Invalid role name',
                 'error_code', 'INVALID_ROLE'
             );
-        END IF;
+        END;
         
         -- Validate full_name for new users
         IF p_full_name IS NULL OR TRIM(p_full_name) = '' THEN
@@ -194,13 +191,13 @@ BEGIN
         
         -- Create user profile
         INSERT INTO users.profiles (
-            role_id,
+            role,
             phone_number,
             full_name,
             is_verified
         )
         VALUES (
-            v_role_id,
+            v_role,
             p_phone_number,
             p_full_name,
             true
@@ -229,12 +226,11 @@ BEGIN
             'user_uuid', v_user_uuid,
             'phone_number', p_phone_number,
             'full_name', COALESCE(p_full_name, u.full_name),
-            'role', r.name,
+            'role', u.role,
             'is_verified', true
         )
     ) INTO result
     FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
     WHERE u.user_id = v_user_id;
     
     RETURN result;

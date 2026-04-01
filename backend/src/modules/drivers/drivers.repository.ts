@@ -9,7 +9,6 @@ import sessionsRepository, { DriverSession } from "./sessions.repository.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
-import { userRoles } from "../../database/schema/public.js";
 
 import type {
   DbCourier,

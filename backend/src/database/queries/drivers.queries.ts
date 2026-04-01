@@ -43,7 +43,7 @@ export default {
       LEFT JOIN logistics.courier_vehicles cv ON u.user_id = cv.courier_id AND cv.is_active = true
       LEFT JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
       WHERE u.user_id = $1
-          AND u.role_id = (SELECT role_id FROM public.user_roles WHERE name = 'courier')
+          AND u.role = 'courier'
           AND u.deleted_at IS NULL
   `,
 
@@ -86,7 +86,7 @@ export default {
       FROM orders.requests o
       JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       WHERE ca.courier_id = $1
-          AND o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'delivered')
+          AND o.status = 'delivered'
   `,
 
   // ============ COURIER AVAILABILITY ============
@@ -141,10 +141,8 @@ export default {
           ca.order_id AS "orderId",
           o.order_uuid AS "orderUuid",
           o.order_number AS "orderNumber",
-          o.status_id AS "statusId",
-          os.name AS "orderStatus",
-          ca.assignment_status_id AS "assignmentStatusId",
-          ast.name AS "assignmentStatus",
+          o.status AS "orderStatus",
+          ca.status AS "assignmentStatus",
 
           -- Vehicle and package info
           vc.name AS "vehicleCategory",
@@ -199,17 +197,12 @@ export default {
           ca.accepted_at AS "acceptedAt"
       FROM orders.courier_assignments ca
       JOIN orders.requests o ON ca.order_id = o.order_id
-      JOIN public.order_statuses os ON o.status_id = os.status_id
-      JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       LEFT JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE ca.courier_id = $1
-          AND ca.assignment_status_id NOT IN (
-              SELECT status_id FROM public.assignment_statuses
-              WHERE name IN ('delivered', 'cancelled', 'rejected')
-          )
+          AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
       ORDER BY ca.assigned_at DESC
   `,
 

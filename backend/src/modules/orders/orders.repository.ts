@@ -6,7 +6,6 @@ import { drizzlePool } from "../../database/drizzle.js";
 import { rawTransaction } from "../../database/transaction.js";
 import ordersQueries from "../../database/queries/orders.queries.js";
 import { orderRequests } from "../../database/schema/orders.js";
-import { orderStatuses } from "../../database/schema/public.js";
 import { FareCalculationResultZ, OrderCreateResultZ } from "./orders.zod.js";
 import type {
   FareCalculationResult,
@@ -121,11 +120,11 @@ class OrdersRepository {
       // Build status WHERE clause
       let statusWhere = "";
       if (status === "active") {
-        statusWhere = `AND os.name IN ('pending', 'accepted', 'picked_up', 'in_transit')`;
+        statusWhere = `AND o.status IN ('pending', 'accepted', 'picked_up', 'in_transit')`;
       } else if (status === "completed") {
-        statusWhere = `AND os.name = 'delivered'`;
+        statusWhere = `AND o.status = 'delivered'`;
       } else if (status === "cancelled") {
-        statusWhere = `AND os.name IN ('cancelled', 'failed')`;
+        statusWhere = `AND o.status = 'cancelled'`;
       }
 
       // Build date WHERE clauses with parameterized placeholders
@@ -154,8 +153,17 @@ class OrdersRepository {
         o.order_id AS "orderId",
         o.order_uuid AS "orderUuid",
         o.order_number AS "orderNumber",
-        o.status_id AS "statusId",
-        os.name AS "statusName",
+        CASE o.status
+          WHEN 'pending' THEN 1
+          WHEN 'accepted' THEN 2
+          WHEN 'picked_up' THEN 3
+          WHEN 'in_transit' THEN 4
+          WHEN 'delivered' THEN 5
+          WHEN 'cancelled' THEN 6
+          WHEN 'undeliverable' THEN 7
+          WHEN 'returned' THEN 8
+        END AS "statusId",
+        o.status AS "statusName",
         o.delivery_type_id AS "deliveryTypeId",
         dt.name AS "deliveryType",
         dt.display_name AS "deliveryTypeDisplay",
@@ -187,7 +195,6 @@ class OrdersRepository {
 
       const fromJoins = `
         FROM orders.requests o
-        JOIN public.order_statuses os ON o.status_id = os.status_id
         JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
         JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
         LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
@@ -213,7 +220,6 @@ class OrdersRepository {
       const countQuery = `
         SELECT COUNT(*) AS total
         FROM orders.requests o
-        JOIN public.order_statuses os ON o.status_id = os.status_id
         ${whereClause}
       `;
 
@@ -331,24 +337,12 @@ class OrdersRepository {
    */
   async updateOrderStatus(orderId: number, status: string) {
     try {
-      const statusResult = await drizzleDb
-        .select({ statusId: orderStatuses.statusId })
-        .from(orderStatuses)
-        .where(eq(orderStatuses.name, status))
-        .limit(1);
-
-      if (!statusResult || statusResult.length === 0) {
+      const validStatuses = new Set(["picked_up", "in_transit", "delivered"]);
+      if (!validStatuses.has(status)) {
         throw new Error(`Invalid status: ${status}`);
       }
-
-      const statusRow = statusResult[0];
-      if (!statusRow) {
-        throw new Error(`Invalid status: ${status}`);
-      }
-
-      const statusId = statusRow.statusId;
       const updateData: any = {
-        statusId,
+        status: status as "picked_up" | "in_transit" | "delivered",
         updatedAt: new Date(),
       };
 

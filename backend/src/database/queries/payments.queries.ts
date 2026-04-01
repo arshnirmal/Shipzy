@@ -14,7 +14,7 @@ export default {
     INSERT INTO payments.transactions (
       order_id,
       payment_method_id,
-      payment_status_id,
+      status,
       amount,
       currency,
       external_transaction_id,
@@ -25,7 +25,7 @@ export default {
     )
     VALUES (
       $1, $2,
-      (SELECT status_id FROM payments.payment_statuses WHERE name = 'pending'),
+      'pending',
       $3, $4, $5, $6, $7, $8, NOW()
     )
       RETURNING transaction_id AS "transactionId", payment_initiated_at AS "paymentInitiatedAt"
@@ -37,7 +37,7 @@ export default {
   MARK_PAYMENT_COMPLETED: `
       UPDATE payments.transactions
       SET 
-          payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed'),
+          status = 'completed',
           payment_completed_at = NOW()
       WHERE transaction_id = $1
       RETURNING transaction_id AS "transactionId", payment_completed_at AS "paymentCompletedAt"
@@ -49,7 +49,7 @@ export default {
   MARK_PAYMENT_FAILED: `
       UPDATE payments.transactions
       SET 
-          payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'failed'),
+          status = 'failed',
           payment_failed_at = NOW(),
           failure_reason = $2
       WHERE transaction_id = $1
@@ -68,14 +68,13 @@ export default {
           t.external_transaction_id AS "externalTransactionId",
           t.payment_gateway AS "paymentGateway",
           t.upi_vpa AS "upiVpa",
-          ps.name AS "paymentStatus",
+          t.status AS "paymentStatus",
           pm.name AS "paymentMethod",
           t.payment_initiated_at AS "paymentInitiatedAt",
           t.payment_completed_at AS "paymentCompletedAt",
           t.payment_failed_at AS "paymentFailedAt",
           t.failure_reason AS "failureReason"
       FROM payments.transactions t
-      JOIN payments.payment_statuses ps ON t.payment_status_id = ps.status_id
       JOIN payments.payment_methods pm ON t.payment_method_id = pm.method_id
       WHERE t.order_id = $1
       ORDER BY t.created_at DESC
@@ -105,12 +104,12 @@ export default {
   `,
 
   /**
-   * Update refund status to processed
+   * Update refund status to completed
    */
   MARK_REFUND_PROCESSED: `
       UPDATE payments.refunds
       SET 
-          refund_status = 'processed',
+          refund_status = 'completed',
           processed_at = NOW(),
           external_refund_id = $2
       WHERE refund_id = $1

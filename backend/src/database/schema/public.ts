@@ -3,6 +3,7 @@
 
 import {
   pgTable,
+  pgEnum,
   serial,
   varchar,
   text,
@@ -14,15 +15,80 @@ import {
 
 // Tables in PostgreSQL default "public" schema — use pgTable() directly (no pgSchema("public")).
 
-// User Roles
-export const userRoles = pgTable("user_roles", {
-  roleId: serial("role_id").primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+// Native enums (Phase 2)
+export const userRoleEnum = pgEnum("user_role", [
+  "client",
+  "courier",
+  "admin",
+  "business",
+]);
+export const orderStatusEnum = pgEnum("order_status", [
+  "pending",
+  "accepted",
+  "picked_up",
+  "in_transit",
+  "delivered",
+  "cancelled",
+  "undeliverable",
+  "returned",
+]);
+export const assignmentStatusEnum = pgEnum("assignment_status", [
+  "assigned",
+  "accepted",
+  "rejected",
+  "picked_up",
+  "in_transit",
+  "delivered",
+  "cancelled",
+  "returned",
+]);
+export const notificationStatusEnum = pgEnum("notification_status", [
+  "pending",
+  "sent",
+  "delivered",
+  "read",
+  "failed",
+]);
+export const notificationChannelEnum = pgEnum("notification_channel", [
+  "push",
+  "sms",
+  "email",
+  "in_app",
+]);
+export const authMethodEnum = pgEnum("auth_method", [
+  "email",
+  "phone",
+  "google",
+  "firebase",
+  "refresh",
+]);
+export const notificationPriorityEnum = pgEnum("notification_priority", [
+  "low",
+  "normal",
+  "high",
+  "critical",
+]);
+export const trackingEventTypeEnum = pgEnum("tracking_event_type", [
+  "location_update",
+  "pickup",
+  "delivery",
+  "status_change",
+  "checkpoint",
+  "route_deviation",
+]);
+export const refundStatusEnum = pgEnum("refund_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+]);
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "completed",
+  "failed",
+  "refunded",
+  "cancelled",
+]);
 
 // Weight Tiers
 export const weightTiers = pgTable("weight_tiers", {
@@ -165,49 +231,3 @@ export const vehicleCategories = pgTable("vehicle_categories", {
     .defaultNow()
     .notNull(),
 });
-
-// Order Statuses
-export const orderStatuses = pgTable("order_statuses", {
-  statusId: serial("status_id").primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(),
-  description: text("description"),
-  displayOrder: integer("display_order"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-// Assignment Statuses
-export const assignmentStatuses = pgTable("assignment_statuses", {
-  statusId: serial("status_id").primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-// Notification Channels
-export const notificationChannels = pgTable(
-  "notification_channels",
-  {
-    channelId: serial("channel_id").primaryKey(),
-    name: varchar("name", { length: 50 }).notNull().unique(),
-    description: text("description"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-);
-
-// Notification Statuses
-export const notificationStatuses = pgTable(
-  "notification_statuses",
-  {
-    statusId: serial("status_id").primaryKey(),
-    name: varchar("name", { length: 50 }).notNull().unique(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-);

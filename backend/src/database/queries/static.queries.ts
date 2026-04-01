@@ -162,24 +162,22 @@ export default {
    */
   GET_ORDER_STATUSES: `
     SELECT
-        status_id AS "statusId",
-        name AS "name",
-        description AS "description"
-    FROM public.order_statuses
-    ORDER BY status_id ASC
-    `,
+        ROW_NUMBER() OVER () AS "statusId",
+        status::text AS "name",
+        NULL::text AS "description"
+    FROM unnest(enum_range(NULL::order_status)) AS status
+  `,
 
   /**
    * Get all assignment statuses
    */
   GET_ASSIGNMENT_STATUSES: `
     SELECT
-        status_id AS "statusId",
-        name AS "name",
-        description AS "description"
-    FROM public.assignment_statuses
-    ORDER BY status_id ASC
-    `,
+        ROW_NUMBER() OVER () AS "statusId",
+        status::text AS "name",
+        NULL::text AS "description"
+    FROM unnest(enum_range(NULL::assignment_status)) AS status
+  `,
 
   /**
    * Get weight tier for specific weight

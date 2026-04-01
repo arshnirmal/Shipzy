@@ -15,8 +15,13 @@ export default {
     SELECT
       u.user_id AS "userId",
       u.user_uuid AS "userUuid",
-      u.role_id AS "roleId",
-      r.name AS "roleName",
+      CASE u.role
+        WHEN 'client' THEN 1
+        WHEN 'courier' THEN 2
+        WHEN 'admin' THEN 3
+        WHEN 'business' THEN 4
+      END AS "roleId",
+      u.role AS "roleName",
       u.firebase_uid AS "firebaseUid",
       u.phone_number AS "phoneNumber",
       u.email AS "email",
@@ -26,7 +31,6 @@ export default {
       u.is_active AS "isActive",
       u.created_at AS "createdAt"
     FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
     WHERE u.firebase_uid = $1
       AND u.deleted_at IS NULL
   `,
@@ -38,8 +42,13 @@ export default {
     SELECT
       u.user_id AS "userId",
       u.user_uuid AS "userUuid",
-      u.role_id AS "roleId",
-      r.name AS "roleName",
+      CASE u.role
+        WHEN 'client' THEN 1
+        WHEN 'courier' THEN 2
+        WHEN 'admin' THEN 3
+        WHEN 'business' THEN 4
+      END AS "roleId",
+      u.role AS "roleName",
       u.firebase_uid AS "firebaseUid",
       u.phone_number AS "phoneNumber",
       u.email AS "email",
@@ -49,7 +58,6 @@ export default {
       u.is_active AS "isActive",
       u.created_at AS "createdAt"
       FROM users.profiles u
-      JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.user_uuid = $1
         AND u.deleted_at IS NULL
         AND u.is_active = true
@@ -62,8 +70,13 @@ export default {
       SELECT
         u.user_id AS "userId",
         u.user_uuid AS "userUuid",
-        u.role_id AS "roleId",
-        r.name AS "roleName",
+        CASE u.role
+          WHEN 'client' THEN 1
+          WHEN 'courier' THEN 2
+          WHEN 'admin' THEN 3
+          WHEN 'business' THEN 4
+        END AS "roleId",
+        u.role AS "roleName",
         u.firebase_uid AS "firebaseUid",
         u.phone_number AS "phoneNumber",
         u.email AS "email",
@@ -73,7 +86,6 @@ export default {
         u.is_active AS "isActive",
         u.created_at AS "createdAt"
       FROM users.profiles u
-      JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.phone_number = $1
         AND u.deleted_at IS NULL
     `,
@@ -85,8 +97,13 @@ export default {
       SELECT
         u.user_id AS "userId",
         u.user_uuid AS "userUuid",
-        u.role_id AS "roleId",
-        r.name AS "roleName",
+        CASE u.role
+          WHEN 'client' THEN 1
+          WHEN 'courier' THEN 2
+          WHEN 'admin' THEN 3
+          WHEN 'business' THEN 4
+        END AS "roleId",
+        u.role AS "roleName",
         u.firebase_uid AS "firebaseUid",
         u.phone_number AS "phoneNumber",
         u.email AS "email",
@@ -96,7 +113,6 @@ export default {
         u.is_active AS "isActive",
         u.created_at AS "createdAt"
       FROM users.profiles u
-      JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE u.email = $1
         AND u.deleted_at IS NULL
     `,
@@ -108,7 +124,7 @@ export default {
    */
   CREATE_USER: `
       INSERT INTO users.profiles (
-        role_id,
+        role,
         firebase_uid,
         phone_number,
         full_name,
@@ -116,11 +132,25 @@ export default {
         password_hash,
         is_verified
       )
-      VALUES ($1, $2, $3, $4, $5, $6, true)
+      VALUES (
+        CASE
+          WHEN $1 = 1 THEN 'client'::user_role
+          WHEN $1 = 2 THEN 'courier'::user_role
+          WHEN $1 = 3 THEN 'admin'::user_role
+          WHEN $1 = 4 THEN 'business'::user_role
+          ELSE 'client'::user_role
+        END,
+        $2, $3, $4, $5, $6, true
+      )
       RETURNING
         user_id AS "userId",
         user_uuid AS "userUuid",
-        role_id AS "roleId",
+        CASE role
+          WHEN 'client' THEN 1
+          WHEN 'courier' THEN 2
+          WHEN 'admin' THEN 3
+          WHEN 'business' THEN 4
+        END AS "roleId",
         firebase_uid AS "firebaseUid",
         phone_number AS "phoneNumber",
         full_name AS "fullName",
@@ -134,18 +164,32 @@ export default {
    */
   CREATE_EMAIL_USER: `
       INSERT INTO users.profiles (
-        role_id,
+        role,
         full_name,
         email,
         password_hash,
         phone_number,
         is_verified
       )
-      VALUES ($1, $2, $3, $4, $5, false)
+      VALUES (
+        CASE
+          WHEN $1 = 1 THEN 'client'::user_role
+          WHEN $1 = 2 THEN 'courier'::user_role
+          WHEN $1 = 3 THEN 'admin'::user_role
+          WHEN $1 = 4 THEN 'business'::user_role
+          ELSE 'client'::user_role
+        END,
+        $2, $3, $4, $5, false
+      )
       RETURNING
         user_id AS "userId",
         user_uuid AS "userUuid",
-        role_id AS "roleId",
+        CASE role
+          WHEN 'client' THEN 1
+          WHEN 'courier' THEN 2
+          WHEN 'admin' THEN 3
+          WHEN 'business' THEN 4
+        END AS "roleId",
         full_name AS "fullName",
         email AS "email",
         phone_number AS "phoneNumber",
@@ -191,13 +235,17 @@ export default {
         s.last_activity_at AS "lastActivityAt",
         u.user_uuid AS "userUuid",
         u.full_name AS "fullName",
-        u.role_id AS "roleId",
-        r.name AS "roleName",
+        CASE u.role
+          WHEN 'client' THEN 1
+          WHEN 'courier' THEN 2
+          WHEN 'admin' THEN 3
+          WHEN 'business' THEN 4
+        END AS "roleId",
+        u.role AS "roleName",
         u.is_active AS "isActive",
         u.is_verified AS "isVerified"
       FROM users.auth_sessions s
       JOIN users.profiles u ON s.user_id = u.user_id
-      JOIN public.user_roles r ON u.role_id = r.role_id
       WHERE s.jwt_token_hash = $1
         AND s.expires_at > NOW()
         AND u.is_active = true

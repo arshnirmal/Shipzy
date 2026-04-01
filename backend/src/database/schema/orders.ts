@@ -17,11 +17,11 @@ import {
 import { userProfiles } from "./users.js";
 import {
   deliveryTypes,
-  orderStatuses,
   vehicleCategories,
   weightTiers,
   packageTypes,
-  assignmentStatuses,
+  orderStatusEnum,
+  assignmentStatusEnum,
 } from "./public.js";
 import { paymentMethods } from "./payments.js";
 import type {
@@ -44,9 +44,7 @@ export const orderRequests = ordersSchema.table("requests", {
   deliveryTypeId: integer("delivery_type_id")
     .notNull()
     .references(() => deliveryTypes.deliveryTypeId),
-  statusId: integer("status_id")
-    .notNull()
-    .references(() => orderStatuses.statusId),
+  status: orderStatusEnum("status").notNull(),
   vehicleCategoryId: integer("vehicle_category_id")
     .notNull()
     .references(() => vehicleCategories.categoryId),
@@ -148,9 +146,7 @@ export const courierAssignments = ordersSchema.table("courier_assignments", {
   courierId: integer("courier_id")
     .notNull()
     .references(() => userProfiles.userId, { onDelete: "cascade" }),
-  assignmentStatusId: integer("assignment_status_id")
-    .notNull()
-    .references(() => assignmentStatuses.statusId),
+  status: assignmentStatusEnum("status").notNull(),
   assignedAt: timestamp("assigned_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

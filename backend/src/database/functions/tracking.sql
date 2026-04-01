@@ -80,7 +80,7 @@ COMMENT ON FUNCTION tracking.update_courier_location IS 'Update courier location
 -- ========================================
 CREATE OR REPLACE FUNCTION tracking.log_tracking_event(
     p_assignment_id INT,
-    p_event_type VARCHAR(50),
+    p_event_type tracking_event_type,
     p_event_description TEXT DEFAULT NULL,
     p_metadata JSONB DEFAULT NULL
 )
@@ -137,7 +137,7 @@ CREATE OR REPLACE FUNCTION tracking.get_order_tracking_history(
 )
 RETURNS TABLE (
     event_id BIGINT,
-    event_type VARCHAR(50),
+    event_type tracking_event_type,
     event_description TEXT,
     latitude NUMERIC,
     longitude NUMERIC,
@@ -184,7 +184,7 @@ CREATE OR REPLACE FUNCTION tracking.get_courier_recent_activity(
 RETURNS TABLE (
     event_id BIGINT,
     "order_id" INT,
-    event_type VARCHAR(50),
+    event_type tracking_event_type,
     event_description TEXT,
     latitude NUMERIC,
     longitude NUMERIC,

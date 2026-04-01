@@ -8,8 +8,6 @@ import ratingsQueries from "../../database/queries/ratings.queries.js";
 import { driverRatings } from "../../database/schema/ratings.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { courierAssignments } from "../../database/schema/orders.js";
-import { orderStatuses } from "../../database/schema/public.js";
-import { assignmentStatuses } from "../../database/schema/public.js";
 
 import type { RatingRow } from "../../types/ratings.js";
 
@@ -140,29 +138,13 @@ class RatingsRepository {
    */
   async isOrderDelivered(orderId: number): Promise<boolean> {
     try {
-      // Get 'delivered' status ID first
-      const deliveredStatus = await drizzleDb
-        .select({ statusId: orderStatuses.statusId })
-        .from(orderStatuses)
-        .where(eq(orderStatuses.name, "delivered"))
-        .limit(1);
-
-      if (deliveredStatus.length === 0) {
-        return false;
-      }
-
-      const deliveredRow = deliveredStatus[0];
-      if (!deliveredRow) {
-        return false;
-      }
-
       const result = await drizzleDb
         .select()
         .from(orderRequests)
         .where(
           and(
             eq(orderRequests.orderId, orderId),
-            eq(orderRequests.statusId, deliveredRow.statusId),
+            eq(orderRequests.status, "delivered"),
             isNotNull(orderRequests.deliveredAt),
           ),
         )

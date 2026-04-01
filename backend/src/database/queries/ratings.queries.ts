@@ -40,7 +40,7 @@ export default {
     JOIN orders.requests o ON r.order_id = o.order_id
     WHERE r.driver_id = $1
       AND r.created_at >= $2
-      AND o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'delivered')
+      AND o.status = 'delivered'
     ORDER BY r.created_at DESC
   `,
 
@@ -60,7 +60,7 @@ export default {
     SELECT ca.courier_id AS "courierId" FROM orders.courier_assignments ca
     JOIN orders.requests o ON ca.order_id = o.order_id
     WHERE o.order_id = $1
-      AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
+      AND ca.status = 'delivered'
     LIMIT 1
   `,
 
@@ -70,7 +70,7 @@ export default {
   ORDER_IS_DELIVERED: `
     SELECT 1 FROM orders.requests
     WHERE order_id = $1
-      AND status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'delivered')
+      AND status = 'delivered'
       AND delivered_at IS NOT NULL
     LIMIT 1
   `,

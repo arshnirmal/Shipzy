@@ -13,7 +13,7 @@ This folder contains all database-related code and SQL files for the Shipzy back
 
 **Contents**:
 - `index.ts` - Main schema export
-- `public.ts` - Public schema tables (user_roles, delivery_types, etc.)
+- `public.ts` - Public schema tables + native PG enums (delivery_types, status/role enums, etc.)
 - `users.ts` - User-related tables (profiles, addresses, auth_sessions)
 - `orders.ts` - Order-related tables (requests, courier_assignments)
 - `logistics.ts` - Logistics tables (courier_status, courier_vehicles, locations)
@@ -51,7 +51,7 @@ import { orderRequests } from "../../database/schema/orders.js";
 **Purpose**: Idempotent `INSERT` scripts for lookup tables.
 
 **Contents**:
-- `master-data.sql` — reference rows (`user_roles`, `delivery_types`, `weight_tiers`, `payments.payment_methods`, capabilities, labels, `pricing_config`, etc.). Applied automatically at the end of `db:deploy`.
+- `master-data.sql` — reference rows (`delivery_types`, `weight_tiers`, `payments.payment_methods`, capabilities, labels, `pricing_config`, etc.). Applied automatically at the end of `db:deploy`.
 
 **Used by**: `scripts/db-deploy.ts`, `scripts/seed-master.ts`, `tests/database.js` (`runSeeds`)
 

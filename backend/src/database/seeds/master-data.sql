@@ -2,17 +2,6 @@
 -- Run after Drizzle migrations. Payment methods live in payments.* (not public).
 
 -- ---------------------------------------------------------------------------
--- public.user_roles
--- ---------------------------------------------------------------------------
-INSERT INTO public.user_roles (name, description)
-VALUES
-  ('client', 'Customer who books deliveries'),
-  ('courier', 'Delivery driver/rider'),
-  ('admin', 'Platform administrator'),
-  ('business', 'Business customer')
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------------
 -- public.vehicle_categories
 -- ---------------------------------------------------------------------------
 INSERT INTO public.vehicle_categories (name, display_name, max_weight_kg)
@@ -24,21 +13,6 @@ VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- public.order_statuses
--- ---------------------------------------------------------------------------
-INSERT INTO public.order_statuses (name, description, display_order)
-VALUES
-  ('pending', 'Order created, awaiting driver assignment', 1),
-  ('accepted', 'Driver accepted the order', 2),
-  ('picked_up', 'Package picked up from sender', 3),
-  ('in_transit', 'Package in transit to destination', 4),
-  ('delivered', 'Successfully delivered', 5),
-  ('cancelled', 'Order cancelled', 6),
-  ('undeliverable', 'Could not deliver to recipient', 7),
-  ('returned', 'Package returned to sender', 8)
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------------
 -- payments.payment_methods
 -- ---------------------------------------------------------------------------
 INSERT INTO payments.payment_methods (name, description)
@@ -46,56 +20,6 @@ VALUES
   ('Cash on Delivery', 'Cash on Delivery'),
   ('Prepaid via UPI', 'Prepaid via UPI'),
   ('Prepaid via Credit/Debit Card', 'Prepaid via Credit/Debit Card')
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------------
--- payments.payment_statuses
--- ---------------------------------------------------------------------------
-INSERT INTO payments.payment_statuses (name, description)
-VALUES
-  ('pending', 'Payment not yet received'),
-  ('completed', 'Payment successful'),
-  ('failed', 'Payment failed'),
-  ('refunded', 'Payment refunded'),
-  ('cancelled', 'Payment cancelled')
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------------
--- public.assignment_statuses
--- ---------------------------------------------------------------------------
-INSERT INTO public.assignment_statuses (name, description)
-VALUES
-  ('assigned', 'Order assigned to courier'),
-  ('accepted', 'Courier accepted assignment'),
-  ('rejected', 'Courier rejected assignment'),
-  ('picked_up', 'Package picked up'),
-  ('in_transit', 'Package in transit'),
-  ('delivered', 'Package delivered'),
-  ('cancelled', 'Assignment cancelled'),
-  ('returned', 'Package returned')
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------------
--- public.notification_channels
--- ---------------------------------------------------------------------------
-INSERT INTO public.notification_channels (name, description)
-VALUES
-  ('push', 'Push notification via FCM'),
-  ('sms', 'SMS notification'),
-  ('email', 'Email notification'),
-  ('in_app', 'In-app notification banner')
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------------
--- public.notification_statuses
--- ---------------------------------------------------------------------------
-INSERT INTO public.notification_statuses (name)
-VALUES
-  ('pending'),
-  ('sent'),
-  ('delivered'),
-  ('read'),
-  ('failed')
 ON CONFLICT (name) DO NOTHING;
 
 -- ---------------------------------------------------------------------------

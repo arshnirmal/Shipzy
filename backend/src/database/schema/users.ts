@@ -15,7 +15,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { userRoles } from "./public.js";
+import { userRoleEnum, authMethodEnum } from "./public.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
 
 const usersSchema = pgSchema("users");
@@ -24,9 +24,7 @@ const usersSchema = pgSchema("users");
 export const userProfiles = usersSchema.table("profiles", {
   userId: serial("user_id").primaryKey(),
   userUuid: uuid("user_uuid").defaultRandom().notNull().unique(),
-  roleId: integer("role_id")
-    .notNull()
-    .references(() => userRoles.roleId),
+  role: userRoleEnum("role").notNull(),
   firebaseUid: varchar("firebase_uid", { length: 255 }).unique(),
   phoneNumber: varchar("phone_number", { length: 20 }),
   email: varchar("email", { length: 100 }).unique(),
@@ -60,7 +58,7 @@ export const authSessions = usersSchema.table("auth_sessions", {
   deviceId: varchar("device_id", { length: 255 }),
   deviceInfo: jsonb("device_info"),
   ipAddress: inet("ip_address"),
-  authMethod: varchar("auth_method", { length: 20 }).default("email").notNull(),
+  authMethod: authMethodEnum("auth_method").default("email").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -6,7 +6,6 @@ import db from "../../database/db.js";
 import authQueries from "../../database/queries/auth.queries.js";
 import { getUserRoleName } from "../../utils/roles.utils.js";
 import { userProfiles } from "../../database/schema/users.js";
-import { userRoles } from "../../database/schema/public.js";
 import { authSessions } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
 
@@ -17,7 +16,6 @@ type User = AuthUser;
 type ProfileSelectBase = {
   userId: number;
   userUuid: string;
-  roleId: number;
   roleName: string;
   firebaseUid: string | null;
   phoneNumber: string | null;
@@ -77,7 +75,7 @@ interface StoreJwtTokenData {
   deviceId?: string | null;
   deviceInfo?: any;
   ipAddress?: string | null;
-  authMethod?: string;
+  authMethod?: "email" | "phone" | "google" | "firebase" | "refresh";
 }
 
 class AuthRepository {
@@ -90,8 +88,7 @@ class AuthRepository {
         .select({
           userId: userProfiles.userId,
           userUuid: userProfiles.userUuid,
-          roleId: userProfiles.roleId,
-          roleName: userRoles.name,
+          roleName: userProfiles.role,
           firebaseUid: userProfiles.firebaseUid,
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
@@ -103,7 +100,6 @@ class AuthRepository {
           updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
-        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
         .where(
           and(
             eq(userProfiles.firebaseUid, firebaseUid),
@@ -132,8 +128,7 @@ class AuthRepository {
         .select({
           userId: userProfiles.userId,
           userUuid: userProfiles.userUuid,
-          roleId: userProfiles.roleId,
-          roleName: userRoles.name,
+          roleName: userProfiles.role,
           firebaseUid: userProfiles.firebaseUid,
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
@@ -145,7 +140,6 @@ class AuthRepository {
           updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
-        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
         .where(
           and(
             eq(userProfiles.userUuid, userUuid),
@@ -175,8 +169,7 @@ class AuthRepository {
         .select({
           userId: userProfiles.userId,
           userUuid: userProfiles.userUuid,
-          roleId: userProfiles.roleId,
-          roleName: userRoles.name,
+          roleName: userProfiles.role,
           firebaseUid: userProfiles.firebaseUid,
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
@@ -189,7 +182,6 @@ class AuthRepository {
           updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
-        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
         .where(
           and(
             eq(userProfiles.phoneNumber, phoneNumber),
@@ -218,8 +210,7 @@ class AuthRepository {
         .select({
           userId: userProfiles.userId,
           userUuid: userProfiles.userUuid,
-          roleId: userProfiles.roleId,
-          roleName: userRoles.name,
+          roleName: userProfiles.role,
           firebaseUid: userProfiles.firebaseUid,
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
@@ -232,7 +223,6 @@ class AuthRepository {
           updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
-        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
         .where(
           and(eq(userProfiles.email, email), isNull(userProfiles.deletedAt)),
         )
@@ -266,7 +256,11 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          roleId,
+          role: getUserRoleName(roleId) as
+            | "client"
+            | "courier"
+            | "admin"
+            | "business",
           firebaseUid: firebaseUid || undefined,
           phoneNumber: phoneNumber || undefined,
           fullName,
@@ -321,7 +315,11 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          roleId,
+          role: getUserRoleName(roleId) as
+            | "client"
+            | "courier"
+            | "admin"
+            | "business",
           fullName,
           email,
           passwordHash,
@@ -382,7 +380,7 @@ class AuthRepository {
         .insert(authSessions)
         .values({
           userId,
-          email: email || "",
+          email: email || undefined,
           phoneNumber: phoneNumber || undefined,
           jwtTokenHash: tokenHash,
           deviceId: deviceId || undefined,

@@ -42,8 +42,17 @@ export default {
             o.client_id AS "clientId",
             u.full_name AS "clientName",
             u.phone_number AS "clientPhone",
-            o.status_id AS "statusId",
-            os.name AS "statusName",
+            CASE o.status
+              WHEN 'pending' THEN 1
+              WHEN 'accepted' THEN 2
+              WHEN 'picked_up' THEN 3
+              WHEN 'in_transit' THEN 4
+              WHEN 'delivered' THEN 5
+              WHEN 'cancelled' THEN 6
+              WHEN 'undeliverable' THEN 7
+              WHEN 'returned' THEN 8
+            END AS "statusId",
+            o.status AS "statusName",
             o.delivery_type_id AS "deliveryTypeId",
             dt.name AS "deliveryType",
             dt.display_name AS "deliveryTypeDisplay",
@@ -118,20 +127,27 @@ export default {
       cu.full_name AS "courierName",
       cu.phone_number AS "courierPhone",
       cu.profile_picture_url AS "courierPhoto",
-      ca.assignment_status_id AS "assignmentStatusId",
-      ast.name AS "assignmentStatus",
+      CASE ca.status
+        WHEN 'assigned' THEN 1
+        WHEN 'accepted' THEN 2
+        WHEN 'rejected' THEN 3
+        WHEN 'picked_up' THEN 4
+        WHEN 'in_transit' THEN 5
+        WHEN 'delivered' THEN 6
+        WHEN 'cancelled' THEN 7
+        WHEN 'returned' THEN 8
+      END AS "assignmentStatusId",
+      ca.status AS "assignmentStatus",
       ca.assigned_at AS "assignedAt",
       ca.accepted_at AS "courierAcceptedAt"
 
       FROM orders.requests o
-      JOIN public.order_statuses os ON o.status_id = os.status_id
       JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       JOIN payments.payment_methods pm ON o.payment_method_id = pm.method_id
       JOIN users.profiles u ON o.client_id = u.user_id
       LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
-      LEFT JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE o.order_id = $1
       AND o.deleted_at IS NULL
@@ -203,15 +219,12 @@ export default {
       JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
-      WHERE o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'pending')
+      WHERE o.status = 'pending'
           AND o.deleted_at IS NULL
           AND NOT EXISTS (
               SELECT 1 FROM orders.courier_assignments ca
               WHERE ca.order_id = o.order_id
-                  AND ca.assignment_status_id NOT IN (
-                      SELECT status_id FROM public.assignment_statuses
-                      WHERE name IN ('rejected', 'cancelled')
-                  )
+                  AND ca.status NOT IN ('rejected', 'cancelled')
           )
           -- OPTIMIZED: Use computed pickup_point column for spatial query
           AND ST_DWithin(
@@ -237,12 +250,12 @@ export default {
       INSERT INTO orders.courier_assignments (
           order_id,
           courier_id,
-          assignment_status_id
+          status
       )
       VALUES (
           $1,
           $2,
-          (SELECT status_id FROM public.assignment_statuses WHERE name = 'assigned')
+          'assigned'
       )
       RETURNING
           assignment_id AS "assignmentId",
@@ -257,7 +270,7 @@ export default {
   ACCEPT_ASSIGNMENT: `
       UPDATE orders.courier_assignments
       SET
-          assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'accepted'),
+          status = 'accepted',
           accepted_at = NOW(),
           updated_at = NOW()
       WHERE order_id = $1
@@ -273,7 +286,7 @@ export default {
   UPDATE_ORDER_STATUS_TO_ASSIGNED: `
       UPDATE orders.requests
       SET
-          status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'accepted'),
+          status = 'accepted',
           accepted_at = NOW(),
           updated_at = NOW()
       WHERE order_id = $1
@@ -298,7 +311,7 @@ export default {
   REJECT_ASSIGNMENT: `
       UPDATE orders.courier_assignments
       SET
-          assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'rejected'),
+          status = 'rejected',
           rejected_at = NOW(),
           rejection_reason = $3,
           updated_at = NOW()
@@ -315,10 +328,28 @@ export default {
           ca.assignment_id,
           ca.order_id,
           o.order_uuid,
-          o.status_id,
-          os.name AS order_status,
-          ca.assignment_status_id,
-          ast.name AS assignment_status,
+          CASE o.status
+            WHEN 'pending' THEN 1
+            WHEN 'accepted' THEN 2
+            WHEN 'picked_up' THEN 3
+            WHEN 'in_transit' THEN 4
+            WHEN 'delivered' THEN 5
+            WHEN 'cancelled' THEN 6
+            WHEN 'undeliverable' THEN 7
+            WHEN 'returned' THEN 8
+          END AS status_id,
+          o.status AS order_status,
+          CASE ca.status
+            WHEN 'assigned' THEN 1
+            WHEN 'accepted' THEN 2
+            WHEN 'rejected' THEN 3
+            WHEN 'picked_up' THEN 4
+            WHEN 'in_transit' THEN 5
+            WHEN 'delivered' THEN 6
+            WHEN 'cancelled' THEN 7
+            WHEN 'returned' THEN 8
+          END AS assignment_status_id,
+          ca.status AS assignment_status,
           -- OPTIMIZED: Pickup location from JSONB
           o.pickup_location->>'fullAddress' AS pickup_address,
           (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
@@ -332,13 +363,8 @@ export default {
           ca.accepted_at
       FROM orders.courier_assignments ca
       JOIN orders.requests o ON ca.order_id = o.order_id
-      JOIN public.order_statuses os ON o.status_id = os.status_id
-      JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
       WHERE ca.courier_id = $1
-          AND ca.assignment_status_id NOT IN (
-              SELECT status_id FROM public.assignment_statuses
-              WHERE name IN ('delivered', 'cancelled', 'rejected')
-          )
+          AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
       ORDER BY ca.assigned_at DESC
   `,
 

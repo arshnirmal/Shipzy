@@ -14,6 +14,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { orderRequests } from "./orders.js";
+import { paymentStatusEnum, refundStatusEnum } from "./public.js";
 
 const paymentsSchema = pgSchema("payments");
 
@@ -28,16 +29,6 @@ export const paymentMethods = paymentsSchema.table("payment_methods", {
     .notNull(),
 });
 
-// Payment Statuses
-export const paymentStatuses = paymentsSchema.table("payment_statuses", {
-  statusId: serial("status_id").primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(),
-  description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
 // Payment Transactions
 export const paymentTransactions = paymentsSchema.table("transactions", {
   transactionId: serial("transaction_id").primaryKey(),
@@ -47,9 +38,7 @@ export const paymentTransactions = paymentsSchema.table("transactions", {
   paymentMethodId: integer("payment_method_id")
     .notNull()
     .references(() => paymentMethods.methodId),
-  paymentStatusId: integer("payment_status_id")
-    .notNull()
-    .references(() => paymentStatuses.statusId),
+  status: paymentStatusEnum("status").notNull(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 10 }).default("INR").notNull(),
   externalTransactionId: varchar("external_transaction_id", { length: 255 }),
@@ -83,7 +72,7 @@ export const refunds = paymentsSchema.table("refunds", {
     .references(() => orderRequests.orderId, { onDelete: "cascade" }),
   refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }).notNull(),
   refundReason: text("refund_reason").notNull(),
-  refundStatus: varchar("refund_status", { length: 50 }).notNull(),
+  refundStatus: refundStatusEnum("refund_status").notNull(),
   externalRefundId: varchar("external_refund_id", { length: 255 }),
   initiatedAt: timestamp("initiated_at", { withTimezone: true })
     .defaultNow()

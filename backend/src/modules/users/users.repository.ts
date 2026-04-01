@@ -5,7 +5,6 @@ import drizzleDb from "../../database/drizzle.js";
 import db from "../../database/db.js";
 import usersQueries from "../../database/queries/users.queries.js";
 import { userProfiles } from "../../database/schema/users.js";
-import { userRoles } from "../../database/schema/public.js";
 import { userAddresses } from "../../database/schema/users.js";
 
 import type { DbUser } from "../../types/user.js";
@@ -15,7 +14,6 @@ type User = DbUser;
 function mapProfileRowToDbUser(row: {
   userId: number;
   userUuid: string;
-  roleId: number;
   roleName: string;
   phoneNumber: string | null;
   email: string | null;
@@ -76,8 +74,7 @@ class UsersRepository {
         .select({
           userId: userProfiles.userId,
           userUuid: userProfiles.userUuid,
-          roleId: userProfiles.roleId,
-          roleName: userRoles.name,
+          roleName: userProfiles.role,
           phoneNumber: userProfiles.phoneNumber,
           email: userProfiles.email,
           fullName: userProfiles.fullName,
@@ -88,7 +85,6 @@ class UsersRepository {
           updatedAt: userProfiles.updatedAt,
         })
         .from(userProfiles)
-        .innerJoin(userRoles, eq(userProfiles.roleId, userRoles.roleId))
         .where(
           and(
             eq(userProfiles.userUuid, userUuid),

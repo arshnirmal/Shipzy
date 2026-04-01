@@ -234,7 +234,7 @@ DECLARE
     v_gst_amount NUMERIC;
     v_subtotal_before_tax NUMERIC;
     v_total_price NUMERIC;
-    v_status_id INT;
+    v_status order_status := 'pending';
     v_pickup_location JSONB;
     v_delivery_location JSONB;
     v_items JSONB;
@@ -262,9 +262,6 @@ BEGIN
     ) THEN 
         RETURN json_build_object('success', false, 'error', 'Vehicle category not supported for this delivery type');
     END IF;
-
-    -- Get 'pending' status
-    SELECT status_id INTO v_status_id FROM public.order_statuses WHERE name = 'pending';
 
     -- Extract fare values from provided fareBreakdown
     v_base_price := (p_order_data -> 'fareBreakdown' ->> 'basePrice') :: NUMERIC;
@@ -328,7 +325,7 @@ BEGIN
 
     -- Create order with JSONB locations, items, and labels
     INSERT INTO orders.requests (
-        client_id, delivery_type_id, vehicle_category_id, weight_tier_id, status_id,
+        client_id, delivery_type_id, vehicle_category_id, weight_tier_id, status,
         pickup_location, delivery_location, items, labels,
         package_description, package_type_id, special_instructions, declared_value,
         notify_recipient_sms, coupon_code,
@@ -337,7 +334,7 @@ BEGIN
         payment_method_id, scheduled_pickup_time, scheduled_delivery_time
     )
     VALUES (
-        v_client_id, v_delivery_type_id, v_vehicle_category_id, (p_order_data ->> 'weightTierId') :: INT, v_status_id,
+        v_client_id, v_delivery_type_id, v_vehicle_category_id, (p_order_data ->> 'weightTierId') :: INT, v_status,
         v_pickup_location, v_delivery_location, v_items, v_labels,
         p_order_data ->> 'packageDescription',
         (p_order_data ->> 'packageTypeId') :: INT,
@@ -405,7 +402,7 @@ RETURNS JSON
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_order_status_name VARCHAR(50);
+    v_order_status_name order_status;
     v_payment_transaction_id INT;
     v_client_id INT;
     v_order_total NUMERIC;
@@ -414,14 +411,14 @@ result JSON;
 
 BEGIN -- Get current order details
 SELECT
-    os.name,
+    o.status,
     o.client_id,
     o.total_price INTO v_order_status_name,
     v_client_id,
     v_order_total
 FROM
     orders.requests o
-    JOIN public.order_statuses os ON o.status_id = os.status_id
+    
 WHERE
     o.order_id = p_order_id
     AND o.deleted_at IS NULL;
@@ -447,14 +444,7 @@ END IF;
 UPDATE
     orders.requests
 SET
-    status_id = (
-        SELECT
-            status_id
-        FROM
-            public.order_statuses
-        WHERE
-            name = 'cancelled'
-    ),
+    status = 'cancelled',
     cancelled_at = NOW(),
     cancellation_reason = p_cancellation_reason,
     updated_at = NOW()
@@ -465,25 +455,11 @@ WHERE
 UPDATE
     orders.courier_assignments
 SET
-    assignment_status_id = (
-        SELECT
-            status_id
-        FROM
-            public.assignment_statuses
-        WHERE
-            name = 'cancelled'
-    ),
+    status = 'cancelled',
     updated_at = NOW()
 WHERE
     order_id = p_order_id
-    AND assignment_status_id NOT IN (
-        SELECT
-            status_id
-        FROM
-            public.assignment_statuses
-        WHERE
-            name IN ('cancelled', 'rejected')
-    );
+    AND status NOT IN ('cancelled', 'rejected');
 
 -- Check for completed payment
 SELECT
@@ -492,14 +468,7 @@ FROM
     payments.transactions
 WHERE
     order_id = p_order_id
-    AND payment_status_id = (
-        SELECT
-            status_id
-        FROM
-            payments.payment_statuses
-        WHERE
-            name = 'completed'
-    )
+    AND status = 'completed'
 LIMIT
     1;
 
@@ -528,8 +497,8 @@ END IF;
 INSERT INTO
     notifications.queue (
         user_id,
-        channel_id,
-        status_id,
+        channel,
+        status,
         title,
         body,
         data,
@@ -538,22 +507,8 @@ INSERT INTO
 VALUES
     (
         v_client_id,
-        (
-            SELECT
-                channel_id
-            FROM
-                public.notification_channels
-            WHERE
-                name = 'push'
-        ),
-        (
-            SELECT
-                status_id
-            FROM
-                public.notification_statuses
-            WHERE
-                name = 'pending'
-        ),
+        'push',
+        'pending',
         'Order Cancelled',
         format(
             'Your order #%s has been cancelled. %s',
@@ -620,25 +575,10 @@ RETURNS JSON
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_order_status_id INT;
+    v_order_status order_status;
     v_assignment_id INT;
-    v_assigned_status_id INT := (
-        SELECT
-            status_id
-        FROM
-            public.assignment_statuses
-        WHERE
-            name = 'assigned'
-);
-
-v_accepted_order_status_id INT := (
-    SELECT
-        status_id
-    FROM
-        public.order_statuses
-    WHERE
-        name = 'accepted'
-);
+    v_assigned_status assignment_status := 'assigned';
+    v_accepted_order_status order_status := 'accepted';
 
 BEGIN -- Lock the order row to prevent concurrent assignments
 PERFORM 1
@@ -651,25 +591,18 @@ UPDATE
 
 -- Ensure order exists and is in a state that can be assigned (e.g., pending)
 SELECT
-    o.status_id INTO v_order_status_id
+    o.status INTO v_order_status
 FROM
     orders.requests o
 WHERE
     o.order_id = p_order_id;
 
 IF NOT FOUND
-OR v_order_status_id IS NULL THEN RETURN json_build_object('success', false, 'error', 'Order not found');
+OR v_order_status IS NULL THEN RETURN json_build_object('success', false, 'error', 'Order not found');
 
 END IF;
 
-IF v_order_status_id != (
-    SELECT
-        status_id
-    FROM
-        public.order_statuses
-    WHERE
-        name = 'pending'
-) THEN RETURN json_build_object(
+IF v_order_status != 'pending' THEN RETURN json_build_object(
     'success',
     false,
     'error',
@@ -709,9 +642,9 @@ END IF;
 
 -- Create assignment
 INSERT INTO
-    orders.courier_assignments (order_id, courier_id, assignment_status_id)
+    orders.courier_assignments (order_id, courier_id, status)
 VALUES
-    (p_order_id, p_courier_id, v_assigned_status_id) RETURNING assignment_id INTO v_assignment_id;
+    (p_order_id, p_courier_id, v_assigned_status) RETURNING assignment_id INTO v_assignment_id;
 
 -- Update courier status and order status atomically
 UPDATE
@@ -726,7 +659,7 @@ WHERE
 UPDATE
     orders.requests
 SET
-    status_id = v_accepted_order_status_id,
+    status = v_accepted_order_status,
     accepted_at = NOW(),
     updated_at = NOW()
 WHERE

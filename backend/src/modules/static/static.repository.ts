@@ -11,8 +11,6 @@ import {
   vehicleCategories,
   packageTypes,
   labels,
-  orderStatuses,
-  assignmentStatuses,
 } from "../../database/schema/public.js";
 import { paymentMethods } from "../../database/schema/payments.js";
 
@@ -203,12 +201,8 @@ class StaticRepository {
    */
   async getOrderStatuses() {
     try {
-      const result = await drizzleDb
-        .select()
-        .from(orderStatuses)
-        .orderBy(orderStatuses.statusId);
-
-      return result;
+      const result = await db.query(staticQueries.GET_ORDER_STATUSES);
+      return result.rows;
     } catch (error) {
       logger.error({
         msg: "Error getting order statuses",
@@ -223,12 +217,8 @@ class StaticRepository {
    */
   async getAssignmentStatuses() {
     try {
-      const result = await drizzleDb
-        .select()
-        .from(assignmentStatuses)
-        .orderBy(assignmentStatuses.statusId);
-
-      return result;
+      const result = await db.query(staticQueries.GET_ASSIGNMENT_STATUSES);
+      return result.rows;
     } catch (error) {
       logger.error({
         msg: "Error getting assignment statuses",

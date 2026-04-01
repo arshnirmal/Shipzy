@@ -15,6 +15,7 @@ import {
 import { courierAssignments, orderRequests } from "./orders.js";
 import { userProfiles } from "./users.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
+import { trackingEventTypeEnum } from "./public.js";
 
 const trackingSchema = pgSchema("tracking");
 
@@ -32,7 +33,7 @@ export const trackingEvents = trackingSchema.table("events", {
   courierId: integer("courier_id")
     .notNull()
     .references(() => userProfiles.userId, { onDelete: "cascade" }),
-  eventType: varchar("event_type", { length: 50 }).notNull(),
+  eventType: trackingEventTypeEnum("event_type").notNull(),
   location: geography("location"),
   // OPTIMIZED: Removed redundant latitude and longitude columns
   // Extract coordinates with: ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude

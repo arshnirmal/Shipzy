@@ -14,8 +14,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { userProfiles } from "./users.js";
 import {
-  notificationChannels,
-  notificationStatuses,
+  notificationChannelEnum,
+  notificationStatusEnum,
+  notificationPriorityEnum,
 } from "./public.js";
 
 const notificationsSchema = pgSchema("notifications");
@@ -26,16 +27,12 @@ export const notificationQueue = notificationsSchema.table("queue", {
   userId: integer("user_id")
     .notNull()
     .references(() => userProfiles.userId, { onDelete: "cascade" }),
-  channelId: integer("channel_id")
-    .notNull()
-    .references(() => notificationChannels.channelId),
-  statusId: integer("status_id")
-    .notNull()
-    .references(() => notificationStatuses.statusId),
+  channel: notificationChannelEnum("channel").notNull(),
+  status: notificationStatusEnum("status").notNull().default("pending"),
   title: varchar("title", { length: 255 }).notNull(),
   body: text("body").notNull(),
   data: jsonb("data"),
-  priority: varchar("priority", { length: 20 }).default("normal").notNull(),
+  priority: notificationPriorityEnum("priority").default("normal").notNull(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
