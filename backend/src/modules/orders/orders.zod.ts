@@ -84,6 +84,17 @@ export const RateOrderRequestZ = z.object({
 });
 export type RateOrderRequest = z.infer<typeof RateOrderRequestZ>;
 
+// Cancel Order Result (stored function response)
+export const CancelOrderResultZ = z.object({
+  success: z.boolean(),
+  orderId: z.number().int().positive().optional(),
+  status: z.string().optional(),
+  refundAmount: z.number().nonnegative().optional(),
+  refundStatus: z.string().optional(),
+  error: z.string().optional(),
+}).passthrough();
+export type CancelOrderResult = z.infer<typeof CancelOrderResultZ>;
+
 // ============================================================================
 // QUERY SCHEMAS - API query parameters
 // ============================================================================
@@ -163,19 +174,36 @@ export type OrderCreateResult = z.infer<typeof OrderCreateResultZ>;
 export const OrderListItemZ = z.object({
   orderId: z.number().int().positive(),
   orderUuid: z.string().uuid(),
-  orderNumber: z.string(),
+  orderNumber: z.string().nullable().optional(),
   status: z.string(),
-  createdAt: z.string().datetime(),
+  statusId: z.number().int().positive(),
+  deliveryTypeId: z.number().int().positive(),
+  deliveryTypeDisplay: z.string().optional(),
+  vehicleCategoryId: z.number().int().positive(),
+  vehicleCategoryDisplay: z.string().optional(),
+  packageDescription: z.string().nullable().optional(),
+  weightTierId: z.number().nullable().optional(),
+  weightTierDisplay: z.string().nullable().optional(),
+  estimatedDistanceKm: z.number().nullable().optional(),
+  actualDistanceKm: z.number().nullable().optional(),
+  actualDurationMins: z.number().nullable().optional(),
+  totalPrice: z.number().nonnegative(),
+  createdAt: z.union([z.string().datetime(), z.date()]),
   pickup: z.object({
-    address: z.string(),
-    city: z.string().optional(),
+    address: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
   }),
   delivery: z.object({
-    address: z.string(),
-    city: z.string().optional(),
+    address: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
   }),
-  totalPrice: z.number().nonnegative(),
-  estimatedDeliveryTime: z.string().datetime().nullable().optional(),
+  courier: z
+    .object({
+      name: z.string().nullable().optional(),
+      photo: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 export type OrderListItem = z.infer<typeof OrderListItemZ>;
 
@@ -270,11 +298,13 @@ export const AvailableOrderItemZ = z.object({
   createdAt: z.string().datetime(),
   pickup: z.object({
     address: z.string(),
+    landmark: z.string().nullable().optional(),
     city: z.string(),
     coordinates: CoordinatesZ,
   }),
   delivery: z.object({
     address: z.string(),
+    landmark: z.string().nullable().optional(),
     city: z.string(),
     coordinates: CoordinatesZ,
   }),

@@ -1,6 +1,7 @@
 // services/backend/src/modules/orders/orders.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import "../../middleware/auth.middleware.js";
 import {
   errorResponse,
@@ -43,7 +44,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -141,7 +142,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -159,7 +160,7 @@ class OrdersController {
       const { id } = request.params;
 
       const order = await ordersService.getOrderById(
-        Number.parseFloat(id),
+        Number.parseInt(id, 10),
         userId,
         role,
       );
@@ -173,7 +174,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -203,6 +204,10 @@ class OrdersController {
         page,
         limit,
         status,
+        dateFrom,
+        dateTo,
+        sortBy,
+        sortOrder,
       );
 
       return paginatedResponse(reply, result.orders, result.pagination);
@@ -214,7 +219,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -259,7 +264,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -278,7 +283,7 @@ class OrdersController {
       const { cancellationReason } = request.body;
 
       const result = await ordersService.cancelOrder(
-        Number.parseFloat(id),
+        Number.parseInt(id, 10),
         userId,
         role,
         cancellationReason,
@@ -293,7 +298,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -324,7 +329,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -346,7 +351,7 @@ class OrdersController {
       const { status } = request.body;
 
       const result = await ordersService.updateOrderStatus(
-        Number.parseFloat(id),
+        Number.parseInt(id, 10),
         status,
         userId,
       );
@@ -364,7 +369,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -402,7 +407,7 @@ class OrdersController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }

@@ -6,7 +6,7 @@ import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import logger from "../config/logger.js";
-import db from "./db.js";
+import { drizzlePool } from "./drizzle.js";
 import drizzleDb from "./drizzle.js";
 
 /**
@@ -34,7 +34,7 @@ export const drizzleTransaction = async <T>(
 export const rawTransaction = async <T>(
   callback: (client: pg.PoolClient) => Promise<T>,
 ): Promise<T> => {
-  const client = await db.getClient();
+  const client = await drizzlePool.connect();
 
   try {
     await client.query("BEGIN");

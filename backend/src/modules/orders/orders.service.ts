@@ -13,7 +13,7 @@ import {
 } from "../../utils/validation.util.js";
 import ordersRepository from "./orders.repository.js";
 
-import type { CalculateFareRequest, CreateOrderRequest } from "./orders.zod.js";
+import type { CalculateFareRequest, CreateOrderRequest, CancelOrderResult } from "./orders.zod.js";
 import { CalculateFareRequestZ } from "./orders.zod.js";
 import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
 
@@ -81,6 +81,7 @@ type OrderRow = {
   gstAmount?: number | string | null;
   subtotalBeforeTax?: number | string | null;
   totalPrice?: number | string | null;
+  clientId?: number | null;
   clientName?: string | null;
   clientPhone?: string | null;
   specialInstructions?: string | null;
@@ -268,8 +269,8 @@ class OrdersService {
       });
 
       const validateLocation = (location: OrderAddress, type: string) => {
-        const required = [
-          "address",
+        const required: (keyof OrderAddress)[] = [
+          "fullAddress",
           "latitude",
           "longitude",
           "city",
@@ -278,9 +279,7 @@ class OrdersService {
           "contactName",
           "contactPhone",
         ];
-        const missing = required.filter(
-          (field: string) => !(location as any)[field],
-        );
+        const missing = required.filter((field) => !location[field]);
         if (missing.length > 0) {
           logger.error({
             msg: `[CREATE-ORDER-SERVICE] ${type} location validation failed`,
@@ -602,6 +601,10 @@ class OrdersService {
     page: number = 1,
     limit: number = 20,
     status?: string,
+    dateFrom?: string,
+    dateTo?: string,
+    sortBy?: string,
+    sortOrder?: string,
   ): Promise<{
     orders: import("./orders.zod.js").OrderListItem[];
     pagination: {
@@ -619,6 +622,10 @@ class OrdersService {
         limit,
         offset,
         status,
+        dateFrom,
+        dateTo,
+        sortBy,
+        sortOrder as "asc" | "desc" | undefined,
       );
 
       return {
@@ -638,12 +645,6 @@ class OrdersService {
               (Date.now() - pickupTime) / (1000 * 60),
             );
           }
-
-          // Compute status-specific timestamp for "X mins ago" display
-          let statusTimestamp = order.createdAt;
-          if (order.deliveredAt) statusTimestamp = order.deliveredAt;
-          else if (order.pickedUpAt) statusTimestamp = order.pickedUpAt;
-          else if (order.acceptedAt) statusTimestamp = order.acceptedAt;
 
           // Format weight tier display (e.g., "1-5 kg", "5-10 kg")
           const weightTierDisplay =
@@ -672,13 +673,15 @@ class OrdersService {
               ? Number.parseFloat(order.actualDistanceKm)
               : null,
             actualDurationMins,
-            totalPrice: Number.parseFloat(order.totalPrice),
+            totalPrice: Number.parseFloat(order.totalPrice ?? "0"),
             createdAt: order.createdAt,
             pickup: {
               address: order.pickupAddress,
+              city: order.pickupCity ?? undefined,
             },
             delivery: {
               address: order.deliveryAddress,
+              city: order.deliveryCity ?? undefined,
             },
             courier: order.courierId
               ? {
@@ -783,7 +786,7 @@ class OrdersService {
     userId: number,
     userRole: string,
     cancellationReason: string,
-  ): Promise<any> {
+  ): Promise<CancelOrderResult> {
     try {
       // Get order details for authorization
       const order = await ordersRepository.findById(orderId);
@@ -957,12 +960,6 @@ class OrdersService {
       actualDurationMins = Math.round((Date.now() - pickupTime) / (1000 * 60));
     }
 
-    // Compute status-specific timestamp for "X mins ago" display
-    let statusTimestamp = order.createdAt;
-    if (order.deliveredAt) statusTimestamp = order.deliveredAt;
-    else if (order.pickedUpAt) statusTimestamp = order.pickedUpAt;
-    else if (order.acceptedAt) statusTimestamp = order.acceptedAt;
-
     // Format weight tier display (e.g., "1-5 kg", "5-10 kg")
     const weightTierDisplay =
       order.weightTierName ||
@@ -1083,6 +1080,13 @@ class OrdersService {
             profilePictureUrl: order.courierPhoto || undefined,
           }
         : null,
+
+      // Client details
+      client: {
+        userId: order.clientId!,
+        name: order.clientName ?? undefined,
+        phone: order.clientPhone ?? undefined,
+      },
     };
   }
 }
