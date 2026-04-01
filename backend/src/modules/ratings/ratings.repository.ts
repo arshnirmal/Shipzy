@@ -1,13 +1,11 @@
 // services/backend/src/modules/ratings/ratings.repository.ts
-import { eq, and, gte, isNotNull } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { eq, and, isNotNull, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import drizzleDb from "../../database/drizzle.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import ratingsQueries from "../../database/queries/ratings.queries.js";
 import { driverRatings } from "../../database/schema/ratings.js";
 import { orderRequests } from "../../database/schema/orders.js";
-import { courierAssignments } from "../../database/schema/orders.js";
+import { courierStatus } from "../../database/schema/logistics.js";
 
 import type { RatingRow } from "../../types/ratings.js";
 
@@ -24,32 +22,52 @@ class RatingsRepository {
     comment?: string | null;
   }): Promise<RatingRow> {
     try {
-      const result = await drizzleDb
-        .insert(driverRatings)
-        .values({
-          orderId: ratingData.orderId,
-          driverId: ratingData.driverId,
-          customerId: ratingData.customerId,
-          rating: ratingData.rating,
-          isAnonymous: ratingData.isAnonymous ?? false,
-          comment: ratingData.comment || undefined,
-        })
-        .returning();
+      const insertedRating = await drizzleDb.transaction(async (tx) => {
+        const result = await tx
+          .insert(driverRatings)
+          .values({
+            orderId: ratingData.orderId,
+            driverId: ratingData.driverId,
+            customerId: ratingData.customerId,
+            rating: ratingData.rating,
+            isAnonymous: ratingData.isAnonymous ?? false,
+            comment: ratingData.comment || undefined,
+          })
+          .returning();
 
-      const row = result[0];
-      if (!row) {
-        throw new Error("Rating insert returned no row");
-      }
+        const row = result[0];
+        if (!row) {
+          throw new Error("Rating insert returned no row");
+        }
+
+        const updatedCourier = await tx
+          .update(courierStatus)
+          .set({
+            avgRating: sql`ROUND(((COALESCE(${courierStatus.avgRating}, 0)::numeric * ${courierStatus.totalRatings}::numeric + ${ratingData.rating}::numeric) / (${courierStatus.totalRatings} + 1)::numeric), 2)`,
+            totalRatings: sql`${courierStatus.totalRatings} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(courierStatus.courierId, ratingData.driverId))
+          .returning({ courierId: courierStatus.courierId });
+
+        if (updatedCourier.length === 0) {
+          throw new Error(
+            `Courier status not found for driver ${ratingData.driverId}`,
+          );
+        }
+
+        return row;
+      });
 
       return {
-        ratingId: row.ratingId,
-        orderId: row.orderId,
-        driverId: row.driverId,
-        customerId: row.customerId,
-        rating: row.rating,
-        isAnonymous: row.isAnonymous,
-        comment: row.comment || null,
-        createdAt: row.createdAt,
+        ratingId: insertedRating.ratingId,
+        orderId: insertedRating.orderId,
+        driverId: insertedRating.driverId,
+        customerId: insertedRating.customerId,
+        rating: insertedRating.rating,
+        isAnonymous: insertedRating.isAnonymous,
+        comment: insertedRating.comment || null,
+        createdAt: insertedRating.createdAt,
       } as RatingRow;
     } catch (error) {
       logger.error({
@@ -70,10 +88,10 @@ class RatingsRepository {
     since: Date,
   ): Promise<RatingRow[]> {
     try {
-      const result = await db.query(ratingsQueries.FIND_DRIVER_RATINGS_RECENT, [
-        driverId,
-        since,
-      ]);
+      const result = await drizzlePool.query(
+        ratingsQueries.FIND_DRIVER_RATINGS_RECENT,
+        [driverId, since],
+      );
       return result.rows;
     } catch (error) {
       logger.error({
@@ -121,7 +139,9 @@ class RatingsRepository {
    */
   async getDriverForOrder(orderId: number): Promise<number | null> {
     try {
-      const result = await db.query(ratingsQueries.ORDER_HAS_DRIVER, [orderId]);
+      const result = await drizzlePool.query(ratingsQueries.ORDER_HAS_DRIVER, [
+        orderId,
+      ]);
       return result.rows[0]?.courierId || null;
     } catch (error) {
       logger.error({

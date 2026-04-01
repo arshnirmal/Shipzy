@@ -1,8 +1,7 @@
 // services/backend/src/modules/users/users.repository.ts
 import { eq, and, isNull } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import drizzleDb from "../../database/drizzle.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import usersQueries from "../../database/queries/users.queries.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { userAddresses } from "../../database/schema/users.js";
@@ -150,7 +149,9 @@ class UsersRepository {
    */
   async getAddresses(userId: number): Promise<Address[]> {
     try {
-      const result = await db.query(usersQueries.GET_USER_ADDRESSES, [userId]);
+      const result = await drizzlePool.query(usersQueries.GET_USER_ADDRESSES, [
+        userId,
+      ]);
       return result.rows;
     } catch (error) {
       logger.error({
@@ -166,7 +167,7 @@ class UsersRepository {
    */
   async getAddressById(addressId: number): Promise<Address | null> {
     try {
-      const result = await db.query(usersQueries.GET_ADDRESS_BY_ID, [
+      const result = await drizzlePool.query(usersQueries.GET_ADDRESS_BY_ID, [
         addressId,
       ]);
       return result.rows[0] || null;
@@ -186,7 +187,7 @@ class UsersRepository {
     userId: number,
     addressData: AddressData,
   ): Promise<Address> {
-    const client = await db.getClient();
+    const client = await drizzlePool.connect();
 
     try {
       await client.query("BEGIN");

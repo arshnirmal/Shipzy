@@ -1,8 +1,7 @@
 // services/backend/src/modules/static/static.repository.ts
 import { eq, and, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import drizzleDb from "../../database/drizzle.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import cacheUtil from "../../utils/cache.util.js";
 import staticQueries from "../../database/queries/static.queries.js";
 import {
@@ -19,7 +18,7 @@ class StaticRepository {
    */
   async getDeliveryTypes() {
     try {
-      const result = await db.query(staticQueries.GET_DELIVERY_TYPES);
+      const result = await drizzlePool.query(staticQueries.GET_DELIVERY_TYPES);
       return result.rows;
     } catch (error) {
       logger.error({
@@ -179,7 +178,7 @@ class StaticRepository {
    */
   async getOrderStatuses() {
     try {
-      const result = await db.query(staticQueries.GET_ORDER_STATUSES);
+      const result = await drizzlePool.query(staticQueries.GET_ORDER_STATUSES);
       return result.rows;
     } catch (error) {
       logger.error({
@@ -195,7 +194,9 @@ class StaticRepository {
    */
   async getAssignmentStatuses() {
     try {
-      const result = await db.query(staticQueries.GET_ASSIGNMENT_STATUSES);
+      const result = await drizzlePool.query(
+        staticQueries.GET_ASSIGNMENT_STATUSES,
+      );
       return result.rows;
     } catch (error) {
       logger.error({
@@ -213,7 +214,7 @@ class StaticRepository {
    */
   async getCreateOrderData() {
     try {
-      const result = await db.query(staticQueries.GET_CREATE_ORDER_DATA);
+      const result = await drizzlePool.query(staticQueries.GET_CREATE_ORDER_DATA);
       return result.rows[0].data;
     } catch (error) {
       logger.error({

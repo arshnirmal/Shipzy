@@ -2,8 +2,6 @@
 import { eq, and, isNull, gt, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
-import db from "../../database/db.js";
-import authQueries from "../../database/queries/auth.queries.js";
 import { getUserRoleName } from "../../utils/roles.utils.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { authSessions } from "../../database/schema/users.js";
@@ -278,9 +276,14 @@ class AuthRepository {
 
       // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
       if (userData.roleName === "courier") {
-        await db.query(authQueries.INITIALIZE_COURIER_STATUS, [
-          createdUser.userId,
-        ]);
+        await drizzleDb
+          .insert(courierStatus)
+          .values({
+            courierId: createdUser.userId,
+            isAvailable: false,
+            isOnline: false,
+          })
+          .onConflictDoNothing({ target: courierStatus.courierId });
       }
 
       // Fetch full user with role for return type compatibility
@@ -336,9 +339,14 @@ class AuthRepository {
 
       // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
       if (userData.roleName === "courier") {
-        await db.query(authQueries.INITIALIZE_COURIER_STATUS, [
-          createdUser.userId,
-        ]);
+        await drizzleDb
+          .insert(courierStatus)
+          .values({
+            courierId: createdUser.userId,
+            isAvailable: false,
+            isOnline: false,
+          })
+          .onConflictDoNothing({ target: courierStatus.courierId });
       }
 
       // Fetch full user with role for return type compatibility

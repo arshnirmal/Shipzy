@@ -1,6 +1,6 @@
 // services/backend/src/modules/drivers/sessions.repository.ts
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
+import { drizzlePool } from "../../database/drizzle.js";
 import sessionsQueries from "../../database/queries/sessions.queries.js";
 
 export interface DriverSession {
@@ -34,7 +34,7 @@ class SessionsRepository {
    */
   async createSession(sessionData: CreateSessionData): Promise<DriverSession> {
     try {
-      const result = await db.query(sessionsQueries.CREATE_SESSION, [
+      const result = await drizzlePool.query(sessionsQueries.CREATE_SESSION, [
         sessionData.driverId,
         sessionData.startedAt,
         sessionData.lastLocationLat || null,
@@ -56,7 +56,7 @@ class SessionsRepository {
    */
   async findActiveSession(driverId: number): Promise<DriverSession | null> {
     try {
-      const result = await db.query(sessionsQueries.FIND_ACTIVE_SESSION, [
+      const result = await drizzlePool.query(sessionsQueries.FIND_ACTIVE_SESSION, [
         driverId,
       ]);
       return result.rows[0] || null;
@@ -75,7 +75,7 @@ class SessionsRepository {
    */
   async endSession(endData: EndSessionData): Promise<DriverSession> {
     try {
-      const result = await db.query(sessionsQueries.END_SESSION, [
+      const result = await drizzlePool.query(sessionsQueries.END_SESSION, [
         endData.sessionId,
         endData.endedAt,
         endData.lastLocationLat || null,
@@ -101,7 +101,7 @@ class SessionsRepository {
     endDate: Date,
   ): Promise<DriverSession[]> {
     try {
-      const result = await db.query(sessionsQueries.GET_SESSIONS_IN_RANGE, [
+      const result = await drizzlePool.query(sessionsQueries.GET_SESSIONS_IN_RANGE, [
         driverId,
         startDate,
         endDate,

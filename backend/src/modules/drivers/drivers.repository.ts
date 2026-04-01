@@ -2,8 +2,7 @@
 import { eq, and, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import drizzleDb from "../../database/drizzle.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository, { DriverSession } from "./sessions.repository.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
@@ -32,9 +31,10 @@ class DriversRepository {
    */
   async findCourierById(userId: number): Promise<Courier | null> {
     try {
-      const result = await db.query(driversQueries.FIND_COURIER_BY_USER_ID, [
-        userId,
-      ]);
+      const result = await drizzlePool.query(
+        driversQueries.FIND_COURIER_BY_USER_ID,
+        [userId],
+      );
       return result.rows[0] || null;
     } catch (error) {
       logger.error({
@@ -66,9 +66,10 @@ class DriversRepository {
         .where(eq(userProfiles.userId, userId));
 
       // Fetch updated courier profile (complex query - keep as raw SQL)
-      const result = await db.query(driversQueries.FIND_COURIER_BY_USER_ID, [
-        userId,
-      ]);
+      const result = await drizzlePool.query(
+        driversQueries.FIND_COURIER_BY_USER_ID,
+        [userId],
+      );
 
       return result.rows[0];
     } catch (error) {
@@ -128,7 +129,7 @@ class DriversRepository {
     longitude: number,
   ): Promise<CourierLocationResult> {
     try {
-      const result = await db.query(driversQueries.UPDATE_COURIER_LOCATION, [
+      const result = await drizzlePool.query(driversQueries.UPDATE_COURIER_LOCATION, [
         courierId,
         longitude,
         latitude,
@@ -151,7 +152,7 @@ class DriversRepository {
     courierId: number,
   ): Promise<CourierAssignmentRow[]> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         driversQueries.FIND_COURIER_ACTIVE_ASSIGNMENTS,
         [courierId],
       );
@@ -170,7 +171,7 @@ class DriversRepository {
    */
   async getEarningsSummary(courierId: number): Promise<EarningsSummaryRow> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         driversQueries.GET_COURIER_EARNINGS_SUMMARY,
         [courierId],
       );

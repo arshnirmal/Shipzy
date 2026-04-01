@@ -1,5 +1,5 @@
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
+import { drizzlePool } from "../../database/drizzle.js";
 
 export class PricingRepository {
   /**
@@ -7,7 +7,7 @@ export class PricingRepository {
    */
   async getPricingConfigValue(key: string): Promise<number | null> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         `SELECT config_value AS "configValue" FROM public.pricing_config WHERE config_key = $1 AND is_active = TRUE`,
         [key],
       );
@@ -27,7 +27,7 @@ export class PricingRepository {
    */
   async getAllPricingConfig(): Promise<Map<string, number>> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         `SELECT config_key AS "configKey", config_value AS "configValue" FROM public.pricing_config WHERE is_active = TRUE`,
       );
 
@@ -55,7 +55,7 @@ export class PricingRepository {
     updatedBy: number,
   ): Promise<void> {
     try {
-      await db.query(
+      await drizzlePool.query(
         `
         UPDATE public.pricing_config
         SET config_value = $1, updated_by = $2, updated_at = NOW()
@@ -79,7 +79,7 @@ export class PricingRepository {
    */
   async getSpecialHandlingFee(packageTypeId: number): Promise<number> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         `SELECT special_handling_fee AS "specialHandlingFee" FROM public.package_types WHERE package_type_id = $1`,
         [packageTypeId],
       );

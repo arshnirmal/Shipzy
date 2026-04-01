@@ -7,6 +7,7 @@ import {
   varchar,
   boolean,
   integer,
+  numeric,
   date,
   bigserial,
   timestamp,
@@ -60,6 +61,8 @@ export const courierStatus = logisticsSchema.table("courier_status", {
     { onDelete: "set null" },
   ),
   totalDeliveriesToday: integer("total_deliveries_today").default(0).notNull(),
+  avgRating: numeric("avg_rating", { precision: 3, scale: 2 }),
+  totalRatings: integer("total_ratings").default(0).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
