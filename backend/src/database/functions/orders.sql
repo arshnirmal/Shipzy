@@ -238,7 +238,6 @@ DECLARE
     v_pickup_location JSONB;
     v_delivery_location JSONB;
     v_items JSONB;
-    v_labels JSONB;
     result JSON;
 
 BEGIN 
@@ -320,13 +319,10 @@ BEGIN
     -- OPTIMIZED: Extract items as JSONB array (replaces orders.items table)
     v_items := COALESCE(p_order_data -> 'items', '[]'::jsonb);
 
-    -- OPTIMIZED: Extract labels as JSONB array (replaces orders.order_labels table)
-    v_labels := COALESCE(p_order_data -> 'labels', '[]'::jsonb);
-
-    -- Create order with JSONB locations, items, and labels
+    -- Create order with JSONB locations and items
     INSERT INTO orders.requests (
         client_id, delivery_type_id, vehicle_category_id, weight_tier_id, status,
-        pickup_location, delivery_location, items, labels,
+        pickup_location, delivery_location, items,
         package_description, package_type_id, special_instructions, declared_value,
         notify_recipient_sms, coupon_code,
         estimated_distance_km, base_price, distance_price, weight_surcharge,
@@ -335,7 +331,7 @@ BEGIN
     )
     VALUES (
         v_client_id, v_delivery_type_id, v_vehicle_category_id, (p_order_data ->> 'weightTierId') :: INT, v_status,
-        v_pickup_location, v_delivery_location, v_items, v_labels,
+        v_pickup_location, v_delivery_location, v_items,
         p_order_data ->> 'packageDescription',
         (p_order_data ->> 'packageTypeId') :: INT,
         p_order_data ->> 'specialInstructions',

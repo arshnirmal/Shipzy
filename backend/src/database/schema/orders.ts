@@ -1,5 +1,5 @@
 // services/backend/src/database/schema/orders.ts
-// Orders schema with JSONB consolidation (locations, items, labels)
+// Orders schema with JSONB consolidation (locations, items)
 
 import {
   pgTable,
@@ -27,7 +27,6 @@ import { paymentMethods } from "./payments.js";
 import type {
   OrderLocationJSONB,
   OrderItemJSONB,
-  OrderLabelsJSONB,
   OrderMetadataJSONB,
 } from "./types.js";
 
@@ -60,7 +59,6 @@ export const orderRequests = ordersSchema.table("requests", {
     .$type<OrderLocationJSONB>()
     .notNull(),
   items: jsonb("items").$type<OrderItemJSONB[]>().default([]).notNull(),
-  labels: jsonb("labels").$type<OrderLabelsJSONB>().default([]).notNull(),
   metadata: jsonb("metadata").$type<OrderMetadataJSONB>().default({}).notNull(),
 
   // Note: pickup_point and delivery_point are computed PostGIS columns

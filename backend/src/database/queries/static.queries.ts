@@ -2,7 +2,7 @@
 
 export default {
   /**
-   * Get all delivery types with nested labels and supported vehicles/weight tiers
+   * Get all delivery types with supported vehicles/weight tiers
    */
   GET_DELIVERY_TYPES: `
     WITH dt AS (
@@ -18,33 +18,6 @@ export default {
       FROM public.delivery_types dt
       WHERE dt.is_active = TRUE
     ),
-      labels_src AS (
-        SELECT DISTINCT ON (dtl.delivery_type_id, dtl.label_id)
-          dtl.delivery_type_id,
-          dtl.display_order,
-          l.label_id, l.name, l.display_text, l.color, l.background_color
-        FROM public.delivery_type_labels dtl
-        JOIN public.labels l
-          ON l.label_id = dtl.label_id
-         AND l.is_active = TRUE
-        ORDER BY dtl.delivery_type_id, dtl.label_id, dtl.display_order
-      ),
-      labels AS (
-        SELECT
-          delivery_type_id,
-          jsonb_agg(
-            jsonb_build_object(
-              'labelId', label_id,
-              'name', name::text,
-              'displayText', display_text::text,
-              'color', color::text,
-              'backgroundColor', background_color::text
-            )
-            ORDER BY display_order
-          ) AS labels
-        FROM labels_src
-        GROUP BY delivery_type_id
-      ),
       active_dtc_dedup AS (
         SELECT DISTINCT ON (dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id)
           dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id
@@ -106,10 +79,9 @@ export default {
         COALESCE(d.per_km_rate, 0) AS "perKmRate",
         COALESCE(d.sort_order, 0) AS "sortOrder",
         COALESCE(d.is_active, false) AS "isActive",
-        COALESCE(lb.labels, '[]'::jsonb) AS labels,
+        '[]'::jsonb AS labels,
         COALESCE(v.supported_vehicles, '[]'::jsonb) AS "supportedVehicles"
       FROM dt d
-      LEFT JOIN labels lb ON lb.delivery_type_id = d.delivery_type_id
       LEFT JOIN vehicles v ON v.delivery_type_id = d.delivery_type_id
       ORDER BY d.sort_order;
     `,
@@ -142,19 +114,6 @@ export default {
         additional_charge AS "additionalCharge"
     FROM public.weight_tiers
     ORDER BY min_weight_kg ASC
-    `,
-
-  /**
-   * Get all labels (for categorization)
-   */
-  GET_LABELS: `
-    SELECT
-        label_id AS "labelId",
-        name AS "name",
-        icon AS "icon",
-        color AS "color"
-    FROM public.labels
-    ORDER BY name ASC
     `,
 
   /**
@@ -255,33 +214,6 @@ export default {
         FROM public.delivery_types dt
         WHERE dt.is_active = TRUE
       ),
-      labels_src AS (
-        SELECT DISTINCT ON (dtl.delivery_type_id, dtl.label_id)
-          dtl.delivery_type_id,
-          dtl.display_order,
-          l.label_id, l.name, l.display_text, l.color, l.background_color
-        FROM public.delivery_type_labels dtl
-        JOIN public.labels l
-          ON l.label_id = dtl.label_id
-         AND l.is_active = TRUE
-        ORDER BY dtl.delivery_type_id, dtl.label_id, dtl.display_order
-      ),
-      labels AS (
-        SELECT
-          delivery_type_id,
-          jsonb_agg(
-            jsonb_build_object(
-              'labelId', label_id,
-              'name', name::text,
-              'displayText', display_text::text,
-              'color', color::text,
-              'backgroundColor', background_color::text
-            )
-            ORDER BY display_order
-          ) AS labels
-        FROM labels_src
-        GROUP BY delivery_type_id
-      ),
       active_dtc_dedup AS (
         SELECT DISTINCT ON (dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id)
           dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id
@@ -374,13 +306,12 @@ export default {
               'perKmRate', d.per_km_rate,
               'sortOrder', d.sort_order,
               'isActive', d.is_active,
-              'labels', COALESCE(lb.labels, '[]'::jsonb),
+              'labels', '[]'::jsonb,
               'supportedVehicles', COALESCE(v.supported_vehicles, '[]'::jsonb)
             )
             ORDER BY d.sort_order
           )
           FROM dt d
-          LEFT JOIN labels lb ON lb.delivery_type_id = d.delivery_type_id
           LEFT JOIN vehicles v ON v.delivery_type_id = d.delivery_type_id
         ),
         'packageTypes', (SELECT package_types FROM package_types_data),

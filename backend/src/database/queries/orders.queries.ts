@@ -117,9 +117,8 @@ export default {
       o.delivery_location->>'contactName' AS "deliveryContactName",
       o.delivery_location->>'contactPhone' AS "deliveryContactPhone",
 
-          -- OPTIMIZED: Items and labels from JSONB
+          -- OPTIMIZED: Items from JSONB
       o.items AS "orderItems",
-      o.labels AS "orderLabels",
 
           -- Courier details (if assigned)
       ca.assignment_id AS "assignmentId",

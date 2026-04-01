@@ -172,36 +172,6 @@ export const deliveryTypeCapabilities = pgTable(
   },
 );
 
-// Labels
-export const labels = pgTable("labels", {
-  labelId: serial("label_id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),
-  displayText: varchar("display_text", { length: 100 }).notNull(),
-  color: varchar("color", { length: 7 }),
-  backgroundColor: varchar("background_color", { length: 7 }),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-// Delivery Type Labels
-export const deliveryTypeLabels = pgTable(
-  "delivery_type_labels",
-  {
-    deliveryTypeId: integer("delivery_type_id")
-      .notNull()
-      .references(() => deliveryTypes.deliveryTypeId, { onDelete: "cascade" }),
-    labelId: integer("label_id")
-      .notNull()
-      .references(() => labels.labelId, { onDelete: "cascade" }),
-    displayOrder: integer("display_order").default(0).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-);
-
 // Pricing Config
 export const pricingConfig = pgTable("pricing_config", {
   configId: serial("config_id").primaryKey(),

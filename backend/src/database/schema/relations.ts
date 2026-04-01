@@ -16,7 +16,6 @@ import {
 import {
   courierStatus,
   courierVehicles,
-  locations,
   driverSessions,
 } from "./logistics.js";
 import { paymentTransactions, refunds } from "./payments.js";
@@ -131,9 +130,9 @@ export const courierVehiclesRelations = relations(
 );
 
 export const driverSessionsRelations = relations(driverSessions, ({ one }) => ({
-  driver: one(courierStatus, {
+  driver: one(userProfiles, {
     fields: [driverSessions.driverId],
-    references: [courierStatus.courierId],
+    references: [userProfiles.userId],
   }),
 }));
 

@@ -1,15 +1,13 @@
 // services/backend/src/database/schema/logistics.ts
-// Logistics schema: locations (for couriers), courier_status, courier_vehicles, driver_sessions
+// Logistics schema: courier_status, courier_vehicles, driver_sessions
 
 import {
   pgSchema,
   serial,
   varchar,
-  text,
   boolean,
   integer,
   date,
-  numeric,
   bigserial,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -19,32 +17,6 @@ import { courierAssignments } from "./orders.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
 
 const logisticsSchema = pgSchema("logistics");
-
-// Locations (for courier current locations - kept separate for spatial indexing)
-export const locations = logisticsSchema.table("locations", {
-  locationId: serial("location_id").primaryKey(),
-  buildingName: varchar("building_name", { length: 100 }),
-  floorNumber: varchar("floor_number", { length: 10 }),
-  flatNumber: varchar("flat_number", { length: 10 }),
-  address: text("address").notNull(),
-  latitude: numeric("latitude", { precision: 10, scale: 8 }).notNull(),
-  longitude: numeric("longitude", { precision: 11, scale: 8 }).notNull(),
-  location: geography("location").notNull(),
-  city: varchar("city", { length: 100 }),
-  state: varchar("state", { length: 100 }),
-  postalCode: varchar("postal_code", { length: 20 }),
-  country: varchar("country", { length: 100 }).default("India").notNull(),
-  landmark: varchar("landmark", { length: 255 }),
-  howToReach: text("how_to_reach"),
-  contactName: varchar("contact_name", { length: 100 }),
-  contactPhone: varchar("contact_phone", { length: 20 }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
 
 // Courier Vehicles
 export const courierVehicles = logisticsSchema.table("courier_vehicles", {
@@ -62,6 +34,7 @@ export const courierVehicles = logisticsSchema.table("courier_vehicles", {
   registrationDocumentUrl: varchar("registration_document_url", {
     length: 255,
   }),
+  isPrimary: boolean("is_primary").default(false).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -100,15 +73,11 @@ export const driverSessions = logisticsSchema.table("driver_sessions", {
   sessionId: bigserial("session_id", { mode: "number" }).primaryKey(),
   driverId: integer("driver_id")
     .notNull()
-    .references(() => courierStatus.courierId),
+    .references(() => userProfiles.userId),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   totalOnlineMinutes: integer("total_online_minutes"),
-  lastLocationLat: numeric("last_location_lat", { precision: 10, scale: 8 }),
-  lastLocationLng: numeric("last_location_lng", {
-    precision: 11,
-    scale: 8,
-  }),
+  lastLocation: geography("last_location"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

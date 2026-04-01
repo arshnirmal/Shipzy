@@ -25,14 +25,7 @@ export const OrderItemJSONBZ = z.object({
 });
 export type OrderItemJSONB = z.infer<typeof OrderItemJSONBZ>;
 
-export const OrderLabelsJSONBZ = z.array(z.string().min(1));
-export type OrderLabelsJSONB = z.infer<typeof OrderLabelsJSONBZ>;
-
 export const OrderMetadataJSONBZ = z
-  .object({
-    couponCode: z.string().max(50).nullable().optional(),
-    notifyRecipientSms: z.boolean().optional(),
-    specialInstructions: z.string().max(1000).nullable().optional(),
-  })
+  .object({})
   .catchall(z.unknown());
 export type OrderMetadataJSONB = z.infer<typeof OrderMetadataJSONBZ>;

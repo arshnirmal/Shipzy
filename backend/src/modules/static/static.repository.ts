@@ -10,7 +10,6 @@ import {
   weightTiers,
   vehicleCategories,
   packageTypes,
-  labels,
 } from "../../database/schema/public.js";
 import { paymentMethods } from "../../database/schema/payments.js";
 
@@ -148,27 +147,6 @@ class StaticRepository {
     } catch (error) {
       logger.error({
         msg: "Error getting package types",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get all labels (migrated to Drizzle)
-   */
-  async getLabels() {
-    try {
-      const result = await drizzleDb
-        .select()
-        .from(labels)
-        .where(eq(labels.isActive, true))
-        .orderBy(labels.name);
-
-      return result;
-    } catch (error) {
-      logger.error({
-        msg: "Error getting labels",
         error: (error as Error).message,
       });
       throw error;
