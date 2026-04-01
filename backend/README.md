@@ -168,17 +168,17 @@ backend/
 
 ## 🛠️ Tech Stack
 
-| Category           | Technology                                          |
-| ------------------ | --------------------------------------------------- |
-| **Runtime**        | Node.js 24+                                         |
-| **Framework**      | Fastify 5.7+                                        |
-| **Database**       | PostgreSQL 14+ with PostGIS + Drizzle ORM           |
-| **Authentication** | Firebase Auth + Google OAuth + Email/Password + JWT |
-| **Package Manager** | pnpm 10.0+                                         |
-| **Language**       | TypeScript 5.7+                                     |
-| **Logger**         | Pino                                                |
-| **Validation**     | Zod + AJV                                           |
-| **Security**       | Helmet, CORS, Rate Limiting                         |
+| Category            | Technology                                          |
+| ------------------- | --------------------------------------------------- |
+| **Runtime**         | Node.js 24+                                         |
+| **Framework**       | Fastify 5.7+                                        |
+| **Database**        | PostgreSQL 14+ with PostGIS + Drizzle ORM           |
+| **Authentication**  | Firebase Auth + Google OAuth + Email/Password + JWT |
+| **Package Manager** | pnpm 10.0+                                          |
+| **Language**        | TypeScript 5.7+                                     |
+| **Logger**          | Pino                                                |
+| **Validation**      | Zod + AJV                                           |
+| **Security**        | Helmet, CORS, Rate Limiting                         |
 
 ---
 
@@ -299,16 +299,17 @@ sequenceDiagram
 
 ## 🔧 Environment Variables
 
-| Variable                | Description                    | Default                      |
-|-------------------------|--------------------------------|------------------------------|
+| Variable                 | Description                    | Default                      |
+| ------------------------ | ------------------------------ | ---------------------------- |
 | `NODE_ENV`               | Environment                    | `development`                |
 | `BACKEND_PORT`           | Server port                    | `3000`                       |
 | `BACKEND_HOST`           | Server host                    | `0.0.0.0`                    |
+| `DATABASE_URL`           | Full Postgres/Neon URL         | (empty)                      |
 | `DB_HOST`                | Database host                  | `localhost`                  |
 | `DB_PORT`                | Database port                  | `5432`                       |
 | `DB_NAME`                | Database name                  | `shipzy_dev`                 |
 | `DB_USER`                | Database user                  | `shipzy_user`                |
-| `DB_PASSWORD`            | Database password              | `secure_password`            |
+| `DB_PASSWORD`            | Database password (fallback)   | `secure_password`            |
 | `DB_POOL_MAX`            | Database connection pool size  | `20`                         |
 | `JWT_SECRET`             | JWT signing key                | (generate with openssl)      |
 | `JWT_EXPIRES_IN`         | JWT expiration time            | `7d`                         |

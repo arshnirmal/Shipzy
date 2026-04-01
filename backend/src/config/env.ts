@@ -35,6 +35,7 @@ const config: Config = {
 
   // Database
   database: {
+    connectionString: process.env.DATABASE_URL || undefined,
     host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "5432", 10),
     database: process.env.DB_NAME || "shipzy_dev",
@@ -92,7 +93,6 @@ const config: Config = {
 const requiredEnvVars = [
   "JWT_SECRET",
   "MAPBOX_ACCESS_TOKEN",
-  "DB_PASSWORD",
   // Firebase credentials (optional if using service account file, required for cloud deployment)
   // 'FIREBASE_PROJECT_ID',
   // 'FIREBASE_CLIENT_EMAIL',
@@ -102,6 +102,11 @@ const requiredEnvVars = [
 const missingEnvVars = requiredEnvVars.filter(
   (varName) => !process.env[varName],
 );
+
+// Allow DATABASE_URL as an alternative to DB_PASSWORD-based split DB credentials.
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  missingEnvVars.push("DB_PASSWORD (or DATABASE_URL)");
+}
 
 if (missingEnvVars.length > 0) {
   throw new Error(

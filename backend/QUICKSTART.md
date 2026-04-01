@@ -7,7 +7,7 @@
 Before you start, make sure you have:
 
 - **Node.js** >= 24.10.0
-- **pnpm** >= 10.0.0  
+- **pnpm** >= 10.0.0
 - **Docker** & **Docker Compose**
 - **PostgreSQL** 14+ with PostGIS (if running locally)
 - **Firebase** project (for authentication)
@@ -17,11 +17,13 @@ Before you start, make sure you have:
 ## 🚀 Quick Start (Docker - Recommended)
 
 ### 1. Clone Repository
+
 ```bash
 cd /mnt/data/Arsh/Computer_Science/Projects/shipzy/backend
 ```
 
 ### 2. Environment Setup
+
 ```bash
 # Copy environment template
 cp .env.example .env
@@ -31,6 +33,7 @@ nano .env  # or use your preferred editor
 ```
 
 **Required Environment Variables:**
+
 ```bash
 # Server
 NODE_ENV=development
@@ -38,11 +41,12 @@ BACKEND_PORT=3000
 BACKEND_HOST=0.0.0.0
 
 # Database
+DATABASE_URL=postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=shipzy_dev
 DB_USER=shipzy_user
-DB_PASSWORD=your_secure_password
+DB_PASSWORD=your_secure_password # only needed if DATABASE_URL is empty
 DB_POOL_MAX=20
 
 # JWT
@@ -62,6 +66,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----E
 ```
 
 ### 3. Start Services
+
 ```bash
 # Start all services with database initialization
 docker compose -f docker-compose.dev.yml up -d --build
@@ -71,6 +76,7 @@ docker compose -f docker-compose.dev.yml logs -f backend
 ```
 
 ### 4. Verify Setup
+
 ```bash
 # Check health endpoint
 curl http://localhost:3000/health
@@ -86,11 +92,13 @@ curl http://localhost:3000/docs
 ## 💻 Local Development Setup
 
 ### 1. Install Dependencies
+
 ```bash
 pnpm install
 ```
 
 ### 2. Database Setup
+
 ```bash
 # Start PostgreSQL with Docker
 docker compose -f docker-compose.dev.yml up -d postgres
@@ -100,6 +108,7 @@ docker compose -f docker-compose.dev.yml logs -f postgres
 ```
 
 ### 3. Deploy Database Schema
+
 ```bash
 # Generate migrations (if schema changed)
 pnpm run db:generate
@@ -112,6 +121,7 @@ pnpm run db:seed
 ```
 
 ### 4. Start Development Server
+
 ```bash
 pnpm run dev
 ```
@@ -123,24 +133,28 @@ Your server is now running at `http://localhost:3000` with hot reload enabled.
 ## 🔧 Database Operations
 
 ### Generate Migrations
+
 ```bash
 # After changing schema files in src/database/schema/
 pnpm run db:generate
 ```
 
 ### Deploy Migrations
+
 ```bash
 # Apply pending migrations to database
 pnpm run db:deploy
 ```
 
 ### Reset Database
+
 ```bash
 # ⚠️ This will delete all data!
 pnpm run db:reset
 ```
 
 ### Seed Development Data
+
 ```bash
 # Add sample data for development
 pnpm run db:seed
@@ -151,16 +165,19 @@ pnpm run db:seed
 ## 🧪 Testing
 
 ### Run All Tests
+
 ```bash
 pnpm test
 ```
 
 ### Run Tests in Watch Mode
+
 ```bash
 pnpm run test:watch
 ```
 
 ### Test Specific Modules
+
 ```bash
 pnpm run test:auth      # Authentication tests
 pnpm run test:users     # User management tests
@@ -173,16 +190,19 @@ pnpm run test:static    # Static data tests
 ## 📡 API Testing
 
 ### Health Check
+
 ```bash
 curl http://localhost:3000/health
 ```
 
 ### Get Static Data (No Auth Required)
+
 ```bash
 curl http://localhost:3000/api/v1/static/delivery-types
 ```
 
 ### Authentication Example
+
 ```bash
 # Register a new user
 curl -X POST http://localhost:3000/api/v1/auth/register \
@@ -200,6 +220,7 @@ curl -X POST http://localhost:3000/api/v1/auth/register \
 ## 🔍 Troubleshooting
 
 ### Database Connection Issues
+
 ```bash
 # Check PostgreSQL container status
 docker compose -f docker-compose.dev.yml ps postgres
@@ -212,6 +233,7 @@ docker compose -f docker-compose.dev.yml exec postgres psql -U shipzy_user -d sh
 ```
 
 ### Port Already in Use
+
 ```bash
 # Find process using port 3000
 lsof -i :3000
@@ -221,6 +243,7 @@ kill -9 <PID>
 ```
 
 ### Migration Issues
+
 ```bash
 # Check migration status
 pnpm run db:deploy
@@ -230,6 +253,7 @@ pnpm run db:reset
 ```
 
 ### Environment Variable Issues
+
 ```bash
 # Verify required variables are set
 grep -E "(JWT_SECRET|MAPBOX_ACCESS_TOKEN|DB_PASSWORD)" .env

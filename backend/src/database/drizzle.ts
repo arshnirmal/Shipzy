@@ -6,17 +6,7 @@ import logger from "../config/logger.js";
 import * as schema from "./schema/index.js";
 
 // Create connection pool for Drizzle
-const pool = new Pool({
-  host: config.database.host,
-  port: config.database.port,
-  database: config.database.database,
-  user: config.database.user,
-  password: config.database.password,
-  max: config.database.max,
-  idleTimeoutMillis: config.database.idleTimeoutMillis,
-  connectionTimeoutMillis: config.database.connectionTimeoutMillis,
-  ssl: config.database.ssl,
-});
+const pool = new Pool(config.database);
 
 // Connection event handlers with cleanup support
 const connectHandler = () => {
@@ -39,7 +29,7 @@ export const cleanupDrizzlePool = async () => {
     // Remove event listeners to prevent memory leaks
     pool.removeListener("connect", connectHandler);
     pool.removeListener("error", errorHandler);
-    
+
     // Close all connections
     await pool.end();
     logger.info("Drizzle database pool closed successfully");
@@ -55,13 +45,13 @@ export const cleanupDrizzlePool = async () => {
 const testConnection = async () => {
   try {
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      setTimeout(() => reject(new Error("Database connection timeout")), 10000);
     });
 
     const connectionPromise = pool.query("SELECT NOW()");
-    
+
     await Promise.race([connectionPromise, timeoutPromise]);
-    
+
     logger.info({
       msg: "Drizzle database connection successful",
       time: new Date().toISOString(),
