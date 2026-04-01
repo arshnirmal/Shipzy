@@ -2,7 +2,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
 import { AppError } from "../../utils/error.util.js";
-import "../../middleware/auth.middleware.js";
 import {
   errorResponse,
   paginatedResponse,
@@ -35,12 +34,14 @@ class OrdersController {
 
       const result = await ordersService.calculateFare(fareData);
 
+      logger.info({
+        msg: "POST /api/v1/orders/calculate-fare",
+        statusCode: 200,
+        distanceKm: fareData.drop?.latitude ? "calculated" : "pending",
+      });
+
       return successResponse(reply, result, "Fare calculated successfully");
     } catch (error) {
-      logger.error({
-        msg: "Calculate fare controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -57,7 +58,6 @@ class OrdersController {
     request: FastifyRequest<{ Body: OrderData }>,
     reply: FastifyReply,
   ) {
-    const startTime = Date.now();
     let requestId: string | undefined;
 
     try {
@@ -65,80 +65,18 @@ class OrdersController {
       const orderData = request.body;
       requestId = request.id;
 
-      // Log incoming request with full payload
-      logger.info({
-        msg: "[CREATE-ORDER] Incoming request",
-        requestId,
-        userId,
-        userRole: role,
-        payload: {
-          deliveryTypeId: orderData.deliveryTypeId,
-          vehicleCategoryId: orderData.vehicleCategoryId,
-          weightTierId: orderData.weightTierId,
-          packageTypeId: orderData.packageTypeId,
-          paymentMethodId: orderData.paymentMethodId,
-          pickup: {
-            addressId: orderData.pickup.addressId,
-            address: orderData.pickup.fullAddress,
-            city: orderData.pickup.city,
-            state: orderData.pickup.state,
-            postalCode: orderData.pickup.postalCode,
-            latitude: orderData.pickup.latitude,
-            longitude: orderData.pickup.longitude,
-            contactName: orderData.pickup.contactName,
-            contactPhone: orderData.pickup.contactPhone,
-          },
-          delivery: {
-            addressId: orderData.delivery.addressId,
-            address: orderData.delivery.fullAddress,
-            city: orderData.delivery.city,
-            state: orderData.delivery.state,
-            postalCode: orderData.delivery.postalCode,
-            latitude: orderData.delivery.latitude,
-            longitude: orderData.delivery.longitude,
-            contactName: orderData.delivery.contactName,
-            contactPhone: orderData.delivery.contactPhone,
-          },
-          fareBreakdown: orderData.fareBreakdown,
-          packageDescription: orderData.packageDescription,
-          specialInstructions: orderData.specialInstructions,
-          declaredValue: orderData.declaredValue,
-          scheduledPickupTime: orderData.scheduledPickupTime,
-          scheduledDeliveryTime: orderData.scheduledDeliveryTime,
-        },
-      });
-
       const result = await ordersService.createOrder(userId, orderData);
 
-      const responseTime = Date.now() - startTime;
-
-      // Log successful response
       logger.info({
-        msg: "[CREATE-ORDER] Order created successfully",
+        msg: "Order created",
         requestId,
         userId,
         orderId: result.orderId,
-        orderUuid: result.orderUuid,
-        orderNumber: result.orderNumber,
-        totalPrice: result.fareBreakdown.totalPrice,
-        responseTimeMs: responseTime,
-        response: result,
+        statusCode: 201,
       });
 
       return successResponse(reply, result, "Order created successfully", 201);
     } catch (error) {
-      const responseTime = Date.now() - startTime;
-
-      logger.error({
-        msg: "[CREATE-ORDER] Error creating order",
-        requestId,
-        userId: request.user?.userId,
-        error: (error as Error).message,
-        errorStack: (error as Error).stack,
-        statusCode: (error as any).statusCode || 500,
-        responseTimeMs: responseTime,
-      });
-
       return errorResponse(
         reply,
         (error as Error).message,
@@ -165,12 +103,15 @@ class OrdersController {
         role,
       );
 
+      logger.info({
+        msg: "GET /api/v1/orders/:id",
+        statusCode: 200,
+        userId,
+        orderId: id,
+      });
+
       return successResponse(reply, order, "Order retrieved successfully");
     } catch (error) {
-      logger.error({
-        msg: "Get order controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -210,12 +151,18 @@ class OrdersController {
         sortOrder,
       );
 
+      logger.info({
+        msg: "GET /api/v1/orders",
+        statusCode: 200,
+        userId,
+        page,
+        limit,
+        count: result.orders.length,
+        total: result.pagination.total,
+      });
+
       return paginatedResponse(reply, result.orders, result.pagination);
     } catch (error) {
-      logger.error({
-        msg: "List orders controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -233,23 +180,22 @@ class OrdersController {
     reply: FastifyReply,
   ) {
     try {
-      const {
-        latitude,
-        longitude,
-        radius = "10",
-        limit = "20",
-      } = request.query;
-
-      if (!latitude || !longitude) {
-        return errorResponse(reply, "Latitude and longitude are required", 400);
-      }
+      const { latitude, longitude, radius, limit } = request.query;
 
       const orders = await ordersService.getAvailableOrders(
         latitude,
         longitude,
-        Number(radius),
-        Number(limit),
+        radius,
+        limit,
       );
+
+      logger.info({
+        msg: "GET /api/v1/orders/available",
+        statusCode: 200,
+        count: orders.length,
+        radius,
+        limit,
+      });
 
       return successResponse(
         reply,
@@ -257,10 +203,6 @@ class OrdersController {
         "Available orders retrieved successfully",
       );
     } catch (error) {
-      logger.error({
-        msg: "Get available orders controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -289,12 +231,15 @@ class OrdersController {
         cancellationReason,
       );
 
+      logger.info({
+        msg: "POST /api/v1/orders/:id/cancel",
+        statusCode: 200,
+        userId,
+        orderId: id,
+      });
+
       return successResponse(reply, result, "Order cancelled successfully");
     } catch (error) {
-      logger.error({
-        msg: "Cancel order controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -316,16 +261,19 @@ class OrdersController {
       const { id } = request.params;
 
       const result = await ordersService.acceptOrder(
-        Number.parseInt(id),
+        Number.parseInt(id, 10),
         userId,
       );
 
+      logger.info({
+        msg: "POST /api/v1/orders/:id/accept",
+        statusCode: 200,
+        userId,
+        orderId: id,
+      });
+
       return successResponse(reply, result, "Order accepted successfully");
     } catch (error) {
-      logger.error({
-        msg: "Accept order controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -356,16 +304,20 @@ class OrdersController {
         userId,
       );
 
+      logger.info({
+        msg: "PUT /api/v1/orders/:id/status",
+        statusCode: 200,
+        userId,
+        orderId: id,
+        newStatus: status,
+      });
+
       return successResponse(
         reply,
         result,
         "Order status updated successfully",
       );
     } catch (error) {
-      logger.error({
-        msg: "Update order status controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,
@@ -391,19 +343,23 @@ class OrdersController {
       const { rating, anonymous, comment } = request.body;
 
       const result = await ratingsService.createRating({
-        orderId: Number.parseInt(id),
+        orderId: Number.parseInt(id, 10),
         customerId: userId,
         rating,
         isAnonymous: anonymous ?? false,
         comment: comment ?? undefined,
       });
 
+      logger.info({
+        msg: "POST /api/v1/orders/:id/rate",
+        statusCode: 200,
+        userId,
+        orderId: id,
+        rating,
+      });
+
       return successResponse(reply, result, "Order rated successfully");
     } catch (error) {
-      logger.error({
-        msg: "Rate order controller error",
-        error: (error as Error).message,
-      });
       return errorResponse(
         reply,
         (error as Error).message,

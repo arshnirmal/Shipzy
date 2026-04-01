@@ -8,6 +8,10 @@ import ordersQueries from "../../database/queries/orders.queries.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { orderStatuses } from "../../database/schema/public.js";
 import { FareCalculationResultZ, OrderCreateResultZ } from "./orders.zod.js";
+import type {
+  FareCalculationResult,
+  OrderCreateResult,
+} from "../../types/orders.js";
 
 // Whitelist of sortable columns to prevent SQL injection
 const SORT_COLUMN_WHITELIST: Record<string, string> = {
@@ -27,15 +31,18 @@ class OrdersRepository {
     distanceKm: number,
     weightTierId: number,
     packageTypeId?: number,
-  ): Promise<import("../../types/orders.js").FareCalculationResult> {
+  ): Promise<FareCalculationResult> {
     try {
-      const result = await drizzlePool.query(ordersQueries.CALL_CALCULATE_FARE, [
-        deliveryTypeId,
-        vehicleCategoryId,
-        distanceKm,
-        weightTierId,
-        packageTypeId ?? null,
-      ]);
+      const result = await drizzlePool.query(
+        ordersQueries.CALL_CALCULATE_FARE,
+        [
+          deliveryTypeId,
+          vehicleCategoryId,
+          distanceKm,
+          weightTierId,
+          packageTypeId ?? null,
+        ],
+      );
 
       const rawResult = result.rows[0]?.result as any;
       const mappedResult = {
@@ -59,7 +66,7 @@ class OrdersRepository {
    */
   async createOrder(
     orderData: Record<string, any>,
-  ): Promise<import("../../types/orders.js").OrderCreateResult> {
+  ): Promise<OrderCreateResult> {
     try {
       const result = await drizzlePool.query(ordersQueries.CALL_CREATE_ORDER, [
         JSON.stringify(orderData),
@@ -81,7 +88,9 @@ class OrdersRepository {
    */
   async findById(orderId: number) {
     try {
-      const result = await drizzlePool.query(ordersQueries.FIND_ORDER_BY_ID, [orderId]);
+      const result = await drizzlePool.query(ordersQueries.FIND_ORDER_BY_ID, [
+        orderId,
+      ]);
       return result.rows[0] || null;
     } catch (error) {
       logger.error({
@@ -132,7 +141,9 @@ class OrdersRepository {
         dateConditions.push(`o.created_at <= $${queryParams.length}`);
       }
 
-      const dateWhere = dateConditions.length ? `AND ${dateConditions.join(" AND ")}` : "";
+      const dateWhere = dateConditions.length
+        ? `AND ${dateConditions.join(" AND ")}`
+        : "";
       const countParams = [...queryParams];
 
       const limitIndex = queryParams.length + 1;
