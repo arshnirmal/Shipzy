@@ -22,24 +22,35 @@ const MASTER_DATA_SQL = path.resolve(
 );
 
 // Database connection
-const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  database: process.env.DB_NAME || process.env.POSTGRES_DB || "shipzy_db",
-  user: process.env.DB_USER || process.env.POSTGRES_USER || "postgres",
-  password:
-    process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || "postgres",
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
+const sslConfig =
+  process.env.DB_SSL === "true" ||
+  process.env.DB_SSL === "require" ||
+  process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : false;
+
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: sslConfig,
+    })
+  : new Pool({
+      host: process.env.DB_HOST || "localhost",
+      port: parseInt(process.env.DB_PORT || "5432"),
+      database: process.env.DB_NAME || process.env.POSTGRES_DB || "shipzy_db",
+      user: process.env.DB_USER || process.env.POSTGRES_USER || "postgres",
+      password:
+        process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || "postgres",
+      ssl: sslConfig,
+    });
 
 async function deploy() {
   const client = await pool.connect();
   try {
     console.log("🚀 Starting Database Deployment...");
-    console.log(`📡 Connected to: ${process.env.DB_HOST || "localhost"}`);
+    console.log(
+      `📡 Connected to: ${process.env.DB_HOST || (process.env.DATABASE_URL ? "DATABASE_URL" : "localhost")}`,
+    );
 
     // 1. Create Deployment Log Table
     await client.query(`
@@ -126,7 +137,9 @@ async function deploy() {
         }
       }
     } else {
-      console.log("   ⚠️  Migrations directory not found. Run: npm run db:generate");
+      console.log(
+        "   ⚠️  Migrations directory not found. Run: npm run db:generate",
+      );
     }
 
     // 4. Deploy Functions (Always run / Replace)
