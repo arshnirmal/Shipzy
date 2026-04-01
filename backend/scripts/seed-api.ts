@@ -1,11 +1,11 @@
 import axios, { AxiosInstance } from "axios";
 import { faker } from "@faker-js/faker";
-import pool from "../src/database/db";
+import { drizzlePool } from "../src/database/drizzle.js";
 
 // Configuration
 const API_URL =
   process.env.API_URL ||
-  "https://unsegmented-steamerless-criselda.ngrok-free.dev/api/v1";
+  `http://${process.env.BACKEND_HOST || "localhost"}:${process.env.BACKEND_PORT || "3000"}/api/v1`;
 
 console.log(`Using API URL: ${API_URL}`);
 
@@ -32,6 +32,9 @@ const state = {
   },
 };
 
+type ActionStats = { success: number; failure: number };
+const actionStats = new Map<string, ActionStats>();
+
 // Helper to generate coordinates in Mumbai
 const generateMumbaiCoordinates = () => {
   const minLat = 18.89;
@@ -47,24 +50,102 @@ const generateMumbaiCoordinates = () => {
 // Helper for delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function formatApiErrors(errors: any): string {
+  if (!errors) return "";
+  if (Array.isArray(errors)) {
+    return errors
+      .map((err) => {
+        if (typeof err === "string") return err;
+        if (err?.message) return String(err.message);
+        return JSON.stringify(err);
+      })
+      .join(" | ");
+  }
+  if (typeof errors === "string") return errors;
+  return JSON.stringify(errors);
+}
+
+function isApiSuccess(res: any): boolean {
+  return (
+    res &&
+    res.status >= 200 &&
+    res.status < 300 &&
+    res.data &&
+    res.data.success === true
+  );
+}
+
+function logApiFailure(action: string, res: any) {
+  const status = res?.status ?? "unknown";
+  const message =
+    res?.data?.message ||
+    res?.data?.error ||
+    "Request failed without a backend message";
+  const errors = formatApiErrors(res?.data?.errors);
+  console.error(`❌ ${action} failed [HTTP ${status}]: ${message}`);
+  if (errors) {
+    console.error(`   ↳ Validation: ${errors}`);
+  }
+}
+
+function ensureApiSuccess(action: string, res: any): boolean {
+  const current = actionStats.get(action) || { success: 0, failure: 0 };
+  if (isApiSuccess(res)) {
+    current.success += 1;
+    actionStats.set(action, current);
+    return true;
+  }
+  current.failure += 1;
+  actionStats.set(action, current);
+  logApiFailure(action, res);
+  return false;
+}
+
+function printSeedSummary() {
+  console.log("\n📈 Seed API Summary");
+  if (actionStats.size === 0) {
+    console.log("   No tracked API actions executed.");
+    return;
+  }
+
+  const rows = Array.from(actionStats.entries()).map(([action, stats]) => ({
+    action,
+    success: stats.success,
+    failure: stats.failure,
+    total: stats.success + stats.failure,
+  }));
+
+  rows.sort((a, b) => b.failure - a.failure || a.action.localeCompare(b.action));
+
+  for (const row of rows) {
+    const icon = row.failure > 0 ? "⚠️" : "✅";
+    console.log(
+      `   ${icon} ${row.action}: ${row.success}/${row.total} succeeded, ${row.failure} failed`,
+    );
+  }
+}
+
 // Fetch existing users from DB and login to get tokens
 async function fetchExistingUsers() {
   console.log("📊 Fetching existing users from DB...");
   try {
     const query =
-      "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role_id = $1 AND deleted_at IS NULL";
-    const res = await pool.query(query, [1]); // 1 for client
+      "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role = $1 AND deleted_at IS NULL AND email IS NOT NULL";
+    const res = await drizzlePool.query(query, ["client"]);
     for (const row of res.rows) {
       const loginData = { email: row.email, password: "Password123!" };
       const loginRes = await api.post("/auth/login", loginData);
-      if (loginRes.data.success) {
+      if (ensureApiSuccess(`Login existing user ${row.email}`, loginRes)) {
         const tokens = loginRes.data.data.tokens;
         // Fetch address
         const addrRes = await api.get("/users/me/addresses", {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         });
         let addressId = null;
-        if (addrRes.data.success && addrRes.data.data.length > 0) {
+        if (
+          ensureApiSuccess(`Fetch addresses for ${row.email}`, addrRes) &&
+          addrRes.data.data.length > 0
+        ) {
           addressId = addrRes.data.data[0].addressId;
         }
         state.users.push({
@@ -75,8 +156,6 @@ async function fetchExistingUsers() {
           accessToken: tokens.accessToken,
           addressId,
         });
-      } else {
-        console.error(`❌ Failed to login user ${row.email}`);
       }
       await delay(200); // Small delay to avoid rate limiting
     }
@@ -91,12 +170,12 @@ async function fetchExistingDrivers() {
   console.log("📊 Fetching existing drivers from DB...");
   try {
     const query =
-      "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role_id = $1 AND deleted_at IS NULL";
-    const res = await pool.query(query, [2]); // 2 for courier
+      "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role = $1 AND deleted_at IS NULL AND email IS NOT NULL";
+    const res = await drizzlePool.query(query, ["courier"]);
     for (const row of res.rows) {
       const loginData = { email: row.email, password: "Password123!" };
       const loginRes = await api.post("/auth/login", loginData);
-      if (loginRes.data.success) {
+      if (ensureApiSuccess(`Login existing driver ${row.email}`, loginRes)) {
         const tokens = loginRes.data.data.tokens;
         state.drivers.push({
           userId: row.user_id,
@@ -105,8 +184,6 @@ async function fetchExistingDrivers() {
           phoneNumber: row.phone_number,
           accessToken: tokens.accessToken,
         });
-      } else {
-        console.error(`❌ Failed to login driver ${row.email}`);
       }
       await delay(200);
     }
@@ -119,31 +196,37 @@ async function fetchExistingDrivers() {
 async function fetchStaticData() {
   console.log("📊 Fetching static data for IDs...");
   const res = await api.get("/static/create-order-data");
-  if (res.data.success) {
+  if (ensureApiSuccess("Fetch create-order static data", res)) {
     state.staticData = res.data.data;
 
     // Fallback if some are still null (though we just seeded them)
     if (!state.staticData.deliveryTypes) {
       const dtRes = await api.get("/static/delivery-types");
-      state.staticData.deliveryTypes = dtRes.data.data;
+      if (ensureApiSuccess("Fallback fetch delivery types", dtRes)) {
+        state.staticData.deliveryTypes = dtRes.data.data;
+      }
     }
     if (!state.staticData.packageTypes) {
       const ptRes = await api.get("/static/package-types");
-      state.staticData.packageTypes = ptRes.data.data;
+      if (ensureApiSuccess("Fallback fetch package types", ptRes)) {
+        state.staticData.packageTypes = ptRes.data.data;
+      }
     }
 
     // Also need weight tiers and vehicle categories
     const wtRes = await api.get("/static/weight-tiers");
-    state.staticData.weightTiers = wtRes.data.data;
+    if (ensureApiSuccess("Fetch weight tiers", wtRes)) {
+      state.staticData.weightTiers = wtRes.data.data;
+    }
 
     const vcRes = await api.get("/static/vehicle-categories");
-    state.staticData.vehicleCategories = vcRes.data.data;
+    if (ensureApiSuccess("Fetch vehicle categories", vcRes)) {
+      state.staticData.vehicleCategories = vcRes.data.data;
+    }
 
     console.log(
       `   Fetched: ${state.staticData.deliveryTypes?.length} delivery types, ${state.staticData.packageTypes?.length} package types`,
     );
-  } else {
-    console.error("❌ Failed to fetch static data");
   }
 }
 
@@ -163,7 +246,7 @@ async function seedUsers(count = 3) {
       console.log(`Registering user: ${userData.email}`);
       const regRes = await api.post("/auth/register", userData);
 
-      if (regRes.data.success) {
+      if (ensureApiSuccess(`Register user ${userData.email}`, regRes)) {
         const user = regRes.data.data.user;
         const tokens = regRes.data.data.tokens;
 
@@ -192,7 +275,7 @@ async function seedUsers(count = 3) {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         });
 
-        if (addrRes.data.success) {
+        if (ensureApiSuccess(`Create address for ${userData.email}`, addrRes)) {
           console.log(`   📍 Address added: ${addressData.fullAddress}`);
           state.users.at(-1).addressId =
             addrRes.data.data.addressId;
@@ -207,7 +290,6 @@ async function seedUsers(count = 3) {
 
 async function seedDrivers(count = 2) {
   console.log(`\n🚚 Seeding ${count} drivers...`);
-  const vehicleTypes = ["bike", "scooter", "van"];
 
   for (let i = 0; i < count; i++) {
     const driverData = {
@@ -222,7 +304,7 @@ async function seedDrivers(count = 2) {
       console.log(`Registering driver: ${driverData.email}`);
       const regRes = await api.post("/auth/register", driverData);
 
-      if (regRes.data.success) {
+      if (ensureApiSuccess(`Register driver ${driverData.email}`, regRes)) {
         const driver = regRes.data.data.user;
         const tokens = regRes.data.data.tokens;
         state.drivers.push({ ...driver, accessToken: tokens.accessToken });
@@ -234,22 +316,30 @@ async function seedDrivers(count = 2) {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         };
         const updateData = {
-          vehicleType:
-            vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)],
-          vehicleNumber:
-            "MH" +
-            faker.number.int({ min: 10, max: 99 }) +
-            faker.string.alpha({ length: 2, casing: "upper" }) +
-            faker.number.int({ min: 1000, max: 9999 }),
+          profilePictureUrl: faker.image.avatar(),
         };
-        await api.put("/drivers/me", updateData, tokenHeader);
+        const profileRes = await api.put("/drivers/me", updateData, tokenHeader);
+        if (!ensureApiSuccess(`Update driver profile ${driverData.email}`, profileRes)) {
+          continue;
+        }
         const location = generateMumbaiCoordinates();
-        await api.put("/drivers/me/location", location, tokenHeader);
-        await api.put(
+        const locationRes = await api.put("/drivers/me/location", location, tokenHeader);
+        if (!ensureApiSuccess(`Update driver location ${driverData.email}`, locationRes)) {
+          continue;
+        }
+        const availabilityRes = await api.put(
           "/drivers/me/availability",
           { isAvailable: true, isOnline: true },
           tokenHeader,
         );
+        if (
+          !ensureApiSuccess(
+            `Update driver availability ${driverData.email}`,
+            availabilityRes,
+          )
+        ) {
+          continue;
+        }
         console.log(`   🟢 Driver is now Online & Available`);
       }
     } catch (error: any) {
@@ -348,8 +438,7 @@ async function seedOrders(count = 3) {
         tokenHeader,
       );
 
-      if (!fareRes.data.success) {
-        console.error(`❌ Fare calculation failed: ${fareRes.data.message}`);
+      if (!ensureApiSuccess(`Calculate fare for ${user.fullName}`, fareRes)) {
         continue;
       }
 
@@ -403,7 +492,7 @@ async function seedOrders(count = 3) {
       console.log(`Creating order for user ${user.fullName} (${dt.name})...`);
       const orderRes = await api.post("/orders", orderData, tokenHeader);
 
-      if (orderRes.data.success) {
+      if (ensureApiSuccess(`Create order for ${user.fullName}`, orderRes)) {
         const order = orderRes.data.data;
         state.orders.push(order);
         console.log(
@@ -420,10 +509,6 @@ async function seedOrders(count = 3) {
             state.drivers[Math.floor(Math.random() * state.drivers.length)];
           await simulateDriverFlow(driver, order.orderId);
         }
-      } else {
-        console.error(`❌ Failed to create order: ${orderRes.data.message}`);
-        if (orderRes.data.errors)
-          console.error(JSON.stringify(orderRes.data.errors, null, 2));
       }
     } catch (error: any) {
       console.error(`❌ Error creating order: ${error.message}`);
@@ -448,7 +533,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
       tokenHeader,
     );
 
-    if (acceptRes.data.success) {
+    if (ensureApiSuccess(`Driver accept order ${orderId}`, acceptRes)) {
       console.log(`   🚚 Driver ${driver.fullName} accepted order ${orderId}`);
 
       // 2. Simulate Pick up
@@ -458,10 +543,20 @@ async function simulateDriverFlow(driver: any, orderId: number) {
         { status: "picked_up" },
         tokenHeader,
       );
-      if (pickupRes.data.success)
+      if (ensureApiSuccess(`Mark picked_up for order ${orderId}`, pickupRes))
         console.log(`   📦 Order ${orderId} picked up`);
 
-      // 3. Simulate Delivery
+      // 3. Simulate in_transit (required before delivered)
+      await delay(1500);
+      const transitRes = await api.put(
+        `/orders/${orderId}/status`,
+        { status: "in_transit" },
+        tokenHeader,
+      );
+      if (ensureApiSuccess(`Mark in_transit for order ${orderId}`, transitRes))
+        console.log(`   🛣️ Order ${orderId} in transit`);
+
+      // 4. Simulate Delivery
       if (Math.random() > 0.5) {
         await delay(2000);
         const deliverRes = await api.put(
@@ -469,11 +564,9 @@ async function simulateDriverFlow(driver: any, orderId: number) {
           { status: "delivered" },
           tokenHeader,
         );
-        if (deliverRes.data.success)
+        if (ensureApiSuccess(`Mark delivered for order ${orderId}`, deliverRes))
           console.log(`   ✅ Order ${orderId} delivered`);
       }
-    } else {
-      console.log(`   ⚠️ Driver accept failed: ${acceptRes.data.message}`);
     }
   } catch (e: any) {
     console.log(`   ⚠️ Driver flow error: ${e.message}`);
@@ -533,6 +626,9 @@ async function main() {
     console.log("\n✨ Seeding complete!");
   } catch (error) {
     console.error("Fatal error during seeding:", error);
+  } finally {
+    printSeedSummary();
+    await drizzlePool.end();
   }
 }
 
