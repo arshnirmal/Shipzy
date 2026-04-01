@@ -1,15 +1,24 @@
-// services/backend/src/modules/static/static.repository.js
+// services/backend/src/modules/static/static.repository.ts
+import { eq, and, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
+import cacheUtil from "../../utils/cache.util.js";
 import staticQueries from "../../database/queries/static.queries.js";
+import {
+  deliveryTypes,
+  weightTiers,
+  vehicleCategories,
+  packageTypes,
+} from "../../database/schema/public.js";
+import { paymentMethods } from "../../database/schema/payments.js";
 
 class StaticRepository {
   /**
-   * Get all delivery types
+   * Get all delivery types (complex query with joins - keep as raw SQL)
    */
   async getDeliveryTypes() {
     try {
-      const result = await db.query(staticQueries.GET_DELIVERY_TYPES);
+      const result = await drizzlePool.query(staticQueries.GET_DELIVERY_TYPES);
       return result.rows;
     } catch (error) {
       logger.error({
@@ -21,30 +30,52 @@ class StaticRepository {
   }
 
   /**
-   * Get delivery type by ID
+   * Get delivery type by ID (migrated to Drizzle with caching)
    */
   async getDeliveryTypeById(deliveryTypeId: number) {
     try {
-      const result = await db.query(staticQueries.GET_DELIVERY_TYPE_BY_ID, [
-        deliveryTypeId,
-      ]);
-      return result.rows[0] || null;
+      // Check cache first
+      const cacheKey = `delivery_type:${deliveryTypeId}`;
+      const cached = await cacheUtil.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      const result = await drizzleDb
+        .select()
+        .from(deliveryTypes)
+        .where(
+          and(
+            eq(deliveryTypes.deliveryTypeId, deliveryTypeId),
+            eq(deliveryTypes.isActive, true),
+          ),
+        )
+        .limit(1);
+
+      const deliveryType = result[0] || null;
+      
+      // Cache for 1 hour
+      if (deliveryType) {
+        await cacheUtil.set(cacheKey, deliveryType, 3600);
+      }
+      
+      return deliveryType;
     } catch (error) {
-      logger.error({
-        msg: "Error getting delivery type by ID",
-        error: (error as Error).message,
-      });
       throw error;
     }
   }
 
   /**
-   * Get all weight tiers
+   * Get all weight tiers (migrated to Drizzle)
    */
   async getWeightTiers() {
     try {
-      const result = await db.query(staticQueries.GET_WEIGHT_TIERS);
-      return result.rows;
+      const result = await drizzleDb
+        .select()
+        .from(weightTiers)
+        .orderBy(weightTiers.minWeightKg);
+
+      return result;
     } catch (error) {
       logger.error({
         msg: "Error getting weight tiers",
@@ -55,14 +86,22 @@ class StaticRepository {
   }
 
   /**
-   * Get weight tier for specific weight
+   * Get weight tier for specific weight (migrated to Drizzle)
    */
   async getWeightTierForWeight(weightKg: number) {
     try {
-      const result = await db.query(staticQueries.GET_WEIGHT_TIER_FOR_WEIGHT, [
-        weightKg,
-      ]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select()
+        .from(weightTiers)
+        .where(
+          and(
+            sql`${weightTiers.minWeightKg}::numeric <= ${String(weightKg)}::numeric`,
+            sql`${weightTiers.maxWeightKg}::numeric > ${String(weightKg)}::numeric`,
+          ),
+        )
+        .limit(1);
+
+      return result[0] || null;
     } catch (error) {
       logger.error({
         msg: "Error getting weight tier for weight",
@@ -73,12 +112,17 @@ class StaticRepository {
   }
 
   /**
-   * Get all vehicle categories
+   * Get all vehicle categories (migrated to Drizzle)
    */
   async getVehicleCategories() {
     try {
-      const result = await db.query(staticQueries.GET_VEHICLE_CATEGORIES);
-      return result.rows;
+      const result = await drizzleDb
+        .select()
+        .from(vehicleCategories)
+        .where(eq(vehicleCategories.isActive, true))
+        .orderBy(vehicleCategories.maxWeightKg);
+
+      return result;
     } catch (error) {
       logger.error({
         msg: "Error getting vehicle categories",
@@ -89,12 +133,16 @@ class StaticRepository {
   }
 
   /**
-   * Get package types (labels)
+   * Get package types (migrated to Drizzle)
    */
   async getPackageTypes() {
     try {
-      const result = await db.query(staticQueries.GET_PACKAGE_TYPES);
-      return result.rows;
+      const result = await drizzleDb
+        .select()
+        .from(packageTypes)
+        .orderBy(packageTypes.name);
+
+      return result;
     } catch (error) {
       logger.error({
         msg: "Error getting package types",
@@ -105,28 +153,17 @@ class StaticRepository {
   }
 
   /**
-   * Get all labels
-   */
-  async getLabels() {
-    try {
-      const result = await db.query(staticQueries.GET_LABELS);
-      return result.rows;
-    } catch (error) {
-      logger.error({
-        msg: "Error getting labels",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get payment methods
+   * Get payment methods (migrated to Drizzle)
    */
   async getPaymentMethods() {
     try {
-      const result = await db.query(staticQueries.GET_PAYMENT_METHODS);
-      return result.rows;
+      const result = await drizzleDb
+        .select()
+        .from(paymentMethods)
+        .where(eq(paymentMethods.isActive, true))
+        .orderBy(paymentMethods.methodId);
+
+      return result;
     } catch (error) {
       logger.error({
         msg: "Error getting payment methods",
@@ -137,11 +174,11 @@ class StaticRepository {
   }
 
   /**
-   * Get order statuses
+   * Get order statuses (migrated to Drizzle)
    */
   async getOrderStatuses() {
     try {
-      const result = await db.query(staticQueries.GET_ORDER_STATUSES);
+      const result = await drizzlePool.query(staticQueries.GET_ORDER_STATUSES);
       return result.rows;
     } catch (error) {
       logger.error({
@@ -153,11 +190,13 @@ class StaticRepository {
   }
 
   /**
-   * Get assignment statuses
+   * Get assignment statuses (migrated to Drizzle)
    */
   async getAssignmentStatuses() {
     try {
-      const result = await db.query(staticQueries.GET_ASSIGNMENT_STATUSES);
+      const result = await drizzlePool.query(
+        staticQueries.GET_ASSIGNMENT_STATUSES,
+      );
       return result.rows;
     } catch (error) {
       logger.error({
@@ -171,10 +210,11 @@ class StaticRepository {
   /**
    * Get all static data for create order screen in a single query
    * Returns delivery types with nested vehicles and weight tiers, plus package types and payment methods
+   * (Complex query with CTEs and JSON aggregation - keep as raw SQL)
    */
   async getCreateOrderData() {
     try {
-      const result = await db.query(staticQueries.GET_CREATE_ORDER_DATA);
+      const result = await drizzlePool.query(staticQueries.GET_CREATE_ORDER_DATA);
       return result.rows[0].data;
     } catch (error) {
       logger.error({

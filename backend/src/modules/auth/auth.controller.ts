@@ -5,27 +5,12 @@ import logger from "../../config/logger.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import authService from "./auth.service.js";
 
-interface GoogleVerifyBody {
-  idToken: string;
-  role?: string;
-}
-
-interface RefreshTokenBody {
-  refreshToken: string;
-}
-
-interface RegisterBody {
-  fullName: string;
-  email: string;
-  password: string;
-  role?: string;
-  phoneNumber?: string;
-}
-
-interface LoginBody {
-  email: string;
-  password: string;
-}
+import type {
+  GoogleAuthRequest,
+  RefreshTokenRequest,
+  RegisterRequest,
+  LoginRequest,
+} from "./auth.zod.js";
 
 class AuthController {
   /**
@@ -33,13 +18,11 @@ class AuthController {
    * Refresh JWT access token
    */
   async refreshToken(
-    request: FastifyRequest<{ Body: RefreshTokenBody }>,
+    request: FastifyRequest<{ Body: RefreshTokenRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { refreshToken } = request.body;
-
-      const result = await authService.refreshToken(refreshToken);
+      const result = await authService.refreshToken(request.body.refreshToken);
 
       return successResponse(reply, result, "Token refreshed successfully");
     } catch (error) {
@@ -60,7 +43,7 @@ class AuthController {
    * Verify Google ID token and create/login user
    */
   async verifyGoogle(
-    request: FastifyRequest<{ Body: GoogleVerifyBody }>,
+    request: FastifyRequest<{ Body: GoogleAuthRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -142,7 +125,7 @@ class AuthController {
    * Register new user with email/password
    */
   async register(
-    request: FastifyRequest<{ Body: RegisterBody }>,
+    request: FastifyRequest<{ Body: RegisterRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -190,7 +173,7 @@ class AuthController {
    * Login with email/password
    */
   async login(
-    request: FastifyRequest<{ Body: LoginBody }>,
+    request: FastifyRequest<{ Body: LoginRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {

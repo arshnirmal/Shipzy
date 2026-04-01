@@ -7,8 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'providers/storage_provider.dart';
 import 'utils/logger.dart';
 
 Future<void> main() async {
@@ -47,7 +49,17 @@ Future<void> main() async {
       _setupErrorHandling();
 
       // Run app with ProviderScope
-      runApp(const ProviderScope(child: ShipzyApp()));
+      // Pre-initialize SharedPreferences for immediate synchronous access in AppRouter
+      final sharedPrefs = await SharedPreferences.getInstance();
+
+      runApp(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(AsyncValue.data(sharedPrefs)),
+          ],
+          child: const ShipzyApp(),
+        ),
+      );
     },
     (error, stackTrace) {
       AppLogger.e('Uncaught Async Error: $error', error: error, stackTrace: stackTrace);

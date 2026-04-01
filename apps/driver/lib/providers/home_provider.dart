@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:riverpod/riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/active_order.dart';
@@ -122,7 +123,7 @@ class DriverHome extends _$DriverHome {
 }
 
 @riverpod
-Future<DailyStats> dailyStats(DailyStatsRef ref) async {
+Future<DailyStats> dailyStats(Ref ref) async {
   // Get daily stats from driver profile to avoid extra API call
   final driverProfile = await ref.watch(driverProfileProvider.future);
   return DailyStats(
@@ -134,13 +135,13 @@ Future<DailyStats> dailyStats(DailyStatsRef ref) async {
 }
 
 @riverpod
-DriverStatus driverStatus(DriverStatusRef ref) {
+DriverStatus driverStatus(Ref ref) {
   // Separate provider for driver status to avoid circular dependencies
   return ref.watch(driverHomeProvider).status;
 }
 
 @riverpod
-Future<List<AvailableOrder>> nearbyOrders(NearbyOrdersRef ref) async {
+Future<List<AvailableOrder>> nearbyOrders(Ref ref) async {
   // Watch driver status from separate provider to avoid circular dependency
   final driverStatus = ref.watch(driverStatusProvider);
   if (driverStatus != DriverStatus.online) {
@@ -163,7 +164,7 @@ Future<List<AvailableOrder>> nearbyOrders(NearbyOrdersRef ref) async {
 }
 
 @riverpod
-Future<DriverDashboardData> driverDashboardData(DriverDashboardDataRef ref) async {
+Future<DriverDashboardData> driverDashboardData(Ref ref) async {
   final apiService = ref.read(apiServiceProvider);
 
   // Fetch both profile and assignments in parallel to reduce total API calls
@@ -176,13 +177,13 @@ Future<DriverDashboardData> driverDashboardData(DriverDashboardDataRef ref) asyn
 }
 
 @riverpod
-Future<ActiveOrder?> activeOrder(ActiveOrderRef ref) async {
+Future<ActiveOrder?> activeOrder(Ref ref) async {
   final dashboardData = await ref.watch(driverDashboardDataProvider.future);
   return dashboardData.activeOrder;
 }
 
 @riverpod
-Future<DriverProfile> driverProfile(DriverProfileRef ref) async {
+Future<DriverProfile> driverProfile(Ref ref) async {
   final dashboardData = await ref.watch(driverDashboardDataProvider.future);
   return dashboardData.profile;
 }

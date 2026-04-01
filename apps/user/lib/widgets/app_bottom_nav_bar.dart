@@ -1,8 +1,11 @@
 // lib/widgets/navigation/app_bottom_nav_bar.dart
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../theme/design_tokens.dart';
 import '../utils/app_routes.dart';
 
 class AppBottomNavBar extends StatelessWidget {
@@ -15,52 +18,52 @@ class AppBottomNavBar extends StatelessWidget {
     final currentIndex = _getCurrentIndex(currentLocation);
 
     return Container(
-      height: 80,
+      height: 87,
       padding: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: theme.brightness == Brightness.light ? 0.05 : 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLowest.withValues(alpha: AppDepth.glassOpacity),
+              boxShadow: AppDepth.ambientShadow(theme.brightness),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _NavItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home_rounded,
+                  label: 'Home',
+                  isActive: currentIndex == 0,
+                  onTap: () => context.go(AppRoutes.home),
+                ),
+                _NavItem(
+                  icon: Icons.add_box_outlined,
+                  activeIcon: Icons.add_box_rounded,
+                  label: 'New Order',
+                  isActive: currentIndex == 1,
+                  onTap: () => context.go(AppRoutes.createOrder),
+                  isHighlighted: true,
+                ),
+                _NavItem(
+                  icon: Icons.receipt_long_outlined,
+                  activeIcon: Icons.receipt_long_rounded,
+                  label: 'Orders',
+                  isActive: currentIndex == 2,
+                  onTap: () => context.go(AppRoutes.orderList),
+                ),
+                _NavItem(
+                  icon: Icons.person_outline_rounded,
+                  activeIcon: Icons.person_rounded,
+                  label: 'Account',
+                  isActive: currentIndex == 3,
+                  onTap: () => context.go(AppRoutes.profile),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(
-            icon: Icons.home_outlined,
-            activeIcon: Icons.home_rounded,
-            label: 'Home',
-            isActive: currentIndex == 0,
-            onTap: () => context.go(AppRoutes.home),
-          ),
-          _NavItem(
-            icon: Icons.add_box_outlined,
-            activeIcon: Icons.add_box_rounded,
-            label: 'New Order',
-            isActive: currentIndex == 1,
-            onTap: () => context.go(AppRoutes.createOrder),
-            isHighlighted: true, // Make "New Order" stand out
-          ),
-          _NavItem(
-            icon: Icons.receipt_long_outlined,
-            activeIcon: Icons.receipt_long_rounded,
-            label: 'Orders',
-            isActive: currentIndex == 2,
-            onTap: () => context.go(AppRoutes.orderList),
-          ),
-          _NavItem(
-            icon: Icons.person_outline_rounded,
-            activeIcon: Icons.person_rounded,
-            label: 'Profile',
-            isActive: currentIndex == 3,
-            onTap: () => context.go(AppRoutes.profile),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -103,11 +106,11 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Special styling for highlighted items (like "New Order")
-    final effectiveColor = isHighlighted && isActive
+    // Color based on theme and active state
+    final effectiveColor = isActive
         ? theme.colorScheme.primary
-        : isActive
-        ? theme.colorScheme.primary
+        : theme.brightness == Brightness.dark
+        ? theme.colorScheme.onSurfaceVariant
         : theme.colorScheme.onSurfaceVariant;
 
     return Expanded(
@@ -115,7 +118,7 @@ class _NavItem extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.radiusLg,
           splashColor: theme.colorScheme.primary.withValues(alpha: 0.1),
           highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
           child: Padding(
@@ -124,28 +127,28 @@ class _NavItem extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon Container with Animation
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
+                // Icon Container
+                Container(
                   padding: EdgeInsets.all(isActive ? 6 : 4),
                   decoration: BoxDecoration(
                     color: isActive ? theme.colorScheme.primary.withValues(alpha: 0.12) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: AppRadius.radiusLg,
                   ),
-                  child: Icon(
-                    isActive ? activeIcon : icon,
-                    color: effectiveColor,
-                    size: 26, // Slightly larger for better visibility
-                  ),
+                  child: Icon(isActive ? activeIcon : icon, color: effectiveColor, size: 20),
                 ),
                 const SizedBox(height: 4),
 
                 // Label Text
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(fontSize: 11, fontWeight: isActive ? FontWeight.w600 : FontWeight.w500, color: effectiveColor, letterSpacing: 0.1),
-                  child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    color: effectiveColor,
+                    letterSpacing: 0.25,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

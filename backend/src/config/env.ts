@@ -35,6 +35,7 @@ const config: Config = {
 
   // Database
   database: {
+    connectionString: process.env.DATABASE_URL || undefined,
     host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "5432", 10),
     database: process.env.DB_NAME || "shipzy_dev",
@@ -96,12 +97,16 @@ const requiredEnvVars = [
   // 'FIREBASE_PROJECT_ID',
   // 'FIREBASE_CLIENT_EMAIL',
   // 'FIREBASE_PRIVATE_KEY',
-  // DB_PASSWORD is optional and defaults to empty string
 ];
 
 const missingEnvVars = requiredEnvVars.filter(
   (varName) => !process.env[varName],
 );
+
+// Allow DATABASE_URL as an alternative to DB_PASSWORD-based split DB credentials.
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  missingEnvVars.push("DB_PASSWORD (or DATABASE_URL)");
+}
 
 if (missingEnvVars.length > 0) {
   throw new Error(

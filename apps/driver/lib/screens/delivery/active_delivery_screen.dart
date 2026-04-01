@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shipzy_driver/providers/order_provider.dart';
-import 'package:shipzy_driver/widgets/map_widget.dart';
+
+import '../../providers/order_provider.dart';
+import '../../widgets/map_widget.dart';
 
 class ActiveDeliveryScreen extends ConsumerStatefulWidget {
-  final String orderId;
+  const ActiveDeliveryScreen({required this.orderId, super.key});
 
-  const ActiveDeliveryScreen({super.key, required this.orderId});
+  final String orderId;
 
   @override
   ConsumerState<ActiveDeliveryScreen> createState() => _ActiveDeliveryScreenState();
@@ -49,11 +50,11 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         children: [
           const Expanded(child: MapWidget()),
           Container(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, -5))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -82,6 +83,8 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
 
   String _getStatusText(OrderStatus status) {
     switch (status) {
+      case OrderStatus.idle:
+        return 'Unknown Status';
       case OrderStatus.accepted:
         return 'Head to Pickup';
       case OrderStatus.navigatingToPickup:
@@ -96,13 +99,13 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         return 'Arrived at Dropoff';
       case OrderStatus.completed:
         return 'Delivery Completed';
-      default:
-        return 'Unknown Status';
     }
   }
 
   String _getActionText(OrderStatus status) {
     switch (status) {
+      case OrderStatus.idle:
+        return 'Continue';
       case OrderStatus.accepted:
         return 'Start Navigation';
       case OrderStatus.navigatingToPickup:
@@ -115,7 +118,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         return 'Arrived at Dropoff';
       case OrderStatus.arrivedAtDropoff:
         return 'Complete Delivery';
-      default:
+      case OrderStatus.completed:
         return 'Continue';
     }
   }
@@ -123,6 +126,8 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   void _handleAction(OrderStatus status) {
     final notifier = ref.read(orderProvider.notifier);
     switch (status) {
+      case OrderStatus.idle:
+        break;
       case OrderStatus.accepted:
         notifier.startNavigation(widget.orderId);
         break;
@@ -135,11 +140,14 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       case OrderStatus.pickedUp:
         // Start nav to dropoff
         break;
+      case OrderStatus.navigatingToDropoff:
+        // Navigate to dropoff
+        break;
       case OrderStatus.arrivedAtDropoff:
         notifier.completeDelivery(widget.orderId);
         context.go('/home');
         break;
-      default:
+      case OrderStatus.completed:
         break;
     }
   }

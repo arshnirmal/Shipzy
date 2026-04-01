@@ -35,9 +35,11 @@ class DriverInfoCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: theme.colorScheme.primaryContainer,
-                  image: courier.photo != null ? DecorationImage(image: NetworkImage(courier.photo!), fit: BoxFit.cover) : null,
+                  image: courier.profilePictureUrl != null
+                      ? DecorationImage(image: NetworkImage(courier.profilePictureUrl!), fit: BoxFit.cover)
+                      : null,
                 ),
-                child: courier.photo == null ? Icon(Icons.person, color: theme.colorScheme.onPrimaryContainer) : null,
+                child: courier.profilePictureUrl == null ? Icon(Icons.person, color: theme.colorScheme.onPrimaryContainer) : null,
               ),
               const SizedBox(width: 16),
 
@@ -46,7 +48,7 @@ class DriverInfoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(courier.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(courier.name ?? 'Unknown Driver', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -68,7 +70,10 @@ class DriverInfoCard extends StatelessWidget {
               ),
 
               // Call Button
-              IconButton.filledTonal(onPressed: () => _makePhoneCall(courier.phone), icon: const Icon(Icons.phone)),
+              IconButton.filledTonal(
+                onPressed: courier.phone == null ? null : () => _makePhoneCall(courier.phone!),
+                icon: const Icon(Icons.phone),
+              ),
             ],
           ),
         ],

@@ -209,7 +209,8 @@ COMMENT ON FUNCTION orders.calculate_fare IS 'Calculate delivery fare based on d
 
 -- ========================================
 -- Function: create_order_with_locations
--- Description: Create order with pickup and delivery locations (atomic transaction)
+-- Description: Create order with pickup and delivery locations as JSONB (atomic transaction)
+-- OPTIMIZED: Uses JSONB columns instead of separate location records
 -- Returns: JSON with created order details
 -- ========================================
 CREATE OR REPLACE FUNCTION orders.create_order_with_locations(
@@ -223,334 +224,181 @@ DECLARE
     v_delivery_type_id INT;
     v_vehicle_category_id INT;
     v_payment_method_id INT;
-    v_pickup_location_id INT;
+    v_order_id INT;
+    v_order_uuid UUID;
+    v_base_price NUMERIC;
+    v_distance_price NUMERIC;
+    v_weight_surcharge NUMERIC;
+    v_platform_fee NUMERIC;
+    v_special_handling_fee NUMERIC;
+    v_gst_amount NUMERIC;
+    v_subtotal_before_tax NUMERIC;
+    v_total_price NUMERIC;
+    v_status order_status := 'pending';
+    v_platform_fee_default NUMERIC := 0;
+    v_order_number VARCHAR(50);
+    v_pickup_location JSONB;
+    v_delivery_location JSONB;
+    v_items JSONB;
+    result JSON;
 
-v_delivery_location_id INT;
+BEGIN 
+    -- Extract and validate required fields
+    v_client_id := (p_order_data ->> 'clientId') :: INT;
+    v_delivery_type_id := (p_order_data ->> 'deliveryTypeId') :: INT;
+    v_vehicle_category_id := (p_order_data ->> 'vehicleCategoryId') :: INT;
+    v_payment_method_id := (p_order_data ->> 'paymentMethodId') :: INT;
 
-v_order_id INT;
+    -- Validate client exists
+    IF NOT EXISTS (SELECT 1 FROM users.profiles WHERE user_id = v_client_id AND is_active = true) THEN 
+        RETURN json_build_object('success', false, 'error', 'Invalid client_id');
+    END IF;
 
-v_order_uuid UUID;
-
-v_fare_calculation JSONB;
-
-v_base_price NUMERIC;
-
-v_distance_price NUMERIC;
-
-v_weight_surcharge NUMERIC;
-
-v_platform_fee NUMERIC;
-
-v_special_handling_fee NUMERIC;
-
-v_gst_amount NUMERIC;
-
-v_subtotal_before_tax NUMERIC;
-
-v_total_price NUMERIC;
-
-v_status_id INT;
-
-result JSON;
-
-BEGIN -- Extract and validate required fields
-v_client_id := (p_order_data ->> 'clientId') :: INT;
-
-v_delivery_type_id := (p_order_data ->> 'deliveryTypeId') :: INT;
-
-v_vehicle_category_id := (p_order_data ->> 'vehicleCategoryId') :: INT;
-
-v_payment_method_id := (p_order_data ->> 'paymentMethodId') :: INT;
-
--- Validate client exists
-IF NOT EXISTS (
-    SELECT
-        1
-    FROM
-        users.profiles
-    WHERE
-        user_id = v_client_id
-        AND is_active = true
-) THEN RETURN json_build_object('success', false, 'error', 'Invalid client_id');
-
-END IF;
-
--- VALIDATE: Vehicle category is supported for this delivery type
-IF NOT EXISTS (
-    SELECT
-        1
-    FROM
-        public.delivery_type_capabilities
-    WHERE
-        delivery_type_id = v_delivery_type_id
+    -- VALIDATE: Vehicle category is supported for this delivery type
+    IF NOT EXISTS (
+        SELECT 1 FROM public.delivery_type_capabilities
+        WHERE delivery_type_id = v_delivery_type_id
         AND vehicle_category_id = v_vehicle_category_id
         AND is_active = TRUE
-) THEN RETURN json_build_object(
-    'success',
-    false,
-    'error',
-    'Vehicle category not supported for this delivery type'
-);
+    ) THEN 
+        RETURN json_build_object('success', false, 'error', 'Vehicle category not supported for this delivery type');
+    END IF;
 
-END IF;
+    -- Load platform fee fallback from pricing config (no hardcoded default)
+    SELECT config_value INTO v_platform_fee_default
+    FROM public.pricing_config
+    WHERE config_key = 'platform_fee'
+      AND is_active = TRUE
+    LIMIT 1;
 
--- Get 'pending' status
-SELECT
-    status_id INTO v_status_id
-FROM
-    public.order_statuses
-WHERE
-    name = 'pending';
+    -- Extract fare values from provided fareBreakdown
+    v_base_price := (p_order_data -> 'fareBreakdown' ->> 'basePrice') :: NUMERIC;
+    v_distance_price := (p_order_data -> 'fareBreakdown' ->> 'distancePrice') :: NUMERIC;
+    v_weight_surcharge := (p_order_data -> 'fareBreakdown' ->> 'weightSurcharge') :: NUMERIC;
+    v_platform_fee := COALESCE((p_order_data -> 'fareBreakdown' ->> 'platformFee') :: NUMERIC, v_platform_fee_default);
+    v_special_handling_fee := COALESCE((p_order_data -> 'fareBreakdown' ->> 'specialHandlingFee') :: NUMERIC, 0.00);
+    
+    -- Calculate subtotal before tax
+    v_subtotal_before_tax := COALESCE(
+        (p_order_data -> 'fareBreakdown' ->> 'subtotalBeforeTax') :: NUMERIC,
+        v_base_price + v_distance_price + v_weight_surcharge + v_platform_fee + v_special_handling_fee
+    );
 
--- Extract fare values from provided fareBreakdown
--- The service layer has already validated these values
-v_base_price := (p_order_data -> 'fareBreakdown' ->> 'basePrice') :: NUMERIC;
+    -- Extract GST amount with fallback calculation (18% of subtotal if not provided)
+    v_gst_amount := COALESCE(
+        (p_order_data -> 'fareBreakdown' ->> 'gstAmount') :: NUMERIC,
+        ROUND(v_subtotal_before_tax * 0.18, 2)
+    );
 
-v_distance_price := (
-    p_order_data -> 'fareBreakdown' ->> 'distancePrice'
-) :: NUMERIC;
+    v_total_price := (p_order_data -> 'fareBreakdown' ->> 'totalPrice') :: NUMERIC;
 
-v_weight_surcharge := (
-    p_order_data -> 'fareBreakdown' ->> 'weightSurcharge'
-) :: NUMERIC;
+    -- OPTIMIZED: Build JSONB location objects (no separate location records)
+    v_pickup_location := jsonb_build_object(
+        'fullAddress', p_order_data -> 'pickup' ->> 'fullAddress',
+        'city', p_order_data -> 'pickup' ->> 'city',
+        'state', p_order_data -> 'pickup' ->> 'state',
+        'postalCode', p_order_data -> 'pickup' ->> 'postalCode',
+        'latitude', (p_order_data -> 'pickup' ->> 'latitude') :: NUMERIC,
+        'longitude', (p_order_data -> 'pickup' ->> 'longitude') :: NUMERIC,
+        'building', p_order_data -> 'pickup' ->> 'building',
+        'floor', p_order_data -> 'pickup' ->> 'floor',
+        'flatNumber', p_order_data -> 'pickup' ->> 'flatNumber',
+        'landmark', p_order_data -> 'pickup' ->> 'landmark',
+        'howToReach', p_order_data -> 'pickup' ->> 'howToReach',
+        'contactName', p_order_data -> 'pickup' ->> 'contactName',
+        'contactPhone', p_order_data -> 'pickup' ->> 'contactPhone'
+    );
 
-v_platform_fee := COALESCE(
-    (
-        p_order_data -> 'fareBreakdown' ->> 'platformFee'
-    ) :: NUMERIC,
-    10.00
-);
+    v_delivery_location := jsonb_build_object(
+        'fullAddress', p_order_data -> 'delivery' ->> 'fullAddress',
+        'city', p_order_data -> 'delivery' ->> 'city',
+        'state', p_order_data -> 'delivery' ->> 'state',
+        'postalCode', p_order_data -> 'delivery' ->> 'postalCode',
+        'latitude', (p_order_data -> 'delivery' ->> 'latitude') :: NUMERIC,
+        'longitude', (p_order_data -> 'delivery' ->> 'longitude') :: NUMERIC,
+        'building', p_order_data -> 'delivery' ->> 'building',
+        'floor', p_order_data -> 'delivery' ->> 'floor',
+        'flatNumber', p_order_data -> 'delivery' ->> 'flatNumber',
+        'landmark', p_order_data -> 'delivery' ->> 'landmark',
+        'howToReach', p_order_data -> 'delivery' ->> 'howToReach',
+        'contactName', p_order_data -> 'delivery' ->> 'contactName',
+        'contactPhone', p_order_data -> 'delivery' ->> 'contactPhone'
+    );
 
-v_special_handling_fee := COALESCE(
-    (
-        p_order_data -> 'fareBreakdown' ->> 'specialHandlingFee'
-    ) :: NUMERIC,
-    0.00
-);
+    -- OPTIMIZED: Extract items as JSONB array (replaces orders.items table)
+    v_items := COALESCE(p_order_data -> 'items', '[]'::jsonb);
 
--- Calculate subtotal before tax
-v_subtotal_before_tax := COALESCE(
-    (
-        p_order_data -> 'fareBreakdown' ->> 'subtotalBeforeTax'
-    ) :: NUMERIC,
-    v_base_price + v_distance_price + v_weight_surcharge + v_platform_fee + v_special_handling_fee
-);
-
--- Extract GST amount with fallback calculation (18% of subtotal if not provided)
-v_gst_amount := COALESCE(
-    (p_order_data -> 'fareBreakdown' ->> 'gstAmount') :: NUMERIC,
-    ROUND(v_subtotal_before_tax * 0.18, 2)
-);
-
-v_total_price := (p_order_data -> 'fareBreakdown' ->> 'totalPrice') :: NUMERIC;
-
--- Create pickup location
-INSERT INTO
-    logistics.locations (
-        address,
-        latitude,
-        longitude,
-        location,
-        city,
-        state,
-        postal_code,
-        landmark,
-        building_name,
-        floor_number,
-        flat_number,
-        contact_name,
-        contact_phone
+    -- Create order with JSONB locations and items
+    INSERT INTO orders.requests (
+        client_id, delivery_type_id, vehicle_category_id, weight_tier_id, status,
+        pickup_location, delivery_location, items,
+        package_description, package_type_id, special_instructions, declared_value,
+        notify_recipient_sms, coupon_code,
+        estimated_distance_km, base_price, distance_price, weight_surcharge,
+        platform_fee, special_handling_fee, gst_amount, subtotal_before_tax, total_price,
+        payment_method_id, scheduled_pickup_time, scheduled_delivery_time
     )
-VALUES
-    (
-        p_order_data -> 'pickup' ->> 'address',
-        (p_order_data -> 'pickup' ->> 'latitude') :: NUMERIC,
-        (p_order_data -> 'pickup' ->> 'longitude') :: NUMERIC,
-        ST_SetSRID(
-            ST_MakePoint(
-                (p_order_data -> 'pickup' ->> 'longitude') :: NUMERIC,
-                (p_order_data -> 'pickup' ->> 'latitude') :: NUMERIC
-            ),
-            4326
-        ) :: geography,
-        p_order_data -> 'pickup' ->> 'city',
-        p_order_data -> 'pickup' ->> 'state',
-        p_order_data -> 'pickup' ->> 'postalCode',
-        p_order_data -> 'pickup' ->> 'howToReach',
-        p_order_data -> 'pickup' ->> 'building',
-        p_order_data -> 'pickup' ->> 'floor',
-        p_order_data -> 'pickup' ->> 'flatNumber',
-        p_order_data -> 'pickup' ->> 'contactName',
-        p_order_data -> 'pickup' ->> 'contactPhone'
-    ) RETURNING location_id INTO v_pickup_location_id;
-
--- Create delivery location
-INSERT INTO
-    logistics.locations (
-        address,
-        latitude,
-        longitude,
-        location,
-        city,
-        state,
-        postal_code,
-        landmark,
-        building_name,
-        floor_number,
-        flat_number,
-        contact_name,
-        contact_phone
-    )
-VALUES
-    (
-        p_order_data -> 'delivery' ->> 'address',
-        (p_order_data -> 'delivery' ->> 'latitude') :: NUMERIC,
-        (p_order_data -> 'delivery' ->> 'longitude') :: NUMERIC,
-        ST_SetSRID(
-            ST_MakePoint(
-                (p_order_data -> 'delivery' ->> 'longitude') :: NUMERIC,
-                (p_order_data -> 'delivery' ->> 'latitude') :: NUMERIC
-            ),
-            4326
-        ) :: geography,
-        p_order_data -> 'delivery' ->> 'city',
-        p_order_data -> 'delivery' ->> 'state',
-        p_order_data -> 'delivery' ->> 'postalCode',
-        p_order_data -> 'delivery' ->> 'howToReach',
-        p_order_data -> 'delivery' ->> 'building',
-        p_order_data -> 'delivery' ->> 'floor',
-        p_order_data -> 'delivery' ->> 'flatNumber',
-        p_order_data -> 'delivery' ->> 'contactName',
-        p_order_data -> 'delivery' ->> 'contactPhone'
-    ) RETURNING location_id INTO v_delivery_location_id;
-
--- Create order
-INSERT INTO
-    orders.requests (
-        client_id,
-        delivery_type_id,
-        vehicle_category_id,
-        weight_tier_id,
-        status_id,
-        pickup_location_id,
-        delivery_location_id,
-        pickup_contact_name,
-        pickup_contact_phone,
-        delivery_contact_name,
-        delivery_contact_phone,
-        package_description,
-        package_type_id,
-        special_instructions,
-        declared_value,
-        estimated_distance_km,
-        base_price,
-        distance_price,
-        weight_surcharge,
-        platform_fee,
-        special_handling_fee,
-        gst_amount,
-        subtotal_before_tax,
-        total_price,
-        payment_method_id,
-        scheduled_pickup_time,
-        scheduled_delivery_time
-    )
-VALUES
-    (
-        v_client_id,
-        v_delivery_type_id,
-        v_vehicle_category_id,
-        (p_order_data ->> 'weightTierId') :: INT,
-        v_status_id,
-        v_pickup_location_id,
-        v_delivery_location_id,
-        p_order_data -> 'pickup' ->> 'contactName',
-        p_order_data -> 'pickup' ->> 'contactPhone',
-        p_order_data -> 'delivery' ->> 'contactName',
-        p_order_data -> 'delivery' ->> 'contactPhone',
+    VALUES (
+        v_client_id, v_delivery_type_id, v_vehicle_category_id, (p_order_data ->> 'weightTierId') :: INT, v_status,
+        v_pickup_location, v_delivery_location, v_items,
         p_order_data ->> 'packageDescription',
         (p_order_data ->> 'packageTypeId') :: INT,
         p_order_data ->> 'specialInstructions',
         (p_order_data ->> 'declaredValue') :: NUMERIC,
+        COALESCE((p_order_data ->> 'notifyRecipientSms') :: BOOLEAN, false),
+        p_order_data ->> 'couponCode',
         (p_order_data -> 'fareBreakdown' ->> 'distanceKm') :: NUMERIC,
-        v_base_price,
-        v_distance_price,
-        v_weight_surcharge,
-        v_platform_fee,
-        v_special_handling_fee,
-        v_gst_amount,
-        v_subtotal_before_tax,
-        v_total_price,
+        v_base_price, v_distance_price, v_weight_surcharge, v_platform_fee, v_special_handling_fee,
+        v_gst_amount, v_subtotal_before_tax, v_total_price,
         v_payment_method_id,
         (p_order_data ->> 'scheduledPickupTime') :: TIMESTAMPTZ,
         (p_order_data ->> 'scheduledDeliveryTime') :: TIMESTAMPTZ
-    ) RETURNING order_id,
-    order_uuid INTO v_order_id,
-    v_order_uuid;
+    ) RETURNING order_id, order_uuid INTO v_order_id, v_order_uuid;
 
--- Build success response with enhanced pricing details
-result := json_build_object(
-    'success',
-    true,
-    'order',
-    json_build_object(
-        'orderId',
-        v_order_id,
-        'orderUuid',
-        v_order_uuid,
-        'orderNumber',
-        (
-            SELECT
-                order_number
-            FROM
-                orders.requests
-            WHERE
-                order_id = v_order_id
-        ),
-        'status',
-        'pending',
-        'pricing',
-        json_build_object(
-            'basePrice',
-            v_base_price,
-            'distanceKm',
-            (p_order_data -> 'fareBreakdown' ->> 'distanceKm') :: NUMERIC,
-            'distancePrice',
-            v_distance_price,
-            'weightSurcharge',
-            v_weight_surcharge,
-            'platformFee',
-            v_platform_fee,
-            'specialHandlingFee',
-            v_special_handling_fee,
-            'subtotalBeforeTax',
-            v_subtotal_before_tax,
-            'gstAmount',
-            v_gst_amount,
-            'totalPrice',
-            v_total_price,
-            'currency',
-            'INR'
-        ),
-        'createdAt',
-        NOW()
-    )
-);
+    -- Generate deterministic human-readable order number post-insert
+    v_order_number := format('ORD-%s-%s',
+        to_char(NOW(), 'YYYYMMDD'),
+        LPAD(v_order_id::TEXT, 6, '0')
+    );
 
-RETURN result;
+    UPDATE orders.requests
+    SET order_number = v_order_number
+    WHERE order_id = v_order_id;
+
+    -- Build success response with enhanced pricing details
+    result := json_build_object(
+        'success', true,
+        'order', json_build_object(
+            'orderId', v_order_id,
+            'orderUuid', v_order_uuid,
+            'orderNumber', v_order_number,
+            'status', 'pending',
+            'pricing', json_build_object(
+                'basePrice', v_base_price,
+                'distanceKm', (p_order_data -> 'fareBreakdown' ->> 'distanceKm') :: NUMERIC,
+                'distancePrice', v_distance_price,
+                'weightSurcharge', v_weight_surcharge,
+                'platformFee', v_platform_fee,
+                'specialHandlingFee', v_special_handling_fee,
+                'subtotalBeforeTax', v_subtotal_before_tax,
+                'gstAmount', v_gst_amount,
+                'totalPrice', v_total_price,
+                'currency', 'INR'
+            ),
+            'createdAt', NOW()
+        )
+    );
+
+    RETURN result;
 
 EXCEPTION
-WHEN OTHERS THEN RETURN json_build_object(
-    'success',
-    false,
-    'error',
-    SQLERRM,
-    'error_code',
-    'ORDER_CREATION_FAILED'
-);
-
+    WHEN OTHERS THEN 
+        RETURN json_build_object(
+            'success', false, 
+            'error', SQLERRM, 
+            'error_code', 'ORDER_CREATION_FAILED'
+        );
 END;
-
 $$;
 
 COMMENT ON FUNCTION orders.create_order_with_locations IS 'Create order with pickup and delivery locations in atomic transaction';
@@ -569,7 +417,7 @@ RETURNS JSON
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_order_status_name VARCHAR(50);
+    v_order_status_name order_status;
     v_payment_transaction_id INT;
     v_client_id INT;
     v_order_total NUMERIC;
@@ -578,14 +426,14 @@ result JSON;
 
 BEGIN -- Get current order details
 SELECT
-    os.name,
+    o.status,
     o.client_id,
     o.total_price INTO v_order_status_name,
     v_client_id,
     v_order_total
 FROM
     orders.requests o
-    JOIN public.order_statuses os ON o.status_id = os.status_id
+    
 WHERE
     o.order_id = p_order_id
     AND o.deleted_at IS NULL;
@@ -611,14 +459,7 @@ END IF;
 UPDATE
     orders.requests
 SET
-    status_id = (
-        SELECT
-            status_id
-        FROM
-            public.order_statuses
-        WHERE
-            name = 'cancelled'
-    ),
+    status = 'cancelled',
     cancelled_at = NOW(),
     cancellation_reason = p_cancellation_reason,
     updated_at = NOW()
@@ -629,25 +470,11 @@ WHERE
 UPDATE
     orders.courier_assignments
 SET
-    assignment_status_id = (
-        SELECT
-            status_id
-        FROM
-            public.assignment_statuses
-        WHERE
-            name = 'cancelled'
-    ),
+    status = 'cancelled',
     updated_at = NOW()
 WHERE
     order_id = p_order_id
-    AND assignment_status_id NOT IN (
-        SELECT
-            status_id
-        FROM
-            public.assignment_statuses
-        WHERE
-            name IN ('cancelled', 'rejected')
-    );
+    AND status NOT IN ('cancelled', 'rejected');
 
 -- Check for completed payment
 SELECT
@@ -656,14 +483,7 @@ FROM
     payments.transactions
 WHERE
     order_id = p_order_id
-    AND payment_status_id = (
-        SELECT
-            status_id
-        FROM
-            payments.payment_statuses
-        WHERE
-            name = 'completed'
-    )
+    AND status = 'completed'
 LIMIT
     1;
 
@@ -692,8 +512,8 @@ END IF;
 INSERT INTO
     notifications.queue (
         user_id,
-        channel_id,
-        status_id,
+        channel,
+        status,
         title,
         body,
         data,
@@ -702,22 +522,8 @@ INSERT INTO
 VALUES
     (
         v_client_id,
-        (
-            SELECT
-                channel_id
-            FROM
-                public.notification_channels
-            WHERE
-                name = 'push'
-        ),
-        (
-            SELECT
-                status_id
-            FROM
-                public.notification_statuses
-            WHERE
-                name = 'pending'
-        ),
+        'push',
+        'pending',
         'Order Cancelled',
         format(
             'Your order #%s has been cancelled. %s',
@@ -784,25 +590,10 @@ RETURNS JSON
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_order_status_id INT;
+    v_order_status order_status;
     v_assignment_id INT;
-    v_assigned_status_id INT := (
-        SELECT
-            status_id
-        FROM
-            public.assignment_statuses
-        WHERE
-            name = 'assigned'
-);
-
-v_accepted_order_status_id INT := (
-    SELECT
-        status_id
-    FROM
-        public.order_statuses
-    WHERE
-        name = 'accepted'
-);
+    v_assigned_status assignment_status := 'assigned';
+    v_accepted_order_status order_status := 'accepted';
 
 BEGIN -- Lock the order row to prevent concurrent assignments
 PERFORM 1
@@ -815,25 +606,18 @@ UPDATE
 
 -- Ensure order exists and is in a state that can be assigned (e.g., pending)
 SELECT
-    o.status_id INTO v_order_status_id
+    o.status INTO v_order_status
 FROM
     orders.requests o
 WHERE
     o.order_id = p_order_id;
 
 IF NOT FOUND
-OR v_order_status_id IS NULL THEN RETURN json_build_object('success', false, 'error', 'Order not found');
+OR v_order_status IS NULL THEN RETURN json_build_object('success', false, 'error', 'Order not found');
 
 END IF;
 
-IF v_order_status_id != (
-    SELECT
-        status_id
-    FROM
-        public.order_statuses
-    WHERE
-        name = 'pending'
-) THEN RETURN json_build_object(
+IF v_order_status != 'pending' THEN RETURN json_build_object(
     'success',
     false,
     'error',
@@ -873,9 +657,9 @@ END IF;
 
 -- Create assignment
 INSERT INTO
-    orders.courier_assignments (order_id, courier_id, assignment_status_id)
+    orders.courier_assignments (order_id, courier_id, status)
 VALUES
-    (p_order_id, p_courier_id, v_assigned_status_id) RETURNING assignment_id INTO v_assignment_id;
+    (p_order_id, p_courier_id, v_assigned_status) RETURNING assignment_id INTO v_assignment_id;
 
 -- Update courier status and order status atomically
 UPDATE
@@ -890,7 +674,7 @@ WHERE
 UPDATE
     orders.requests
 SET
-    status_id = v_accepted_order_status_id,
+    status = v_accepted_order_status,
     accepted_at = NOW(),
     updated_at = NOW()
 WHERE

@@ -5,6 +5,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify, { FastifyInstance } from "fastify";
 import config from "./config/env.js";
 import logger from "./config/logger.js";
+import { drizzlePool } from "./database/drizzle.js";
 import { authenticate } from "./middleware/auth.middleware.js";
 import {
   errorHandler,
@@ -75,6 +76,33 @@ export const buildApp = async (
   // Rate limiting
   await app.register(rateLimit, rateLimitConfig);
 
+  // OpenAPI / Swagger (optional - register only if plugin is installed)
+  try {
+    const swagger = await import("@fastify/swagger");
+    const swaggerUi = await import("@fastify/swagger-ui");
+
+    await app.register(swagger.default, {
+      openapi: {
+        info: {
+          title: "Shipzy API",
+          version: "1.0.0",
+          description: "Shipzy hyperlocal delivery API",
+        },
+        servers: [{ url: `http://${config.host}:${config.port}/api/v1` }],
+      },
+      hideUntagged: false,
+    });
+
+    await app.register(swaggerUi.default, {
+      routePrefix: "/docs",
+      uiConfig: { docExpansion: "list", deepLinking: false },
+      staticCSP: true,
+    });
+  } catch (err) {
+    // swagger packages not installed — continue without interactive docs
+    app.log?.debug?.("Swagger plugins not available")
+  }
+
   // ============ DECORATORS ============
 
   // Add logger decorator
@@ -113,14 +141,46 @@ export const buildApp = async (
 
   // ============ ROUTES ============
 
-  // Health check
+  // Health check with database connectivity and server uptime
   app.get("/health", async (request, reply) => {
-    return {
-      status: "ok",
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.nodeEnv,
-    };
+    try {
+      // Test database connectivity
+      const dbTest = await drizzlePool.query("SELECT 1 as test");
+
+      return {
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: config.nodeEnv,
+        database: {
+          connected: dbTest.rows.length > 0,
+          pool: {
+            totalConnections: (drizzlePool as any)?.totalCount || 0,
+            idleConnections: (drizzlePool as any)?.idleCount || 0,
+            waitingConnections: (drizzlePool as any)?.waitingCount || 0,
+          },
+        },
+        memory: {
+          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+          external: Math.round(process.memoryUsage().external / 1024 / 1024),
+        },
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Health check failed",
+        error: (error as Error).message,
+      });
+
+      return reply.status(503).send({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        error: "Service unavailable",
+        database: {
+          connected: false,
+        },
+      });
+    }
   });
 
   // API version

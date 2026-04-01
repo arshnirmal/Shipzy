@@ -1,49 +1,46 @@
 // services/backend/src/modules/users/users.repository.ts
+import { eq, and, isNull } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import usersQueries from "../../database/queries/users.queries.js";
+import { userProfiles } from "../../database/schema/users.js";
+import { userAddresses } from "../../database/schema/users.js";
 
-interface User {
-  user_id: number;
-  user_uuid: string;
-  full_name: string;
-  email?: string;
-  phone_number: string;
-  profile_picture_url?: string;
-  role_name: string;
-  is_verified: boolean;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
+import type { DbUser } from "../../types/user.js";
+
+type User = DbUser;
+
+function mapProfileRowToDbUser(row: {
+  userId: number;
+  userUuid: string;
+  roleName: string;
+  phoneNumber: string | null;
+  email: string | null;
+  fullName: string;
+  profilePictureUrl: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}): User {
+  return {
+    userId: row.userId,
+    userUuid: row.userUuid,
+    fullName: row.fullName,
+    email: row.email ?? undefined,
+    phoneNumber: row.phoneNumber ?? undefined,
+    profilePictureUrl: row.profilePictureUrl ?? undefined,
+    roleName: row.roleName,
+    isVerified: row.isVerified,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
 }
 
 interface Address {
-  address_id: number;
-  user_id: number;
-  label: string;
-  full_address: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  latitude: number;
-  longitude: number;
-  address_type?: string;
-  building?: string;
-  floor?: string;
-  flat_number?: string;
-  landmark?: string;
-  is_default: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
-
-interface UpdateProfileData {
-  fullName?: string;
-  email?: string;
-  profilePictureUrl?: string;
-}
-
-interface AddressData {
+  addressId: number;
+  userId?: number;
   label: string;
   fullAddress: string;
   city: string;
@@ -56,17 +53,47 @@ interface AddressData {
   floor?: string;
   flatNumber?: string;
   landmark?: string;
-  isDefault?: boolean;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
 }
+
+import type { UpdateProfileRequest, SaveAddressRequest } from "./users.zod.js";
+
+type UpdateProfileData = UpdateProfileRequest;
+type AddressData = SaveAddressRequest;
 
 class UsersRepository {
   /**
-   * Find user by UUID
+   * Find user by UUID (migrated to Drizzle)
    */
   async findByUuid(userUuid: string): Promise<User | null> {
     try {
-      const result = await db.query(usersQueries.FIND_USER_BY_UUID, [userUuid]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+          roleName: userProfiles.role,
+          phoneNumber: userProfiles.phoneNumber,
+          email: userProfiles.email,
+          fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
+          isVerified: userProfiles.isVerified,
+          isActive: userProfiles.isActive,
+          createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
+        })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.userUuid, userUuid),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      const row = result[0];
+      return row ? mapProfileRowToDbUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
@@ -77,7 +104,7 @@ class UsersRepository {
   }
 
   /**
-   * Update user profile
+   * Update user profile (migrated to Drizzle)
    */
   async updateProfile(
     userId: number,
@@ -86,14 +113,28 @@ class UsersRepository {
     try {
       const { fullName, email, profilePictureUrl } = updateData;
 
-      const result = await db.query(usersQueries.UPDATE_USER_PROFILE, [
-        userId,
-        fullName || null,
-        email || null,
-        profilePictureUrl || null,
-      ]);
+      const result = await drizzleDb
+        .update(userProfiles)
+        .set({
+          fullName: fullName || undefined,
+          email: email || undefined,
+          profilePictureUrl: profilePictureUrl || undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, userId))
+        .returning();
 
-      return result.rows[0];
+      const updatedRow = result[0];
+      if (!updatedRow) {
+        throw new Error("User update returned no row");
+      }
+
+      // Fetch full user with role for return type compatibility
+      const updatedUser = await this.findByUuid(updatedRow.userUuid);
+      if (!updatedUser) {
+        throw new Error("User not found after update");
+      }
+      return updatedUser;
     } catch (error) {
       logger.error({
         msg: "Error updating user profile",
@@ -108,7 +149,9 @@ class UsersRepository {
    */
   async getAddresses(userId: number): Promise<Address[]> {
     try {
-      const result = await db.query(usersQueries.GET_USER_ADDRESSES, [userId]);
+      const result = await drizzlePool.query(usersQueries.GET_USER_ADDRESSES, [
+        userId,
+      ]);
       return result.rows;
     } catch (error) {
       logger.error({
@@ -124,7 +167,7 @@ class UsersRepository {
    */
   async getAddressById(addressId: number): Promise<Address | null> {
     try {
-      const result = await db.query(usersQueries.GET_ADDRESS_BY_ID, [
+      const result = await drizzlePool.query(usersQueries.GET_ADDRESS_BY_ID, [
         addressId,
       ]);
       return result.rows[0] || null;
@@ -144,7 +187,7 @@ class UsersRepository {
     userId: number,
     addressData: AddressData,
   ): Promise<Address> {
-    const client = await db.getClient();
+    const client = await drizzlePool.connect();
 
     try {
       await client.query("BEGIN");
@@ -187,15 +230,24 @@ class UsersRepository {
   }
 
   /**
-   * Delete address
+   * Delete address (migrated to Drizzle)
    */
-  async deleteAddress(addressId: number, userId: number): Promise<any> {
+  async deleteAddress(
+    addressId: number,
+    userId: number,
+  ): Promise<{ addressId: number } | null> {
     try {
-      const result = await db.query(usersQueries.DELETE_ADDRESS, [
-        addressId,
-        userId,
-      ]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .delete(userAddresses)
+        .where(
+          and(
+            eq(userAddresses.addressId, addressId),
+            eq(userAddresses.userId, userId),
+          ),
+        )
+        .returning({ addressId: userAddresses.addressId });
+
+      return result[0] || null;
     } catch (error) {
       logger.error({
         msg: "Error deleting address",

@@ -5,7 +5,7 @@
 # ============================================
 # Base Stage
 # ============================================
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 
 # Install system dependencies and pnpm
 RUN apk add --no-cache \
@@ -55,7 +55,13 @@ RUN apk add --no-cache python3 make g++
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-CMD ["npm", "run", "dev"]
+# Make startup script executable
+RUN chmod +x /app/scripts/startup.sh
+
+# Use dumb-init as PID 1 and override base image entrypoint
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+CMD ["/app/scripts/startup.sh"]
 
 # ============================================
 # Production Dependencies Stage

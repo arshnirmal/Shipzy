@@ -87,7 +87,7 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
                 const SizedBox(width: 8),
                 _buildChip(Icons.inventory_2, widget.order.packageType),
                 const Spacer(),
-                Text('⏱️ $etaMins mins away', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6))),
+                Text('⏱️ $etaMins mins away', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
               ],
             ),
 
@@ -96,12 +96,9 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
             // Countdown removed (timer disabled)
             Row(
               children: [
-                Icon(Icons.timer_off, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                Icon(Icons.timer_off, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                 const SizedBox(width: 4),
-                Text(
-                  'Offer may expire soon',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                ),
+                Text('Offer may expire soon', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
               ],
             ),
 
@@ -160,9 +157,9 @@ class _AvailableOrderCardState extends State<AvailableOrderCard> {
       decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(4)),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+          Icon(icon, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
           const SizedBox(width: 4),
-          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
         ],
       ),
     );

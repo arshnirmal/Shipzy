@@ -1,14 +1,15 @@
 // lib/screens/auth/register_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_state_provider.dart';
+import '../../theme/design_tokens.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/auth_utils.dart';
+import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
 import 'widgets/auth_widgets.dart';
 
@@ -25,11 +26,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _isGoogleSigningIn = false;
 
   @override
   void dispose() {
@@ -37,8 +37,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _togglePasswordVisibility() {
+    setState(() => _obscurePassword = !_obscurePassword);
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleSigningIn = true);
+
+    try {
+      final authState = ref.read(authStateProvider.notifier);
+      final result = await authState.signInWithGoogle();
+
+      result.when(
+        success: (user, {required bool isNewUser}) {
+          if (mounted) {
+            SnackbarUtils.showSuccess(context, 'Welcome to Shipzy, ${user.fullName}');
+            context.go(AppRoutes.splash);
+          }
+        },
+        error: (message) {
+          AppLogger.e('Google sign in error: $message');
+          if (mounted) {
+            SnackbarUtils.showError(context, AuthErrorParser.parseRegisterError(message), showDismiss: true);
+          }
+        },
+      );
+    } catch (e) {
+      AppLogger.e('Google sign in error: $e');
+      if (mounted) {
+        SnackbarUtils.showError(context, 'Failed to sign in with Google');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleSigningIn = false);
+      }
+    }
   }
 
   Future<void> _submit() async {
@@ -62,18 +98,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       result.when(
         success: (user, {required bool isNewUser}) {
-          // Dismiss keyboard and show success message
           FocusScope.of(context).unfocus();
           SnackbarUtils.showSuccess(context, 'Welcome to Shipzy, ${user.fullName}!');
-
-          // Navigate to home
-          context.go(AppRoutes.home);
+          context.go(AppRoutes.splash);
         },
         error: (message) {
+          AppLogger.e('Register error: $message');
           SnackbarUtils.showError(context, AuthErrorParser.parseRegisterError(message), showDismiss: true);
         },
       );
     } catch (e) {
+      AppLogger.e('Register error: $e');
       if (mounted) {
         SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
       }
@@ -84,35 +119,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
-  Future<void> _handleGoogleSignUp() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final authState = ref.read(authStateProvider.notifier);
-      final result = await authState.signInWithGoogle();
-
-      result.when(
-        success: (user, {required bool isNewUser}) {
-          final message = isNewUser ? 'Welcome to Shipzy, ${user.fullName}!' : 'Welcome back, ${user.fullName}!';
-
-          // Dismiss keyboard and show success message
-          FocusScope.of(context).unfocus();
-          SnackbarUtils.showSuccess(context, message);
-          context.go(AppRoutes.home);
-        },
-        error: (message) {
-          SnackbarUtils.showError(context, AuthErrorParser.parseRegisterError(message));
-        },
-      );
-    } catch (e) {
-      if (mounted) {
-        SnackbarUtils.showError(context, 'Google sign-up failed. Please try again.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+  String? _validateFullName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your full name';
     }
+    if (value.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your phone number';
+    }
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(value.trim())) {
+      return 'Please enter a valid 10-digit phone number';
+    }
+    return null;
   }
 
   @override
@@ -120,26 +144,43 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg).copyWith(bottom: AppSpacing.lg),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 32),
 
-                // Title
+                // Logo Header
                 Center(
-                  child: Text(
-                    'Create Account',
-                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.1), borderRadius: AppRadius.radiusLg),
+                    child: ClipRRect(
+                      borderRadius: AppRadius.radiusLg,
+                      child: Image.asset('assets/app_logo.png', fit: BoxFit.cover),
+                    ),
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Welcome Text
+                Text(
+                  'Create Account',
+                  style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: AppSpacing.xs),
+
+                Text('Sign up to get started with Shipzy.', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+
+                const SizedBox(height: AppSpacing.xl),
 
                 // Full Name Field
                 AuthTextField(
@@ -147,12 +188,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Full Name',
                   hintText: 'Enter full name',
                   textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
                   prefixIcon: const Icon(Icons.person_outline),
-                  validator: AuthValidators.validateFullName,
+                  enabled: !_isLoading,
+                  validator: _validateFullName,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.md),
 
                 // Email Field
                 AuthTextField(
@@ -161,27 +202,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   hintText: 'Enter email address',
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
                   prefixIcon: const Icon(Icons.email_outlined),
+                  enabled: !_isLoading,
                   validator: AuthValidators.validateEmail,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.md),
 
-                // Phone Number Field
+                // Phone Field
                 AuthTextField(
                   controller: _phoneController,
                   label: 'Phone Number',
-                  hintText: '9876543210',
+                  hintText: 'Enter phone number',
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
                   prefixIcon: const Icon(Icons.phone_outlined),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: AuthValidators.validatePhoneNumber,
+                  enabled: !_isLoading,
+                  validator: _validatePhone,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.md),
 
                 // Password Field
                 AuthTextField(
@@ -189,88 +229,56 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Password',
                   hintText: 'Enter password',
                   obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                  ),
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) => AuthValidators.validatePassword(value, minLength: 8),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Confirm Password Field
-                AuthTextField(
-                  controller: _confirmPasswordController,
-                  label: 'Confirm Password',
-                  hintText: 'Re-enter password',
-                  obscureText: _obscureConfirmPassword,
                   textInputAction: TextInputAction.done,
-                  enabled: !_isLoading,
                   onFieldSubmitted: (_) => _submit(),
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                    icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                    onPressed: _togglePasswordVisibility,
+                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                   ),
-                  validator: (value) => AuthValidators.validateConfirmPassword(value, _passwordController.text),
+                  enabled: !_isLoading,
+                  validator: (value) => AuthValidators.validatePassword(value, minLength: 8),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xl),
 
-                // Register Button
-                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Create Account'),
+                // Sign Up Button
+                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Sign up'),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
+
+                const AuthDivider(text: 'or continue with'),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Google Sign In Button
+                SocialButton(
+                  label: 'Continue with Google',
+                  icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
+                  onPressed: _signInWithGoogle,
+                  isLoading: _isGoogleSigningIn,
+                ),
+
+                const SizedBox(height: AppSpacing.xl),
 
                 // Sign In Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have an account?', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text('Already have an account?', style: theme.textTheme.bodyMedium),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.pop(),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                        minimumSize: Size.zero,
+                      ),
                       child: Text(
-                        'Sign In',
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                        'Log in',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // Divider
-                const AuthDivider(text: 'Or Sign up with'),
-
-                const SizedBox(height: 24),
-
-                // Social Sign Up Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: SocialButton(
-                        label: 'Google',
-                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
-                        onPressed: _isLoading ? null : _handleGoogleSignUp,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SocialButton(
-                        label: 'Apple',
-                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
-                        onPressed: null, // TODO(dev): Implement Apple sign-up
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
               ],
             ),
           ),

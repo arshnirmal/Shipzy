@@ -15,8 +15,8 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   // TODO: Add state for uploaded documents
 
   Future<void> _uploadDocument(String type) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
       // TODO: Implement actual upload logic
@@ -40,8 +40,7 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('Upload Documents')),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -68,11 +67,8 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildDocumentItem(String title, VoidCallback onTap) {
-    return Card(
+  Widget _buildDocumentItem(String title, VoidCallback onTap) => Card(
       child: ListTile(title: Text(title), trailing: const Icon(Icons.upload_file), onTap: onTap),
     );
-  }
 }

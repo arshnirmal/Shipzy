@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { buildApp } from "./app.js";
 import config from "./config/env.js";
 import logger from "./config/logger.js";
-import db from "./database/db.js";
+import { cleanupDrizzlePool } from "./database/drizzle.js";
 import * as cron from "node-cron";
 
 /**
@@ -24,7 +24,10 @@ const start = async () => {
     logger.info(`Server listening on ${config.host}:${config.port}`);
     logger.info(`Environment: ${config.nodeEnv}`);
     logger.info(
-      `API Documentation: http://${config.host}:${config.port}/api/v1`,
+      `API Documentation (UI): http://${config.host}:${config.port}/docs`,
+    );
+    logger.info(
+      `OpenAPI JSON: http://${config.host}:${config.port}/documentation/json`,
     );
 
     // Self-ping to prevent sleep on free tiers
@@ -64,7 +67,7 @@ const start = async () => {
       logger.info("Server closed");
 
       // Close database connections
-      await db.closePool();
+      await cleanupDrizzlePool();
       logger.info("Database connections closed");
 
       logger.info("Graceful shutdown completed");

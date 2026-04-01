@@ -2,7 +2,7 @@
 
 > Production-ready backend API for the Shipzy hyperlocal delivery platform
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24+-green.svg)](https://nodejs.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-4.28-blue.svg)](https://www.fastify.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://www.postgresql.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth-orange.svg)](https://firebase.google.com/)
@@ -11,7 +11,7 @@
 
 ## 📋 Overview
 
-Shipzy Backend is a high-performance REST API built with Fastify, multi-provider authentication (Firebase, Google OAuth, Email/Password), and PostgreSQL. It powers a hyperlocal delivery platform connecting customers with nearby couriers.
+Shipzy Backend is a high-performance REST API built with Fastify, multi-provider authentication (Firebase, Google OAuth, Email/Password), and PostgreSQL with Drizzle ORM. It powers a hyperlocal delivery platform connecting customers with nearby couriers.
 
 ### Key Features
 
@@ -27,86 +27,140 @@ Shipzy Backend is a high-performance REST API built with Fastify, multi-provider
 
 ---
 
-## 🚀 Quick Start
+## �️ Development Setup
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- PostgreSQL 14+
+- Node.js >= 24.10.0
+- PostgreSQL 14+ with PostGIS
+- Docker & Docker Compose
 - Firebase project
-- npm or yarn
+- pnpm >= 10.0.0
 
-### Installation
+### Local Development Setup
 
 ```bash
 # 1. Clone and navigate
-cd services/backend
+cd /mnt/data/Arsh/Computer_Science/Projects/shipzy/backend
 
 # 2. Install dependencies
-npm install
+pnpm install
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env with your credentials (see .env.example for all required variables)
+# Edit .env with your credentials
 
-# 4. Setup database
-npm run db:init
+# 4. Start PostgreSQL (if not using Docker)
+docker compose -f docker-compose.dev.yml up -d postgres
 
-# 5. Start server
-npm run dev
+# 5. Deploy database migrations
+pnpm run db:deploy
+
+# 6. Start development server
+pnpm run dev
 ```
 
-**👉 See [QUICKSTART.md](./QUICKSTART.md) for detailed setup**
+### Docker Development Setup
 
-**👉 See [FIREBASE_AUTH_SETUP.md](./FIREBASE_AUTH_SETUP.md) for Firebase configuration**
+```bash
+# 1. Configure environment
+cp .env.example .env
+
+# 2. Start all services
+docker compose -f docker-compose.dev.yml up -d --build
+
+# 3. Check logs
+docker compose -f docker-compose.dev.yml logs -f backend
+```
+
+## 🔐 Firebase Auth Setup
+
+### 1. Create Firebase Project
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create new project or select existing
+3. Enable Authentication
+4. Enable Google OAuth and Email/Password providers
+
+### 2. Get Service Account Key
+
+1. Go to Project Settings → Service accounts
+2. Click "Generate new private key"
+3. Download JSON file and save as `shipzy-firebase-service-account.json`
+4. Place file in backend root directory
+
+### 3. Configure Environment
+
+```bash
+# Add to .env file
+FIREBASE_PROJECT_ID=your-firebase-project-id
+FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----"
+```
+
+### 4. Test Firebase Connection
+
+```bash
+# Test Firebase admin initialization
+node -e "console.log(require('firebase-admin').apps.length > 0 ? 'Firebase initialized' : 'Firebase not initialized')"
+```
+
+**👉 See [Development Setup](#development-setup) for detailed setup**
+
+**👉 See [Firebase Auth Setup](#firebase-auth-setup) for Firebase configuration**
 
 ---
 
 ## 📂 Project Structure
 
 ```
-services/backend/
+backend/
 ├── src/
 │   ├── config/                 # Configuration
-│   │   ├── env.js             # Environment variables
-│   │   ├── firebase.js        # Firebase Admin SDK
-│   │   └── logger.js          # Pino logger
+│   │   ├── env.ts             # Environment variables
+│   │   ├── firebase.ts        # Firebase Admin SDK
+│   │   └── logger.ts          # Pino logger
 │   │
 │   ├── utils/                  # Utilities
-│   │   ├── jwt.util.js        # JWT generation/verification
-│   │   ├── response.util.js   # Standard responses
-│   │   └── error.util.js      # Custom error classes
+│   │   ├── jwt.util.ts        # JWT generation/verification
+│   │   ├── response.util.ts   # Standard responses
+│   │   └── error.util.ts      # Custom error classes
 │   │
 │   ├── middleware/             # Middleware
-│   │   ├── auth.middleware.js # JWT authentication
-│   │   ├── error.middleware.js# Global error handler
-│   │   └── validate.middleware.js # Request validation
+│   │   ├── auth.middleware.ts # JWT authentication
+│   │   ├── error.middleware.ts# Global error handler
+│   │   └── validate.middleware.ts # Request validation
 │   │
 │   ├── database/               # Database
-│   │   ├── db.js              # Connection pool
-│   │   ├── transaction.js     # Transaction helper
-│   │   ├── init/              # Schema & migrations
-│   │   └── queries/           # SQL queries
-│   │       ├── auth.queries.js
-│   │       ├── orders.queries.js
-│   │       ├── drivers.queries.js
-│   │       └── ...
+│   │   ├── db.ts              # Connection pool
+│   │   ├── drizzle.ts         # Drizzle ORM instance
+│   │   ├── transaction.ts     # Transaction helper
+│   │   ├── schema/            # Drizzle schema definitions
+│   │   ├── migrations/        # SQL migrations (auto-generated)
+│   │   ├── functions/         # SQL stored functions
+│   │   ├── queries/           # Raw SQL queries
+│   │   └── utils/             # Database utilities
 │   │
 │   ├── modules/                # Feature modules
-│   │   └── auth/              # Authentication module
-│   │       ├── auth.routes.js    # Routes
-│   │       ├── auth.controller.js # Controllers
-│   │       ├── auth.service.js   # Business logic
-│   │       ├── auth.repository.js # Data access
-│   │       └── auth.schema.js    # Validation schemas
+│   │   ├── auth/              # Authentication module
+│   │   ├── users/             # User management
+│   │   ├── drivers/           # Driver management
+│   │   ├── orders/            # Order management
+│   │   ├── addresses/         # Address & location services
+│   │   ├── ratings/           # Rating system
+│   │   ├── static/            # Static data
+│   │   └── pricing/           # Pricing calculations
 │   │
-│   ├── app.js                  # Fastify app
-│   └── server.js               # Server entry point
+│   ├── schemas/                # Zod validation schemas
+│   ├── types/                  # TypeScript type definitions
+│   ├── app.ts                  # Fastify app
+│   └── server.ts               # Server entry point
 │
+├── scripts/                    # Database & utility scripts
+├── tests/                      # Test files
+├── docs/                       # Documentation
 ├── package.json
 ├── .env.example
-├── QUICKSTART.md
-├── FIREBASE_AUTH_SETUP.md
 └── README.md
 ```
 
@@ -114,15 +168,17 @@ services/backend/
 
 ## 🛠️ Tech Stack
 
-| Category           | Technology                                          |
-| ------------------ | --------------------------------------------------- |
-| **Runtime**        | Node.js 18+                                         |
-| **Framework**      | Fastify 4.28                                        |
-| **Database**       | PostgreSQL 14+ with PostGIS                         |
-| **Authentication** | Firebase Auth + Google OAuth + Email/Password + JWT |
-| **Logger**         | Pino                                                |
-| **Validation**     | AJV                                                 |
-| **Security**       | Helmet, CORS, Rate Limiting                         |
+| Category            | Technology                                          |
+| ------------------- | --------------------------------------------------- |
+| **Runtime**         | Node.js 24+                                         |
+| **Framework**       | Fastify 5.7+                                        |
+| **Database**        | PostgreSQL 14+ with PostGIS + Drizzle ORM           |
+| **Authentication**  | Firebase Auth + Google OAuth + Email/Password + JWT |
+| **Package Manager** | pnpm 10.0+                                          |
+| **Language**        | TypeScript 5.7+                                     |
+| **Logger**          | Pino                                                |
+| **Validation**      | Zod + AJV                                           |
+| **Security**        | Helmet, CORS, Rate Limiting                         |
 
 ---
 
@@ -202,7 +258,7 @@ services/backend/
 | GET    | `/health` | Server health status | No            |
 | GET    | `/api/v1` | API info             | No            |
 
-**📋 Total: 37 implemented endpoints**
+**📋 Total: 38 implemented endpoints**
 
 ---
 
@@ -243,19 +299,17 @@ sequenceDiagram
 
 ## 🔧 Environment Variables
 
-| Variable                 | Description                    | Example                      |
+| Variable                 | Description                    | Default                      |
 | ------------------------ | ------------------------------ | ---------------------------- |
 | `NODE_ENV`               | Environment                    | `development`                |
 | `BACKEND_PORT`           | Server port                    | `3000`                       |
 | `BACKEND_HOST`           | Server host                    | `0.0.0.0`                    |
-| `POSTGRES_DB`            | Database name                  | `shipzy_dev`                 |
-| `POSTGRES_USER`          | Database user                  | `shipzy_user`                |
-| `POSTGRES_PASSWORD`      | Database password              | `secure_password`            |
+| `DATABASE_URL`           | Full Postgres/Neon URL         | (empty)                      |
 | `DB_HOST`                | Database host                  | `localhost`                  |
+| `DB_PORT`                | Database port                  | `5432`                       |
 | `DB_NAME`                | Database name                  | `shipzy_dev`                 |
 | `DB_USER`                | Database user                  | `shipzy_user`                |
-| `DB_PASSWORD`            | Database password              | `secure_password`            |
-| `DB_PORT`                | Database port                  | `5432`                       |
+| `DB_PASSWORD`            | Database password (fallback)   | `secure_password`            |
 | `DB_POOL_MAX`            | Database connection pool size  | `20`                         |
 | `JWT_SECRET`             | JWT signing key                | (generate with openssl)      |
 | `JWT_EXPIRES_IN`         | JWT expiration time            | `7d`                         |
@@ -351,9 +405,10 @@ npm run lint:fix
 npm run format
 
 # Database operations
-npm run db:init
-npm run db:functions
-npm run db:seed
+pnpm run db:generate    # Generate migrations from schema
+pnpm run db:deploy      # Deploy migrations to database
+pnpm run db:reset       # Reset database (dangerous)
+pnpm run db:seed        # Seed development data
 ```
 
 ---

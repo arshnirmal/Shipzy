@@ -12,20 +12,20 @@ part 'order_details_provider.g.dart';
 
 @riverpod
 class OrderDetails extends _$OrderDetails {
-  Timer? _refreshTimer;
+  Timer? refreshTimer;
 
   @override
   Future<Order> build(int orderId) async {
     ref.onDispose(() {
-      _refreshTimer?.cancel();
+      refreshTimer?.cancel();
     });
 
-    final order = await _fetchOrder(orderId);
-    _setupAutoRefresh(order.status);
+    final order = await fetchOrder(orderId);
+    setupAutoRefresh(order.status);
     return order;
   }
 
-  Future<Order> _fetchOrder(int orderId) async {
+  Future<Order> fetchOrder(int orderId) async {
     final orderService = ref.read(orderServiceProvider);
     try {
       final response = await orderService.getOrderDetails(orderId);
@@ -35,18 +35,18 @@ class OrderDetails extends _$OrderDetails {
     }
   }
 
-  void _setupAutoRefresh(OrderStatus status) {
-    _refreshTimer?.cancel();
-    final interval = _getRefreshInterval(status);
+  void setupAutoRefresh(OrderStatus status) {
+    refreshTimer?.cancel();
+    final interval = getRefreshInterval(status);
 
     if (interval > Duration.zero) {
-      _refreshTimer = Timer.periodic(interval, (_) {
+      refreshTimer = Timer.periodic(interval, (_) {
         refresh();
       });
     }
   }
 
-  Duration _getRefreshInterval(OrderStatus status) {
+  Duration getRefreshInterval(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
         return const Duration(seconds: 30);
@@ -57,6 +57,8 @@ class OrderDetails extends _$OrderDetails {
       case OrderStatus.inTransit:
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return Duration.zero; // No auto-refresh for completed/cancelled/failed
     }
@@ -66,8 +68,8 @@ class OrderDetails extends _$OrderDetails {
     final orderId = state.value?.orderId;
     if (orderId != null) {
       state = await AsyncValue.guard(() async {
-        final order = await _fetchOrder(orderId);
-        _setupAutoRefresh(order.status);
+        final order = await fetchOrder(orderId);
+        setupAutoRefresh(order.status);
         return order;
       });
     }

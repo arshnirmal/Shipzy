@@ -384,8 +384,8 @@ class NewOrder extends _$NewOrder {
         deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
         vehicleCategoryId: state.selectedVehicle!.categoryId,
         weightTierId: weightTier.tierId,
-        pickup: Coordinate(lat: state.pickupLatitude!, lng: state.pickupLongitude!),
-        drop: Coordinate(lat: state.deliveryLatitude!, lng: state.deliveryLongitude!),
+        pickup: Coordinate(latitude: state.pickupLatitude!, longitude: state.pickupLongitude!),
+        drop: Coordinate(latitude: state.deliveryLatitude!, longitude: state.deliveryLongitude!),
       );
 
       final response = await orderService.calculateFare(request);
@@ -463,7 +463,7 @@ class NewOrder extends _$NewOrder {
         weightTierId: weightTier.tierId,
         paymentMethodId: state.selectedPaymentMethod!.methodId,
         pickup: CreateOrderPickup(
-          address: state.pickupAddress!,
+          fullAddress: state.pickupAddress!,
           latitude: state.pickupLatitude!,
           longitude: state.pickupLongitude!,
           city: state.pickupCity ?? 'Unknown',
@@ -477,7 +477,7 @@ class NewOrder extends _$NewOrder {
           flatNumber: state.pickupFlat,
         ),
         delivery: CreateOrderDelivery(
-          address: state.deliveryAddress!,
+          fullAddress: state.deliveryAddress!,
           latitude: state.deliveryLatitude!,
           longitude: state.deliveryLongitude!,
           city: state.deliveryCity ?? 'Unknown',

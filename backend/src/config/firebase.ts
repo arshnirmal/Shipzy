@@ -115,7 +115,8 @@ export const verifyFirebaseToken = async (
   }
 
   try {
-    const decodedToken = await firebaseAuth.verifyIdToken(idToken);
+    // Enforce revocation checks to avoid accepting revoked tokens.
+    const decodedToken = await firebaseAuth.verifyIdToken(idToken, true);
     return decodedToken;
   } catch (error) {
     logger.error({

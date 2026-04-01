@@ -8,61 +8,22 @@ export default {
   // ============ USER PROFILE ============
 
   /**
-   * Find user by UUID (for JWT payload)
-   */
-  FIND_USER_BY_UUID: `
-    SELECT
-      u.user_id,
-      u.user_uuid,
-      u.role_id,
-      r.name AS role_name,
-      u.phone_number,
-      u.email,
-      u.full_name,
-      u.profile_picture_url,
-      u.is_verified,
-      u.is_active,
-      u.created_at
-    FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
-    WHERE u.user_uuid = $1
-      AND u.deleted_at IS NULL
-  `,
-
-  /**
-   * Find user by phone number
-   */
-  FIND_USER_BY_PHONE: `
-    SELECT
-      u.user_id,
-      u.user_uuid,
-      u.role_id,
-      r.name AS role_name,
-      u.phone_number,
-      u.email,
-      u.full_name,
-      u.profile_picture_url,
-      u.is_verified,
-      u.is_active,
-      u.created_at
-    FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
-    WHERE u.phone_number = $1
-          AND u.deleted_at IS NULL
-  `,
-
-  /**
    * Update user profile
    */
   UPDATE_USER_PROFILE: `
       UPDATE users.profiles
-      SET 
+      SET
           full_name = COALESCE($2, full_name),
           email = COALESCE($3, email),
           profile_picture_url = COALESCE($4, profile_picture_url),
           updated_at = NOW()
       WHERE user_id = $1
-      RETURNING user_id, full_name, email, profile_picture_url, updated_at
+      RETURNING
+          user_id AS "userId",
+          full_name AS "fullName",
+          email AS "email",
+          profile_picture_url AS "profilePictureUrl",
+          updated_at AS "updatedAt"
   `,
 
   // ============ USER ADDRESSES ============
@@ -72,21 +33,21 @@ export default {
    */
   GET_USER_ADDRESSES: `
       SELECT
-          a.address_id,
-          a.address_type,
-          a.label,
-          a.full_address,
-          a.building,
-          a.floor,
-          a.flat_number,
-          a.landmark,
-          a.city,
-          a.state,
-          a.postal_code,
-          ST_Y(a.location::geometry) AS latitude,
-          ST_X(a.location::geometry) AS longitude,
-          a.is_default,
-          a.created_at
+          a.address_id AS "addressId",
+          a.address_type AS "addressType",
+          a.label AS "label",
+          a.full_address AS "fullAddress",
+          a.building AS "building",
+          a.floor AS "floor",
+          a.flat_number AS "flatNumber",
+          a.landmark AS "landmark",
+          a.city AS "city",
+          a.state AS "state",
+          a.postal_code AS "postalCode",
+          ST_Y(a.location::geometry) AS "latitude",
+          ST_X(a.location::geometry) AS "longitude",
+          a.is_default AS "isDefault",
+          a.created_at AS "createdAt"
       FROM users.addresses a
       WHERE a.user_id = $1
       ORDER BY a.is_default DESC, a.created_at DESC
@@ -97,21 +58,21 @@ export default {
    */
   GET_ADDRESS_BY_ID: `
       SELECT
-          a.address_id,
-          a.user_id,
-          a.address_type,
-          a.label,
-          a.full_address,
-          a.building,
-          a.floor,
-          a.flat_number,
-          a.landmark,
-          a.city,
-          a.state,
-          a.postal_code,
-          ST_Y(a.location::geometry) AS latitude,
-          ST_X(a.location::geometry) AS longitude,
-          a.is_default
+          a.address_id AS "addressId",
+          a.user_id AS "userId",
+          a.address_type AS "addressType",
+          a.label AS "label",
+          a.full_address AS "fullAddress",
+          a.building AS "building",
+          a.floor AS "floor",
+          a.flat_number AS "flatNumber",
+          a.landmark AS "landmark",
+          a.city AS "city",
+          a.state AS "state",
+          a.postal_code AS "postalCode",
+          ST_Y(a.location::geometry) AS "latitude",
+          ST_X(a.location::geometry) AS "longitude",
+          a.is_default AS "isDefault"
       FROM users.addresses a
       WHERE a.address_id = $1
   `,
@@ -141,11 +102,11 @@ export default {
           $14
       )
       RETURNING
-          address_id,
-          label,
-          full_address,
-          is_default,
-          created_at
+          address_id AS "addressId",
+          label AS "label",
+          full_address AS "fullAddress",
+          is_default AS "isDefault",
+          created_at AS "createdAt"
   `,
 
   /**
@@ -163,6 +124,6 @@ export default {
   DELETE_ADDRESS: `
       DELETE FROM users.addresses
       WHERE address_id = $1 AND user_id = $2
-      RETURNING address_id
+      RETURNING address_id AS "addressId"
   `,
 };

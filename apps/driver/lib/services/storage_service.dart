@@ -4,6 +4,4 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'storage_service.g.dart';
 
 @riverpod
-FlutterSecureStorage secureStorage(SecureStorageRef ref) {
-  return const FlutterSecureStorage();
-}
+FlutterSecureStorage secureStorage(SecureStorageRef ref) => const FlutterSecureStorage();

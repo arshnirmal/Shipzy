@@ -10,27 +10,6 @@ declare module "fastify" {
   }
 }
 
-// Common interfaces
-export interface ApiResponse<T = any> {
-  status: "success" | "error";
-  message: string;
-  data?: T;
-  timestamp?: string;
-}
-
-export interface ErrorResponse {
-  status: "error";
-  message: string;
-  error?: string;
-  timestamp?: string;
-}
-
-export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  offset?: number;
-}
-
 export interface DeviceInfo {
   deviceId?: string;
   ipAddress: string;
@@ -44,6 +23,7 @@ export interface UserRole {
 }
 
 export interface DatabaseConfig {
+  connectionString?: string;
   host: string;
   port: number;
   database: string;

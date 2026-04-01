@@ -5,6 +5,8 @@ import {
   deleteAddressSchema,
   saveAddressSchema,
   updateProfileSchema,
+  getAddressesSchema,
+  getCurrentUserSchema,
 } from "./users.schema.js";
 
 async function usersRoutes(fastify: FastifyInstance, options: any) {
@@ -12,7 +14,11 @@ async function usersRoutes(fastify: FastifyInstance, options: any) {
   fastify.addHook("onRequest", fastify.authenticate);
 
   // GET /api/v1/users/me - Get current user profile
-  fastify.get("/me", usersController.getCurrentUser.bind(usersController));
+  fastify.get(
+    "/me",
+    { schema: getCurrentUserSchema },
+    usersController.getCurrentUser.bind(usersController),
+  );
 
   // PUT /api/v1/users/me - Update user profile
   fastify.put(
@@ -24,6 +30,7 @@ async function usersRoutes(fastify: FastifyInstance, options: any) {
   // GET /api/v1/users/me/addresses - Get saved addresses
   fastify.get(
     "/me/addresses",
+    { schema: getAddressesSchema },
     usersController.getAddresses.bind(usersController),
   );
 

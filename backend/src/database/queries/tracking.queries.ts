@@ -26,8 +26,6 @@ export default {
           courier_id,
           event_type,
           location,
-          latitude,
-          longitude,
           accuracy_meters,
           speed_kmph,
           bearing_degrees,
@@ -37,9 +35,9 @@ export default {
       VALUES (
           $1, $2, $3, $4,
           ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography,
-          $5, $6, $7, $8, $9, $10, $11
+          $7, $8, $9, $10, $11
       )
-      RETURNING event_id, timestamp
+      RETURNING event_id AS "eventId", timestamp AS "timestamp"
   `,
 
   /**
@@ -47,13 +45,13 @@ export default {
    */
   GET_LATEST_TRACKING_EVENT: `
       SELECT 
-          te.event_id,
-          te.event_type,
-          ST_Y(te.location::geometry) AS latitude,
-          ST_X(te.location::geometry) AS longitude,
-          te.speed_kmph,
-          te.bearing_degrees,
-          te.timestamp
+          te.event_id AS "eventId",
+          te.event_type AS "eventType",
+          ST_Y(te.location::geometry) AS "latitude",
+          ST_X(te.location::geometry) AS "longitude",
+          te.speed_kmph AS "speedKmph",
+          te.bearing_degrees AS "bearingDegrees",
+          te.timestamp AS "timestamp"
       FROM tracking.events te
       WHERE te.order_id = $1
       ORDER BY te.timestamp DESC
@@ -65,14 +63,14 @@ export default {
    */
   GET_ORDER_TRACKING_EVENTS: `
       SELECT 
-          te.event_id,
-          te.event_type,
-          ST_Y(te.location::geometry) AS latitude,
-          ST_X(te.location::geometry) AS longitude,
-          te.speed_kmph,
-          te.bearing_degrees,
-          te.accuracy_meters,
-          te.timestamp
+          te.event_id AS "eventId",
+          te.event_type AS "eventType",
+          ST_Y(te.location::geometry) AS "latitude",
+          ST_X(te.location::geometry) AS "longitude",
+          te.speed_kmph AS "speedKmph",
+          te.bearing_degrees AS "bearingDegrees",
+          te.accuracy_meters AS "accuracyMeters",
+          te.timestamp AS "timestamp"
       FROM tracking.events te
       WHERE te.order_id = $1
       ORDER BY te.timestamp DESC
@@ -83,7 +81,7 @@ export default {
    * Count tracking events for order
    */
   COUNT_TRACKING_EVENTS: `
-      SELECT COUNT(*) AS total_events
+      SELECT COUNT(*) AS "totalEvents"
       FROM tracking.events
       WHERE order_id = $1
   `,

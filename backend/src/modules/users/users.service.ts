@@ -5,50 +5,23 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import {
+  toIsoDateTime,
+  toIsoDateTimeOrUndefined,
+} from "../../utils/datetime.util.js";
 import usersRepository from "./users.repository.js";
 
-interface UserProfile {
-  userId: number;
-  userUuid: string;
-  role: string;
-  phoneNumber: string;
-  email?: string;
-  fullName: string;
-  profilePictureUrl?: string;
-  isVerified: boolean;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface UpdateProfileData {
-  fullName?: string;
-  email?: string;
-  profilePictureUrl?: string;
-}
-
-interface AddressData {
-  label: string;
-  fullAddress: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  latitude: number;
-  longitude: number;
-  addressType?: "home" | "work" | "other";
-  building?: string;
-  floor?: string;
-  flatNumber?: string;
-  landmark?: string;
-  isDefault?: boolean;
-  [key: string]: any;
-}
+import type { UserProfileResponse } from "./users.zod.js";
+import type {
+  UpdateProfileRequest as UpdateProfileData,
+  SaveAddressRequest as AddressData,
+} from "./users.zod.js";
 
 class UsersService {
   /**
    * Get current user profile
    */
-  async getCurrentUser(userUuid: string): Promise<UserProfile> {
+  async getCurrentUser(userUuid: string): Promise<UserProfileResponse> {
     try {
       const user = await usersRepository.findByUuid(userUuid);
 
@@ -57,17 +30,17 @@ class UsersService {
       }
 
       return {
-        userId: user.user_id,
-        userUuid: user.user_uuid,
-        role: user.role_name,
-        phoneNumber: user.phone_number,
-        email: user.email,
-        fullName: user.full_name,
-        profilePictureUrl: user.profile_picture_url,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName as UserProfileResponse["role"],
+        phoneNumber: user.phoneNumber ?? null,
+        email: user.email ?? null,
+        fullName: user.fullName,
+        profilePictureUrl: user.profilePictureUrl ?? null,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        createdAt: toIsoDateTime(user.createdAt),
+        updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -84,7 +57,7 @@ class UsersService {
   async updateProfile(
     userId: number,
     updateData: UpdateProfileData,
-  ): Promise<UserProfile> {
+  ): Promise<UserProfileResponse> {
     try {
       // Validate email format if provided
       if (updateData.email) {
@@ -100,17 +73,17 @@ class UsersService {
       );
 
       return {
-        userId: updatedUser.user_id,
-        userUuid: updatedUser.user_uuid,
-        fullName: updatedUser.full_name,
-        email: updatedUser.email,
-        profilePictureUrl: updatedUser.profile_picture_url,
-        role: updatedUser.role_name,
-        phoneNumber: updatedUser.phone_number,
-        isVerified: updatedUser.is_verified,
-        isActive: updatedUser.is_active,
-        createdAt: updatedUser.created_at,
-        updatedAt: updatedUser.updated_at,
+        userId: updatedUser.userId,
+        userUuid: updatedUser.userUuid,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email ?? null,
+        profilePictureUrl: updatedUser.profilePictureUrl ?? null,
+        role: updatedUser.roleName as UserProfileResponse["role"],
+        phoneNumber: updatedUser.phoneNumber ?? null,
+        isVerified: updatedUser.isVerified,
+        isActive: updatedUser.isActive,
+        createdAt: toIsoDateTime(updatedUser.createdAt),
+        updatedAt: toIsoDateTimeOrUndefined(updatedUser.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -124,26 +97,29 @@ class UsersService {
   /**
    * Get user addresses
    */
-  async getAddresses(userId: number): Promise<any[]> {
+  async getAddresses(
+    userId: number,
+  ): Promise<import("./users.zod.js").SavedAddressResponse[]> {
     try {
       const addresses = await usersRepository.getAddresses(userId);
 
       return addresses.map((addr) => ({
-        addressId: addr.address_id,
-        addressType: addr.address_type,
+        addressId: addr.addressId,
+        addressType:
+          addr.addressType as import("./users.zod.js").SavedAddressResponse["addressType"],
         label: addr.label,
-        fullAddress: addr.full_address,
-        building: addr.building,
-        floor: addr.floor,
-        flatNumber: addr.flat_number,
+        fullAddress: addr.fullAddress,
+        building: addr.building || undefined,
+        floor: addr.floor || undefined,
+        flatNumber: addr.flatNumber || undefined,
         landmark: addr.landmark,
         city: addr.city,
         state: addr.state,
-        postalCode: addr.postal_code,
+        postalCode: addr.postalCode,
         latitude: addr.latitude,
         longitude: addr.longitude,
-        isDefault: addr.is_default,
-        createdAt: addr.created_at,
+        isDefault: addr.isDefault,
+        createdAt: toIsoDateTime(addr.createdAt),
       }));
     } catch (error) {
       logger.error({
@@ -157,7 +133,10 @@ class UsersService {
   /**
    * Save new address
    */
-  async saveAddress(userId: number, addressData: AddressData): Promise<any> {
+  async saveAddress(
+    userId: number,
+    addressData: AddressData,
+  ): Promise<import("./users.zod.js").SavedAddressResponse> {
     try {
       // Validate required fields
       const requiredFields = [
@@ -169,9 +148,10 @@ class UsersService {
         "latitude",
         "longitude",
       ];
-      const missingFields = requiredFields.filter(
-        (field) => !addressData[field],
-      );
+      const missingFields = requiredFields.filter((field) => {
+        const v = (addressData as unknown as Record<string, unknown>)[field];
+        return v === undefined || v === null || v === "";
+      });
 
       if (missingFields.length > 0) {
         throw new ValidationError(
@@ -193,11 +173,22 @@ class UsersService {
       );
 
       return {
-        addressId: savedAddress.address_id,
+        addressId: savedAddress.addressId,
+        addressType:
+          savedAddress.addressType as import("./users.zod.js").SavedAddressResponse["addressType"],
         label: savedAddress.label,
-        fullAddress: savedAddress.full_address,
-        isDefault: savedAddress.is_default,
-        createdAt: savedAddress.created_at,
+        fullAddress: savedAddress.fullAddress,
+        building: savedAddress.building || undefined,
+        floor: savedAddress.floor || undefined,
+        flatNumber: savedAddress.flatNumber || undefined,
+        landmark: savedAddress.landmark || undefined,
+        city: savedAddress.city,
+        state: savedAddress.state,
+        postalCode: savedAddress.postalCode,
+        latitude: savedAddress.latitude,
+        longitude: savedAddress.longitude,
+        isDefault: savedAddress.isDefault,
+        createdAt: toIsoDateTime(savedAddress.createdAt),
       };
     } catch (error) {
       logger.error({
@@ -211,7 +202,10 @@ class UsersService {
   /**
    * Delete address
    */
-  async deleteAddress(addressId: number, userId: number): Promise<any> {
+  async deleteAddress(
+    addressId: number,
+    userId: number,
+  ): Promise<{ message: string }> {
     try {
       // Verify address belongs to user
       const address = await usersRepository.getAddressById(addressId);
@@ -220,7 +214,7 @@ class UsersService {
         throw new NotFoundError("Address not found");
       }
 
-      if (address.user_id !== userId) {
+      if (address.userId !== userId) {
         throw new AuthorizationError("You can only delete your own addresses");
       }
 

@@ -82,13 +82,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             IconData icon;
 
             if (status == DriverStatus.onDelivery) {
-              pillColor = Colors.orange.withOpacity(0.12);
+              pillColor = Colors.orange.withValues(alpha: 0.12);
               pillBorder = Colors.orange;
               textColor = Colors.orange;
               label = 'In Transit';
               icon = Icons.directions_bike;
             } else if (status == DriverStatus.online) {
-              pillColor = Colors.green.withOpacity(0.12);
+              pillColor = Colors.green.withValues(alpha: 0.12);
               pillBorder = Colors.green;
               textColor = Colors.green;
               label = 'Online';
@@ -131,10 +131,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const SizedBox(width: 4),
                           Text(
                             label,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: textColor,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: theme.textTheme.labelSmall?.copyWith(color: textColor, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -145,7 +142,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (profile.vehicle != null)
                   Text(
                     '${profile.vehicle!.model} • ${profile.vehicle!.vehicleNumber}',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7)),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
                     overflow: TextOverflow.ellipsis,
                   ),
               ],
@@ -205,7 +202,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
                                     ref.invalidate(activeOrderProvider);
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    }
                                   }
                                 },
                                 onMarkDelivered: () async {
@@ -214,7 +213,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ref.invalidate(activeOrderProvider);
                                     ref.invalidate(dailyStatsProvider);
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                    }
                                   }
                                 },
                               )
@@ -260,7 +261,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           decoration: BoxDecoration(
                             color: theme.colorScheme.errorContainer,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+                            border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -307,7 +308,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       await ref.read(apiServiceProvider).updateOrderStatus(order.orderId, 'picked_up');
                                       ref.invalidate(activeOrderProvider);
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      }
                                     }
                                   },
                                   onMarkDelivered: () async {
@@ -316,7 +319,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ref.invalidate(activeOrderProvider);
                                       ref.invalidate(dailyStatsProvider);
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update order status: $e')));
+                                      }
                                     }
                                   },
                                 )
@@ -396,7 +401,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.errorContainer,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: theme.colorScheme.error.withOpacity(0.3)),
+                                  border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.3)),
                                 ),
                                 child: Center(
                                   child: Text(

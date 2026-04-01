@@ -5,68 +5,103 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import {
+  toIsoDateTime,
+  toIsoDateTimeOrNull,
+} from "../../utils/datetime.util.js";
 import driversRepository from "./drivers.repository.js";
 
-interface DriverProfile {
-  userId: number;
-  userUuid: string;
-  phoneNumber: string;
-  fullName: string;
-  email: string;
-  profilePictureUrl?: string;
-  isVerified: boolean;
-  isActive: boolean;
-  status: {
-    isAvailable: boolean;
-    isOnline: boolean;
-    totalDeliveriesToday: number;
-    lastActiveLocation: {
-      latitude: number;
-      longitude: number;
-      updatedAt: Date;
-    } | null;
+import type { DriverProfileResponse } from "./drivers.zod.js";
+
+type UpdateProfileData = import("./drivers.zod.js").UpdateDriverProfileRequest;
+type UpdateAvailabilityData =
+  import("./drivers.zod.js").UpdateAvailabilityRequest;
+type LocationData = import("./drivers.zod.js").UpdateLocationRequest;
+
+type DriverProfile = DriverProfileResponse;
+
+// API return shape for earnings summary (used by `getEarningsSummary`)
+type EarningsSummary = {
+  deliveries: {
+    today?: number;
+    total?: number;
+    thisWeek?: number;
+    thisMonth?: number;
   };
-  vehicle: {
-    vehicleId: number;
-    vehicleNumber: string;
-    model: string;
-    year: number;
-    category: string;
-    capacity: number;
-  } | null;
   earnings: {
-    total: number;
-    today: number;
-    thisWeek: number;
-    thisMonth: number;
-    averageOrderValue: number;
-    totalDistanceKm: number;
+    today?: number;
+    total?: number;
+    thisWeek?: number;
+    thisMonth?: number;
+    averageOrderValue?: number;
   };
-  createdAt: Date;
-  updatedAt: Date;
-}
+  totalDistanceKm: number;
+};
 
-interface UpdateProfileData {
-  fullName?: string;
-  phoneNumber?: string;
-  vehicleType?: string;
-  vehicleNumber?: string;
-  licenseNumber?: string;
-}
-
-interface UpdateAvailabilityData {
-  isAvailable: boolean;
-  isOnline?: boolean;
-  location?: {
-    latitude: number;
-    longitude: number;
+// API return shape for active assignments (frontend-friendly)
+type ActiveAssignment = {
+  assignmentId: number;
+  orderId: number;
+  orderUuid?: string;
+  orderNumber?: string;
+  orderStatus?: string;
+  assignmentStatus?: string;
+  vehicleCategory?: string | null;
+  vehicleCategoryDisplay?: string | null;
+  packageType?: string | null;
+  weightTier?: {
+    id?: number;
+    name?: string;
+    minWeightKg?: number;
+    maxWeightKg?: number;
+  } | null;
+  pickup: {
+    address?: string | null;
+    building?: string | null;
+    landmark?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
   };
-}
-
-interface LocationData {
-  latitude: number;
-  longitude: number;
-}
+  delivery: {
+    address?: string | null;
+    building?: string | null;
+    landmark?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
+  };
+  packageDescription?: string | null;
+  specialInstructions?: string | null;
+  declaredValue?: number | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  driverEarnings: number;
+  earningsBreakdown: {
+    basePayout: number;
+    distanceEarning: number;
+    weightCompensation: number;
+    peakHourBonus: number;
+    urgencyBonus: number;
+    onTimeBonus: number;
+    qualityBonus: number;
+    platformCommission: number;
+    customerTip: number;
+    grossEarning: number;
+    netEarning: number;
+  };
+  estimatedDeliveryTime: number;
+  assignedAt?: string | null;
+  acceptedAt?: string | null;
+};
 
 class DriversService {
   /**
@@ -81,35 +116,37 @@ class DriversService {
       }
 
       return {
-        userId: driver.user_id,
-        userUuid: driver.user_uuid,
-        phoneNumber: driver.phone_number,
-        fullName: driver.full_name,
+        userId: driver.userId,
+        userUuid: driver.userUuid,
+        phoneNumber: driver.phoneNumber ?? null,
+        fullName: driver.fullName,
         email: driver.email || "",
-        profilePictureUrl: driver.profile_picture_url,
-        isVerified: driver.is_verified,
-        isActive: driver.is_active,
+        role: "courier",
+        profilePictureUrl: driver.profilePictureUrl ?? null,
+        isVerified: driver.isVerified,
+        isActive: driver.isActive,
         status: {
-          isAvailable: driver.is_available,
-          isOnline: driver.is_online,
-          totalDeliveriesToday: driver.total_deliveries_today,
-          lastActiveLocation:
-            driver.current_latitude && driver.current_longitude
+          isAvailable: driver.isAvailable,
+          isOnline: driver.isOnline,
+          totalDeliveriesToday: driver.totalDeliveriesToday,
+          currentLocation:
+            driver.currentLatitude && driver.currentLongitude
               ? {
-                  latitude: Number.parseFloat(driver.current_latitude),
-                  longitude: Number.parseFloat(driver.current_longitude),
-                  updatedAt: driver.last_location_update || new Date(),
+                  latitude: Number(driver.currentLatitude),
+                  longitude: Number(driver.currentLongitude),
                 }
               : null,
+          lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
         },
-        vehicle: driver.vehicle_id
+        vehicle: driver.vehicleId
           ? {
-              vehicleId: driver.vehicle_id,
-              vehicleNumber: driver.vehicle_number || "",
-              model: driver.vehicle_model || "",
-              year: driver.vehicle_year || 0,
-              category: driver.vehicle_category || "",
-              capacity: Number.parseFloat(driver.vehicle_max_weight || "0"),
+              vehicleId: driver.vehicleId,
+              categoryId: driver.vehicleCategoryId ?? undefined,
+              category: driver.vehicleCategory || "",
+              isActive: Boolean(driver.vehicleIsActive),
+              vehicleNumber: driver.vehicleNumber || "",
+              model: driver.vehicleModel || "",
+              year: driver.vehicleYear || 0,
             }
           : null,
         earnings: {
@@ -120,8 +157,8 @@ class DriversService {
           averageOrderValue: 0,
           totalDistanceKm: 0,
         },
-        createdAt: driver.created_at,
-        updatedAt: driver.updated_at,
+        createdAt: toIsoDateTime(driver.createdAt),
+        updatedAt: toIsoDateTime(driver.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -138,7 +175,12 @@ class DriversService {
   async updateProfile(
     userId: number,
     updateData: UpdateProfileData,
-  ): Promise<any> {
+  ): Promise<
+    Pick<
+      DriverProfileResponse,
+      "userId" | "fullName" | "email" | "profilePictureUrl" | "updatedAt"
+    >
+  > {
     try {
       // Validate role is courier
       const driver = await driversRepository.findCourierById(userId);
@@ -152,11 +194,11 @@ class DriversService {
       );
 
       return {
-        userId: updatedDriver.user_id,
-        fullName: updatedDriver.full_name,
-        email: updatedDriver.email,
-        profilePictureUrl: updatedDriver.profile_picture_url,
-        updatedAt: updatedDriver.updated_at,
+        userId: updatedDriver.userId,
+        fullName: updatedDriver.fullName,
+        email: updatedDriver.email ?? null,
+        profilePictureUrl: updatedDriver.profilePictureUrl ?? null,
+        updatedAt: toIsoDateTime(updatedDriver.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -173,9 +215,18 @@ class DriversService {
   async updateAvailability(
     userId: number,
     availabilityData: UpdateAvailabilityData,
-  ): Promise<any> {
+  ): Promise<{
+    courierId: number;
+    isAvailable: boolean;
+    isOnline: boolean;
+    updatedAt: string;
+  }> {
     try {
-      const { isAvailable, isOnline = false, location } = availabilityData;
+      const {
+        isAvailable,
+        isOnline = false,
+        currentLocation,
+      } = availabilityData;
 
       // Get current status before update
       const currentProfile = await driversRepository.findCourierById(userId);
@@ -183,8 +234,8 @@ class DriversService {
         throw new NotFoundError("Driver profile not found");
       }
 
-      const currentIsOnline = currentProfile.is_online;
-      const currentIsAvailable = currentProfile.is_available;
+      const currentIsOnline = currentProfile.isOnline;
+      const currentIsAvailable = currentProfile.isAvailable;
 
       // Update availability in database
       const result = await driversRepository.updateAvailability(
@@ -194,11 +245,13 @@ class DriversService {
       );
 
       // Update location if provided (this updates lastActiveLocation)
-      if (location) {
+      if (currentLocation) {
+        // Explicitly cast to prevent potential global Location type collision and use correct args
+        const loc = currentLocation as { latitude: number; longitude: number };
         await driversRepository.updateLocation(
           userId,
-          location.latitude,
-          location.longitude,
+          loc.latitude,
+          loc.longitude,
         );
       }
 
@@ -209,31 +262,30 @@ class DriversService {
         isAvailable &&
         (!currentIsOnline || !currentIsAvailable)
       ) {
-        await driversRepository.createSession(
-          userId,
-          location
-            ? { lat: location.latitude, lng: location.longitude }
-            : undefined,
-        );
+        const loc = currentLocation as
+          | { latitude: number; longitude: number }
+          | undefined;
+        await driversRepository.createSession(userId, loc);
       }
       // End session when driver goes offline OR becomes unavailable while online
       else if (
         (!isOnline || (currentIsOnline && !isAvailable)) &&
         (currentIsOnline || currentIsAvailable)
       ) {
+        const loc = currentLocation as
+          | { latitude: number; longitude: number }
+          | undefined;
         await driversRepository.endActiveSession(
           userId,
-          location
-            ? { lat: location.latitude, lng: location.longitude }
-            : undefined,
+          loc ? { lat: loc.latitude, lng: loc.longitude } : undefined,
         );
       }
 
       return {
-        courierId: result.courier_id,
-        isAvailable: result.is_available,
-        isOnline: result.is_online,
-        updatedAt: result.updated_at,
+        courierId: result.courierId,
+        isAvailable: result.isAvailable,
+        isOnline: result.isOnline,
+        updatedAt: toIsoDateTime(result.updatedAt),
       };
     } catch (error) {
       logger.error({
@@ -250,7 +302,12 @@ class DriversService {
   async updateLocation(
     userId: number,
     locationData: LocationData,
-  ): Promise<any> {
+  ): Promise<{
+    courierId: number;
+    latitude: number;
+    longitude: number;
+    lastLocationUpdate: string;
+  }> {
     try {
       const { latitude, longitude } = locationData;
 
@@ -269,10 +326,10 @@ class DriversService {
       );
 
       return {
-        courierId: result.courier_id,
-        latitude: Number.parseFloat(result.latitude),
-        longitude: Number.parseFloat(result.longitude),
-        lastLocationUpdate: result.last_location_update,
+        courierId: result.courierId,
+        latitude: Number(result.latitude),
+        longitude: Number(result.longitude),
+        lastLocationUpdate: toIsoDateTime(result.lastLocationUpdate),
       };
     } catch (error) {
       logger.error({
@@ -286,7 +343,7 @@ class DriversService {
   /**
    * Get driver active assignments
    */
-  async getActiveAssignments(userId: number): Promise<any[]> {
+  async getActiveAssignments(userId: number): Promise<ActiveAssignment[]> {
     try {
       const assignments = await driversRepository.getActiveAssignments(userId);
 
@@ -295,71 +352,65 @@ class DriversService {
         assignments.map(async (assignment) => {
           const earnings = await this.calculateDriverEarnings(assignment);
           return {
-            assignmentId: assignment.assignment_id,
-            orderId: assignment.order_id,
-            orderUuid: assignment.order_uuid,
-            orderNumber: assignment.order_number,
-            orderStatus: assignment.order_status,
-            assignmentStatus: assignment.assignment_status,
-            vehicleCategory: assignment.vehicle_category,
-            vehicleCategoryDisplay: assignment.vehicle_category_display,
-            packageType: assignment.package_type,
-            weightTier: assignment.weight_tier_name
+            assignmentId: assignment.assignmentId,
+            orderId: assignment.orderId,
+            orderUuid: assignment.orderUuid ?? undefined,
+            orderNumber: assignment.orderNumber ?? undefined,
+            orderStatus: assignment.orderStatus ?? undefined,
+            assignmentStatus: assignment.assignmentStatus ?? undefined,
+            vehicleCategory: assignment.vehicleCategory,
+            vehicleCategoryDisplay: assignment.vehicleCategoryDisplay,
+            packageType: assignment.packageType,
+            weightTier: assignment.weightTierName
               ? {
-                  id: assignment.weight_tier_id,
-                  name: assignment.weight_tier_name,
-                  minWeightKg: Number.parseFloat(
-                    assignment.weight_tier_min || "0",
-                  ),
-                  maxWeightKg: Number.parseFloat(
-                    assignment.weight_tier_max || "0",
-                  ),
+                  id: assignment.weightTierId ?? undefined,
+                  name: assignment.weightTierName,
+                  minWeightKg: Number(assignment.weightTierMin || 0),
+                  maxWeightKg: Number(assignment.weightTierMax || 0),
                 }
               : null,
             pickup: {
-              address: assignment.pickup_address,
-              building: assignment.pickup_building,
-              landmark: assignment.pickup_landmark,
-              city: assignment.pickup_city,
-              state: assignment.pickup_state,
-              postalCode: assignment.pickup_postal_code,
-              latitude: Number.parseFloat(assignment.pickup_latitude),
-              longitude: Number.parseFloat(assignment.pickup_longitude),
-              contactName: assignment.pickup_contact_name,
-              contactPhone: assignment.pickup_contact_phone,
+              address: assignment.pickupAddress,
+              building: assignment.pickupBuilding,
+              landmark: assignment.pickupLandmark,
+              city: assignment.pickupCity,
+              state: assignment.pickupState,
+              postalCode: assignment.pickupPostalCode,
+              latitude: Number(assignment.pickupLatitude),
+              longitude: Number(assignment.pickupLongitude),
+              contactName: assignment.pickupContactName,
+              contactPhone: assignment.pickupContactPhone,
             },
             delivery: {
-              address: assignment.delivery_address,
-              building: assignment.delivery_building,
-              landmark: assignment.delivery_landmark,
-              city: assignment.delivery_city,
-              state: assignment.delivery_state,
-              postalCode: assignment.delivery_postal_code,
-              latitude: Number.parseFloat(assignment.delivery_latitude),
-              longitude: Number.parseFloat(assignment.delivery_longitude),
-              contactName: assignment.delivery_contact_name,
-              contactPhone: assignment.delivery_contact_phone,
+              address: assignment.deliveryAddress,
+              building: assignment.deliveryBuilding,
+              landmark: assignment.deliveryLandmark,
+              city: assignment.deliveryCity,
+              state: assignment.deliveryState,
+              postalCode: assignment.deliveryPostalCode,
+              latitude: Number(assignment.deliveryLatitude),
+              longitude: Number(assignment.deliveryLongitude),
+              contactName: assignment.deliveryContactName,
+              contactPhone: assignment.deliveryContactPhone,
             },
-            packageDescription: assignment.package_description,
-            specialInstructions: assignment.special_instructions,
-            declaredValue: assignment.declared_value
-              ? Number.parseFloat(assignment.declared_value)
+            packageDescription: assignment.packageDescription,
+            specialInstructions: assignment.specialInstructions,
+            declaredValue: assignment.declaredValue
+              ? Number(assignment.declaredValue)
               : null,
-            estimatedDistanceKm: assignment.estimated_distance_km
-              ? Number.parseFloat(assignment.estimated_distance_km)
+            estimatedDistanceKm: assignment.estimatedDistanceKm
+              ? Number(assignment.estimatedDistanceKm)
               : null,
-            actualDistanceKm: assignment.actual_distance_km
-              ? Number.parseFloat(assignment.actual_distance_km)
+            actualDistanceKm: assignment.actualDistanceKm
+              ? Number(assignment.actualDistanceKm)
               : null,
             driverEarnings: earnings.netEarning,
             earningsBreakdown: earnings.earningsBreakdown,
             estimatedDeliveryTime: Math.ceil(
-              (Number.parseFloat(assignment.estimated_distance_km || "10") /
-                25) *
-                60,
+              (Number(assignment.estimatedDistanceKm || 10) / 25) * 60,
             ), // Estimate based on 25km/h average speed
-            assignedAt: assignment.assigned_at,
-            acceptedAt: assignment.accepted_at,
+            assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
+            acceptedAt: toIsoDateTimeOrNull(assignment.acceptedAt),
           };
         }),
       );
@@ -378,7 +429,9 @@ class DriversService {
    * Calculate driver earnings for an assignment
    * Returns both net earning and detailed breakdown
    */
-  private async calculateDriverEarnings(assignment: any): Promise<{
+  private async calculateDriverEarnings(
+    assignment: import("../../types/drivers.js").CourierAssignmentRow,
+  ): Promise<{
     netEarning: number;
     earningsBreakdown: {
       basePayout: number;
@@ -421,11 +474,9 @@ class DriversService {
         (await pricingRepo.getPricingConfigValue("quality_bonus_amount")) ||
         5.0;
 
-      const basePrice = Number.parseFloat(assignment.base_price || "0");
-      const distancePrice = Number.parseFloat(assignment.distance_price || "0");
-      const weightSurcharge = Number.parseFloat(
-        assignment.weight_surcharge || "0",
-      );
+      const basePrice = Number(assignment.basePrice || 0);
+      const distancePrice = Number(assignment.distancePrice || 0);
+      const weightSurcharge = Number(assignment.weightSurcharge || 0);
 
       // Base earnings using configurable rates
       const basePayout = basePrice * commissionRate;
@@ -433,7 +484,7 @@ class DriversService {
       const weightCompensation = weightSurcharge * weightRate;
 
       // Peak hour bonus
-      const pickupTime = new Date(assignment.assigned_at);
+      const pickupTime = new Date(assignment.assignedAt ?? Date.now());
       const hour = pickupTime.getHours();
       const isPeakHour =
         (hour >= 8 && hour < 10) ||
@@ -443,7 +494,7 @@ class DriversService {
 
       // Urgency bonus for "Deliver Now"
       const urgencyBonus =
-        assignment.delivery_type === "deliver_now" ? urgencyBonusAmount : 0;
+        assignment.deliveryType === "deliver_now" ? urgencyBonusAmount : 0;
 
       // On-time delivery bonus (simplified)
       const onTimeBonus =
@@ -491,12 +542,12 @@ class DriversService {
     } catch (error) {
       logger.error({
         msg: "Error calculating driver earnings",
-        assignmentId: assignment.assignment_id,
+        assignmentId: assignment.assignmentId,
         error: (error as Error).message,
       });
       // Fallback to simple calculation
       const fallbackNetEarning = Math.round(
-        Number.parseFloat(assignment.total_price) * 0.7,
+        Number(assignment.totalPrice) * 0.7,
       );
       return {
         netEarning: fallbackNetEarning,
@@ -524,7 +575,7 @@ class DriversService {
   async getEarningsSummary(
     userId: number,
     period: string = "today",
-  ): Promise<any> {
+  ): Promise<EarningsSummary> {
     try {
       const earnings = await driversRepository.getEarningsSummary(userId);
 
@@ -532,31 +583,31 @@ class DriversService {
       if (period === "today") {
         return {
           deliveries: {
-            today: Number.parseInt(earnings.today_deliveries),
+            today: Number(earnings.todayDeliveries),
           },
           earnings: {
-            today: Number.parseFloat(earnings.today_earnings),
+            today: Number(earnings.todayEarnings),
           },
-          totalDistanceKm: Number.parseFloat(earnings.total_distance_km),
+          totalDistanceKm: Number(earnings.totalDistanceKm),
         };
       }
 
       // For detailed screens - full response
       return {
         deliveries: {
-          total: Number.parseInt(earnings.total_deliveries),
-          today: Number.parseInt(earnings.today_deliveries),
-          thisWeek: Number.parseInt(earnings.week_deliveries),
-          thisMonth: Number.parseInt(earnings.month_deliveries),
+          total: Number(earnings.totalDeliveries),
+          today: Number(earnings.todayDeliveries),
+          thisWeek: Number(earnings.weekDeliveries),
+          thisMonth: Number(earnings.monthDeliveries),
         },
         earnings: {
-          total: Number.parseFloat(earnings.total_earnings),
-          today: Number.parseFloat(earnings.today_earnings),
-          thisWeek: Number.parseFloat(earnings.week_earnings),
-          thisMonth: Number.parseFloat(earnings.month_earnings),
-          averageOrderValue: Number.parseFloat(earnings.avg_order_value),
+          total: Number(earnings.totalEarnings),
+          today: Number(earnings.todayEarnings),
+          thisWeek: Number(earnings.weekEarnings),
+          thisMonth: Number(earnings.monthEarnings),
+          averageOrderValue: Number(earnings.avgOrderValue),
         },
-        totalDistanceKm: Number.parseFloat(earnings.total_distance_km),
+        totalDistanceKm: Number(earnings.totalDistanceKm),
       };
     } catch (error) {
       logger.error({

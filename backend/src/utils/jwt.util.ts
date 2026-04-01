@@ -7,7 +7,8 @@ interface JWTPayload {
   userId: number;
   userUuid: string;
   role: string;
-  phoneNumber: string;
+  email?: string;
+  phoneNumber?: string;
   iat?: number;
   exp?: number;
 }

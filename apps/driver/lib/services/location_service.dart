@@ -6,9 +6,7 @@ part 'location_service.g.dart';
 @riverpod
 class LocationService extends _$LocationService {
   @override
-  Stream<Position> build() {
-    return Geolocator.getPositionStream(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10));
-  }
+  Stream<Position> build() => Geolocator.getPositionStream(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 10));
 
   Future<Position> getCurrentLocation() async {
     bool serviceEnabled;
@@ -31,6 +29,6 @@ class LocationService extends _$LocationService {
       return Future.error('Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    return await Geolocator.getCurrentPosition();
+    return Geolocator.getCurrentPosition();
   }
 }

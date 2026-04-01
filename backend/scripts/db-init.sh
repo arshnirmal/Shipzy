@@ -1,47 +1,64 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 export PAGER=cat
 
 echo "🚀 Initialize Database..."
 
-# 1. Extensions
-echo "🔌 Enabling Extensions..."
-# Default to standard PG env vars if Docker-specific ones are present
-export PGUSER="${PGUSER:-$POSTGRES_USER}"
-export PGDATABASE="${PGDATABASE:-$POSTGRES_DB}"
+# Database Configuration - use environment variables directly
+export PGUSER="${POSTGRES_USER:-$DB_USER}"
+export PGDATABASE="${POSTGRES_DB:-$DB_NAME}"
+export PGPASSWORD="${POSTGRES_PASSWORD:-$DB_PASSWORD}"
 
-# 1. Extensions
-echo "🔌 Enabling Extensions..."
-psql -v ON_ERROR_STOP=1 <<-EOSQL
-    CREATE EXTENSION IF NOT EXISTS postgis;
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-EOSQL
-
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
-
-# 2. Schemas
-echo "🏗️  Creating Schemas..."
-SCHEMA_DIR="$BACKEND_DIR/src/database/schemas"
-# Also check absolute path for Docker
-if [ ! -d "$SCHEMA_DIR" ] && [ -d "/src/database/schemas" ]; then
-    SCHEMA_DIR="/src/database/schemas"
-fi
-
-if [ -d "$SCHEMA_DIR" ]; then
-    echo "   Using schemas from: $SCHEMA_DIR"
-    for f in "$SCHEMA_DIR"/*.sql; do
-        if [ -f "$f" ]; then
-            echo "   -- Loading $(basename "$f") --"
-            psql -v ON_ERROR_STOP=1 -f "$f"
-        fi
-    done
+# Inside Docker init, use Unix socket (default) unless explicitly set to TCP
+if [ -n "$DB_HOST" ] && [ "$DB_HOST" != "localhost" ]; then
+    export PGHOST="$DB_HOST"
+    export PGPORT="${DB_PORT}"
 else
-    echo "⚠️  Schemas directory not found at $SCHEMA_DIR or /src/database/schemas!"
+    # Use Unix socket for Docker init (default behavior)
+    unset PGHOST
+    unset PGPORT
 fi
 
-# 3. Functions
+# Validate required environment variables
+if [ -z "$PGDATABASE" ] || [ -z "$PGUSER" ] || [ -z "$PGPASSWORD" ]; then
+    echo "❌ ERROR: Required database environment variables are not set:"
+    echo "   PGDATABASE: ${PGDATABASE:-'<empty>'}"
+    echo "   PGUSER: ${PGUSER:-'<empty>'}"
+    echo "   PGPASSWORD: ${PGPASSWORD:-'<empty>'}"
+    exit 1
+fi
+
+echo "📍 Database Configuration:"
+if [ -n "$PGHOST" ]; then
+    echo "   Host: $PGHOST"
+    echo "   Port: $PGPORT"
+else
+    echo "   Host: Unix Socket (default)"
+fi
+echo "   Database: $PGDATABASE"
+echo "   User: $PGUSER"
+
+SCRIPT_DIR="$( cd "$( dirname "$0" )" &> /dev/null && pwd )"
+BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
+# Avoid "//path" when running in Docker (SCRIPT_DIR=/docker-entrypoint-initdb.d → BACKEND_DIR=/)
+BACKEND_DIR="${BACKEND_DIR%/}"
+
+# 1. Run Setup SQL (Extensions & Schemas)
+echo "🔧 Running Setup (Extensions & Schemas)..."
+SETUP_SQL="$BACKEND_DIR/src/database/setup.sql"
+# Also check absolute path for Docker
+if [ ! -f "$SETUP_SQL" ] && [ -f "/src/database/setup.sql" ]; then
+    SETUP_SQL="/src/database/setup.sql"
+fi
+
+if [ -f "$SETUP_SQL" ]; then
+    echo "   Loading: setup.sql"
+    psql -v ON_ERROR_STOP=1 -f "$SETUP_SQL"
+else
+    echo "⚠️  Setup SQL not found at $SETUP_SQL or /src/database/setup.sql!"
+fi
+
+# 2. Functions (Always run / Replace)
 echo "⚙️  Installing Functions..."
 FUNC_DIR="$BACKEND_DIR/src/database/functions"
 # Also check absolute path for Docker
@@ -61,24 +78,27 @@ else
     echo "⚠️  Functions directory not found at $FUNC_DIR or /src/database/functions!"
 fi
 
-# 4. User Permissions
+# 3. User Permissions
 echo "🔒 Configure Permissions..."
-# Create user if not exists
-psql -v ON_ERROR_STOP=0 -c "CREATE USER shipzy_user WITH PASSWORD 'password123';" 2>/dev/null || echo "   User 'shipzy_user' may already exist."
+# Create user if not exists using configured password
+psql -v ON_ERROR_STOP=0 -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';" 2>/dev/null || echo "   User '$PGUSER' may already exist."
 
 # Grant privileges
 psql -v ON_ERROR_STOP=1 <<-EOSQL
-    GRANT ALL PRIVILEGES ON DATABASE "$PGDATABASE" TO shipzy_user;
-    ALTER USER shipzy_user CREATEDB;
-    GRANT CREATE ON SCHEMA public TO shipzy_user;
+    GRANT ALL PRIVILEGES ON DATABASE "$PGDATABASE" TO $PGUSER;
+    ALTER USER $PGUSER CREATEDB;
+    GRANT CREATE ON SCHEMA public TO $PGUSER;
     -- Try to grant usage on common schemas if they exist
     DO \$\$
     BEGIN
-        EXECUTE 'GRANT USAGE ON SCHEMA users, logistics, orders, payments, tracking, notifications TO shipzy_user';
+        EXECUTE 'GRANT USAGE ON SCHEMA users, logistics, orders, payments, tracking, notifications TO $PGUSER';
     EXCEPTION WHEN OTHERS THEN
         RAISE NOTICE 'Some schemas might not exist yet, skipping grant for them';
     END
     \$\$;
 EOSQL
 
+echo ""
 echo "✅ Database Initialization Complete!"
+echo "📝 Note: Migrations will be deployed when backend starts or run manually:"
+echo "   npm run db:deploy"

@@ -9,7 +9,7 @@ part 'create_order.g.dart';
 @freezed
 abstract class CreateOrderPickup with _$CreateOrderPickup {
   const factory CreateOrderPickup({
-    required String address,
+    @JsonKey(name: 'fullAddress') required String fullAddress,
     required double latitude,
     required double longitude,
     required String city,
@@ -31,7 +31,7 @@ abstract class CreateOrderPickup with _$CreateOrderPickup {
 @freezed
 abstract class CreateOrderDelivery with _$CreateOrderDelivery {
   const factory CreateOrderDelivery({
-    required String address,
+    @JsonKey(name: 'fullAddress') required String fullAddress,
     required double latitude,
     required double longitude,
     required String city,
@@ -82,9 +82,11 @@ abstract class CreateOrderRequest with _$CreateOrderRequest {
     int? packageTypeId,
     String? packageDescription,
     String? specialInstructions,
-    String? scheduledPickupTime,
-    String? scheduledDeliveryTime,
+    DateTime? scheduledPickupTime,
+    DateTime? scheduledDeliveryTime,
     double? declaredValue,
+    @Default(false) bool notifyRecipientSms,
+    String? couponCode,
   }) = _CreateOrderRequest;
 
   factory CreateOrderRequest.fromJson(Map<String, dynamic> json) => _$CreateOrderRequestFromJson(json);
@@ -93,7 +95,8 @@ abstract class CreateOrderRequest with _$CreateOrderRequest {
 /// Response for create order endpoint
 @freezed
 abstract class CreateOrderResponse with _$CreateOrderResponse {
-  const factory CreateOrderResponse({required bool success, required String message, required CreatedOrderData data}) = _CreateOrderResponse;
+  const factory CreateOrderResponse({required bool success, required String message, required CreatedOrderData data, required DateTime timestamp}) =
+      _CreateOrderResponse;
 
   factory CreateOrderResponse.fromJson(Map<String, dynamic> json) => _$CreateOrderResponseFromJson(json);
 }
@@ -125,8 +128,10 @@ abstract class CreatedOrderData with _$CreatedOrderData {
     required String orderUuid,
     required String orderNumber,
     required String status,
-    required CreatedOrderPricing pricing,
+    @JsonKey(name: 'fareBreakdown') required CreatedOrderPricing fareBreakdown,
     required DateTime createdAt,
+    double? estimatedDistanceKm,
+    int? estimatedDurationMins,
   }) = _CreatedOrderData;
 
   factory CreatedOrderData.fromJson(Map<String, dynamic> json) => _$CreatedOrderDataFromJson(json);

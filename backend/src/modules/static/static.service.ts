@@ -19,7 +19,6 @@ class StaticService {
           baseRate: Number.parseFloat(dt.base_rate),
           perKmRate: Number.parseFloat(dt.per_km_rate),
         },
-        labels: dt.labels || [],
         supportedVehicles: dt.supported_vehicles || [],
         sortOrder: dt.sort_order,
         isActive: dt.is_active,
@@ -41,11 +40,11 @@ class StaticService {
       const tiers = await staticRepository.getWeightTiers();
 
       return tiers.map((tier) => ({
-        tierId: tier.tier_id,
+        tierId: tier.tierId,
         name: tier.name,
-        minWeightKg: Number.parseFloat(tier.min_weight_kg),
-        maxWeightKg: Number.parseFloat(tier.max_weight_kg),
-        additionalCharge: Number.parseFloat(tier.additional_charge),
+        minWeightKg: Number.parseFloat(tier.minWeightKg),
+        maxWeightKg: Number.parseFloat(tier.maxWeightKg),
+        additionalCharge: Number.parseFloat(tier.additionalCharge),
       }));
     } catch (error) {
       logger.error({
@@ -64,11 +63,11 @@ class StaticService {
       const categories = await staticRepository.getVehicleCategories();
 
       return categories.map((cat) => ({
-        categoryId: cat.category_id,
+        categoryId: cat.categoryId,
         name: cat.name,
         description: cat.description,
-        maxWeightKg: cat.max_weight_kg,
-        icon: cat.icon_url,
+        maxWeightKg: cat.maxWeightKg,
+        icon: cat.iconUrl,
       }));
     } catch (error) {
       logger.error({
@@ -87,10 +86,10 @@ class StaticService {
       const types = await staticRepository.getPackageTypes();
 
       return types.map((type) => ({
-        packageTypeId: type.package_type_id,
+        packageTypeId: type.packageTypeId,
         name: type.name,
         description: type.description,
-        icon: type.icon,
+        icon: null as string | null,
       }));
     } catch (error) {
       logger.error({
@@ -109,11 +108,11 @@ class StaticService {
       const methods = await staticRepository.getPaymentMethods();
 
       return methods.map((method) => ({
-        methodId: method.method_id,
+        methodId: method.methodId,
         name: method.name,
         displayName: method.name,
         description: method.description,
-        isActive: method.is_active,
+        isActive: method.isActive,
       }));
     } catch (error) {
       logger.error({
@@ -148,7 +147,7 @@ class StaticService {
       const statuses = await staticRepository.getOrderStatuses();
 
       return statuses.map((status) => ({
-        statusId: status.status_id,
+        statusId: status.statusId,
         name: status.name,
         description: status.description,
       }));

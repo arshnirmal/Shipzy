@@ -292,3 +292,11 @@ backend/scripts/*.log
 # Uncomment if you have local development scripts you don't want to commit
 # **/scripts/local-*.sh
 # **/scripts/dev-*.sh
+
+.cursor/
+.vscode/
+
+# Claude Code — personal overrides
+.claude/settings.local.json
+.claude/settings.json
+.claude/CLAUDE.local.md

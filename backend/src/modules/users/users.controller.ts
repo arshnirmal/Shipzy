@@ -5,26 +5,11 @@ import { errorResponse, successResponse } from "../../utils/response.util.js";
 import { AuthenticationError } from "../../utils/error.util.js";
 import usersService from "./users.service.js";
 
-interface UpdateProfileBody {
-  fullName?: string;
-  email?: string;
-}
-
-interface SaveAddressBody {
-  label: string;
-  fullAddress: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  latitude: number;
-  longitude: number;
-  addressType?: "home" | "work" | "other";
-  building?: string;
-  floor?: string;
-  flatNumber?: string;
-  landmark?: string;
-  isDefault?: boolean;
-}
+import type {
+  UpdateProfileRequest,
+  SaveAddressRequest,
+  DeleteAddressParams,
+} from "./users.zod.js";
 
 class UsersController {
   /**
@@ -67,7 +52,7 @@ class UsersController {
    * Update user profile
    */
   async updateProfile(
-    request: FastifyRequest<{ Body: UpdateProfileBody }>,
+    request: FastifyRequest<{ Body: UpdateProfileRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -76,9 +61,8 @@ class UsersController {
       }
 
       const { userId } = request.user;
-      const updateData = request.body;
 
-      const updatedUser = await usersService.updateProfile(userId, updateData);
+      const updatedUser = await usersService.updateProfile(userId, request.body);
 
       return successResponse(
         reply,
@@ -138,7 +122,7 @@ class UsersController {
    * Save new address
    */
   async saveAddress(
-    request: FastifyRequest<{ Body: SaveAddressBody }>,
+    request: FastifyRequest<{ Body: SaveAddressRequest }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {
@@ -147,9 +131,8 @@ class UsersController {
       }
 
       const { userId } = request.user;
-      const addressData = request.body;
 
-      const savedAddress = await usersService.saveAddress(userId, addressData);
+      const savedAddress = await usersService.saveAddress(userId, request.body);
 
       return successResponse(
         reply,
@@ -175,7 +158,7 @@ class UsersController {
    * Delete saved address
    */
   async deleteAddress(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest<{ Params: DeleteAddressParams }>,
     reply: FastifyReply,
   ): Promise<any> {
     try {

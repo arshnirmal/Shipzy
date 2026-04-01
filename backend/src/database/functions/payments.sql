@@ -23,13 +23,13 @@ BEGIN
     INSERT INTO payments.transactions (
         order_id,
         payment_method_id,
-        payment_status_id,
+        status,
         amount,
         currency
     ) VALUES (
         p_order_id,
         p_payment_method_id,
-        (SELECT status_id FROM payments.payment_statuses WHERE name = 'pending'),
+        'pending',
         p_amount,
         p_currency
     )
@@ -55,21 +55,18 @@ RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    status_id INT;
+    v_status payment_status;
 BEGIN
-    -- Get the status_id for the given status name
-    SELECT ps.status_id INTO status_id
-    FROM payments.payment_statuses ps
-    WHERE ps.name = p_status_name;
-
-    IF status_id IS NULL THEN
+    BEGIN
+        v_status := p_status_name::payment_status;
+    EXCEPTION WHEN invalid_text_representation THEN
         RAISE EXCEPTION 'Invalid payment status: %', p_status_name;
-    END IF;
+    END;
 
     -- Update the transaction
     UPDATE payments.transactions
     SET
-        payment_status_id = status_id,
+        status = v_status,
         external_transaction_id = COALESCE(p_external_transaction_id, external_transaction_id),
         payment_gateway = COALESCE(p_payment_gateway, payment_gateway),
         payment_completed_at = CASE WHEN p_status_name = 'completed' THEN NOW() ELSE payment_completed_at END,
@@ -94,7 +91,7 @@ RETURNS TABLE (
     transaction_id INT,
     amount NUMERIC,
     currency VARCHAR,
-    status_name VARCHAR,
+    status_name payment_status,
     external_transaction_id VARCHAR,
     payment_gateway VARCHAR,
     created_at TIMESTAMPTZ,
@@ -108,13 +105,12 @@ BEGIN
         pt.transaction_id,
         pt.amount,
         pt.currency,
-        ps.name as status_name,
+        pt.status as status_name,
         pt.external_transaction_id,
         pt.payment_gateway,
         pt.created_at,
         pt.payment_completed_at
     FROM payments.transactions pt
-    JOIN payments.payment_statuses ps ON pt.payment_status_id = ps.status_id
     WHERE pt.order_id = p_order_id
     ORDER BY pt.created_at DESC;
 END;
@@ -141,8 +137,8 @@ BEGIN
     JOIN orders.requests o ON pt.order_id = o.order_id
     JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
     WHERE ca.courier_id = p_courier_id
-      AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
-      AND pt.payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed')
+      AND ca.status = 'delivered'
+      AND pt.status = 'completed'
       AND ca.completed_at >= p_start_date;
 
     RETURN total_earnings;
@@ -176,9 +172,9 @@ BEGIN
     FROM orders.courier_assignments ca
     LEFT JOIN orders.requests o ON ca.order_id = o.order_id
     LEFT JOIN payments.transactions pt ON o.order_id = pt.order_id
-        AND pt.payment_status_id = (SELECT status_id FROM payments.payment_statuses WHERE name = 'completed')
+        AND pt.status = 'completed'
     WHERE ca.courier_id = p_courier_id
-      AND ca.assignment_status_id = (SELECT status_id FROM public.assignment_statuses WHERE name = 'delivered')
+      AND ca.status = 'delivered'
       AND ca.completed_at >= p_start_date;
 END;
 $$;

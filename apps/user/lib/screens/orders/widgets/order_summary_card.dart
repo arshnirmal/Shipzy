@@ -42,14 +42,18 @@ class OrderSummaryCard extends StatelessWidget {
           Text('Order Summary', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
 
-          _SummaryRow(icon: Icons.local_shipping, label: 'Vehicle', value: vehicleType),
+          _SummaryRow(icon: Icons.local_shipping, label: 'Vehicle', subtitle: vehicleType),
           const Divider(height: 24),
 
-          _SummaryRow(icon: Icons.inventory_2_outlined, label: 'Package', value: packageType, subtitle: weight != null ? 'Weight: $weight' : null),
-          if (distance != null) ...[const Divider(height: 24), _SummaryRow(icon: Icons.straighten, label: 'Distance', value: distance!)],
+          _SummaryRow(
+            icon: Icons.inventory_2_outlined,
+            label: 'Package',
+            subtitle: packageType + (weight != null ? ' Weight: $weight' : ''),
+          ),
+          if (distance != null) ...[const Divider(height: 24), _SummaryRow(icon: Icons.straighten, label: 'Distance', subtitle: distance)],
           const Divider(height: 24),
 
-          _SummaryRow(icon: Icons.speed, label: 'Delivery', value: deliveryType),
+          _SummaryRow(icon: Icons.speed, label: 'Delivery', subtitle: deliveryType),
 
           // Enhanced pricing breakdown or simple fare
           Builder(
@@ -63,21 +67,26 @@ class OrderSummaryCard extends StatelessWidget {
                     Text('Fare Breakdown', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
 
-                    _PricingRow(label: 'Base Fare', value: breakdown.basePrice),
-                    _PricingRow(label: 'Distance (${breakdown.distanceKm} km)', value: breakdown.distancePrice),
-                    if (breakdown.weightSurcharge > 0) _PricingRow(label: 'Weight Surcharge', value: breakdown.weightSurcharge),
-                    if (breakdown.specialHandlingFee > 0) _PricingRow(label: 'Special Handling', value: breakdown.specialHandlingFee),
-
-                    const Divider(height: 12),
-                    _PricingRow(label: 'Subtotal (before GST)', value: breakdown.subtotalBeforeTax, isSubtotal: true),
-
-                    _PricingRow(label: 'Platform Fee', value: breakdown.platformFee),
-                    _PricingRow(label: 'GST (${(breakdown.gstAmount / breakdown.subtotalBeforeTax * 100).round()}%)', value: breakdown.gstAmount),
+                    _PaymentRow(label: 'Base Fare', value: order!.fareBreakdown.basePrice),
+                    if (order!.fareBreakdown.distancePrice > 0) ...[
+                      _PaymentRow(label: 'Distance Charge', value: order!.fareBreakdown.distancePrice),
+                    ],
+                    if (order!.fareBreakdown.weightSurcharge > 0) ...[
+                      _PaymentRow(label: 'Weight Surcharge', value: order!.fareBreakdown.weightSurcharge),
+                    ],
+                    if (order!.fareBreakdown.platformFee > 0) ...[_PaymentRow(label: 'Platform Fee', value: order!.fareBreakdown.platformFee)],
+                    if (order!.fareBreakdown.gstAmount > 0) ...[_PaymentRow(label: 'GST', value: order!.fareBreakdown.gstAmount)],
+                    _PricingRow(
+                      label: 'Subtotal (before GST)',
+                      value: order!.fareBreakdown.subtotalBeforeTax,
+                      isSubtotal: true,
+                      valueStyle: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
 
                     const Divider(height: 12),
                     _PricingRow(
                       label: 'Total Amount',
-                      value: breakdown.totalPrice,
+                      value: order!.totalPrice,
                       isTotal: true,
                       valueStyle: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                     ),
@@ -91,7 +100,7 @@ class OrderSummaryCard extends StatelessWidget {
                     _SummaryRow(
                       icon: Icons.currency_rupee,
                       label: 'Total Fare',
-                      value: fare!,
+                      subtitle: fare,
                       valueStyle: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                     ),
                   ],
@@ -108,39 +117,33 @@ class OrderSummaryCard extends StatelessWidget {
   FareBreakdown? _getFareBreakdown() {
     // Try to create FareBreakdown from Order first
     if (order != null) {
-      final dist = order!.actualDistanceKm ?? order!.estimatedDistanceKm;
-      if (order!.basePrice != null && order!.distancePrice != null && order!.weightSurcharge != null && dist != null) {
-        // Calculate missing values if needed
-        final platformFee = order!.platformFee ?? 10.0;
-        final specialHandlingFee = order!.specialHandlingFee ?? 0.0;
-        final subtotalBeforeTax =
-            order!.subtotalBeforeTax ?? (order!.basePrice! + order!.distancePrice! + order!.weightSurcharge! + platformFee + specialHandlingFee);
-        final gstAmount = order!.gstAmount ?? (subtotalBeforeTax * 0.18);
-
-        return FareBreakdown(
-          basePrice: order!.basePrice!,
-          distanceKm: dist,
-          distancePrice: order!.distancePrice!,
-          weightSurcharge: order!.weightSurcharge!,
-          platformFee: platformFee,
-          specialHandlingFee: specialHandlingFee,
-          subtotalBeforeTax: subtotalBeforeTax,
-          gstAmount: gstAmount,
-          totalPrice: order!.totalPrice,
-          currency: order!.currency ?? 'INR',
-        );
-      }
+      return FareBreakdown(
+        basePrice: order!.fareBreakdown.basePrice,
+        distanceKm: order!.fareBreakdown.distanceKm,
+        distancePrice: order!.fareBreakdown.distancePrice,
+        weightSurcharge: order!.fareBreakdown.weightSurcharge,
+        platformFee: order!.fareBreakdown.platformFee,
+        specialHandlingFee: 0,
+        subtotalBeforeTax: order!.fareBreakdown.subtotalBeforeTax,
+        gstAmount: order!.fareBreakdown.gstAmount,
+        totalPrice: order!.totalPrice,
+        currency: order!.fareBreakdown.currency,
+      );
     }
     return null; // Fallback if no valid data
   }
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.icon, required this.label, required this.value, this.subtitle, this.valueStyle});
+  const _SummaryRow({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    this.valueStyle,
+  });
 
   final IconData icon;
   final String label;
-  final String value;
   final String? subtitle;
   final TextStyle? valueStyle;
 
@@ -163,20 +166,47 @@ class _SummaryRow extends StatelessWidget {
             ],
           ),
         ),
-        Text(value, style: valueStyle ?? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          subtitle ?? '',
+          style: valueStyle ?? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
 }
 
-class _PricingRow extends StatelessWidget {
-  const _PricingRow({required this.label, required this.value, this.isSubtotal = false, this.isTotal = false, this.valueStyle});
+class _PaymentRow extends StatelessWidget {
+  const _PaymentRow({required this.label, required this.value});
 
   final String label;
   final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ),
+          Text('₹${value.toStringAsFixed(2)}', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PricingRow extends StatelessWidget {
+  const _PricingRow({required this.label, required this.value, required this.valueStyle, this.isSubtotal = false, this.isTotal = false});
+
+  final String label;
+  final double value;
+  final TextStyle? valueStyle;
   final bool isSubtotal;
   final bool isTotal;
-  final TextStyle? valueStyle;
 
   @override
   Widget build(BuildContext context) {

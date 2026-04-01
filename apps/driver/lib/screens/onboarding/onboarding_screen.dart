@@ -56,7 +56,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemBuilder: (context, index) {
                   final item = _items[index];
                   return Padding(
-                    padding: const EdgeInsets.all(32.0),
+                    padding: const EdgeInsets.all(32),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -72,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -102,9 +102,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class OnboardingItem {
+
+  OnboardingItem({required this.title, required this.description, required this.icon});
   final String title;
   final String description;
   final IconData icon;
-
-  OnboardingItem({required this.title, required this.description, required this.icon});
 }

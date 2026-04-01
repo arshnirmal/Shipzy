@@ -1,48 +1,80 @@
 // services/backend/src/modules/ratings/ratings.repository.ts
+import { eq, and, isNotNull, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import ratingsQueries from "../../database/queries/ratings.queries.js";
+import { driverRatings } from "../../database/schema/ratings.js";
+import { orderRequests } from "../../database/schema/orders.js";
+import { courierStatus } from "../../database/schema/logistics.js";
 
-interface DriverRating {
-  rating_id: number;
-  order_id: number;
-  driver_id: number;
-  customer_id: number;
-  rating: number;
-  comment?: string;
-  created_at: Date;
-  order_number?: string;
-  delivered_at?: Date;
-}
-
-interface CreateRatingData {
-  order_id: number;
-  driver_id: number;
-  customer_id: number;
-  rating: number;
-  comment?: string;
-}
+import type { RatingRow } from "../../types/ratings.js";
 
 class RatingsRepository {
   /**
-   * Create a new driver rating
+   * Create a new driver rating (migrated to Drizzle)
    */
-  async createRating(ratingData: CreateRatingData): Promise<DriverRating> {
+  async createRating(ratingData: {
+    orderId: number;
+    driverId: number;
+    customerId: number;
+    rating: number;
+    isAnonymous?: boolean;
+    comment?: string | null;
+  }): Promise<RatingRow> {
     try {
-      const result = await db.query(ratingsQueries.INSERT_RATING, [
-        ratingData.order_id,
-        ratingData.driver_id,
-        ratingData.customer_id,
-        ratingData.rating,
-        ratingData.comment || null,
-      ]);
-      return result.rows[0];
+      const insertedRating = await drizzleDb.transaction(async (tx) => {
+        const result = await tx
+          .insert(driverRatings)
+          .values({
+            orderId: ratingData.orderId,
+            driverId: ratingData.driverId,
+            customerId: ratingData.customerId,
+            rating: ratingData.rating,
+            isAnonymous: ratingData.isAnonymous ?? false,
+            comment: ratingData.comment || undefined,
+          })
+          .returning();
+
+        const row = result[0];
+        if (!row) {
+          throw new Error("Rating insert returned no row");
+        }
+
+        const updatedCourier = await tx
+          .update(courierStatus)
+          .set({
+            avgRating: sql`ROUND(((COALESCE(${courierStatus.avgRating}, 0)::numeric * ${courierStatus.totalRatings}::numeric + ${ratingData.rating}::numeric) / (${courierStatus.totalRatings} + 1)::numeric), 2)`,
+            totalRatings: sql`${courierStatus.totalRatings} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(courierStatus.courierId, ratingData.driverId))
+          .returning({ courierId: courierStatus.courierId });
+
+        if (updatedCourier.length === 0) {
+          throw new Error(
+            `Courier status not found for driver ${ratingData.driverId}`,
+          );
+        }
+
+        return row;
+      });
+
+      return {
+        ratingId: insertedRating.ratingId,
+        orderId: insertedRating.orderId,
+        driverId: insertedRating.driverId,
+        customerId: insertedRating.customerId,
+        rating: insertedRating.rating,
+        isAnonymous: insertedRating.isAnonymous,
+        comment: insertedRating.comment || null,
+        createdAt: insertedRating.createdAt,
+      } as RatingRow;
     } catch (error) {
       logger.error({
         msg: "Error creating driver rating",
         error: (error as Error).message,
-        orderId: ratingData.order_id,
-        driverId: ratingData.driver_id,
+        orderId: ratingData.orderId,
+        driverId: ratingData.driverId,
       });
       throw error;
     }
@@ -54,12 +86,12 @@ class RatingsRepository {
   async getDriverRatingsRecent(
     driverId: number,
     since: Date,
-  ): Promise<DriverRating[]> {
+  ): Promise<RatingRow[]> {
     try {
-      const result = await db.query(ratingsQueries.FIND_DRIVER_RATINGS_RECENT, [
-        driverId,
-        since,
-      ]);
+      const result = await drizzlePool.query(
+        ratingsQueries.FIND_DRIVER_RATINGS_RECENT,
+        [driverId, since],
+      );
       return result.rows;
     } catch (error) {
       logger.error({
@@ -72,18 +104,25 @@ class RatingsRepository {
   }
 
   /**
-   * Validate that order belongs to customer
+   * Validate that order belongs to customer (migrated to Drizzle)
    */
   async orderBelongsToCustomer(
     orderId: number,
     customerId: number,
   ): Promise<boolean> {
     try {
-      const result = await db.query(ratingsQueries.ORDER_BELONGS_TO_CUSTOMER, [
-        orderId,
-        customerId,
-      ]);
-      return result.rows.length > 0;
+      const result = await drizzleDb
+        .select()
+        .from(orderRequests)
+        .where(
+          and(
+            eq(orderRequests.orderId, orderId),
+            eq(orderRequests.clientId, customerId),
+          ),
+        )
+        .limit(1);
+
+      return result.length > 0;
     } catch (error) {
       logger.error({
         msg: "Error checking order ownership",
@@ -96,12 +135,14 @@ class RatingsRepository {
   }
 
   /**
-   * Get driver ID for an order
+   * Get driver ID for an order (complex query - keep as raw SQL for now)
    */
   async getDriverForOrder(orderId: number): Promise<number | null> {
     try {
-      const result = await db.query(ratingsQueries.ORDER_HAS_DRIVER, [orderId]);
-      return result.rows[0]?.courier_id || null;
+      const result = await drizzlePool.query(ratingsQueries.ORDER_HAS_DRIVER, [
+        orderId,
+      ]);
+      return result.rows[0]?.courierId || null;
     } catch (error) {
       logger.error({
         msg: "Error getting driver for order",
@@ -113,14 +154,23 @@ class RatingsRepository {
   }
 
   /**
-   * Check if order is delivered
+   * Check if order is delivered (migrated to Drizzle)
    */
   async isOrderDelivered(orderId: number): Promise<boolean> {
     try {
-      const result = await db.query(ratingsQueries.ORDER_IS_DELIVERED, [
-        orderId,
-      ]);
-      return result.rows.length > 0;
+      const result = await drizzleDb
+        .select()
+        .from(orderRequests)
+        .where(
+          and(
+            eq(orderRequests.orderId, orderId),
+            eq(orderRequests.status, "delivered"),
+            isNotNull(orderRequests.deliveredAt),
+          ),
+        )
+        .limit(1);
+
+      return result.length > 0;
     } catch (error) {
       logger.error({
         msg: "Error checking if order is delivered",
@@ -132,14 +182,17 @@ class RatingsRepository {
   }
 
   /**
-   * Check if rating already exists for order
+   * Check if rating already exists for order (migrated to Drizzle)
    */
   async ratingExistsForOrder(orderId: number): Promise<boolean> {
     try {
-      const result = await db.query(ratingsQueries.RATING_EXISTS_FOR_ORDER, [
-        orderId,
-      ]);
-      return result.rows.length > 0;
+      const result = await drizzleDb
+        .select()
+        .from(driverRatings)
+        .where(eq(driverRatings.orderId, orderId))
+        .limit(1);
+
+      return result.length > 0;
     } catch (error) {
       logger.error({
         msg: "Error checking if rating exists",

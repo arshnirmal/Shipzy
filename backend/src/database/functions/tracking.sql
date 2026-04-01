@@ -41,32 +41,31 @@ BEGIN
         WHERE assignment_id = p_assignment_id;
     END IF;
 
-    -- Insert tracking event
-    INSERT INTO tracking.events (
-        assignment_id,
-        order_id,
-        courier_id,
-        event_type,
-        location,
-        latitude,
-        longitude,
-        accuracy_meters,
-        speed_kmph,
-        bearing_degrees,
-        event_description
-    ) VALUES (
-        p_assignment_id,
-        v_order_id,
-        p_courier_id,
-        'location_update',
-        v_location,
-        p_latitude,
-        p_longitude,
-        p_accuracy_meters,
-        p_speed_kmph,
-        p_bearing_degrees,
-        'Location update from mobile app'
-    );
+    -- Insert tracking event only when assignment context exists.
+    -- tracking.events has NOT NULL assignment_id/order_id.
+    IF p_assignment_id IS NOT NULL AND v_order_id IS NOT NULL THEN
+        INSERT INTO tracking.events (
+            assignment_id,
+            order_id,
+            courier_id,
+            event_type,
+            location,
+            accuracy_meters,
+            speed_kmph,
+            bearing_degrees,
+            event_description
+        ) VALUES (
+            p_assignment_id,
+            v_order_id,
+            p_courier_id,
+            'location_update',
+            v_location,
+            p_accuracy_meters,
+            p_speed_kmph,
+            p_bearing_degrees,
+            'Location update from mobile app'
+        );
+    END IF;
 
     RETURN TRUE;
 
@@ -84,7 +83,7 @@ COMMENT ON FUNCTION tracking.update_courier_location IS 'Update courier location
 -- ========================================
 CREATE OR REPLACE FUNCTION tracking.log_tracking_event(
     p_assignment_id INT,
-    p_event_type VARCHAR(50),
+    p_event_type tracking_event_type,
     p_event_description TEXT DEFAULT NULL,
     p_metadata JSONB DEFAULT NULL
 )
@@ -141,7 +140,7 @@ CREATE OR REPLACE FUNCTION tracking.get_order_tracking_history(
 )
 RETURNS TABLE (
     event_id BIGINT,
-    event_type VARCHAR(50),
+    event_type tracking_event_type,
     event_description TEXT,
     latitude NUMERIC,
     longitude NUMERIC,
@@ -160,8 +159,8 @@ BEGIN
         te.event_id,
         te.event_type,
         te.event_description,
-        te.latitude,
-        te.longitude,
+        ST_Y(te.location::geometry)::NUMERIC AS latitude,
+        ST_X(te.location::geometry)::NUMERIC AS longitude,
         te.accuracy_meters,
         te.speed_kmph,
         te.bearing_degrees,
@@ -188,7 +187,7 @@ CREATE OR REPLACE FUNCTION tracking.get_courier_recent_activity(
 RETURNS TABLE (
     event_id BIGINT,
     "order_id" INT,
-    event_type VARCHAR(50),
+    event_type tracking_event_type,
     event_description TEXT,
     latitude NUMERIC,
     longitude NUMERIC,
@@ -204,8 +203,8 @@ BEGIN
         te.order_id,
         te.event_type,
         te.event_description,
-        te.latitude,
-        te.longitude,
+        ST_Y(te.location::geometry)::NUMERIC AS latitude,
+        ST_X(te.location::geometry)::NUMERIC AS longitude,
         te.timestamp
     FROM tracking.events te
     WHERE te.courier_id = p_courier_id

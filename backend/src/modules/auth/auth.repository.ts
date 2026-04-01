@@ -1,33 +1,49 @@
 // services/backend/src/modules/auth/auth.repository.ts
+import { eq, and, isNull, gt, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
-import authQueries from "../../database/queries/auth.queries.js";
+import drizzleDb from "../../database/drizzle.js";
 import { getUserRoleName } from "../../utils/roles.utils.js";
+import { userProfiles } from "../../database/schema/users.js";
+import { authSessions } from "../../database/schema/users.js";
+import { courierStatus } from "../../database/schema/logistics.js";
 
-interface User {
-  user_id: number;
-  user_uuid: string;
-  firebase_uid?: string;
-  full_name: string;
-  email?: string;
-  phone_number?: string;
-  role_name: string;
-  is_active: boolean;
-  is_verified?: boolean;
-  profile_complete?: boolean;
-  password_hash?: string;
-  created_at: Date;
-  updated_at?: Date;
-}
+import type { AuthUser } from "../../types/user.js";
 
-interface Session {
-  session_id: number;
-  user_id: number;
-  token_hash: string;
-  expires_at: Date;
-  is_revoked: boolean;
-  created_at: Date;
-  last_activity_at?: Date;
+type User = AuthUser;
+
+type ProfileSelectBase = {
+  userId: number;
+  userUuid: string;
+  roleName: string;
+  firebaseUid: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  fullName: string;
+  profilePictureUrl: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function mapProfileRowToUser(
+  row: ProfileSelectBase & { passwordHash?: string | null },
+): User {
+  return {
+    userId: row.userId,
+    userUuid: row.userUuid,
+    fullName: row.fullName,
+    email: row.email ?? undefined,
+    phoneNumber: row.phoneNumber ?? undefined,
+    profilePictureUrl: row.profilePictureUrl ?? undefined,
+    roleName: row.roleName,
+    isVerified: row.isVerified,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    firebaseUid: row.firebaseUid ?? undefined,
+    passwordHash: row.passwordHash ?? null,
+  };
 }
 
 interface CreateUserData {
@@ -57,19 +73,41 @@ interface StoreJwtTokenData {
   deviceId?: string | null;
   deviceInfo?: any;
   ipAddress?: string | null;
-  authMethod?: string;
+  authMethod?: "email" | "phone" | "google" | "firebase";
 }
 
 class AuthRepository {
   /**
-   * Find user by Firebase UID
+   * Find user by Firebase UID (migrated to Drizzle)
    */
   async findByFirebaseUid(firebaseUid: string): Promise<User | null> {
     try {
-      const result = await db.query(authQueries.FIND_USER_BY_FIREBASE_UID, [
-        firebaseUid,
-      ]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+          roleName: userProfiles.role,
+          firebaseUid: userProfiles.firebaseUid,
+          phoneNumber: userProfiles.phoneNumber,
+          email: userProfiles.email,
+          fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
+          isVerified: userProfiles.isVerified,
+          isActive: userProfiles.isActive,
+          createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
+        })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.firebaseUid, firebaseUid),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by Firebase UID",
@@ -80,12 +118,37 @@ class AuthRepository {
   }
 
   /**
-   * Find user by UUID
+   * Find user by UUID (migrated to Drizzle)
    */
   async findByUuid(userUuid: string): Promise<User | null> {
     try {
-      const result = await db.query(authQueries.FIND_USER_BY_UUID, [userUuid]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+          roleName: userProfiles.role,
+          firebaseUid: userProfiles.firebaseUid,
+          phoneNumber: userProfiles.phoneNumber,
+          email: userProfiles.email,
+          fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
+          isVerified: userProfiles.isVerified,
+          isActive: userProfiles.isActive,
+          createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
+        })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.userUuid, userUuid),
+            eq(userProfiles.isActive, true),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
@@ -96,14 +159,37 @@ class AuthRepository {
   }
 
   /**
-   * Find user by phone number
+   * Find user by phone number (migrated to Drizzle)
    */
   async findByPhone(phoneNumber: string): Promise<User | null> {
     try {
-      const result = await db.query(authQueries.FIND_USER_BY_PHONE, [
-        phoneNumber,
-      ]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+          roleName: userProfiles.role,
+          firebaseUid: userProfiles.firebaseUid,
+          phoneNumber: userProfiles.phoneNumber,
+          email: userProfiles.email,
+          fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
+          passwordHash: userProfiles.passwordHash,
+          isVerified: userProfiles.isVerified,
+          isActive: userProfiles.isActive,
+          createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
+        })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.phoneNumber, phoneNumber),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by phone",
@@ -114,12 +200,34 @@ class AuthRepository {
   }
 
   /**
-   * Find user by email
+   * Find user by email (migrated to Drizzle)
    */
   async findByEmail(email: string): Promise<User | null> {
     try {
-      const result = await db.query(authQueries.FIND_USER_BY_EMAIL, [email]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+          roleName: userProfiles.role,
+          firebaseUid: userProfiles.firebaseUid,
+          phoneNumber: userProfiles.phoneNumber,
+          email: userProfiles.email,
+          fullName: userProfiles.fullName,
+          profilePictureUrl: userProfiles.profilePictureUrl,
+          passwordHash: userProfiles.passwordHash,
+          isVerified: userProfiles.isVerified,
+          isActive: userProfiles.isActive,
+          createdAt: userProfiles.createdAt,
+          updatedAt: userProfiles.updatedAt,
+        })
+        .from(userProfiles)
+        .where(
+          and(eq(userProfiles.email, email), isNull(userProfiles.deletedAt)),
+        )
+        .limit(1);
+
+      const row = result[0];
+      return row ? mapProfileRowToUser(row) : null;
     } catch (error) {
       logger.error({
         msg: "Error finding user by email",
@@ -130,7 +238,7 @@ class AuthRepository {
   }
 
   /**
-   * Create new user (for social/OTP auth - backward compatibility)
+   * Create new user (for social/OTP auth - migrated to Drizzle)
    */
   async createUser(userData: CreateUserData): Promise<User> {
     try {
@@ -143,25 +251,48 @@ class AuthRepository {
         passwordHash = null,
       } = userData;
 
-      const result = await db.query(authQueries.CREATE_USER, [
-        roleId,
-        firebaseUid,
-        phoneNumber,
-        fullName,
-        email,
-        passwordHash,
-      ]);
+      const result = await drizzleDb
+        .insert(userProfiles)
+        .values({
+          role: getUserRoleName(roleId) as
+            | "client"
+            | "courier"
+            | "admin"
+            | "business",
+          firebaseUid: firebaseUid || undefined,
+          phoneNumber: phoneNumber || undefined,
+          fullName,
+          email: email || undefined,
+          passwordHash: passwordHash || undefined,
+          isVerified: true,
+        })
+        .returning();
 
-      const user = result.rows[0];
+      const createdUser = result[0];
+      if (!createdUser) {
+        throw new Error("User insert returned no row");
+      }
+      const roleName = getUserRoleName(roleId);
 
-      user.role_name = getUserRoleName(roleId);
-
-      // Initialize courier status if role is courier
+      // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
       if (userData.roleName === "courier") {
-        await db.query(authQueries.INITIALIZE_COURIER_STATUS, [user.user_id]);
+        await drizzleDb
+          .insert(courierStatus)
+          .values({
+            courierId: createdUser.userId,
+            isAvailable: false,
+            isOnline: false,
+          })
+          .onConflictDoNothing({ target: courierStatus.courierId });
       }
 
-      return user;
+      // Fetch full user with role for return type compatibility
+      const user = await this.findByUuid(createdUser.userUuid);
+      if (!user) {
+        throw new Error("User not found after creation");
+      }
+
+      return { ...user, roleName } as User;
     } catch (error) {
       logger.error({
         msg: "Error creating user",
@@ -172,7 +303,7 @@ class AuthRepository {
   }
 
   /**
-   * Create new user for email/password registration
+   * Create new user for email/password registration (migrated to Drizzle)
    */
   async createEmailUser(userData: CreateEmailUserData): Promise<User> {
     try {
@@ -184,24 +315,47 @@ class AuthRepository {
         phoneNumber = null,
       } = userData;
 
-      const result = await db.query(authQueries.CREATE_EMAIL_USER, [
-        roleId,
-        fullName,
-        email,
-        passwordHash,
-        phoneNumber,
-      ]);
+      const result = await drizzleDb
+        .insert(userProfiles)
+        .values({
+          role: getUserRoleName(roleId) as
+            | "client"
+            | "courier"
+            | "admin"
+            | "business",
+          fullName,
+          email,
+          passwordHash,
+          phoneNumber: phoneNumber || undefined,
+          isVerified: false,
+        })
+        .returning();
 
-      const user = result.rows[0];
+      const createdUser = result[0];
+      if (!createdUser) {
+        throw new Error("User insert returned no row");
+      }
+      const roleName = getUserRoleName(roleId);
 
-      user.role_name = getUserRoleName(roleId);
-
-      // Initialize courier status if role is courier
+      // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
       if (userData.roleName === "courier") {
-        await db.query(authQueries.INITIALIZE_COURIER_STATUS, [user.user_id]);
+        await drizzleDb
+          .insert(courierStatus)
+          .values({
+            courierId: createdUser.userId,
+            isAvailable: false,
+            isOnline: false,
+          })
+          .onConflictDoNothing({ target: courierStatus.courierId });
       }
 
-      return user;
+      // Fetch full user with role for return type compatibility
+      const user = await this.findByUuid(createdUser.userUuid);
+      if (!user) {
+        throw new Error("User not found after creation");
+      }
+
+      return { ...user, roleName } as User;
     } catch (error) {
       logger.error({
         msg: "Error creating email user",
@@ -212,9 +366,9 @@ class AuthRepository {
   }
 
   /**
-   * Store JWT token hash
+   * Store JWT token hash (migrated to Drizzle)
    */
-  async storeJwtToken(sessionData: StoreJwtTokenData): Promise<Session> {
+  async storeJwtToken(sessionData: StoreJwtTokenData): Promise<void> {
     try {
       const {
         userId,
@@ -227,18 +381,25 @@ class AuthRepository {
         authMethod = "email",
       } = sessionData;
 
-      const result = await db.query(authQueries.STORE_JWT_TOKEN, [
-        userId,
-        email,
-        phoneNumber,
-        tokenHash,
-        deviceId || null,
-        deviceInfo || null,
-        ipAddress || null,
-        authMethod,
-      ]);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      return result.rows[0];
+      await drizzleDb
+        .insert(authSessions)
+        .values({
+          userId,
+          email: email || undefined,
+          phoneNumber: phoneNumber || undefined,
+          jwtTokenHash: tokenHash,
+          deviceId: deviceId || undefined,
+          deviceInfo: deviceInfo || undefined,
+          ipAddress: ipAddress || undefined,
+          authMethod,
+          isVerified: true,
+          verifiedAt: new Date(),
+          expiresAt,
+          lastActivityAt: new Date(),
+        });
     } catch (error) {
       logger.error({
         msg: "Error storing JWT token",
@@ -249,14 +410,25 @@ class AuthRepository {
   }
 
   /**
-   * Validate JWT token
+   * Validate JWT token (migrated to Drizzle)
    */
-  async validateJwtToken(tokenHash: string): Promise<Session | null> {
+  async validateJwtToken(tokenHash: string): Promise<boolean> {
     try {
-      const result = await db.query(authQueries.VALIDATE_JWT_TOKEN, [
-        tokenHash,
-      ]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .select({ sessionId: authSessions.sessionId })
+        .from(authSessions)
+        .innerJoin(userProfiles, eq(authSessions.userId, userProfiles.userId))
+        .where(
+          and(
+            eq(authSessions.jwtTokenHash, tokenHash),
+            gt(authSessions.expiresAt, sql`NOW()`),
+            eq(userProfiles.isActive, true),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      return result.length > 0;
     } catch (error) {
       logger.error({
         msg: "Error validating JWT token",
@@ -267,11 +439,14 @@ class AuthRepository {
   }
 
   /**
-   * Update session activity
+   * Update session activity (migrated to Drizzle)
    */
   async updateSessionActivity(tokenHash: string): Promise<void> {
     try {
-      await db.query(authQueries.UPDATE_SESSION_ACTIVITY, [tokenHash]);
+      await drizzleDb
+        .update(authSessions)
+        .set({ lastActivityAt: new Date() })
+        .where(eq(authSessions.jwtTokenHash, tokenHash));
     } catch (error) {
       logger.error({
         msg: "Error updating session activity",
@@ -282,12 +457,17 @@ class AuthRepository {
   }
 
   /**
-   * Revoke JWT token
+   * Revoke JWT token (migrated to Drizzle)
    */
-  async revokeToken(tokenHash: string): Promise<Session | null> {
+  async revokeToken(tokenHash: string): Promise<{ sessionId: number } | null> {
     try {
-      const result = await db.query(authQueries.REVOKE_JWT_TOKEN, [tokenHash]);
-      return result.rows[0] || null;
+      const result = await drizzleDb
+        .update(authSessions)
+        .set({ expiresAt: new Date() })
+        .where(eq(authSessions.jwtTokenHash, tokenHash))
+        .returning({ sessionId: authSessions.sessionId });
+
+      return result[0] ?? null;
     } catch (error) {
       logger.error({
         msg: "Error revoking token",
@@ -298,11 +478,19 @@ class AuthRepository {
   }
 
   /**
-   * Revoke all user tokens
+   * Revoke all user tokens (migrated to Drizzle)
    */
   async revokeAllUserTokens(userId: number): Promise<void> {
     try {
-      await db.query(authQueries.REVOKE_ALL_USER_TOKENS, [userId]);
+      await drizzleDb
+        .update(authSessions)
+        .set({ expiresAt: new Date() })
+        .where(
+          and(
+            eq(authSessions.userId, userId),
+            gt(authSessions.expiresAt, sql`NOW()`),
+          ),
+        );
     } catch (error) {
       logger.error({
         msg: "Error revoking all user tokens",

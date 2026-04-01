@@ -35,7 +35,7 @@ class OrderStatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            status.label,
+            status.name,
             style: TextStyle(color: colors.text, fontSize: fontSize, fontWeight: FontWeight.w600),
           ),
         ],
@@ -89,6 +89,22 @@ class OrderStatusBadge extends StatelessWidget {
         );
 
       case OrderStatus.cancelled:
+        return _StatusColors(
+          background: theme.colorScheme.error.withValues(alpha: 0.1),
+          border: theme.colorScheme.error.withValues(alpha: 0.3),
+          dot: theme.colorScheme.error,
+          text: theme.colorScheme.error,
+        );
+
+      case OrderStatus.undeliverable:
+        return _StatusColors(
+          background: theme.colorScheme.error.withValues(alpha: 0.1),
+          border: theme.colorScheme.error.withValues(alpha: 0.3),
+          dot: theme.colorScheme.error,
+          text: theme.colorScheme.error,
+        );
+
+      case OrderStatus.returned:
         return _StatusColors(
           background: theme.colorScheme.error.withValues(alpha: 0.1),
           border: theme.colorScheme.error.withValues(alpha: 0.3),

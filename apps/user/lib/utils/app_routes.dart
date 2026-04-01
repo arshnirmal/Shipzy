@@ -13,6 +13,9 @@ class AppRoutes {
   /// Route for the splash screen.
   static const String splash = '/';
 
+  /// Route for onboarding flow
+  static const String onboarding = '/onboarding';
+
   /// Route for email/password login.
   static const String login = '/login';
 

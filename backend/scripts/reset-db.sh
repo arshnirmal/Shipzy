@@ -38,13 +38,23 @@ echo -e "${YELLOW}🚀 Starting fresh database...${NC}"
 docker compose -f docker-compose.dev.yml up -d postgres
 
 echo -e "${YELLOW}⏳ Waiting for database initialization...${NC}"
-sleep 20
-
-
+sleep 10
 
 echo -e "${YELLOW}🚀 Starting all services...${NC}"
 docker compose -f docker-compose.dev.yml up -d
 
+echo -e "${YELLOW}⏳ Waiting for backend to be ready...${NC}"
+sleep 5
+
+echo -e "${YELLOW}📦 Deploying migrations...${NC}"
+# Run migrations deployment from backend container (has npm/node)
+docker compose -f docker-compose.dev.yml exec -T backend npm run db:deploy || {
+    echo -e "${YELLOW}⚠️  Migrations deployment failed or no migrations found.${NC}"
+    echo -e "${YELLOW}   This is OK if you haven't generated migrations yet.${NC}"
+    echo -e "${YELLOW}   Run: npm run db:generate && npm run db:deploy${NC}"
+}
+
 echo -e "${GREEN}✅ Database reset complete!${NC}"
-echo -e "${GREEN}Fresh database is ready with schema and functions installed.${NC}"
+echo -e "${GREEN}Fresh database is ready with setup.sql and functions installed.${NC}"
+echo -e "${GREEN}Migrations will be deployed automatically or run: npm run db:deploy${NC}"
 

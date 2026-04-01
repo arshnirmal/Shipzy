@@ -1,7 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'auth_service_provider.dart';
-
 part 'profile_provider.g.dart';
 
 @riverpod
@@ -13,8 +11,6 @@ class Profile extends _$Profile {
     state = state.copyWith(isLoading: true);
 
     try {
-      final authService = ref.read(authServiceProvider);
-
       // For now, we'll just simulate the profile update
       // In a real implementation, you'd call the backend API
       await Future.delayed(const Duration(seconds: 1)); // Simulate API call

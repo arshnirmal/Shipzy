@@ -1,40 +1,29 @@
 // services/backend/src/modules/drivers/drivers.repository.ts
+import { eq, and, isNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
-import db from "../../database/db.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository, { DriverSession } from "./sessions.repository.js";
+import type { Coordinates } from "../../schemas/common.zod.js";
+import { userProfiles } from "../../database/schema/users.js";
+import { courierStatus } from "../../database/schema/logistics.js";
 
-interface Courier {
-  courier_id: number;
-  user_id: number;
-  user_uuid: string;
-  full_name: string;
-  email?: string;
-  phone_number: string;
-  profile_picture_url?: string;
-  is_verified: boolean;
-  is_active: boolean;
-  is_available: boolean;
-  is_online: boolean;
-  current_latitude?: string;
-  current_longitude?: string;
-  last_location_update?: Date;
-  total_deliveries_today: number;
-  vehicle_id?: number;
-  vehicle_number?: string;
-  vehicle_model?: string;
-  vehicle_year?: number;
-  vehicle_category?: string;
-  vehicle_max_weight?: string;
-  created_at: Date;
-  updated_at: Date;
-}
+import type {
+  DbCourier,
+  CourierAvailabilityResult,
+  CourierLocationResult,
+  EarningsSummaryRow,
+  CourierAssignmentRow,
+} from "../../types/drivers.js";
 
-interface UpdateProfileData {
+type Courier = DbCourier;
+
+type UpdateProfileData = {
   fullName?: string;
   email?: string;
   profilePictureUrl?: string;
-}
+};
 
 class DriversRepository {
   /**
@@ -42,9 +31,10 @@ class DriversRepository {
    */
   async findCourierById(userId: number): Promise<Courier | null> {
     try {
-      const result = await db.query(driversQueries.FIND_COURIER_BY_USER_ID, [
-        userId,
-      ]);
+      const result = await drizzlePool.query(
+        driversQueries.FIND_COURIER_BY_USER_ID,
+        [userId],
+      );
       return result.rows[0] || null;
     } catch (error) {
       logger.error({
@@ -56,7 +46,7 @@ class DriversRepository {
   }
 
   /**
-   * Update courier profile
+   * Update courier profile (migrated to Drizzle)
    */
   async updateProfile(
     userId: number,
@@ -65,12 +55,21 @@ class DriversRepository {
     try {
       const { fullName, email, profilePictureUrl } = updateData;
 
-      const result = await db.query(driversQueries.UPDATE_COURIER_PROFILE, [
-        userId,
-        fullName || null,
-        email || null,
-        profilePictureUrl || null,
-      ]);
+      await drizzleDb
+        .update(userProfiles)
+        .set({
+          fullName: fullName || undefined,
+          email: email || undefined,
+          profilePictureUrl: profilePictureUrl || undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(userProfiles.userId, userId));
+
+      // Fetch updated courier profile (complex query - keep as raw SQL)
+      const result = await drizzlePool.query(
+        driversQueries.FIND_COURIER_BY_USER_ID,
+        [userId],
+      );
 
       return result.rows[0];
     } catch (error) {
@@ -83,20 +82,35 @@ class DriversRepository {
   }
 
   /**
-   * Update courier availability
+   * Update courier availability (migrated to Drizzle)
    */
   async updateAvailability(
     courierId: number,
     isAvailable: boolean,
     isOnline: boolean,
-  ): Promise<any> {
+  ): Promise<CourierAvailabilityResult> {
     try {
-      const result = await db.query(
-        driversQueries.UPDATE_COURIER_AVAILABILITY,
-        [courierId, isAvailable, isOnline],
-      );
+      const result = await drizzleDb
+        .update(courierStatus)
+        .set({
+          isAvailable,
+          isOnline,
+          updatedAt: new Date(),
+        })
+        .where(eq(courierStatus.courierId, courierId))
+        .returning({
+          courierId: courierStatus.courierId,
+          isAvailable: courierStatus.isAvailable,
+          isOnline: courierStatus.isOnline,
+          updatedAt: courierStatus.updatedAt,
+        });
 
-      return result.rows[0];
+      const row = result[0];
+      if (!row) {
+        throw new Error("Courier availability update returned no row");
+      }
+
+      return row as CourierAvailabilityResult;
     } catch (error) {
       logger.error({
         msg: "Error updating courier availability",
@@ -113,15 +127,15 @@ class DriversRepository {
     courierId: number,
     latitude: number,
     longitude: number,
-  ): Promise<any> {
+  ): Promise<CourierLocationResult> {
     try {
-      const result = await db.query(driversQueries.UPDATE_COURIER_LOCATION, [
+      const result = await drizzlePool.query(driversQueries.UPDATE_COURIER_LOCATION, [
         courierId,
         longitude,
         latitude,
       ]);
 
-      return result.rows[0];
+      return result.rows[0] as CourierLocationResult;
     } catch (error) {
       logger.error({
         msg: "Error updating courier location",
@@ -134,13 +148,15 @@ class DriversRepository {
   /**
    * Get courier active assignments
    */
-  async getActiveAssignments(courierId: number): Promise<any[]> {
+  async getActiveAssignments(
+    courierId: number,
+  ): Promise<CourierAssignmentRow[]> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         driversQueries.FIND_COURIER_ACTIVE_ASSIGNMENTS,
         [courierId],
       );
-      return result.rows;
+      return result.rows as CourierAssignmentRow[];
     } catch (error) {
       logger.error({
         msg: "Error getting courier assignments",
@@ -153,13 +169,13 @@ class DriversRepository {
   /**
    * Get courier earnings summary
    */
-  async getEarningsSummary(courierId: number): Promise<any> {
+  async getEarningsSummary(courierId: number): Promise<EarningsSummaryRow> {
     try {
-      const result = await db.query(
+      const result = await drizzlePool.query(
         driversQueries.GET_COURIER_EARNINGS_SUMMARY,
         [courierId],
       );
-      return result.rows[0];
+      return result.rows[0] as EarningsSummaryRow;
     } catch (error) {
       logger.error({
         msg: "Error getting courier earnings",
@@ -174,15 +190,12 @@ class DriversRepository {
   /**
    * Create a new driver session
    */
-  async createSession(
-    driverId: number,
-    location?: { lat: number; lng: number },
-  ) {
+  async createSession(driverId: number, location?: Coordinates) {
     return sessionsRepository.createSession({
-      driver_id: driverId,
-      started_at: new Date(),
-      last_location_lat: location?.lat,
-      last_location_lng: location?.lng,
+      driverId: driverId,
+      startedAt: new Date(),
+      lastLocationLat: location?.latitude,
+      lastLocationLng: location?.longitude,
     });
   }
 
@@ -204,10 +217,10 @@ class DriversRepository {
     if (!activeSession) return null;
 
     return sessionsRepository.endSession({
-      session_id: activeSession.session_id,
-      ended_at: new Date(),
-      last_location_lat: location?.lat,
-      last_location_lng: location?.lng,
+      sessionId: activeSession.sessionId,
+      endedAt: new Date(),
+      lastLocationLat: location?.lat,
+      lastLocationLng: location?.lng,
     });
   }
 

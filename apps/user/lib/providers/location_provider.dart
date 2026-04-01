@@ -96,11 +96,16 @@ class LocationNotifier extends Notifier<AsyncValue<SavedAddress?>> {
 
       state = AsyncValue.data(
         SavedAddress(
+          addressId: 0, // Current location has ID 0
           label: 'Current Location',
           fullAddress: address,
+          city: '',
+          state: '',
+          postalCode: '',
           latitude: position.latitude,
           longitude: position.longitude,
-          isCurrentLocation: true,
+          addressType: 'current',
+          createdAt: DateTime.now(),
         ),
       );
     } catch (e) {

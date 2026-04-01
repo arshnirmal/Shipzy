@@ -4,8 +4,7 @@ class OrdersListScreen extends StatelessWidget {
   const OrdersListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
+  Widget build(BuildContext context) => DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
@@ -27,5 +26,4 @@ class OrdersListScreen extends StatelessWidget {
         ),
       ),
     );
-  }
 }

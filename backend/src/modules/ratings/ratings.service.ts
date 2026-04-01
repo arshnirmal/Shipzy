@@ -5,29 +5,27 @@ import {
   NotFoundError,
   ValidationError,
 } from "../../utils/error.util.js";
+import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ratingsRepository from "./ratings.repository.js";
 
-interface CreateRatingData {
-  orderId: number;
-  customerId: number;
-  rating: number;
-  comment?: string;
-}
+import type { CreateRating } from "./ratings.zod.js";
 
 interface DriverRatingStats {
   averageRating: number;
   totalRatings: number;
   ratingDistribution: { [key: number]: number };
-  lastUpdated: Date;
+  lastUpdated: string;
 }
 
 class RatingsService {
   /**
    * Create a new driver rating
    */
-  async createRating(ratingData: CreateRatingData): Promise<any> {
+  async createRating(
+    ratingData: CreateRating,
+  ): Promise<import("./ratings.zod.js").RatingResponse> {
     try {
-      const { orderId, customerId, rating, comment } = ratingData;
+      const { orderId, customerId, rating, isAnonymous, comment } = ratingData;
 
       // Validate rating range
       if (rating < 1 || rating > 5) {
@@ -62,20 +60,23 @@ class RatingsService {
 
       // Create the rating
       const newRating = await ratingsRepository.createRating({
-        order_id: orderId,
-        driver_id: driverId,
-        customer_id: customerId,
+        orderId,
+        driverId,
+        customerId,
         rating,
+        isAnonymous,
         comment,
       });
 
       return {
-        ratingId: newRating.rating_id,
-        orderId: newRating.order_id,
-        driverId: newRating.driver_id,
+        ratingId: newRating.ratingId,
+        orderId: newRating.orderId,
+        driverId: newRating.driverId,
+        customerId: newRating.customerId,
         rating: newRating.rating,
+        isAnonymous: newRating.isAnonymous ?? false,
         comment: newRating.comment,
-        createdAt: newRating.created_at,
+        createdAt: toIsoDateTime(newRating.createdAt),
       };
     } catch (error) {
       logger.error({
@@ -106,7 +107,7 @@ class RatingsService {
           averageRating: 0,
           totalRatings: 0,
           ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-          lastUpdated: new Date(),
+          lastUpdated: toIsoDateTime(new Date()),
         };
       }
 
@@ -137,8 +138,8 @@ class RatingsService {
       let lastUpdated = new Date();
       if (ratings.length > 0) {
         const firstRating = ratings[0];
-        if (firstRating && firstRating.created_at) {
-          lastUpdated = firstRating.created_at;
+        if (firstRating && firstRating.createdAt) {
+          lastUpdated = firstRating.createdAt;
         }
       }
 
@@ -146,7 +147,7 @@ class RatingsService {
         averageRating,
         totalRatings: ratings.length,
         ratingDistribution: distribution,
-        lastUpdated,
+        lastUpdated: toIsoDateTime(lastUpdated),
       };
     } catch (error) {
       logger.error({

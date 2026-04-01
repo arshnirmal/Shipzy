@@ -19,6 +19,7 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_otp_code VARCHAR(6);
+    v_otp_code_hash VARCHAR(64);
     v_session_id INT;
     v_existing_attempts INT;
     result JSON;
@@ -51,47 +52,59 @@ BEGIN
     
     -- Generate 6-digit OTP
     v_otp_code := LPAD(FLOOR(RANDOM() * 1000000)::TEXT, 6, '0');
+    v_otp_code_hash := encode(digest(v_otp_code, 'sha256'), 'hex');
     
-    -- Insert or update auth session
-    INSERT INTO users.auth_sessions (
-        phone_number,
-        otp_code,
-        otp_expires_at,
-        device_id,
-        device_info,
-        ip_address,
-        is_verified,
-        verification_attempts
-    )
-    VALUES (
-        p_phone_number,
-        v_otp_code,
-        NOW() + INTERVAL '10 minutes',
-        p_device_id,
-        p_device_info,
-        p_ip_address,
-        false,
-        0
-    )
-    ON CONFLICT (phone_number)
-    WHERE is_verified = false AND otp_expires_at > NOW()
-    DO UPDATE SET
-        otp_code = v_otp_code,
+    -- Update active unverified session if present, else insert a new one.
+    UPDATE users.auth_sessions
+    SET
+        otp_code_hash = v_otp_code_hash,
         otp_expires_at = NOW() + INTERVAL '10 minutes',
         device_id = p_device_id,
         device_info = p_device_info,
         ip_address = p_ip_address,
         verification_attempts = 0,
         created_at = NOW()
+    WHERE session_id = (
+        SELECT session_id
+        FROM users.auth_sessions
+        WHERE phone_number = p_phone_number
+            AND is_verified = false
+            AND otp_expires_at > NOW()
+        ORDER BY created_at DESC
+        LIMIT 1
+    )
     RETURNING session_id INTO v_session_id;
+
+    IF NOT FOUND THEN
+        INSERT INTO users.auth_sessions (
+            phone_number,
+            otp_code_hash,
+            otp_expires_at,
+            device_id,
+            device_info,
+            ip_address,
+            is_verified,
+            verification_attempts
+        )
+        VALUES (
+            p_phone_number,
+            v_otp_code_hash,
+            NOW() + INTERVAL '10 minutes',
+            p_device_id,
+            p_device_info,
+            p_ip_address,
+            false,
+            0
+        )
+        RETURNING session_id INTO v_session_id;
+    END IF;
     
     -- Build success response
     SELECT json_build_object(
         'success', true,
         'session_id', v_session_id,
         'phone_number', p_phone_number,
-        'otp_expires_at', NOW() + INTERVAL '10 minutes',
-        'otp_code', v_otp_code  -- REMOVE IN PRODUCTION, only for development
+        'otp_expires_at', NOW() + INTERVAL '10 minutes'
     ) INTO result;
     
     RETURN result;
@@ -126,7 +139,7 @@ DECLARE
     v_user_id INT;
     v_user_uuid UUID;
     v_is_new_user BOOLEAN := false;
-    v_role_id INT;
+    v_role user_role;
     result JSON;
 BEGIN
     -- Verify OTP
@@ -136,7 +149,7 @@ BEGIN
         verified_at = NOW(),
         verification_attempts = verification_attempts + 1
     WHERE phone_number = p_phone_number
-        AND otp_code = p_otp_code
+        AND otp_code_hash = encode(digest(p_otp_code, 'sha256'), 'hex')
         AND otp_expires_at > NOW()
         AND is_verified = false
         AND verification_attempts < 5
@@ -168,18 +181,15 @@ BEGIN
     IF NOT FOUND THEN
         v_is_new_user := true;
         
-        -- Get role_id
-        SELECT role_id INTO v_role_id
-        FROM public.user_roles
-        WHERE name = p_role_name;
-        
-        IF NOT FOUND THEN
+        BEGIN
+            v_role := p_role_name::user_role;
+        EXCEPTION WHEN invalid_text_representation THEN
             RETURN json_build_object(
                 'success', false,
                 'error', 'Invalid role name',
                 'error_code', 'INVALID_ROLE'
             );
-        END IF;
+        END;
         
         -- Validate full_name for new users
         IF p_full_name IS NULL OR TRIM(p_full_name) = '' THEN
@@ -192,13 +202,13 @@ BEGIN
         
         -- Create user profile
         INSERT INTO users.profiles (
-            role_id,
+            role,
             phone_number,
             full_name,
             is_verified
         )
         VALUES (
-            v_role_id,
+            v_role,
             p_phone_number,
             p_full_name,
             true
@@ -227,12 +237,11 @@ BEGIN
             'user_uuid', v_user_uuid,
             'phone_number', p_phone_number,
             'full_name', COALESCE(p_full_name, u.full_name),
-            'role', r.name,
+            'role', u.role,
             'is_verified', true
         )
     ) INTO result
     FROM users.profiles u
-    JOIN public.user_roles r ON u.role_id = r.role_id
     WHERE u.user_id = v_user_id;
     
     RETURN result;

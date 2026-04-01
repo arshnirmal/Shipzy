@@ -58,7 +58,7 @@ class OrderDetailsScreen extends ConsumerWidget {
           StatusHeroCard(
             status: order.status,
             orderNumber: order.orderNumber,
-            timestamp: order.statusTimestamp ?? order.createdAt,
+            timestamp: order.statusTimestamp,
             etaText: _getEtaText(order),
             distanceText: _getDistanceText(order),
             reasonText: _getReasonText(order),
@@ -97,9 +97,9 @@ class OrderDetailsScreen extends ConsumerWidget {
 
           // Order Summary
           OrderSummaryCard(
-            vehicleType: order.vehicleCategoryDisplay ?? 'N/A',
+            vehicleType: order.vehicleCategoryDisplay,
             packageType: order.packageType,
-            deliveryType: order.deliveryTypeDisplay ?? 'N/A',
+            deliveryType: order.deliveryTypeDisplay,
             distance: order.distance != null ? '${order.distance!.toStringAsFixed(1)} km' : null,
             weight: order.packageWeight != null ? '${order.packageWeight}' : null,
             order: order,
@@ -127,9 +127,14 @@ class OrderDetailsScreen extends ConsumerWidget {
         if (order.actualDurationMins != null) {
           return 'Total time: ${order.actualDurationMins} mins';
         }
+        if (order.deliveredAt == null) {
+          return null;
+        }
         final duration = order.deliveredAt!.difference(order.createdAt);
         return 'Total time: ${duration.inMinutes} minutes';
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
       case OrderStatus.inTransit:
         return null;
@@ -165,6 +170,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         };
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return () {
           // TODO(arsh): Navigate to reorder
@@ -188,6 +195,8 @@ class OrderDetailsScreen extends ConsumerWidget {
       case OrderStatus.pending:
       case OrderStatus.inTransit:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return null;
     }
@@ -202,6 +211,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         return 'Track Live';
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return 'Reorder';
       case OrderStatus.inTransit:
@@ -219,6 +230,8 @@ class OrderDetailsScreen extends ConsumerWidget {
       case OrderStatus.pending:
       case OrderStatus.inTransit:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return null;
     }
@@ -233,6 +246,8 @@ class OrderDetailsScreen extends ConsumerWidget {
         return Icons.location_on;
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return Icons.refresh;
       case OrderStatus.inTransit:
@@ -250,6 +265,8 @@ class OrderDetailsScreen extends ConsumerWidget {
       case OrderStatus.pending:
       case OrderStatus.inTransit:
       case OrderStatus.cancelled:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returned:
       case OrderStatus.rejected:
         return null;
     }
@@ -285,39 +302,22 @@ class OrderDetailsScreen extends ConsumerWidget {
               _PaymentRow(label: 'Platform Fee', value: '₹${fareBreakdown.platformFee}'),
               const SizedBox(height: 8),
             ],
-            if (fareBreakdown.specialHandlingFee > 0) ...[
-              _PaymentRow(label: 'Special Handling', value: '₹${fareBreakdown.specialHandlingFee}'),
-              const SizedBox(height: 8),
-            ],
-            if (fareBreakdown.gstAmount > 0) ...[
-              _PaymentRow(label: 'GST', value: '₹${fareBreakdown.gstAmount}'),
-              const Divider(height: 24),
-            ],
+            if (fareBreakdown.gstAmount > 0) ...[_PaymentRow(label: 'GST', value: '₹${fareBreakdown.gstAmount}'), const Divider(height: 24)],
             _PaymentRow(label: 'Total', value: '₹${fareBreakdown.totalPrice}', isTotal: true),
           ] else ...[
             // Fallback to order fields if fareBreakdown is not available
-            if (order.basePrice != null) ...[
-              _PaymentRow(label: 'Base Fare', value: '₹${order.basePrice}'),
+            ...[_PaymentRow(label: 'Base Fare', value: '₹${order.fareBreakdown.basePrice}'), const SizedBox(height: 8)],
+            ...[_PaymentRow(label: 'Distance Charge', value: '₹${order.fareBreakdown.distancePrice}'), const SizedBox(height: 8)],
+            if (order.fareBreakdown.weightSurcharge > 0) ...[
+              _PaymentRow(label: 'Weight Surcharge', value: '₹${order.fareBreakdown.weightSurcharge}'),
               const SizedBox(height: 8),
             ],
-            if (order.distancePrice != null) ...[
-              _PaymentRow(label: 'Distance Charge', value: '₹${order.distancePrice}'),
+            if (order.fareBreakdown.platformFee > 0) ...[
+              _PaymentRow(label: 'Platform Fee', value: '₹${order.fareBreakdown.platformFee}'),
               const SizedBox(height: 8),
             ],
-            if (order.weightSurcharge != null && order.weightSurcharge! > 0) ...[
-              _PaymentRow(label: 'Weight Surcharge', value: '₹${order.weightSurcharge}'),
-              const SizedBox(height: 8),
-            ],
-            if (order.platformFee != null && order.platformFee! > 0) ...[
-              _PaymentRow(label: 'Platform Fee', value: '₹${order.platformFee}'),
-              const SizedBox(height: 8),
-            ],
-            if (order.specialHandlingFee != null && order.specialHandlingFee! > 0) ...[
-              _PaymentRow(label: 'Special Handling', value: '₹${order.specialHandlingFee}'),
-              const SizedBox(height: 8),
-            ],
-            if (order.gstAmount != null && order.gstAmount! > 0) ...[
-              _PaymentRow(label: 'GST', value: '₹${order.gstAmount}'),
+            if (order.fareBreakdown.gstAmount > 0) ...[
+              _PaymentRow(label: 'GST', value: '₹${order.fareBreakdown.gstAmount}'),
               const Divider(height: 24),
             ],
             _PaymentRow(label: 'Total', value: '₹${order.totalFare}', isTotal: true),
@@ -369,10 +369,12 @@ class OrderDetailsScreen extends ConsumerWidget {
         break;
 
       case OrderStatus.cancelled:
+      case OrderStatus.returned:
         // TODO: Add RefundStatusCard when API supports it
         // widgets.add(RefundStatusCard(amount: order.totalFare, status: 'Processed'));
         break;
 
+      case OrderStatus.undeliverable:
       case OrderStatus.rejected:
         widgets.add(
           FailureDetailsCard(
@@ -423,7 +425,7 @@ class _PaymentRow extends StatelessWidget {
     final theme = Theme.of(context);
     final style = isTotal
         ? theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)
-        : theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7));
+        : theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.7));
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

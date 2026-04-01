@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/orders/order.dart';
+import '../../../models/orders/order_list_item.dart';
 import '../../../models/orders/order_status.dart';
 import '../../home/widgets/order_status_badge.dart';
 
 class OrderCard extends StatelessWidget {
   const OrderCard({required this.order, super.key, this.onTap, this.onActionTap});
 
-  final Order order;
+  final OrderListItem order;
   final VoidCallback? onTap;
   final VoidCallback? onActionTap;
 
@@ -43,7 +43,7 @@ class OrderCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          order.packageDescription ?? order.packageType,
+                          order.packageDescription ?? 'Package Delivery',
                           style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -60,7 +60,7 @@ class OrderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              RouteTimeline(pickupAddress: order.pickupAddress, deliveryAddress: order.deliveryAddress),
+              RouteTimeline(pickupAddress: order.pickup.address, deliveryAddress: order.delivery.address),
               const SizedBox(height: 20),
               Row(
                 children: [

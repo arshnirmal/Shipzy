@@ -9,16 +9,11 @@ import {
 } from "../utils/error.util.js";
 import { verifyToken } from "../utils/jwt.util.js";
 
-interface User {
-  userId: number;
-  userUuid: string;
-  role: string;
-  phoneNumber: string;
-}
+import type { RequestUser } from "../types/user.js";
 
 declare module "fastify" {
   interface FastifyRequest {
-    user?: User;
+    user?: RequestUser;
   }
 }
 
@@ -46,9 +41,9 @@ export const authenticate = async (
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
     // 4. Validate token in database (check if revoked)
-    const session = await authRepository.validateJwtToken(tokenHash);
+    const isValid = await authRepository.validateJwtToken(tokenHash);
 
-    if (!session) {
+    if (!isValid) {
       throw new AuthenticationError("Invalid or revoked token");
     }
 

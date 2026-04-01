@@ -5,9 +5,7 @@ part 'order_provider.g.dart';
 @riverpod
 class Order extends _$Order {
   @override
-  OrderState build() {
-    return OrderState();
-  }
+  OrderState build() => OrderState();
 
   Future<void> acceptOrder(String orderId) async {
     // TODO: Call API to accept order
@@ -27,19 +25,17 @@ class Order extends _$Order {
   }
 
   Future<void> completeDelivery(String orderId) async {
-    state = state.copyWith(status: OrderStatus.completed, activeOrderId: null);
+    state = state.copyWith(status: OrderStatus.completed);
   }
 }
 
 enum OrderStatus { idle, accepted, navigatingToPickup, arrivedAtPickup, pickedUp, navigatingToDropoff, arrivedAtDropoff, completed }
 
 class OrderState {
+  OrderState({this.activeOrderId, this.status = OrderStatus.idle});
   final String? activeOrderId;
   final OrderStatus status;
 
-  OrderState({this.activeOrderId, this.status = OrderStatus.idle});
-
-  OrderState copyWith({String? activeOrderId, OrderStatus? status}) {
-    return OrderState(activeOrderId: activeOrderId ?? this.activeOrderId, status: status ?? this.status);
-  }
+  OrderState copyWith({String? activeOrderId, OrderStatus? status}) =>
+      OrderState(activeOrderId: activeOrderId ?? this.activeOrderId, status: status ?? this.status);
 }

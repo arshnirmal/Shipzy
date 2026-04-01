@@ -11,6 +11,7 @@ import {
   getOrderByIdSchema,
   listOrdersSchema,
   updateOrderStatusSchema,
+  rateOrderSchema,
 } from "./orders.schema.js";
 
 async function ordersRoutes(fastify: FastifyInstance, options: any) {
@@ -57,15 +58,21 @@ async function ordersRoutes(fastify: FastifyInstance, options: any) {
   // GET /api/v1/orders/:id - Get order details
   fastify.get(
     "/:id",
-    { schema: getOrderByIdSchema },
-    ordersController.getOrderById.bind(ordersController),
+    {
+      schema: getOrderByIdSchema,
+      onRequest: [authorize("client", "courier")],
+    },
+    ordersController.getOrderById.bind(ordersController) as any,
   );
 
-  // POST /api/v1/orders/:id/cancel - Cancel order
+  // POST /api/v1/orders/:id/cancel - Cancel order (clients only)
   fastify.post(
     "/:id/cancel",
-    { schema: cancelOrderSchema },
-    ordersController.cancelOrder.bind(ordersController),
+    {
+      schema: cancelOrderSchema,
+      onRequest: [authorize("client")],
+    },
+    ordersController.cancelOrder.bind(ordersController) as any,
   );
 
   // POST /api/v1/orders/:id/accept - Accept order (couriers only)
@@ -92,6 +99,7 @@ async function ordersRoutes(fastify: FastifyInstance, options: any) {
   fastify.post(
     "/:id/rate",
     {
+      schema: rateOrderSchema,
       onRequest: [authorize("client")],
     },
     ordersController.rateOrder.bind(ordersController) as any,

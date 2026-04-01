@@ -1,5 +1,6 @@
 // lib/providers/auth_state_provider.dart
 
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/user.dart';
@@ -28,8 +29,8 @@ class AuthState extends _$AuthState {
       final authService = ref.read(authServiceProvider);
       final user = await authService.getCurrentUser(accessToken);
 
-      // Check if user profile is complete (determines if new user)
-      final isNewUser = !user.profileComplete;
+      // Check if user is verified (determines if new user needs verification)
+      final isNewUser = !user.isVerified;
 
       return AuthStateData.authenticated(user, isNewUser: isNewUser);
     } catch (e) {
@@ -49,30 +50,40 @@ class AuthState extends _$AuthState {
         return const AuthResult.error('Google sign-in cancelled');
       }
 
-      final idToken = await googleAuth.getIdToken();
-      if (idToken == null) {
-        return const AuthResult.error('Failed to get Google ID token');
+      final auth = await account.authentication;
+      final googleIdToken = auth.idToken;
+      final googleAccessToken = auth.accessToken;
+
+      if (googleIdToken == null && googleAccessToken == null) {
+        return const AuthResult.error('Failed to get Google authentication tokens');
+      }
+
+      // Sign in to Firebase Auth using Google credentials
+      final credential = firebase.GoogleAuthProvider.credential(
+        accessToken: googleAccessToken,
+        idToken: googleIdToken,
+      );
+
+      final currentFirebaseUser =
+          await firebase.FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Obtain the Firebase ID token which the backend verifies
+      final firebaseIdToken =
+          await currentFirebaseUser.user?.getIdToken(true);
+
+      if (firebaseIdToken == null) {
+        return const AuthResult.error('Failed to get Firebase ID token');
       }
 
       final authService = ref.read(authServiceProvider);
-      final response = await authService.verifyGoogleToken(idToken, role: role);
+      // Send Firebase ID Token to backend
+      final response = await authService.verifyGoogleToken(firebaseIdToken, role: role);
 
-      await _storeTokens(
-        response.data.tokens.accessToken,
-        response.data.tokens.refreshToken,
-      );
+      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
-      state = AsyncData(
-        AuthStateData.authenticated(
-          response.data.user,
-          isNewUser: response.data.isNewUser,
-        ),
-      );
+      state = AsyncData(AuthStateData.authenticated(response.data.user, isNewUser: response.data.isNewUser));
 
-      return AuthResult.success(
-        response.data.user,
-        isNewUser: response.data.isNewUser,
-      );
+      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -88,53 +99,27 @@ class AuthState extends _$AuthState {
   }) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.register(
-        fullName: fullName,
-        email: email,
-        password: password,
-        phoneNumber: phoneNumber,
-        role: role,
-      );
+      final response = await authService.register(fullName: fullName, email: email, password: password, phoneNumber: phoneNumber, role: role);
 
-      await _storeTokens(
-        response.data.tokens.accessToken,
-        response.data.tokens.refreshToken,
-      );
+      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
-      state = AsyncData(
-        AuthStateData.authenticated(
-          response.data.user,
-          isNewUser: response.data.isNewUser,
-        ),
-      );
+      state = AsyncData(AuthStateData.authenticated(response.data.user, isNewUser: response.data.isNewUser));
 
-      return AuthResult.success(
-        response.data.user,
-        isNewUser: response.data.isNewUser,
-      );
+      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
   /// Login
-  Future<AuthResult> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<AuthResult> login({required String email, required String password}) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.login(
-        email: email,
-        password: password,
-      );
+      final response = await authService.login(email: email, password: password);
 
       AppLogger.d('Login response: ${response.data.toJson()}');
 
-      await _storeTokens(
-        response.data.tokens.accessToken,
-        response.data.tokens.refreshToken,
-      );
+      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
 
       state = AsyncData(AuthStateData.authenticated(response.data.user));
 
@@ -157,10 +142,7 @@ class AuthState extends _$AuthState {
       final authService = ref.read(authServiceProvider);
       final response = await authService.refreshToken(refreshToken);
 
-      await storage.write(
-        key: 'access_token',
-        value: response.data.accessToken,
-      );
+      await storage.write(key: 'access_token', value: response.data.accessToken);
 
       return true;
     } catch (e) {
@@ -183,6 +165,13 @@ class AuthState extends _$AuthState {
       // Continue with local logout
     } finally {
       await _clearTokens();
+
+      // Sign out from Firebase securely
+      try {
+        await firebase.FirebaseAuth.instance.signOut();
+      } catch (e) {
+        AppLogger.e('Firebase signout error: $e');
+      }
 
       try {
         final googleAuth = ref.read(googleAuthProvider.notifier);
@@ -210,19 +199,13 @@ class AuthState extends _$AuthState {
 // Auth state classes
 sealed class AuthStateData {
   const AuthStateData();
-  const factory AuthStateData.authenticated(AppUser user, {bool isNewUser}) =
-      Authenticated;
+  const factory AuthStateData.authenticated(AppUser user, {bool isNewUser}) = Authenticated;
   const factory AuthStateData.unauthenticated() = Unauthenticated;
 
-  T maybeWhen<T>({
-    required T Function() orElse,
-    T Function(AppUser user, {required bool isNewUser})? authenticated,
-    T Function()? unauthenticated,
-  }) {
+  T maybeWhen<T>({required T Function() orElse, T Function(AppUser user, {required bool isNewUser})? authenticated, T Function()? unauthenticated}) {
     if (this is Authenticated) {
       final auth = this as Authenticated;
-      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ??
-          orElse();
+      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ?? orElse();
     } else if (this is Unauthenticated) {
       return unauthenticated?.call() ?? orElse();
     } else {
@@ -244,14 +227,10 @@ class Unauthenticated extends AuthStateData {
 // Auth result
 sealed class AuthResult {
   const AuthResult();
-  const factory AuthResult.success(AppUser user, {required bool isNewUser}) =
-      AuthSuccess;
+  const factory AuthResult.success(AppUser user, {required bool isNewUser}) = AuthSuccess;
   const factory AuthResult.error(String message) = AuthError;
 
-  T when<T>({
-    required T Function(AppUser user, {required bool isNewUser}) success,
-    required T Function(String message) error,
-  }) {
+  T when<T>({required T Function(AppUser user, {required bool isNewUser}) success, required T Function(String message) error}) {
     if (this is AuthSuccess) {
       final s = this as AuthSuccess;
       return success(s.user, isNewUser: s.isNewUser);

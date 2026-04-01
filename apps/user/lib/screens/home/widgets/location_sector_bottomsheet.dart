@@ -59,7 +59,7 @@ class LocationSelectorSheet extends ConsumerWidget {
                     icon: Icons.my_location_rounded,
                     label: 'Current Location',
                     address: 'Using GPS',
-                    isSelected: selectedLocation.value?.isCurrentLocation ?? false,
+                    isSelected: selectedLocation.value?.addressType == 'current',
                     onTap: () async {
                       final address = await ref.read(addressFromCoordinatesProvider(position).future);
 
@@ -67,11 +67,16 @@ class LocationSelectorSheet extends ConsumerWidget {
                           .read(locationNotifierProvider.notifier)
                           .selectAddress(
                             SavedAddress(
+                              addressId: 0,
                               label: 'Current Location',
                               fullAddress: address ?? 'Current Location',
+                              city: '',
+                              state: '',
+                              postalCode: '',
                               latitude: position.latitude,
                               longitude: position.longitude,
-                              isCurrentLocation: true,
+                              addressType: 'current',
+                              createdAt: DateTime.now(),
                             ),
                           );
                       if (context.mounted) {
@@ -130,8 +135,8 @@ class LocationSelectorSheet extends ConsumerWidget {
                       final isSelected = selectedLocation.value?.addressId == address.addressId;
 
                       return _LocationTile(
-                        icon: _getIconForLabel(address.label),
-                        label: address.label,
+                        icon: _getIconForLabel(address.label ?? ''),
+                        label: address.label ?? 'Saved Location',
                         address: address.fullAddress,
                         isSelected: isSelected,
                         onTap: () {

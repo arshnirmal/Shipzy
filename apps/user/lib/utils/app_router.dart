@@ -5,14 +5,16 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_state_provider.dart';
+import '../providers/storage_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/new_order/address_form_screen.dart';
-import '../screens/new_order/new_order_screen.dart';
-import '../screens/orders/order_details_screen.dart';
-import '../screens/orders/order_list_screen.dart';
-import '../screens/profile/profile_screen.dart';
+// import '../screens/new_order/address_form_screen.dart';
+// import '../screens/new_order/new_order_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
+// import '../screens/orders/order_details_screen.dart';
+// import '../screens/orders/order_list_screen.dart';
+// import '../screens/profile/profile_screen.dart';
 import '../screens/splash_screen.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import 'app_routes.dart';
@@ -22,6 +24,7 @@ part 'app_router.g.dart';
 @riverpod
 GoRouter router(Ref ref) {
   final authState = ref.watch(authStateProvider);
+  final sharedPrefs = ref.watch(sharedPreferencesProvider).value;
 
   return GoRouter(
     debugLogDiagnostics: true,
@@ -37,7 +40,11 @@ GoRouter router(Ref ref) {
         return authStateValue.maybeWhen(
           data: (authData) => authData.maybeWhen(
             authenticated: (user, {required bool isNewUser}) => AppRoutes.home,
-            unauthenticated: () => AppRoutes.login,
+            unauthenticated: () {
+              // Check if user has seen onboarding
+              final hasSeenOnboarding = sharedPrefs?.getBool('has_seen_onboarding') ?? false;
+              return hasSeenOnboarding ? AppRoutes.login : AppRoutes.onboarding;
+            },
             orElse: () => AppRoutes.login,
           ),
           orElse: () => null, // Stay on splash while loading
@@ -65,12 +72,15 @@ GoRouter router(Ref ref) {
       // ============ SPLASH ============
       GoRoute(path: AppRoutes.splash, name: 'splash', builder: (context, state) => const SplashScreen()),
 
+      // ============ ONBOARDING ============
+      GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (context, state) => const OnboardingScreen()),
+
       // ============ AUTHENTICATION ============
       GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
 
       GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
 
-      // ============ MAIN APP (Shell Route for Bottom Nav) ============
+      // ============ FEATURE SLICES ============
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -79,77 +89,74 @@ GoRouter router(Ref ref) {
             name: 'home',
             pageBuilder: (context, state) => const CustomTransitionPage(child: HomeScreen(), transitionsBuilder: _fadeTransition),
           ),
-          GoRoute(
-            path: AppRoutes.createOrder,
-            name: 'createOrder',
-            pageBuilder: (context, state) => const CustomTransitionPage(child: NewOrderScreen(), transitionsBuilder: _fadeTransition),
-          ),
-          GoRoute(
-            path: AppRoutes.orderList,
-            name: 'orderList',
-            pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersScreen(), transitionsBuilder: _fadeTransition),
-          ),
-          GoRoute(
-            path: AppRoutes.profile,
-            name: 'profile',
-            pageBuilder: (context, state) => const CustomTransitionPage(child: ProfileScreen(), transitionsBuilder: _fadeTransition),
-          ),
+          // GoRoute(
+          //   path: AppRoutes.createOrder,
+          //   name: 'createOrder',
+          //   pageBuilder: (context, state) => const CustomTransitionPage(child: NewOrderScreen(), transitionsBuilder: _fadeTransition),
+          // ),
+          // GoRoute(
+          //   path: AppRoutes.orderList,
+          //   name: 'orderList',
+          //   pageBuilder: (context, state) => const CustomTransitionPage(child: OrdersScreen(), transitionsBuilder: _fadeTransition),
+          // ),
+          // GoRoute(
+          //   path: AppRoutes.profile,
+          //   name: 'profile',
+          //   pageBuilder: (context, state) => const CustomTransitionPage(child: ProfileScreen(), transitionsBuilder: _fadeTransition),
+          // ),
         ],
       ),
 
-      // ============ ORDER FLOW ============
-      GoRoute(
-        path: AppRoutes.orderDetailsPath,
-        name: 'orderDetails',
-        builder: (context, state) {
-          final orderId = int.parse(state.pathParameters['orderId']!);
-          return OrderDetailsScreen(orderId: orderId);
-        },
-      ),
+      // GoRoute(
+      //   path: AppRoutes.orderDetailsPath,
+      //   name: 'orderDetails',
+      //   builder: (context, state) {
+      //     final orderId = int.parse(state.pathParameters['orderId']!);
+      //     return OrderDetailsScreen(orderId: orderId);
+      //   },
+      // ),
 
-      // ============ ADDRESS ============
-      GoRoute(
-        path: AppRoutes.addressList,
-        name: 'addressList',
-        builder: (context, state) => const Scaffold(body: Center(child: Text('Address List - Coming Soon'))),
-      ),
+      // GoRoute(
+      //   path: AppRoutes.addressList,
+      //   name: 'addressList',
+      //   builder: (context, state) => const Scaffold(body: Center(child: Text('Address List - Coming Soon'))),
+      // ),
 
-      GoRoute(
-        path: AppRoutes.addressForm,
-        name: 'addressForm',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final purpose = extra?['purpose'] as String?;
-          final initialAddress = extra?['initialAddress'] as String?;
-          final latitude = extra?['latitude'] as double?;
-          final longitude = extra?['longitude'] as double?;
-          final building = extra?['building'] as String?;
-          final floor = extra?['floor'] as String?;
-          final flat = extra?['flat'] as String?;
-          final howToReach = extra?['howToReach'] as String?;
+      // GoRoute(
+      //   path: AppRoutes.addressForm,
+      //   name: 'addressForm',
+      //   builder: (context, state) {
+      //     final extra = state.extra as Map<String, dynamic>?;
+      //     final purpose = extra?['purpose'] as String?;
+      //     final initialAddress = extra?['initialAddress'] as String?;
+      //     final latitude = extra?['latitude'] as double?;
+      //     final longitude = extra?['longitude'] as double?;
+      //     final building = extra?['building'] as String?;
+      //     final floor = extra?['floor'] as String?;
+      //     final flat = extra?['flat'] as String?;
+      //     final howToReach = extra?['howToReach'] as String?;
+      //
+      //     return AddressFormScreen(
+      //       purpose: purpose,
+      //       initialAddress: initialAddress,
+      //       initialLatitude: latitude,
+      //       initialLongitude: longitude,
+      //       initialBuilding: building,
+      //       initialFloor: floor,
+      //       initialFlat: flat,
+      //       initialHowToReach: howToReach,
+      //     );
+      //   },
+      // ),
 
-          return AddressFormScreen(
-            purpose: purpose,
-            initialAddress: initialAddress,
-            initialLatitude: latitude,
-            initialLongitude: longitude,
-            initialBuilding: building,
-            initialFloor: floor,
-            initialFlat: flat,
-            initialHowToReach: howToReach,
-          );
-        },
-      ),
-
-      // ============ PAYMENT ============
-      GoRoute(
-        path: AppRoutes.payment,
-        name: 'payment',
-        builder: (context, state) {
-          final extra = state.extra as Map?;
-          return Scaffold(body: Center(child: Text('Payment - Order: ${extra?['orderId'] ?? 'N/A'}')));
-        },
-      ),
+      // GoRoute(
+      //   path: AppRoutes.payment,
+      //   name: 'payment',
+      //   builder: (context, state) {
+      //     final extra = state.extra as Map?;
+      //     return Scaffold(body: Center(child: Text('Payment - Order: ${extra?['orderId'] ?? 'N/A'}')));
+      //   },
+      // ),
     ],
 
     // Error handling
@@ -200,7 +207,7 @@ class ErrorScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              ElevatedButton.icon(onPressed: () => context.go(AppRoutes.home), icon: const Icon(Icons.home), label: const Text('Go Home')),
+              ElevatedButton.icon(onPressed: () => context.go(AppRoutes.login), icon: const Icon(Icons.login), label: const Text('Go to Login')),
             ],
           ),
         ),

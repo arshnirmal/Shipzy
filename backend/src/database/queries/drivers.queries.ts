@@ -13,35 +13,37 @@ export default {
    */
   FIND_COURIER_BY_USER_ID: `
     SELECT
-      u.user_id,
-      u.user_uuid,
-      u.phone_number,
-      u.full_name,
-      u.email,
-          u.profile_picture_url,
-          u.is_verified,
-          u.is_active,
-          cs.status_id AS courier_status_id,
-          cs.is_available,
-          cs.is_online,
-          cs.total_deliveries_today,
-          cs.last_location_update,
-          ST_Y(cs.current_location::geometry) AS current_latitude,
-          ST_X(cs.current_location::geometry) AS current_longitude,
-          cv.vehicle_id,
-          cv.vehicle_number,
-          cv.model AS vehicle_model,
-          cv.year AS vehicle_year,
-          vc.name AS vehicle_category,
-          vc.max_weight_kg AS vehicle_max_weight,
-          cs.created_at,
-          cs.updated_at
+            u.user_id AS "userId",
+            u.user_uuid AS "userUuid",
+            u.phone_number AS "phoneNumber",
+            u.full_name AS "fullName",
+            u.email AS "email",
+            u.profile_picture_url AS "profilePictureUrl",
+            u.is_verified AS "isVerified",
+            u.is_active AS "isActive",
+            cs.status_id AS "courierStatusId",
+            cs.is_available AS "isAvailable",
+            cs.is_online AS "isOnline",
+            cs.total_deliveries_today AS "totalDeliveriesToday",
+            cs.last_location_update AS "lastLocationUpdate",
+            ST_Y(cs.current_location::geometry) AS "currentLatitude",
+            ST_X(cs.current_location::geometry) AS "currentLongitude",
+            cv.vehicle_id AS "vehicleId",
+            cv.vehicle_number AS "vehicleNumber",
+            cv.model AS "vehicleModel",
+            cv.year AS "vehicleYear",
+            vc.category_id AS "vehicleCategoryId",
+            vc.name AS "vehicleCategory",
+            vc.max_weight_kg AS "vehicleMaxWeight",
+            cv.is_active AS "vehicleIsActive",
+            cs.created_at AS "createdAt",
+            cs.updated_at AS "updatedAt"
       FROM users.profiles u
       LEFT JOIN logistics.courier_status cs ON u.user_id = cs.courier_id
       LEFT JOIN logistics.courier_vehicles cv ON u.user_id = cv.courier_id AND cv.is_active = true
       LEFT JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
       WHERE u.user_id = $1
-          AND u.role_id = (SELECT role_id FROM public.user_roles WHERE name = 'courier')
+          AND u.role = 'courier'
           AND u.deleted_at IS NULL
   `,
 
@@ -56,41 +58,35 @@ export default {
           profile_picture_url = COALESCE($4, profile_picture_url),
           updated_at = NOW()
       WHERE user_id = $1
-      RETURNING user_id, full_name, email, profile_picture_url, updated_at
+      RETURNING
+          user_id AS "userId",
+          full_name AS "fullName",
+          email AS "email",
+          profile_picture_url AS "profilePictureUrl",
+          updated_at AS "updatedAt"
   `,
 
-  /**
-   * Toggle courier online status
-   */
-  TOGGLE_COURIER_ONLINE_STATUS: `
-      UPDATE logistics.courier_status
-      SET
-          is_online = NOT is_online,
-          is_available = CASE WHEN is_online = true THEN false ELSE is_available END,
-          updated_at = NOW()
-      WHERE courier_id = $1
-      RETURNING courier_id, is_online, is_available, updated_at
-  `,
+  // NOTE: TOGGLE_COURIER_ONLINE_STATUS removed - not used anywhere, can be done via Drizzle if needed
 
   /**
    * Get courier earnings summary
    */
   GET_COURIER_EARNINGS_SUMMARY: `
       SELECT
-          COUNT(DISTINCT o.order_id) AS total_deliveries,
-          COUNT(DISTINCT CASE WHEN o.created_at::date = CURRENT_DATE THEN o.order_id END) AS today_deliveries,
-          COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.order_id END) AS week_deliveries,
-          COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.order_id END) AS month_deliveries,
-          COALESCE(SUM(o.total_price), 0) AS total_earnings,
-          COALESCE(SUM(CASE WHEN o.created_at::date = CURRENT_DATE THEN o.total_price END), 0) AS today_earnings,
-          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.total_price END), 0) AS week_earnings,
-          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.total_price END), 0) AS month_earnings,
-          COALESCE(ROUND(AVG(o.total_price), 2), 0) AS avg_order_value,
-          COALESCE(ROUND(SUM(o.actual_distance_km), 2), 0) AS total_distance_km
+          COUNT(DISTINCT o.order_id) AS "totalDeliveries",
+          COUNT(DISTINCT CASE WHEN o.created_at::date = CURRENT_DATE THEN o.order_id END) AS "todayDeliveries",
+          COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.order_id END) AS "weekDeliveries",
+          COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.order_id END) AS "monthDeliveries",
+          COALESCE(SUM(o.total_price), 0) AS "totalEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at::date = CURRENT_DATE THEN o.total_price END), 0) AS "todayEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.total_price END), 0) AS "weekEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.total_price END), 0) AS "monthEarnings",
+          COALESCE(ROUND(AVG(o.total_price), 2), 0) AS "avgOrderValue",
+          COALESCE(ROUND(SUM(o.actual_distance_km), 2), 0) AS "totalDistanceKm"
       FROM orders.requests o
       JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
       WHERE ca.courier_id = $1
-          AND o.status_id = (SELECT status_id FROM public.order_statuses WHERE name = 'delivered')
+          AND o.status = 'delivered'
   `,
 
   // ============ COURIER AVAILABILITY ============
@@ -100,12 +96,16 @@ export default {
    */
   UPDATE_COURIER_AVAILABILITY: `
       UPDATE logistics.courier_status
-      SET 
+      SET
           is_available = $2,
           is_online = $3,
           updated_at = NOW()
       WHERE courier_id = $1
-      RETURNING courier_id, is_available, is_online, updated_at
+      RETURNING
+          courier_id AS "courierId",
+          is_available AS "isAvailable",
+          is_online AS "isOnline",
+          updated_at AS "updatedAt"
   `,
 
   // ============ COURIER LOCATION ============
@@ -115,152 +115,94 @@ export default {
    */
   UPDATE_COURIER_LOCATION: `
       UPDATE logistics.courier_status
-      SET 
+      SET
           current_location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
           last_location_update = NOW(),
           updated_at = NOW()
       WHERE courier_id = $1
-      RETURNING 
-          courier_id,
-          ST_Y(current_location::geometry) AS latitude,
-          ST_X(current_location::geometry) AS longitude,
-          last_location_update
+      RETURNING
+          courier_id AS "courierId",
+          ST_Y(current_location::geometry) AS "latitude",
+          ST_X(current_location::geometry) AS "longitude",
+          last_location_update AS "lastLocationUpdate"
   `,
 
-  /**
-   * Get courier current location
-   */
-  GET_COURIER_LOCATION: `
-      SELECT 
-          courier_id,
-          ST_Y(current_location::geometry) AS latitude,
-          ST_X(current_location::geometry) AS longitude,
-          last_location_update,
-          is_online,
-          is_available
-      FROM logistics.courier_status
-      WHERE courier_id = $1
-  `,
-
-  // ============ COURIER VEHICLE ============
-
-  /**
-   * Get courier active vehicle
-   */
-  GET_COURIER_VEHICLE: `
-      SELECT 
-          cv.vehicle_id,
-          cv.vehicle_number,
-          cv.model,
-          cv.year,
-          vc.name AS category,
-          cv.insurance_expiry,
-          cv.is_active
-      FROM logistics.courier_vehicles cv
-      JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
-      WHERE cv.courier_id = $1
-          AND cv.is_active = true
-      LIMIT 1
-  `,
-
-  /**
-   * Update courier vehicle
-   */
-  UPDATE_COURIER_VEHICLE: `
-      UPDATE logistics.courier_vehicles
-      SET
-          vehicle_number = COALESCE($2, vehicle_number),
-          model = COALESCE($3, model),
-          year = COALESCE($4, year),
-          category_id = COALESCE($5, category_id),
-          updated_at = NOW()
-      WHERE courier_id = $1
-          AND is_active = true
-      RETURNING vehicle_id, vehicle_number, model, updated_at
-  `,
+  // NOTE: GET_COURIER_LOCATION, GET_COURIER_VEHICLE, UPDATE_COURIER_VEHICLE removed - not used anywhere
+  // These can be implemented via Drizzle ORM if needed in the future
 
   // ============ COURIER ASSIGNMENTS ============
 
   /**
-   * Find courier's active assignments
+   * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
    */
   FIND_COURIER_ACTIVE_ASSIGNMENTS: `
       SELECT
-          ca.assignment_id,
-          ca.order_id,
-          o.order_uuid,
-          o.order_number,
-          o.status_id,
-          os.name AS order_status,
-          ca.assignment_status_id,
-          ast.name AS assignment_status,
+          ca.assignment_id AS "assignmentId",
+          ca.order_id AS "orderId",
+          o.order_uuid AS "orderUuid",
+          o.order_number AS "orderNumber",
+          o.status AS "orderStatus",
+          ca.status AS "assignmentStatus",
 
           -- Vehicle and package info
-          vc.name AS vehicle_category,
-          vc.display_name AS vehicle_category_display,
-          pt.name AS package_type,
-          wt.tier_id AS weight_tier_id,
-          wt.name AS weight_tier_name,
-          wt.min_weight_kg AS weight_tier_min,
-          wt.max_weight_kg AS weight_tier_max,
+          vc.name AS "vehicleCategory",
+          vc.display_name AS "vehicleCategoryDisplay",
+          pt.name AS "packageType",
+          wt.tier_id AS "weightTierId",
+          wt.name AS "weightTierName",
+          wt.min_weight_kg AS "weightTierMin",
+          wt.max_weight_kg AS "weightTierMax",
 
-          -- Pickup location
-          pl.address AS pickup_address,
-          pl.building_name AS pickup_building,
-          pl.landmark AS pickup_landmark,
-          pl.city AS pickup_city,
-          pl.state AS pickup_state,
-          pl.postal_code AS pickup_postal_code,
-          ST_Y(pl.location::geometry) AS pickup_latitude,
-          ST_X(pl.location::geometry) AS pickup_longitude,
-          o.pickup_contact_name,
-          o.pickup_contact_phone,
+          -- OPTIMIZED: Pickup location from JSONB
+          o.pickup_location->>'fullAddress' AS "pickupAddress",
+          o.pickup_location->>'building' AS "pickupBuilding",
+          o.pickup_location->>'landmark' AS "pickupLandmark",
+          o.pickup_location->>'city' AS "pickupCity",
+          o.pickup_location->>'state' AS "pickupState",
+          o.pickup_location->>'postalCode' AS "pickupPostalCode",
+          (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
+          (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
+          o.pickup_location->>'contactName' AS "pickupContactName",
+          o.pickup_location->>'contactPhone' AS "pickupContactPhone",
 
-          -- Delivery location
-          dl.address AS delivery_address,
-          dl.building_name AS delivery_building,
-          dl.landmark AS delivery_landmark,
-          dl.city AS delivery_city,
-          dl.state AS delivery_state,
-          dl.postal_code AS delivery_postal_code,
-          ST_Y(dl.location::geometry) AS delivery_latitude,
-          ST_X(dl.location::geometry) AS delivery_longitude,
-          o.delivery_contact_name,
-          o.delivery_contact_phone,
+          -- OPTIMIZED: Delivery location from JSONB
+          o.delivery_location->>'fullAddress' AS "deliveryAddress",
+          o.delivery_location->>'building' AS "deliveryBuilding",
+          o.delivery_location->>'landmark' AS "deliveryLandmark",
+          o.delivery_location->>'city' AS "deliveryCity",
+          o.delivery_location->>'state' AS "deliveryState",
+          o.delivery_location->>'postalCode' AS "deliveryPostalCode",
+          (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
+          (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
+          o.delivery_location->>'contactName' AS "deliveryContactName",
+          o.delivery_location->>'contactPhone' AS "deliveryContactPhone",
 
-          o.package_description,
-          o.special_instructions,
-          o.declared_value,
-          o.estimated_distance_km,
-          o.actual_distance_km,
+          o.package_description AS "packageDescription",
+          o.special_instructions AS "specialInstructions",
+          o.declared_value AS "declaredValue",
+          o.estimated_distance_km AS "estimatedDistanceKm",
+          o.actual_distance_km AS "actualDistanceKm",
           -- Delivery type (needed for earnings calculation)
-          dt.name AS delivery_type,
+          dt.name AS "deliveryType",
           -- Complete pricing breakdown
-          o.base_price,
-          o.distance_price,
-          o.weight_surcharge,
-          o.platform_fee,
-          o.special_handling_fee,
-          o.gst_amount,
-          o.subtotal_before_tax,
-          o.total_price,
-          ca.assigned_at,
-          ca.accepted_at
+          o.base_price AS "basePrice",
+          o.distance_price AS "distancePrice",
+          o.weight_surcharge AS "weightSurcharge",
+          o.platform_fee AS "platformFee",
+          o.special_handling_fee AS "specialHandlingFee",
+          o.gst_amount AS "gstAmount",
+          o.subtotal_before_tax AS "subtotalBeforeTax",
+          o.total_price AS "totalPrice",
+          ca.assigned_at AS "assignedAt",
+          ca.accepted_at AS "acceptedAt"
       FROM orders.courier_assignments ca
       JOIN orders.requests o ON ca.order_id = o.order_id
-      JOIN public.order_statuses os ON o.status_id = os.status_id
-      JOIN public.assignment_statuses ast ON ca.assignment_status_id = ast.status_id
-      JOIN logistics.locations pl ON o.pickup_location_id = pl.location_id
-      JOIN logistics.locations dl ON o.delivery_location_id = dl.location_id
       LEFT JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
       LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
       LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
       LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       WHERE ca.courier_id = $1
-          AND ca.assignment_status_id NOT IN (
-              SELECT status_id FROM public.assignment_statuses
-              WHERE name IN ('delivered', 'cancelled', 'rejected')
-          )
+          AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
       ORDER BY ca.assigned_at DESC
   `,
 
