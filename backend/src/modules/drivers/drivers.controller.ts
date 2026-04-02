@@ -19,7 +19,7 @@ class DriversController {
   async getDriverProfile(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 
@@ -50,7 +50,7 @@ class DriversController {
   async updateProfile(
     request: FastifyRequest<{ Body: UpdateDriverProfileRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
       const updatedDriver = await driversService.updateProfile(
@@ -83,7 +83,7 @@ class DriversController {
   async updateAvailability(
     request: FastifyRequest<{ Body: UpdateAvailabilityRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
       const result = await driversService.updateAvailability(
@@ -116,7 +116,7 @@ class DriversController {
   async updateLocation(
     request: FastifyRequest<{ Body: UpdateLocationRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
       const result = await driversService.updateLocation(userId, request.body);
@@ -142,7 +142,7 @@ class DriversController {
   async getActiveAssignments(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 
@@ -174,7 +174,7 @@ class DriversController {
   async getEarnings(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
       const query = request.query as { period?: string };
@@ -206,7 +206,7 @@ class DriversController {
    * GET /api/v1/drivers/me/rating
    * Get driver rating stats
    */
-  async getRating(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getRating(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 

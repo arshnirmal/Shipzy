@@ -13,7 +13,7 @@ class StaticController {
   async getDeliveryTypes(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const deliveryTypes = await staticService.getDeliveryTypes();
 
@@ -43,7 +43,7 @@ class StaticController {
   async getWeightTiers(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const weightTiers = await staticService.getWeightTiers();
 
@@ -73,7 +73,7 @@ class StaticController {
   async getVehicleCategories(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const categories = await staticService.getVehicleCategories();
 
@@ -103,7 +103,7 @@ class StaticController {
   async getPackageTypes(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const packageTypes = await staticService.getPackageTypes();
 
@@ -133,7 +133,7 @@ class StaticController {
   async getPaymentMethods(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const paymentMethods = await staticService.getPaymentMethods();
 
@@ -163,7 +163,7 @@ class StaticController {
   async getCreateOrderData(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const data = await staticService.getCreateOrderData();
 
@@ -193,7 +193,7 @@ class StaticController {
   async getOrderStatuses(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const statuses = await staticService.getOrderStatuses();
 

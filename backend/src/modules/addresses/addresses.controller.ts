@@ -20,7 +20,7 @@ class AddressesController {
   async searchAddresses(
     request: FastifyRequest<{ Body: SearchAddresses }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { query } = request.body;
 
@@ -60,7 +60,7 @@ class AddressesController {
   async retrievePlace(
     request: FastifyRequest<{ Body: RetrievePlace }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { mapboxId, sessionToken } = request.body;
 
@@ -103,7 +103,7 @@ class AddressesController {
   async reverseGeocode(
     request: FastifyRequest<{ Body: ReverseGeocode }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { latitude, longitude, types, limit } = request.body;
 
@@ -148,7 +148,7 @@ class AddressesController {
   async getDirections(
     request: FastifyRequest<{ Body: Directions }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { origin, destination, profile } = request.body;
 
@@ -192,7 +192,7 @@ class AddressesController {
   async calculateDistance(
     request: FastifyRequest<{ Body: Distance }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { lat1, lon1, lat2, lon2 } = request.body;
 

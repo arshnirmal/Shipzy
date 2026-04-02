@@ -14,12 +14,12 @@ interface PaginationMeta {
  * @param message - Success message
  * @param statusCode - HTTP status code
  */
-export const successResponse = <T = any>(
+export const successResponse = <T = unknown>(
   reply: FastifyReply,
   data: T,
   message: string = "Success",
   statusCode: number = 200,
-) => {
+): FastifyReply => {
   return reply.status(statusCode).send({
     success: true,
     message,
@@ -39,8 +39,8 @@ export const errorResponse = (
   reply: FastifyReply,
   message: string,
   statusCode: number = 400,
-  errors: any = null,
-) => {
+  errors: unknown = null,
+): FastifyReply => {
   return reply.status(statusCode).send({
     success: false,
     message,
@@ -55,11 +55,11 @@ export const errorResponse = (
  * @param data - Response data
  * @param pagination - Pagination metadata
  */
-export const paginatedResponse = <T = any>(
+export const paginatedResponse = <T = unknown>(
   reply: FastifyReply,
   data: T[],
   pagination: PaginationMeta,
-) => {
+): FastifyReply => {
   return reply.status(200).send({
     success: true,
     data,

@@ -26,7 +26,7 @@ class UsersController {
   async getCurrentUser(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userUuid } = this._requireAuthenticatedUser(request);
 
@@ -58,7 +58,7 @@ class UsersController {
   async updateProfile(
     request: FastifyRequest<{ Body: UpdateProfileRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = this._requireAuthenticatedUser(request);
 
@@ -90,7 +90,7 @@ class UsersController {
   async getAddresses(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = this._requireAuthenticatedUser(request);
 
@@ -122,7 +122,7 @@ class UsersController {
   async saveAddress(
     request: FastifyRequest<{ Body: SaveAddressRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = this._requireAuthenticatedUser(request);
 
@@ -155,7 +155,7 @@ class UsersController {
   async deleteAddress(
     request: FastifyRequest<{ Params: DeleteAddressParams }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = this._requireAuthenticatedUser(request);
       const { id } = request.params;

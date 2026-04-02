@@ -43,7 +43,7 @@ class AuthController {
   async refreshToken(
     request: FastifyRequest<{ Body: RefreshTokenRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const result = await authService.refreshToken(request.body.refreshToken);
 
@@ -68,7 +68,7 @@ class AuthController {
   async verifyGoogle(
     request: FastifyRequest<{ Body: GoogleAuthRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { idToken, role } = request.body;
       const deviceInfo = this._getDeviceInfo(request);
@@ -105,7 +105,7 @@ class AuthController {
    * POST /api/v1/auth/logout
    * Logout user (revoke token)
    */
-  async logout(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async logout(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
     try {
       // Get token from Authorization header
       const token = request.headers.authorization?.replace("Bearer ", "");
@@ -140,7 +140,7 @@ class AuthController {
   async register(
     request: FastifyRequest<{ Body: RegisterRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const deviceInfo = this._getDeviceInfo(request);
       const result = await authService.registerWithEmail(
@@ -174,7 +174,7 @@ class AuthController {
   async login(
     request: FastifyRequest<{ Body: LoginRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const deviceInfo = this._getDeviceInfo(request);
       const result = await authService.loginWithEmail(request.body, deviceInfo);

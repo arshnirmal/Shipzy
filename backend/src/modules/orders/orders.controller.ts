@@ -28,7 +28,7 @@ class OrdersController {
   async calculateFare(
     request: FastifyRequest<{ Body: CalculateFareRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const fareData = request.body;
 
