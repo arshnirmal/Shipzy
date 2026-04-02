@@ -22,6 +22,10 @@ interface Config {
   database: DatabaseConfig;
   jwt: JWTConfig & { refreshExpiresIn: string };
   firebase: FirebaseConfig;
+  mapbox: {
+    accessToken: string;
+    baseUrl: string;
+  };
   cors: CorsConfig;
   rateLimit: RateLimitConfig;
   logging: LoggerConfig & { logQueries: boolean };
@@ -66,6 +70,12 @@ const config: Config = {
     privateKey: process.env.FIREBASE_PRIVATE_KEY
       ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
       : "",
+  },
+
+  // Mapbox
+  mapbox: {
+    accessToken: process.env.MAPBOX_ACCESS_TOKEN || "",
+    baseUrl: process.env.MAPBOX_BASE_URL || "https://api.mapbox.com",
   },
 
   // CORS

@@ -1,6 +1,7 @@
 // services/backend/src/modules/addresses/addresses.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import addressesService from "./addresses.service.js";
 import type {
@@ -21,12 +22,12 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { query, proximity, types, limit } = request.body;
+      const { query } = request.body;
 
       logger.info({
         msg: "Address search request",
         query,
-        proximity,
+        proximity: request.body.proximity,
         userId: request.user?.userId,
       });
 
@@ -43,18 +44,12 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      const userMessage = error instanceof AppError
+        ? error.message
         : "An error occurred while searching for addresses";
 
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      return errorResponse(reply, userMessage, statusCode);
     }
   }
 
@@ -91,18 +86,12 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      const userMessage = error instanceof AppError
+        ? error.message
         : "An error occurred while retrieving place details";
 
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      return errorResponse(reply, userMessage, statusCode);
     }
   }
 
@@ -140,18 +129,12 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      const userMessage = error instanceof AppError
+        ? error.message
         : "An error occurred while converting coordinates to address";
 
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      return errorResponse(reply, userMessage, statusCode);
     }
   }
 
@@ -191,18 +174,12 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      const userMessage = error instanceof AppError
+        ? error.message
         : "An error occurred while calculating directions";
 
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      return errorResponse(reply, userMessage, statusCode);
     }
   }
 
@@ -230,18 +207,12 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      const userMessage = error instanceof AppError
+        ? error.message
         : "An error occurred while calculating distance";
 
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      return errorResponse(reply, userMessage, statusCode);
     }
   }
 }

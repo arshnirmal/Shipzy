@@ -2,14 +2,14 @@
 import axios from "axios";
 import crypto from "node:crypto";
 import NodeCache from "node-cache";
+import config from "../../config/env.js";
 import logger from "../../config/logger.js";
 import { ValidationError } from "../../utils/error.util.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
 
 interface SearchParams {
   query: string;
-  // Accept either a "lon,lat" string (legacy) or structured object { latitude, longitude }
-  proximity?: string | Coordinates;
+  proximity?: Coordinates;
   limit?: number;
   types?: string | string[];
   country?: string;
@@ -73,8 +73,8 @@ class AddressesService {
   private readonly mapboxAccessToken: string;
 
   constructor() {
-    this.baseUrl = process.env.MAPBOX_BASE_URL || "https://api.mapbox.com";
-    this.mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN || "";
+    this.baseUrl = config.mapbox.baseUrl;
+    this.mapboxAccessToken = config.mapbox.accessToken;
 
     if (!this.mapboxAccessToken) {
       logger.warn(
@@ -123,12 +123,12 @@ class AddressesService {
   ): Promise<SearchSuggestion[]> {
     // Sanitize and validate input first
     let sanitizedQuery = "";
-    let sanitizedProximity: string | undefined;
+    let proximityParam: string | undefined;
 
     try {
       const {
         query,
-        proximity = "72.8321,18.9582", // Mumbai coordinates as default
+        proximity = { latitude: 18.9582, longitude: 72.8321 }, // Mumbai coordinates as default
         limit = 7,
         types = "address,poi",
         country = "IN",
@@ -148,27 +148,10 @@ class AddressesService {
       }
 
       if (proximity) {
-        // support structured proximity { latitude, longitude }
-        let proximityStr: string | undefined;
-        if (
-          typeof proximity === "object" &&
-          proximity.latitude &&
-          proximity.longitude
-        ) {
-          proximityStr = `${proximity.longitude},${proximity.latitude}`;
-        } else if (typeof proximity === "string") {
-          proximityStr = proximity;
-        }
-
-        if (proximityStr) {
-          sanitizedProximity = this._sanitizeInput(proximityStr);
-          if (sanitizedProximity.length > 50) {
-            throw new ValidationError("Proximity parameter too long");
-          }
-        }
+        proximityParam = `${proximity.longitude},${proximity.latitude}`;
       }
 
-      const cacheKey = `search:${sanitizedQuery}:${sanitizedProximity || "default"}`;
+      const cacheKey = `search:${sanitizedQuery}:${proximityParam || "default"}`;
       const cached = searchCache.get(cacheKey) as
         | SearchSuggestion[]
         | undefined;
@@ -191,7 +174,7 @@ class AddressesService {
             q: sanitizedQuery,
             access_token: this.mapboxAccessToken,
             session_token: sessionToken,
-            proximity: sanitizedProximity,
+            proximity: proximityParam,
             limit,
             types: typesParam,
             country,
@@ -367,19 +350,7 @@ class AddressesService {
 
       let { longitude, latitude, types, limit = 5 } = geocodeParams;
 
-      // Validate and round coordinates to 7 decimal places (centimeter precision)
-      if (typeof latitude !== "number" || typeof longitude !== "number") {
-        throw new ValidationError("Invalid coordinate format");
-      }
-
-      if (latitude < -90 || latitude > 90) {
-        throw new ValidationError("Latitude must be between -90 and 90");
-      }
-
-      if (longitude < -180 || longitude > 180) {
-        throw new ValidationError("Longitude must be between -180 and 180");
-      }
-
+      // Round coordinates to 7 decimal places (centimeter precision)
       // Validate limit
       if (limit !== undefined && (limit < 1 || limit > 5)) {
         throw new ValidationError("Limit must be between 1 and 5");
@@ -819,7 +790,7 @@ class AddressesService {
   }
 
   // Helper methods
-  _generateSessionToken() {
+  private _generateSessionToken() {
     // Generate cryptographically secure random token
     const randomBytes = crypto.randomBytes(16);
     const timestamp = Date.now().toString(36);
@@ -827,11 +798,11 @@ class AddressesService {
     return `${timestamp}_${randomPart}`;
   }
 
-  _toRad(degrees: number) {
+  private _toRad(degrees: number) {
     return degrees * (Math.PI / 180);
   }
 
-  _parseContext(context: unknown) {
+  private _parseContext(context: unknown) {
     if (!context) return {};
 
     const parsed: Record<string, string> = {};
