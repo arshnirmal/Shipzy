@@ -9,7 +9,7 @@ import { CoordinatesZ, BaseAddressZ } from "../../schemas/common.zod.js";
 export const ProximityZ = CoordinatesZ;
 
 export const SearchAddressesZ = z.object({
-  query: z.string().min(1).max(256),
+  query: z.string().trim().min(2).max(256),
   proximity: ProximityZ.optional(),
   country: z
     .string()
@@ -27,15 +27,16 @@ export const SearchAddressesZ = z.object({
         "country",
       ]),
     )
+    .min(1)
     .optional(),
   limit: z.number().int().min(1).max(10).optional(),
-});
+}).strict();
 export type SearchAddresses = z.infer<typeof SearchAddressesZ>;
 
 export const RetrievePlaceZ = z.object({
   mapboxId: z.string().min(1).max(200),
   sessionToken: z.string().min(1).max(200),
-});
+}).strict();
 export type RetrievePlace = z.infer<typeof RetrievePlaceZ>;
 
 export const ReverseGeocodeZ = CoordinatesZ.extend({
@@ -51,26 +52,33 @@ export const ReverseGeocodeZ = CoordinatesZ.extend({
         "country",
       ]),
     )
+    .min(1)
     .optional(),
-});
+  limit: z.number().int().min(1).max(5).optional(),
+})
+  .strict();
 export type ReverseGeocode = z.infer<typeof ReverseGeocodeZ>;
 
-export const DirectionsZ = z.object({
-  origin: CoordinatesZ,
-  destination: CoordinatesZ,
-  profile: z.enum(["driving", "walking", "cycling"]).optional(),
-});
+export const DirectionsZ = z
+  .object({
+    origin: CoordinatesZ,
+    destination: CoordinatesZ,
+    profile: z.enum(["driving", "walking", "cycling"]).optional(),
+  })
+  .strict();
 export type Directions = z.infer<typeof DirectionsZ>;
 
-export const DistanceZ = z.object({
-  lat1: z.number().min(-90).max(90),
-  lon1: z.number().min(-180).max(180),
-  lat2: z.number().min(-90).max(90),
-  lon2: z.number().min(-180).max(180),
-});
+export const DistanceZ = z
+  .object({
+    lat1: z.number().min(-90).max(90),
+    lon1: z.number().min(-180).max(180),
+    lat2: z.number().min(-90).max(90),
+    lon2: z.number().min(-180).max(180),
+  })
+  .strict();
 export type Distance = z.infer<typeof DistanceZ>;
 
-// ============================================================================
+// ============================================================================ 
 // RESPONSE SCHEMAS - API responses
 // ============================================================================
 

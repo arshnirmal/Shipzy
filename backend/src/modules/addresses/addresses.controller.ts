@@ -25,8 +25,8 @@ class AddressesController {
       const { query } = request.body;
 
       logger.info({
-        msg: "Address search request",
-        query,
+        msg: "POST /api/v1/addresses/search",
+        requestId: request.id,
         proximity: request.body.proximity,
         userId: request.user?.userId,
       });
@@ -41,15 +41,15 @@ class AddressesController {
     } catch (error) {
       logger.error({
         msg: "Address search controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const statusCode = error instanceof AppError ? error.statusCode : 500;
-      const userMessage = error instanceof AppError
-        ? error.message
-        : "An error occurred while searching for addresses";
-
-      return errorResponse(reply, userMessage, statusCode);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        error instanceof AppError ? error.statusCode : 500,
+      );
     }
   }
 
@@ -65,7 +65,8 @@ class AddressesController {
       const { mapboxId, sessionToken } = request.body;
 
       logger.info({
-        msg: "Place retrieve request",
+        msg: "POST /api/v1/addresses/retrieve",
+        requestId: request.id,
         mapboxId,
         userId: request.user?.userId,
       });
@@ -83,15 +84,15 @@ class AddressesController {
     } catch (error) {
       logger.error({
         msg: "Place retrieve controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const statusCode = error instanceof AppError ? error.statusCode : 500;
-      const userMessage = error instanceof AppError
-        ? error.message
-        : "An error occurred while retrieving place details";
-
-      return errorResponse(reply, userMessage, statusCode);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        error instanceof AppError ? error.statusCode : 500,
+      );
     }
   }
 
@@ -104,18 +105,20 @@ class AddressesController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { latitude, longitude, types } = request.body;
+      const { latitude, longitude, types, limit } = request.body;
 
       logger.info({
-        msg: "Reverse geocoding request",
-        coordinates: { latitude, longitude },
+        msg: "POST /api/v1/addresses/reverse-geocode",
+        requestId: request.id,
+        hasCustomTypes: Boolean(types?.length),
         userId: request.user?.userId,
       });
 
       const result = await addressesService.reverseGeocode({
         latitude,
         longitude,
-        types: types || ["street", "neighborhood"],
+        types: types || ["address", "neighborhood"],
+        limit,
       });
 
       return successResponse(
@@ -126,15 +129,15 @@ class AddressesController {
     } catch (error) {
       logger.error({
         msg: "Reverse geocoding controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const statusCode = error instanceof AppError ? error.statusCode : 500;
-      const userMessage = error instanceof AppError
-        ? error.message
-        : "An error occurred while converting coordinates to address";
-
-      return errorResponse(reply, userMessage, statusCode);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        error instanceof AppError ? error.statusCode : 500,
+      );
     }
   }
 
@@ -150,9 +153,8 @@ class AddressesController {
       const { origin, destination, profile } = request.body;
 
       logger.info({
-        msg: "Directions request",
-        origin,
-        destination,
+        msg: "POST /api/v1/addresses/directions",
+        requestId: request.id,
         profile,
         userId: request.user?.userId,
       });
@@ -171,15 +173,15 @@ class AddressesController {
     } catch (error) {
       logger.error({
         msg: "Directions controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const statusCode = error instanceof AppError ? error.statusCode : 500;
-      const userMessage = error instanceof AppError
-        ? error.message
-        : "An error occurred while calculating directions";
-
-      return errorResponse(reply, userMessage, statusCode);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        error instanceof AppError ? error.statusCode : 500,
+      );
     }
   }
 
@@ -196,6 +198,13 @@ class AddressesController {
 
       const distance = addressesService.calculateDistance(lat1, lon1, lat2, lon2);
 
+      logger.info({
+        msg: "POST /api/v1/addresses/distance",
+        requestId: request.id,
+        userId: request.user?.userId,
+        statusCode: 200,
+      });
+
       return successResponse(
         reply,
         { distanceKm: distance },
@@ -204,15 +213,15 @@ class AddressesController {
     } catch (error) {
       logger.error({
         msg: "Distance calculation error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const statusCode = error instanceof AppError ? error.statusCode : 500;
-      const userMessage = error instanceof AppError
-        ? error.message
-        : "An error occurred while calculating distance";
-
-      return errorResponse(reply, userMessage, statusCode);
+      return errorResponse(
+        reply,
+        (error as Error).message,
+        error instanceof AppError ? error.statusCode : 500,
+      );
     }
   }
 }
