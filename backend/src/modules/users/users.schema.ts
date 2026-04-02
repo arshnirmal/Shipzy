@@ -10,54 +10,12 @@ import {
   AddressesArrayResponseZ,
 } from "./users.zod.js";
 
-const _UpdateProfileJson = zodToJsonSchema(
-  UpdateProfileRequestZ as any,
-  "UpdateProfile",
-);
-const UpdateProfileJson =
-  (_UpdateProfileJson.definitions &&
-    (_UpdateProfileJson.definitions as any).UpdateProfile) ||
-  _UpdateProfileJson;
-const _SaveAddressJson = zodToJsonSchema(
-  SaveAddressRequestZ as any,
-  "SaveAddress",
-);
-const SaveAddressJson =
-  (_SaveAddressJson.definitions &&
-    (_SaveAddressJson.definitions as any).SaveAddress) ||
-  _SaveAddressJson;
-const _DeleteAddressParamsJson = zodToJsonSchema(
-  DeleteAddressParamsZ as any,
-  "DeleteAddressParams",
-);
-const DeleteAddressParamsJson =
-  (_DeleteAddressParamsJson.definitions &&
-    (_DeleteAddressParamsJson.definitions as any).DeleteAddressParams) ||
-  _DeleteAddressParamsJson;
-const _UserResponseJson = zodToJsonSchema(
-  UserProfileResponseZ as any,
-  "UserResponse",
-);
-const UserResponseJson =
-  (_UserResponseJson.definitions &&
-    (_UserResponseJson.definitions as any).UserResponse) ||
-  _UserResponseJson;
-const _AddressResponseJson = zodToJsonSchema(
-  SavedAddressResponseZ as any,
-  "AddressResponse",
-);
-const AddressResponseJson =
-  (_AddressResponseJson.definitions &&
-    (_AddressResponseJson.definitions as any).AddressResponse) ||
-  _AddressResponseJson;
-const _AddressesArrayJson = zodToJsonSchema(
-  AddressesArrayResponseZ as any,
-  "AddressesArray",
-);
-const AddressesArrayJson =
-  (_AddressesArrayJson.definitions &&
-    (_AddressesArrayJson.definitions as any).AddressesArray) ||
-  _AddressesArrayJson;
+const UpdateProfileJson = zodToJsonSchema(UpdateProfileRequestZ as any);
+const SaveAddressJson = zodToJsonSchema(SaveAddressRequestZ as any);
+const DeleteAddressParamsJson = zodToJsonSchema(DeleteAddressParamsZ as any);
+const UserResponseJson = zodToJsonSchema(UserProfileResponseZ as any);
+const AddressResponseJson = zodToJsonSchema(SavedAddressResponseZ as any);
+const AddressesArrayJson = zodToJsonSchema(AddressesArrayResponseZ as any);
 
 export const updateProfileSchema: FastifySchema = {
   body: UpdateProfileJson,

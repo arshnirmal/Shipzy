@@ -10,7 +10,7 @@ export const DeliveryTypeZ = z.object({
   supportedVehicles: z.array(z.string()).optional(),
   sortOrder: z.number().optional(),
   isActive: z.boolean().optional(),
-});
+}).strict();
 export type DeliveryType = z.infer<typeof DeliveryTypeZ>;
 
 export const WeightTierZ = z.object({
@@ -19,7 +19,7 @@ export const WeightTierZ = z.object({
   minWeightKg: z.number(),
   maxWeightKg: z.number(),
   additionalCharge: z.number(),
-});
+}).strict();
 export type WeightTier = z.infer<typeof WeightTierZ>;
 
 export const VehicleCategoryZ = z.object({
@@ -28,7 +28,7 @@ export const VehicleCategoryZ = z.object({
   description: z.string().optional(),
   maxWeightKg: z.number().optional(),
   icon: z.string().optional(),
-});
+}).strict();
 export type VehicleCategory = z.infer<typeof VehicleCategoryZ>;
 
 export const PackageTypeZ = z.object({
@@ -36,7 +36,7 @@ export const PackageTypeZ = z.object({
   name: z.string(),
   description: z.string().optional(),
   icon: z.string().optional(),
-});
+}).strict();
 export type PackageType = z.infer<typeof PackageTypeZ>;
 
 export const StaticPaymentMethodZ = z.object({
@@ -45,19 +45,19 @@ export const StaticPaymentMethodZ = z.object({
   displayName: z.string().optional(),
   description: z.string().optional(),
   isActive: z.boolean().optional(),
-});
+}).strict();
 export type StaticPaymentMethod = z.infer<typeof StaticPaymentMethodZ>;
 
 export const CreateOrderDataZ = z.object({
   deliveryTypes: z.array(DeliveryTypeZ),
   packageTypes: z.array(PackageTypeZ),
   paymentMethods: z.array(StaticPaymentMethodZ),
-});
+}).strict();
 export type CreateOrderData = z.infer<typeof CreateOrderDataZ>;
 
 export const OrderStatusZ = z.object({
   statusId: z.number(),
   name: z.string(),
   description: z.string().optional(),
-});
+}).strict();
 export type OrderStatus = z.infer<typeof OrderStatusZ>;

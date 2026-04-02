@@ -2,6 +2,7 @@
 import { eq, and, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
+import { AppError } from "../../utils/error.util.js";
 import cacheUtil from "../../utils/cache.util.js";
 import staticQueries from "../../database/queries/static.queries.js";
 import {
@@ -61,6 +62,11 @@ class StaticRepository {
       
       return deliveryType;
     } catch (error) {
+      logger.error({
+        msg: "Error getting delivery type by ID",
+        deliveryTypeId,
+        error: (error as Error).message,
+      });
       throw error;
     }
   }
@@ -215,7 +221,11 @@ class StaticRepository {
   async getCreateOrderData() {
     try {
       const result = await drizzlePool.query(staticQueries.GET_CREATE_ORDER_DATA);
-      return result.rows[0].data;
+      const data = result.rows[0]?.data;
+      if (!data) {
+        throw new AppError("Create order static data is unavailable", 500);
+      }
+      return data;
     } catch (error) {
       logger.error({
         msg: "Error getting create order data",

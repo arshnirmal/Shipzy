@@ -3,7 +3,6 @@ import logger from "../../config/logger.js";
 import {
   AuthorizationError,
   NotFoundError,
-  ValidationError,
 } from "../../utils/error.util.js";
 import {
   toIsoDateTime,
@@ -59,14 +58,6 @@ class UsersService {
     updateData: UpdateProfileData,
   ): Promise<UserProfileResponse> {
     try {
-      // Validate email format if provided
-      if (updateData.email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(updateData.email)) {
-          throw new ValidationError("Invalid email format");
-        }
-      }
-
       const updatedUser = await usersRepository.updateProfile(
         userId,
         updateData,
@@ -138,35 +129,6 @@ class UsersService {
     addressData: AddressData,
   ): Promise<import("./users.zod.js").SavedAddressResponse> {
     try {
-      // Validate required fields
-      const requiredFields = [
-        "label",
-        "fullAddress",
-        "city",
-        "state",
-        "postalCode",
-        "latitude",
-        "longitude",
-      ];
-      const missingFields = requiredFields.filter((field) => {
-        const v = (addressData as unknown as Record<string, unknown>)[field];
-        return v === undefined || v === null || v === "";
-      });
-
-      if (missingFields.length > 0) {
-        throw new ValidationError(
-          `Missing required fields: ${missingFields.join(", ")}`,
-        );
-      }
-
-      // Validate coordinates
-      if (addressData.latitude < -90 || addressData.latitude > 90) {
-        throw new ValidationError("Invalid latitude");
-      }
-      if (addressData.longitude < -180 || addressData.longitude > 180) {
-        throw new ValidationError("Invalid longitude");
-      }
-
       const savedAddress = await usersRepository.saveAddress(
         userId,
         addressData,

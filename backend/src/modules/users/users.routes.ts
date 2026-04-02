@@ -9,7 +9,7 @@ import {
   getCurrentUserSchema,
 } from "./users.schema.js";
 
-async function usersRoutes(fastify: FastifyInstance, options: any) {
+async function usersRoutes(fastify: FastifyInstance, _options: unknown) {
   // All routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 

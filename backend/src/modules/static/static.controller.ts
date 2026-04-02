@@ -1,6 +1,7 @@
 // services/backend/src/modules/static/static.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import staticService from "./static.service.js";
 
@@ -24,12 +25,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get delivery types controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -53,12 +55,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get weight tiers controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -82,12 +85,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get vehicle categories controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -111,12 +115,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get package types controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -140,12 +145,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get payment methods controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -169,12 +175,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get create order data controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -198,12 +205,13 @@ class StaticController {
     } catch (error) {
       logger.error({
         msg: "Get order statuses controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }

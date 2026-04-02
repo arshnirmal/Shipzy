@@ -40,7 +40,7 @@ function mapProfileRowToDbUser(row: {
 
 interface Address {
   addressId: number;
-  userId?: number;
+  userId: number;
   label: string;
   fullAddress: string;
   city: string;

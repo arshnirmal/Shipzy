@@ -11,50 +11,13 @@ import {
   OrderStatusZ,
 } from "./static.zod.js";
 
-const _DeliveryTypeJson = zodToJsonSchema(DeliveryTypeZ as any, "DeliveryType");
-const DeliveryTypeJson =
-  (_DeliveryTypeJson.definitions &&
-    (_DeliveryTypeJson.definitions as any).DeliveryType) ||
-  _DeliveryTypeJson;
-const _WeightTierJson = zodToJsonSchema(WeightTierZ as any, "WeightTier");
-const WeightTierJson =
-  (_WeightTierJson.definitions &&
-    (_WeightTierJson.definitions as any).WeightTier) ||
-  _WeightTierJson;
-const _VehicleCategoryJson = zodToJsonSchema(
-  VehicleCategoryZ as any,
-  "VehicleCategory",
-);
-const VehicleCategoryJson =
-  (_VehicleCategoryJson.definitions &&
-    (_VehicleCategoryJson.definitions as any).VehicleCategory) ||
-  _VehicleCategoryJson;
-const _PackageTypeJson = zodToJsonSchema(PackageTypeZ as any, "PackageType");
-const PackageTypeJson =
-  (_PackageTypeJson.definitions &&
-    (_PackageTypeJson.definitions as any).PackageType) ||
-  _PackageTypeJson;
-const _PaymentMethodJson = zodToJsonSchema(
-  StaticPaymentMethodZ as any,
-  "PaymentMethod",
-);
-const PaymentMethodJson =
-  (_PaymentMethodJson.definitions &&
-    (_PaymentMethodJson.definitions as any).PaymentMethod) ||
-  _PaymentMethodJson;
-const _CreateOrderDataJson = zodToJsonSchema(
-  CreateOrderDataZ as any,
-  "CreateOrderData",
-);
-const CreateOrderDataJson =
-  (_CreateOrderDataJson.definitions &&
-    (_CreateOrderDataJson.definitions as any).CreateOrderData) ||
-  _CreateOrderDataJson;
-const _OrderStatusJson = zodToJsonSchema(OrderStatusZ as any, "OrderStatus");
-const OrderStatusJson =
-  (_OrderStatusJson.definitions &&
-    (_OrderStatusJson.definitions as any).OrderStatus) ||
-  _OrderStatusJson;
+const DeliveryTypeJson = zodToJsonSchema(DeliveryTypeZ as any);
+const WeightTierJson = zodToJsonSchema(WeightTierZ as any);
+const VehicleCategoryJson = zodToJsonSchema(VehicleCategoryZ as any);
+const PackageTypeJson = zodToJsonSchema(PackageTypeZ as any);
+const PaymentMethodJson = zodToJsonSchema(StaticPaymentMethodZ as any);
+const CreateOrderDataJson = zodToJsonSchema(CreateOrderDataZ as any);
+const OrderStatusJson = zodToJsonSchema(OrderStatusZ as any);
 
 export const getDeliveryTypesSchema: FastifySchema = {
   response: {

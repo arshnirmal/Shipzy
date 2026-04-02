@@ -13,7 +13,7 @@ export const CreateRatingRequestZ = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(500).nullable().optional(),
   isAnonymous: z.boolean().optional().default(false),
-});
+}).strict();
 export type CreateRatingRequest = z.infer<typeof CreateRatingRequestZ>;
 
 // ============================================================================
@@ -30,7 +30,7 @@ export const RatingResponseZ = z.object({
   isAnonymous: z.boolean().optional(),
   comment: z.string().nullable().optional(),
   createdAt: z.iso.datetime(),
-});
+}).strict();
 export type RatingResponse = z.infer<typeof RatingResponseZ>;
 
 // Driver Rating Stats Response
@@ -50,16 +50,9 @@ export const DriverRatingStatsZ = z.object({
         rating: z.number().int().min(1).max(5),
         comment: z.string().nullable().optional(),
         createdAt: z.iso.datetime(),
-      }),
+      }).strict(),
     )
     .optional(),
   lastUpdated: z.iso.datetime(),
-});
+}).strict();
 export type DriverRatingStats = z.infer<typeof DriverRatingStatsZ>;
-
-// ============================================================================
-// LEGACY TYPE EXPORTS (for backward compatibility during migration)
-// ============================================================================
-
-export const CreateRatingZ = CreateRatingRequestZ;
-export type CreateRating = CreateRatingRequest;

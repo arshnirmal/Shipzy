@@ -103,8 +103,19 @@ export default {
       )
       RETURNING
           address_id AS "addressId",
+          user_id AS "userId",
+          address_type AS "addressType",
           label AS "label",
           full_address AS "fullAddress",
+          building AS "building",
+          floor AS "floor",
+          flat_number AS "flatNumber",
+          landmark AS "landmark",
+          city AS "city",
+          state AS "state",
+          postal_code AS "postalCode",
+          ST_Y(location::geometry) AS "latitude",
+          ST_X(location::geometry) AS "longitude",
           is_default AS "isDefault",
           created_at AS "createdAt"
   `,

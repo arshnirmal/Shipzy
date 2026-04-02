@@ -8,7 +8,7 @@ import {
 import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ratingsRepository from "./ratings.repository.js";
 
-import type { CreateRating } from "./ratings.zod.js";
+import type { CreateRatingRequest } from "./ratings.zod.js";
 
 interface DriverRatingStats {
   averageRating: number;
@@ -22,15 +22,10 @@ class RatingsService {
    * Create a new driver rating
    */
   async createRating(
-    ratingData: CreateRating,
+    ratingData: CreateRatingRequest,
   ): Promise<import("./ratings.zod.js").RatingResponse> {
     try {
       const { orderId, customerId, rating, isAnonymous, comment } = ratingData;
-
-      // Validate rating range
-      if (rating < 1 || rating > 5) {
-        throw new ValidationError("Rating must be between 1 and 5");
-      }
 
       // Check if order belongs to customer
       const orderBelongsToCustomer =
@@ -111,9 +106,10 @@ class RatingsService {
         };
       }
 
-      // Calculate distribution
+      // Calculate distribution using only valid rating rows
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
       let totalScore = 0;
+      let validRatingsCount = 0;
 
       ratings.forEach((rating) => {
         if (
@@ -126,12 +122,13 @@ class RatingsService {
           const ratingValue = rating.rating;
           distribution[ratingValue as keyof typeof distribution]++;
           totalScore += ratingValue;
+          validRatingsCount++;
         }
       });
 
       const averageRating =
-        ratings.length > 0
-          ? Math.round((totalScore / ratings.length) * 10) / 10
+        validRatingsCount > 0
+          ? Math.round((totalScore / validRatingsCount) * 10) / 10
           : 0;
 
       // Find the most recent rating date
@@ -145,7 +142,7 @@ class RatingsService {
 
       return {
         averageRating,
-        totalRatings: ratings.length,
+        totalRatings: validRatingsCount,
         ratingDistribution: distribution,
         lastUpdated: toIsoDateTime(lastUpdated),
       };
