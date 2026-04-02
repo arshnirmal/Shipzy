@@ -160,10 +160,7 @@ class UsersController {
       const { userId } = this._requireAuthenticatedUser(request);
       const { id } = request.params;
 
-      const result = await usersService.deleteAddress(
-        Number.parseInt(id, 10),
-        userId,
-      );
+      const result = await usersService.deleteAddress(id, userId);
 
       return successResponse(reply, result, "Address deleted successfully");
     } catch (error) {

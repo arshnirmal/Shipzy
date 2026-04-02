@@ -29,7 +29,7 @@ export type SaveAddressRequest = z.infer<typeof SaveAddressRequestZ>;
 
 // Delete Address Params
 export const DeleteAddressParamsZ = z.object({
-  id: z.string().regex(/^\d+$/),
+  id: z.coerce.number().int().positive(),
 }).strict();
 export type DeleteAddressParams = z.infer<typeof DeleteAddressParamsZ>;
 

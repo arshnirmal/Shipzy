@@ -88,44 +88,48 @@ export const orderRequests = ordersSchema.table(
     ),
     specialInstructions: text("special_instructions"),
     packageDescription: text("package_description"),
-    declaredValue: numeric("declared_value", { precision: 10, scale: 2 })
-      .default("0.00")
+    declaredValue: numeric("declared_value", { precision: 10, scale: 2, mode: "number" })
+      .default(0)
       .notNull(),
     notifyRecipientSms: boolean("notify_recipient_sms").default(false).notNull(),
     couponCode: varchar("coupon_code", { length: 50 }),
     estimatedDistanceKm: numeric("estimated_distance_km", {
       precision: 6,
       scale: 2,
+      mode: "number",
     }),
     actualDistanceKm: numeric("actual_distance_km", {
       precision: 6,
       scale: 2,
+      mode: "number",
     }),
     actualDurationMins: integer("actual_duration_mins"),
-    basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull(),
-    distancePrice: numeric("distance_price", { precision: 10, scale: 2 })
-      .default("0.00")
+    basePrice: numeric("base_price", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    distancePrice: numeric("distance_price", { precision: 10, scale: 2, mode: "number" })
+      .default(0)
       .notNull(),
-    weightSurcharge: numeric("weight_surcharge", { precision: 10, scale: 2 })
-      .default("0.00")
+    weightSurcharge: numeric("weight_surcharge", { precision: 10, scale: 2, mode: "number" })
+      .default(0)
       .notNull(),
-    platformFee: numeric("platform_fee", { precision: 10, scale: 2 }).notNull(),
+    platformFee: numeric("platform_fee", { precision: 10, scale: 2, mode: "number" }).notNull(),
     specialHandlingFee: numeric("special_handling_fee", {
       precision: 10,
       scale: 2,
+      mode: "number",
     })
-      .default("0.00")
+      .default(0)
       .notNull(),
     subtotalBeforeTax: numeric("subtotal_before_tax", {
       precision: 10,
       scale: 2,
+      mode: "number",
     })
-      .default("0.00")
+      .default(0)
       .notNull(),
-    gstAmount: numeric("gst_amount", { precision: 10, scale: 2 })
-      .default("0.00")
+    gstAmount: numeric("gst_amount", { precision: 10, scale: 2, mode: "number" })
+      .default(0)
       .notNull(),
-    totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
+    totalPrice: numeric("total_price", { precision: 10, scale: 2, mode: "number" }).notNull(),
     paymentMethodId: integer("payment_method_id")
       .notNull()
       .references(() => paymentMethods.methodId),

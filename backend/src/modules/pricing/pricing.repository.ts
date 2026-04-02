@@ -61,7 +61,7 @@ class PricingRepository {
       await drizzleDb
         .update(pricingConfig)
         .set({
-          configValue: value.toString(),
+          configValue: value,
           updatedBy,
           updatedAt: new Date(),
         })

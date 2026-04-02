@@ -14,7 +14,7 @@ import {
   rateOrderSchema,
 } from "./orders.schema.js";
 
-async function ordersRoutes(fastify: FastifyInstance, options: any) {
+async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
   // All routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 

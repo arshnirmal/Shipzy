@@ -43,7 +43,7 @@ export const paymentTransactions = paymentsSchema.table(
       .notNull()
       .references(() => paymentMethods.methodId),
     status: paymentStatusEnum("status").notNull(),
-    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 10, scale: 2, mode: "number" }).notNull(),
     currency: varchar("currency", { length: 10 }).default("INR").notNull(),
     externalTransactionId: varchar("external_transaction_id", { length: 255 }),
     paymentGateway: varchar("payment_gateway", { length: 50 }),
@@ -80,7 +80,7 @@ export const refunds = paymentsSchema.table(
     orderId: integer("order_id")
       .notNull()
       .references(() => orderRequests.orderId, { onDelete: "cascade" }),
-    refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }).notNull(),
+    refundAmount: numeric("refund_amount", { precision: 10, scale: 2, mode: "number" }).notNull(),
     refundReason: text("refund_reason").notNull(),
     refundStatus: refundStatusEnum("refund_status").notNull(),
     externalRefundId: varchar("external_refund_id", { length: 255 }),

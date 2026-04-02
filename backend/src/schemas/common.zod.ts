@@ -8,7 +8,7 @@ import { z } from "zod";
 export const CoordinatesZ = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-});
+}).strict();
 export type Coordinates = z.infer<typeof CoordinatesZ>;
 
 // ============================================================================
@@ -19,7 +19,7 @@ export const TimestampedEntityZ = z.object({
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime().optional(),
   deletedAt: z.iso.datetime().nullable().optional(),
-});
+}).strict();
 export type TimestampedEntity = z.infer<typeof TimestampedEntityZ>;
 
 // ============================================================================
@@ -38,17 +38,17 @@ export const BaseAddressZ = z.object({
   floor: z.string().max(10).nullable().optional(),
   flatNumber: z.string().max(10).nullable().optional(),
   landmark: z.string().max(255).nullable().optional(),
-});
+}).strict();
 export type BaseAddress = z.infer<typeof BaseAddressZ>;
 
 // For user-saved addresses
 export const SavedAddressZ = BaseAddressZ.extend({
-  addressId: z.number(),
+  addressId: z.number().int().positive(),
   addressType: z.enum(["home", "work", "other"]).optional(),
-  label: z.string().optional(),
+  label: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
   createdAt: z.iso.datetime().optional(),
-});
+}).strict();
 export type SavedAddress = z.infer<typeof SavedAddressZ>;
 
 // For order pickup/delivery locations
@@ -71,14 +71,14 @@ export type OrderAddress = z.infer<typeof OrderAddressZ>;
 // ============================================================================
 
 export const VehicleZ = z.object({
-  vehicleId: z.number().optional(),
-  categoryId: z.number().optional(),
+  vehicleId: z.number().int().positive().optional(),
+  categoryId: z.number().int().positive().optional(),
   category: z.string().optional(),
   isActive: z.boolean().optional(),
   vehicleNumber: z.string().optional(),
   model: z.string().optional(),
-  year: z.number().optional(),
-});
+  year: z.number().int().min(1900).max(2100).optional(),
+}).strict();
 export type Vehicle = z.infer<typeof VehicleZ>;
 
 // ============================================================================
@@ -92,7 +92,7 @@ export const EarningsZ = z.object({
   thisMonth: z.number(),
   averageOrderValue: z.number(),
   totalDistanceKm: z.number(),
-});
+}).strict();
 export type Earnings = z.infer<typeof EarningsZ>;
 
 // ============================================================================
@@ -110,7 +110,7 @@ export const FareBreakdownZ = z.object({
   specialHandlingFee: z.number().nonnegative().optional(),
   totalPrice: z.number().nonnegative(),
   currency: z.string().optional(),
-});
+}).strict();
 export type FareBreakdown = z.infer<typeof FareBreakdownZ>;
 
 // ============================================================================
@@ -119,35 +119,37 @@ export type FareBreakdown = z.infer<typeof FareBreakdownZ>;
 
 // Base user fields shared across all user types
 export const BaseUserZ = z.object({
-  userId: z.number(),
-  userUuid: z.string(),
+  userId: z.number().int().positive(),
+  userUuid: z.string().uuid(),
   role: z.enum(["client", "courier"]),
   phoneNumber: z.string().nullable().optional(),
   email: z.string().email().nullable().optional(),
-  fullName: z.string(),
-  profilePictureUrl: z.string().nullable().optional(),
+  fullName: z.string().min(2).max(100),
+  profilePictureUrl: z.string().url().nullable().optional(),
   isVerified: z.boolean(),
   isActive: z.boolean(),
   createdAt: z.iso.datetime().optional(),
   updatedAt: z.iso.datetime().optional(),
-});
+}).strict();
 export type BaseUser = z.infer<typeof BaseUserZ>;
 
 // Client user (no additional fields for now, ready for future expansion)
 export const ClientUserZ = BaseUserZ.extend({
   // Future fields can be added here (e.g., preferredPaymentMethod, totalOrders, etc.)
-});
+}).strict();
 export type ClientUser = z.infer<typeof ClientUserZ>;
 
 // Driver user with additional fields
 export const DriverUserZ = BaseUserZ.extend({
-  status: z.object({
-    isAvailable: z.boolean(),
-    isOnline: z.boolean(),
-    totalDeliveriesToday: z.number().int().nonnegative().optional(),
-    currentLocation: CoordinatesZ.nullable().optional(),
-    lastLocationUpdate: z.iso.datetime().nullable().optional(),
-  }),
+  status: z
+    .object({
+      isAvailable: z.boolean(),
+      isOnline: z.boolean(),
+      totalDeliveriesToday: z.number().int().nonnegative().optional(),
+      currentLocation: CoordinatesZ.nullable().optional(),
+      lastLocationUpdate: z.iso.datetime().nullable().optional(),
+    })
+    .strict(),
   vehicle: VehicleZ.nullable().optional(),
   earnings: EarningsZ.optional(),
   rating: z
@@ -155,8 +157,9 @@ export const DriverUserZ = BaseUserZ.extend({
       averageRating: z.number().min(0).max(5),
       totalRatings: z.number().int().nonnegative(),
     })
+    .strict()
     .optional(),
-});
+}).strict();
 export type DriverUser = z.infer<typeof DriverUserZ>;
 
 // ============================================================================
@@ -182,7 +185,7 @@ export const PaymentMethodZ = z.object({
   methodType: z.enum(["cash", "card", "upi", "wallet"]),
   methodName: z.string(),
   isDefault: z.boolean().optional(),
-});
+}).strict();
 export type PaymentMethod = z.infer<typeof PaymentMethodZ>;
 
 export const PaymentTransactionZ = z
@@ -190,7 +193,7 @@ export const PaymentTransactionZ = z
     transactionId: z.number().int().positive(),
     transactionUuid: z.string().uuid(),
     amount: z.number().nonnegative(),
-    status: z.enum(["pending", "completed", "failed", "refunded"]),
+    status: z.enum(["pending", "completed", "failed", "refunded", "cancelled"]),
     paymentMethod: PaymentMethodZ,
   })
   .merge(TimestampedEntityZ);
@@ -206,8 +209,8 @@ export const ApiResponseZ = <T extends z.ZodType>(dataSchema: T) =>
     success: z.literal(true),
     message: z.string(),
     data: dataSchema,
-    meta: z.record(z.string(), z.any()).optional(),
-  });
+    meta: z.record(z.string(), z.unknown()).optional(),
+  }).strict();
 
 // Generic error response
 export const ErrorResponseZ = z.object({
@@ -216,10 +219,10 @@ export const ErrorResponseZ = z.object({
   error: z
     .object({
       code: z.string().optional(),
-      details: z.any().optional(),
+      details: z.unknown().optional(),
     })
     .optional(),
-});
+}).strict();
 
 // Paginated response wrapper
 export const PaginatedResponseZ = <T extends z.ZodType>(itemSchema: T) =>
@@ -227,16 +230,20 @@ export const PaginatedResponseZ = <T extends z.ZodType>(itemSchema: T) =>
     success: z.literal(true),
     message: z.string(),
     data: z.array(itemSchema),
-    meta: z.object({
-      pagination: z.object({
-        page: z.number(),
-        limit: z.number(),
-        total: z.number(),
-        totalPages: z.number(),
-      }),
-      filters: z.record(z.string(), z.any()).optional(),
-    }),
-  });
+    meta: z
+      .object({
+        pagination: z
+          .object({
+            page: z.number(),
+            limit: z.number(),
+            total: z.number(),
+            totalPages: z.number(),
+          })
+          .strict(),
+        filters: z.record(z.string(), z.unknown()).optional(),
+      })
+      .strict(),
+  }).strict();
 
 // ============================================================================
 // PAGINATION - Common pagination schema
@@ -247,7 +254,7 @@ export const PaginationZ = z.object({
   limit: z.coerce.number().int().positive(),
   total: z.coerce.number().int().nonnegative(),
   totalPages: z.coerce.number().int().nonnegative(),
-});
+}).strict();
 export type Pagination = z.infer<typeof PaginationZ>;
 
 // ============================================================================
@@ -258,22 +265,22 @@ export type Pagination = z.infer<typeof PaginationZ>;
 export const PaginationQueryZ = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(20),
-});
+}).strict();
 export type PaginationQuery = z.infer<typeof PaginationQueryZ>;
 
 // Sorting query parameters
 export const SortQueryZ = z.object({
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
-});
+}).strict();
 export type SortQuery = z.infer<typeof SortQueryZ>;
 
 // Combined base query (pagination + sorting)
-export const BaseQueryZ = PaginationQueryZ.merge(SortQueryZ);
+export const BaseQueryZ = PaginationQueryZ.merge(SortQueryZ).strict();
 export type BaseQuery = z.infer<typeof BaseQueryZ>;
 
 // ID parameter
 export const IdParamZ = z.object({
-  id: z.string().regex(/^[0-9]+$/),
-});
+  id: z.coerce.number().int().positive(),
+}).strict();
 export type IdParam = z.infer<typeof IdParamZ>;

@@ -98,7 +98,7 @@ class OrdersController {
       const { id } = request.params;
 
       const order = await ordersService.getOrderById(
-        Number.parseInt(id, 10),
+        id,
         userId,
         role,
       );
@@ -225,7 +225,7 @@ class OrdersController {
       const { cancellationReason } = request.body;
 
       const result = await ordersService.cancelOrder(
-        Number.parseInt(id, 10),
+        id,
         userId,
         role,
         cancellationReason,
@@ -261,7 +261,7 @@ class OrdersController {
       const { id } = request.params;
 
       const result = await ordersService.acceptOrder(
-        Number.parseInt(id, 10),
+        id,
         userId,
       );
 
@@ -299,7 +299,7 @@ class OrdersController {
       const { status } = request.body;
 
       const result = await ordersService.updateOrderStatus(
-        Number.parseInt(id, 10),
+        id,
         status,
         userId,
       );
@@ -343,7 +343,7 @@ class OrdersController {
       const { rating, anonymous, comment } = request.body;
 
       const result = await ratingsService.createRating({
-        orderId: Number.parseInt(id, 10),
+        orderId: id,
         customerId: userId,
         rating,
         isAnonymous: anonymous ?? false,

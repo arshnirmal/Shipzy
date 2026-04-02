@@ -2,8 +2,10 @@
 import crypto from "node:crypto";
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import authService from "./auth.service.js";
+import type { DeviceInfo } from "../../types/index.js";
 
 import type {
   GoogleAuthRequest,
@@ -13,6 +15,27 @@ import type {
 } from "./auth.zod.js";
 
 class AuthController {
+  private _getHeaderValue(
+    value: string | string[] | undefined,
+  ): string | undefined {
+    if (typeof value === "string") return value;
+    return Array.isArray(value) ? value[0] : undefined;
+  }
+
+  private _getDeviceInfo(request: FastifyRequest): DeviceInfo {
+    const deviceInfo: DeviceInfo = {
+      ipAddress: request.ip,
+    };
+
+    const deviceId = this._getHeaderValue(request.headers["x-device-id"]);
+    const userAgent = this._getHeaderValue(request.headers["user-agent"]);
+
+    if (deviceId) deviceInfo.deviceId = deviceId;
+    if (userAgent) deviceInfo.userAgent = userAgent;
+
+    return deviceInfo;
+  }
+
   /**
    * POST /api/v1/auth/refresh
    * Refresh JWT access token
@@ -33,7 +56,7 @@ class AuthController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 401,
+        error instanceof AppError ? error.statusCode : 401,
       );
     }
   }
@@ -48,18 +71,8 @@ class AuthController {
   ): Promise<any> {
     try {
       const { idToken, role } = request.body;
-
-      // Get device info from request
-      const deviceInfo: any = {
-        ipAddress: request.ip,
-      };
-      if (request.headers["x-device-id"] !== undefined)
-        deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined)
-        deviceInfo.userAgent = request.headers["user-agent"];
-
-      const userData: any = {};
-      if (role !== undefined) userData.roleName = role;
+      const deviceInfo = this._getDeviceInfo(request);
+      const userData: { roleName?: string } = { roleName: role };
 
       const result = await authService.verifyGoogleAndCreateUser(
         idToken,
@@ -83,7 +96,7 @@ class AuthController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -115,7 +128,7 @@ class AuthController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -129,23 +142,9 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { fullName, email, password, role, phoneNumber } = request.body;
-
-      // Get device info from request
-      const deviceInfo: any = {
-        ipAddress: request.ip,
-      };
-      if (request.headers["x-device-id"] !== undefined)
-        deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined)
-        deviceInfo.userAgent = request.headers["user-agent"];
-
-      const registerData: any = { fullName, email, password };
-      if (role !== undefined) registerData.role = role;
-      if (phoneNumber !== undefined) registerData.phoneNumber = phoneNumber;
-
+      const deviceInfo = this._getDeviceInfo(request);
       const result = await authService.registerWithEmail(
-        registerData,
+        request.body,
         deviceInfo,
       );
 
@@ -163,7 +162,7 @@ class AuthController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -177,21 +176,8 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<any> {
     try {
-      const { email, password } = request.body;
-
-      // Get device info from request
-      const deviceInfo: any = {
-        ipAddress: request.ip,
-      };
-      if (request.headers["x-device-id"] !== undefined)
-        deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined)
-        deviceInfo.userAgent = request.headers["user-agent"];
-
-      const result = await authService.loginWithEmail(
-        { email, password },
-        deviceInfo,
-      );
+      const deviceInfo = this._getDeviceInfo(request);
+      const result = await authService.loginWithEmail(request.body, deviceInfo);
 
       return successResponse(reply, result, "User logged in successfully");
     } catch (error) {
@@ -202,7 +188,7 @@ class AuthController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 401,
+        error instanceof AppError ? error.statusCode : 401,
       );
     }
   }

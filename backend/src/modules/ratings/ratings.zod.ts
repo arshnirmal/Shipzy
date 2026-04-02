@@ -1,6 +1,5 @@
 // services/backend/src/modules/ratings/ratings.zod.ts
 import { z } from "zod";
-import { BaseRatingZ } from "../../schemas/common.zod.js";
 
 // ============================================================================
 // REQUEST SCHEMAS - API request payloads

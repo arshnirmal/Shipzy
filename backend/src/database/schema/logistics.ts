@@ -75,7 +75,7 @@ export const courierStatus = logisticsSchema.table(
       { onDelete: "set null" },
     ),
     totalDeliveriesToday: integer("total_deliveries_today").default(0).notNull(),
-    avgRating: numeric("avg_rating", { precision: 3, scale: 2 }),
+    avgRating: numeric("avg_rating", { precision: 3, scale: 2, mode: "number" }),
     totalRatings: integer("total_ratings").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

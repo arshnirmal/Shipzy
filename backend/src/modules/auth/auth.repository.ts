@@ -71,7 +71,7 @@ interface StoreJwtTokenData {
   phoneNumber?: string;
   tokenHash: string;
   deviceId?: string | null;
-  deviceInfo?: any;
+  deviceInfo?: unknown;
   ipAddress?: string | null;
   authMethod?: "email" | "phone" | "google" | "firebase";
 }

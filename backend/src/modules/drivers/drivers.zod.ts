@@ -18,7 +18,7 @@ export const UpdateDriverProfileRequestZ = z.object({
   email: z.string().email().optional(),
   profilePictureUrl: z.string().url().optional(),
   phoneNumber: z.string().min(10).max(20).optional(),
-});
+}).strict();
 export type UpdateDriverProfileRequest = z.infer<
   typeof UpdateDriverProfileRequestZ
 >;
@@ -28,7 +28,7 @@ export const UpdateAvailabilityRequestZ = z.object({
   isAvailable: z.boolean(),
   isOnline: z.boolean().optional(),
   currentLocation: CoordinatesZ.optional(),
-});
+}).strict();
 export type UpdateAvailabilityRequest = z.infer<
   typeof UpdateAvailabilityRequestZ
 >;
@@ -49,16 +49,18 @@ export type DriverProfileResponse = z.infer<typeof DriverProfileResponseZ>;
 export const DriverEarningsResponseZ = EarningsZ.extend({
   recentOrders: z
     .array(
-      z.object({
-        orderId: z.number(),
-        orderNumber: z.string(),
-        completedAt: z.iso.datetime(),
-        earnings: z.number().nonnegative(),
-        distanceKm: z.number().nonnegative(),
-      }),
+      z
+        .object({
+          orderId: z.number(),
+          orderNumber: z.string(),
+          completedAt: z.iso.datetime(),
+          earnings: z.number().nonnegative(),
+          distanceKm: z.number().nonnegative(),
+        })
+        .strict(),
     )
     .optional(),
-});
+}).strict();
 export type DriverEarningsResponse = z.infer<typeof DriverEarningsResponseZ>;
 
 // Active Assignment Response
@@ -68,5 +70,5 @@ export const ActiveAssignmentZ = z.object({
   assignedAt: z.iso.datetime(),
   acceptedAt: z.iso.datetime().nullable().optional(),
   status: z.string(),
-});
+}).strict();
 export type ActiveAssignment = z.infer<typeof ActiveAssignmentZ>;

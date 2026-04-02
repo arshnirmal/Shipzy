@@ -99,11 +99,12 @@ export const weightTiers = pgTable(
   {
     tierId: serial("tier_id").primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
-    minWeightKg: numeric("min_weight_kg", { precision: 10, scale: 2 }).notNull(),
-    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2 }).notNull(),
+    minWeightKg: numeric("min_weight_kg", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2, mode: "number" }).notNull(),
     additionalCharge: numeric("additional_charge", {
       precision: 10,
       scale: 2,
+      mode: "number",
     }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -138,8 +139,8 @@ export const deliveryTypes = pgTable(
     name: varchar("name", { length: 100 }).notNull().unique(),
     displayName: varchar("display_name", { length: 100 }).notNull(),
     description: text("description"),
-    baseRate: numeric("base_rate", { precision: 10, scale: 2 }).notNull(),
-    perKmRate: numeric("per_km_rate", { precision: 10, scale: 2 }).notNull(),
+    baseRate: numeric("base_rate", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    perKmRate: numeric("per_km_rate", { precision: 10, scale: 2, mode: "number" }).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -165,8 +166,9 @@ export const packageTypes = pgTable(
     specialHandlingFee: numeric("special_handling_fee", {
       precision: 10,
       scale: 2,
+      mode: "number",
     })
-      .default("0.00")
+      .default(0)
       .notNull(),
     requiresSpecialHandling: boolean("requires_special_handling")
       .default(false)
@@ -201,10 +203,12 @@ export const deliveryTypeCapabilities = pgTable(
     baseRateOverride: numeric("base_rate_override", {
       precision: 10,
       scale: 2,
+      mode: "number",
     }),
     perKmRateOverride: numeric("per_km_rate_override", {
       precision: 10,
       scale: 2,
+      mode: "number",
     }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -226,7 +230,7 @@ export const pricingConfig = pgTable(
   {
     configId: serial("config_id").primaryKey(),
     configKey: varchar("config_key", { length: 50 }).notNull().unique(),
-    configValue: numeric("config_value", { precision: 10, scale: 4 }).notNull(),
+    configValue: numeric("config_value", { precision: 10, scale: 4, mode: "number" }).notNull(),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
     updatedBy: integer("updated_by"),
@@ -253,7 +257,7 @@ export const vehicleCategories = pgTable(
     name: varchar("name", { length: 50 }).notNull().unique(),
     displayName: varchar("display_name", { length: 100 }).notNull(),
     description: text("description"),
-    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2 }).notNull(),
+    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2, mode: "number" }).notNull(),
     iconUrl: varchar("icon_url", { length: 255 }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })

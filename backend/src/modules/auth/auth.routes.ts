@@ -8,7 +8,7 @@ import {
   loginSchema,
 } from "./auth.schema.js";
 
-async function authRoutes(fastify: FastifyInstance, options: any) {
+async function authRoutes(fastify: FastifyInstance, _options: unknown) {
   // POST /api/v1/auth/google/verify
   fastify.post(
     "/google/verify",

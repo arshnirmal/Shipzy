@@ -8,7 +8,7 @@ import {
   updateLocationSchema,
 } from "./drivers.schema.js";
 
-async function driversRoutes(fastify: FastifyInstance, options: any) {
+async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   // All routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 
