@@ -27,8 +27,7 @@ type OrderRow = {
   orderId: number;
   orderUuid: string;
   orderNumber: string;
-  statusId?: number;
-  statusName?: string;
+  status?: string;
   deliveryTypeId?: number;
   deliveryType?: string;
   deliveryTypeDisplay?: string;
@@ -387,8 +386,7 @@ class OrdersService {
           orderId: order.orderId,
           orderUuid: order.orderUuid,
           orderNumber: order.orderNumber,
-          status: order.statusName,
-          statusId: order.statusId,
+          status: order.status,
           deliveryTypeId: order.deliveryTypeId,
           deliveryTypeDisplay: order.deliveryTypeDisplay,
           vehicleCategoryId: order.vehicleCategoryId,
@@ -508,9 +506,9 @@ class OrdersService {
     }
 
     const nonCancellableStatuses = ["delivered", "cancelled"];
-    if (nonCancellableStatuses.includes(order.statusName)) {
+    if (nonCancellableStatuses.includes(order.status)) {
       throw new ValidationError(
-        `Order cannot be cancelled in ${order.statusName} status`,
+        `Order cannot be cancelled in ${order.status} status`,
       );
     }
 
@@ -545,9 +543,9 @@ class OrdersService {
       throw new NotFoundError("Order not found");
     }
 
-    if (order.statusName !== "pending") {
+    if (order.status !== "pending") {
       throw new ValidationError(
-        `Order cannot be accepted in ${order.statusName} status`,
+        `Order cannot be accepted in ${order.status} status`,
       );
     }
 
@@ -585,19 +583,19 @@ class OrdersService {
       );
     }
 
-    if (status === "picked_up" && order.statusName !== "accepted") {
+    if (status === "picked_up" && order.status !== "accepted") {
       throw new ValidationError(
         "Order must be in accepted status to be picked up",
       );
     }
 
-    if (status === "in_transit" && order.statusName !== "picked_up") {
+    if (status === "in_transit" && order.status !== "picked_up") {
       throw new ValidationError(
         "Order must be picked up before marking in transit",
       );
     }
 
-    if (status === "delivered" && order.statusName !== "in_transit") {
+    if (status === "delivered" && order.status !== "in_transit") {
       throw new ValidationError(
         "Order must be in transit before marking delivered",
       );
@@ -652,8 +650,7 @@ class OrdersService {
       orderUuid: order.orderUuid,
       orderNumber: order.orderNumber,
 
-      status: order.statusName,
-      statusId: order.statusId!,
+      status: order.status!,
 
       deliveryTypeId: order.deliveryTypeId!,
       deliveryTypeDisplay: order.deliveryTypeDisplay,

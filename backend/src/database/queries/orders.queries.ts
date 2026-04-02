@@ -42,17 +42,7 @@ export default {
             o.client_id AS "clientId",
             u.full_name AS "clientName",
             u.phone_number AS "clientPhone",
-            CASE o.status
-              WHEN 'pending' THEN 1
-              WHEN 'accepted' THEN 2
-              WHEN 'picked_up' THEN 3
-              WHEN 'in_transit' THEN 4
-              WHEN 'delivered' THEN 5
-              WHEN 'cancelled' THEN 6
-              WHEN 'undeliverable' THEN 7
-              WHEN 'returned' THEN 8
-            END AS "statusId",
-            o.status AS "statusName",
+            o.status AS "status",
             o.delivery_type_id AS "deliveryTypeId",
             dt.name AS "deliveryType",
             dt.display_name AS "deliveryTypeDisplay",
@@ -126,16 +116,6 @@ export default {
       cu.full_name AS "courierName",
       cu.phone_number AS "courierPhone",
       cu.profile_picture_url AS "courierPhoto",
-      CASE ca.status
-        WHEN 'assigned' THEN 1
-        WHEN 'accepted' THEN 2
-        WHEN 'rejected' THEN 3
-        WHEN 'picked_up' THEN 4
-        WHEN 'in_transit' THEN 5
-        WHEN 'delivered' THEN 6
-        WHEN 'cancelled' THEN 7
-        WHEN 'returned' THEN 8
-      END AS "assignmentStatusId",
       ca.status AS "assignmentStatus",
       ca.assigned_at AS "assignedAt",
       ca.accepted_at AS "courierAcceptedAt"
@@ -327,27 +307,7 @@ export default {
           ca.assignment_id,
           ca.order_id,
           o.order_uuid,
-          CASE o.status
-            WHEN 'pending' THEN 1
-            WHEN 'accepted' THEN 2
-            WHEN 'picked_up' THEN 3
-            WHEN 'in_transit' THEN 4
-            WHEN 'delivered' THEN 5
-            WHEN 'cancelled' THEN 6
-            WHEN 'undeliverable' THEN 7
-            WHEN 'returned' THEN 8
-          END AS status_id,
           o.status AS order_status,
-          CASE ca.status
-            WHEN 'assigned' THEN 1
-            WHEN 'accepted' THEN 2
-            WHEN 'rejected' THEN 3
-            WHEN 'picked_up' THEN 4
-            WHEN 'in_transit' THEN 5
-            WHEN 'delivered' THEN 6
-            WHEN 'cancelled' THEN 7
-            WHEN 'returned' THEN 8
-          END AS assignment_status_id,
           ca.status AS assignment_status,
           -- OPTIMIZED: Pickup location from JSONB
           o.pickup_location->>'fullAddress' AS pickup_address,

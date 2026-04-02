@@ -101,7 +101,6 @@ export const CourierAssignmentDbZ = z
     orderUuid: z.string().uuid().nullable().optional(),
     orderNumber: z.string().nullable().optional(),
     orderStatus: z.string().nullable().optional(),
-    assignmentStatusId: z.number().int().nullable().optional(),
     assignmentStatus: z.string().nullable().optional(),
     vehicleCategory: z.string().nullable().optional(),
     vehicleCategoryDisplay: z.string().nullable().optional(),

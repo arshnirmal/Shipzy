@@ -2,7 +2,6 @@
 import { eq, and, isNull, gt, sql } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
-import { getUserRoleName } from "../../utils/roles.utils.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { authSessions } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
@@ -47,22 +46,20 @@ function mapProfileRowToUser(
 }
 
 interface CreateUserData {
-  roleId: number;
+  role: string;
   firebaseUid?: string;
   phoneNumber?: string | null;
   fullName: string;
   email?: string;
   passwordHash?: string | null;
-  roleName?: string;
 }
 
 interface CreateEmailUserData {
-  roleId: number;
+  role: string;
   fullName: string;
   email: string;
   passwordHash: string;
   phoneNumber?: string | null;
-  roleName?: string;
 }
 
 interface StoreJwtTokenData {
@@ -243,7 +240,7 @@ class AuthRepository {
   async createUser(userData: CreateUserData): Promise<User> {
     try {
       const {
-        roleId,
+        role,
         firebaseUid,
         phoneNumber,
         fullName,
@@ -254,11 +251,7 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          role: getUserRoleName(roleId) as
-            | "client"
-            | "courier"
-            | "admin"
-            | "business",
+          role: role as "client" | "courier" | "admin" | "business",
           firebaseUid: firebaseUid || undefined,
           phoneNumber: phoneNumber || undefined,
           fullName,
@@ -272,10 +265,9 @@ class AuthRepository {
       if (!createdUser) {
         throw new Error("User insert returned no row");
       }
-      const roleName = getUserRoleName(roleId);
 
       // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
-      if (userData.roleName === "courier") {
+      if (role === "courier") {
         await drizzleDb
           .insert(courierStatus)
           .values({
@@ -292,7 +284,7 @@ class AuthRepository {
         throw new Error("User not found after creation");
       }
 
-      return { ...user, roleName } as User;
+      return user as User;
     } catch (error) {
       logger.error({
         msg: "Error creating user",
@@ -308,7 +300,7 @@ class AuthRepository {
   async createEmailUser(userData: CreateEmailUserData): Promise<User> {
     try {
       const {
-        roleId,
+        role,
         fullName,
         email,
         passwordHash,
@@ -318,11 +310,7 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          role: getUserRoleName(roleId) as
-            | "client"
-            | "courier"
-            | "admin"
-            | "business",
+          role: role as "client" | "courier" | "admin" | "business",
           fullName,
           email,
           passwordHash,
@@ -335,10 +323,9 @@ class AuthRepository {
       if (!createdUser) {
         throw new Error("User insert returned no row");
       }
-      const roleName = getUserRoleName(roleId);
 
       // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
-      if (userData.roleName === "courier") {
+      if (role === "courier") {
         await drizzleDb
           .insert(courierStatus)
           .values({
@@ -355,7 +342,7 @@ class AuthRepository {
         throw new Error("User not found after creation");
       }
 
-      return { ...user, roleName } as User;
+      return user as User;
     } catch (error) {
       logger.error({
         msg: "Error creating email user",

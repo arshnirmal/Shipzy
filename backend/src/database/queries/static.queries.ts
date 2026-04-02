@@ -119,10 +119,7 @@ export default {
    * Get all order statuses
    */
   GET_ORDER_STATUSES: `
-    SELECT
-        ROW_NUMBER() OVER () AS "statusId",
-        status::text AS "name",
-        NULL::text AS "description"
+    SELECT status::text AS "name"
     FROM unnest(enum_range(NULL::order_status)) AS status
   `,
 
@@ -130,10 +127,7 @@ export default {
    * Get all assignment statuses
    */
   GET_ASSIGNMENT_STATUSES: `
-    SELECT
-        ROW_NUMBER() OVER () AS "statusId",
-        status::text AS "name",
-        NULL::text AS "description"
+    SELECT status::text AS "name"
     FROM unnest(enum_range(NULL::assignment_status)) AS status
   `,
 

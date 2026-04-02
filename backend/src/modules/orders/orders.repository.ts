@@ -157,17 +157,7 @@ class OrdersRepository {
         o.order_id AS "orderId",
         o.order_uuid AS "orderUuid",
         o.order_number AS "orderNumber",
-        CASE o.status
-          WHEN 'pending' THEN 1
-          WHEN 'accepted' THEN 2
-          WHEN 'picked_up' THEN 3
-          WHEN 'in_transit' THEN 4
-          WHEN 'delivered' THEN 5
-          WHEN 'cancelled' THEN 6
-          WHEN 'undeliverable' THEN 7
-          WHEN 'returned' THEN 8
-        END AS "statusId",
-        o.status AS "statusName",
+        o.status AS "status",
         o.delivery_type_id AS "deliveryTypeId",
         dt.name AS "deliveryType",
         dt.display_name AS "deliveryTypeDisplay",

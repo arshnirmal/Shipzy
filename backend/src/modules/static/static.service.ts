@@ -75,11 +75,7 @@ class StaticService {
   async getOrderStatuses() {
     const statuses = await staticRepository.getOrderStatuses();
 
-    return statuses.map((status) => ({
-      statusId: status.statusId,
-      name: status.name,
-      description: status.description,
-    }));
+    return statuses.map((status) => status.name);
   }
 
   private _toNumber(value: unknown): number {

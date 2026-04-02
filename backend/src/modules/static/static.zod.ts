@@ -55,9 +55,5 @@ export const CreateOrderDataZ = z.object({
 }).strict();
 export type CreateOrderData = z.infer<typeof CreateOrderDataZ>;
 
-export const OrderStatusZ = z.object({
-  statusId: z.number(),
-  name: z.string(),
-  description: z.string().optional(),
-}).strict();
+export const OrderStatusZ = z.string();
 export type OrderStatus = z.infer<typeof OrderStatusZ>;

@@ -17,7 +17,6 @@ import {
   toIsoDateTimeOrUndefined,
 } from "../../utils/datetime.util.js";
 import authRepository from "./auth.repository.js";
-import { getRoleId } from "../../utils/roles.utils.js";
 import type { LoginRequest, RegisterRequest, AuthResponse } from "./auth.zod.js";
 import type { DeviceInfo } from "../../types/index.js";
 
@@ -140,16 +139,13 @@ class AuthService {
           }
         }
 
-        const roleId = getRoleId(roleName);
-
         user = await authRepository.createUser({
-          roleId,
+          role: roleName,
           firebaseUid: decodedToken.uid,
           phoneNumber: null,
           fullName: decodedToken.name || decodedToken.email?.split("@")[0] || "Google User",
           email: decodedToken.email,
           passwordHash: null,
-          roleName,
         });
 
         logger.info({ msg: "New user created via Google auth", userId: user.userId });
@@ -229,16 +225,14 @@ class AuthService {
       const existingUser = await authRepository.findByEmail(email);
       if (existingUser) throw new ValidationError("User with this email already exists");
 
-      const roleId = getRoleId(role);
       const passwordHash = await bcrypt.hash(password, 12);
 
       const user = await authRepository.createEmailUser({
-        roleId,
+        role,
         fullName,
         email,
         passwordHash,
         phoneNumber,
-        roleName: role,
       });
 
       logger.info({ msg: "New user registered with email", userId: user.userId, email });
