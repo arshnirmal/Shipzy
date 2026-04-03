@@ -32,193 +32,131 @@ export default {
   // ============ ORDER RETRIEVAL ============
 
   /**
-   * Find order by ID with full details (OPTIMIZED - uses JSONB columns)
+   * Find order by ID with full details
+   * JOINs: only client + courier profiles (master data comes from snapshot JSONB)
    */
   FIND_ORDER_BY_ID: `
     SELECT
-            o.order_id AS "orderId",
-            o.order_uuid AS "orderUuid",
-            o.order_number AS "orderNumber",
-            o.client_id AS "clientId",
-            u.full_name AS "clientName",
-            u.phone_number AS "clientPhone",
-            o.status AS "status",
-            o.delivery_type_id AS "deliveryTypeId",
-            dt.name AS "deliveryType",
-            dt.display_name AS "deliveryTypeDisplay",
-            o.vehicle_category_id AS "vehicleCategoryId",
-            vc.name AS "vehicleCategory",
-            vc.display_name AS "vehicleCategoryDisplay",
-            o.package_description AS "packageDescription",
-            o.package_type_id AS "packageTypeId",
-            o.special_instructions AS "specialInstructions",
-            o.base_price AS "basePrice",
-            o.distance_price AS "distancePrice",
-            o.weight_surcharge AS "weightSurcharge",
-            o.platform_fee AS "platformFee",
-            o.special_handling_fee AS "specialHandlingFee",
-            o.gst_amount AS "gstAmount",
-            o.subtotal_before_tax AS "subtotalBeforeTax",
-            o.total_price AS "totalPrice",
-            o.estimated_distance_km AS "estimatedDistanceKm",
-            o.actual_distance_km AS "actualDistanceKm",
-            o.actual_pickup_time AS "actualPickupTime",
-            o.actual_delivery_time AS "actualDeliveryTime",
-            o.payment_method_id AS "paymentMethodId",
-            pm.name AS "paymentMethod",
-            o.created_at AS "createdAt",
-            o.accepted_at AS "acceptedAt",
-            o.picked_up_at AS "pickedUpAt",
-            o.delivered_at AS "deliveredAt",
-            o.cancelled_at AS "cancelledAt",
-            o.cancellation_reason AS "cancellationReason",
+      o.order_id             AS "orderId",
+      o.order_uuid           AS "orderUuid",
+      o.order_number         AS "orderNumber",
+      o.client_id            AS "clientId",
+      u.full_name            AS "clientName",
+      u.phone_number         AS "clientPhone",
+      o.status               AS "status",
 
-          -- Weight tier details
-      wt.tier_id AS "weightTierId",
-      wt.name AS "weightTierName",
-      wt.min_weight_kg AS "weightTierMin",
-      wt.max_weight_kg AS "weightTierMax",
+      -- FK columns kept for integrity/filtering
+      o.delivery_type_id     AS "deliveryTypeId",
+      o.vehicle_category_id  AS "vehicleCategoryId",
+      o.weight_tier_id       AS "weightTierId",
+      o.package_type_id      AS "packageTypeId",
+      o.payment_method_id    AS "paymentMethodId",
 
-          -- OPTIMIZED: Pickup details from JSONB
-      o.pickup_location->>'fullAddress' AS "pickupAddress",
-      o.pickup_location->>'building' AS "pickupBuilding",
-      o.pickup_location->>'floor' AS "pickupFloor",
-      o.pickup_location->>'flatNumber' AS "pickupFlat",
-      o.pickup_location->>'landmark' AS "pickupLandmark",
-      o.pickup_location->>'city' AS "pickupCity",
-      o.pickup_location->>'state' AS "pickupState",
-      o.pickup_location->>'postalCode' AS "pickupPostalCode",
-      (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
-      (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
-      o.pickup_location->>'contactName' AS "pickupContactName",
-      o.pickup_location->>'contactPhone' AS "pickupContactPhone",
+      -- Operational scalars
+      o.total_price          AS "totalPrice",
+      o.estimated_distance_km AS "estimatedDistanceKm",
+      o.actual_distance_km   AS "actualDistanceKm",
+      o.coupon_code          AS "couponCode",
 
-          -- OPTIMIZED: Delivery details from JSONB
-      o.delivery_location->>'fullAddress' AS "deliveryAddress",
-      o.delivery_location->>'building' AS "deliveryBuilding",
-      o.delivery_location->>'floor' AS "deliveryFloor",
-      o.delivery_location->>'flatNumber' AS "deliveryFlat",
-      o.delivery_location->>'landmark' AS "deliveryLandmark",
-      o.delivery_location->>'city' AS "deliveryCity",
-      o.delivery_location->>'state' AS "deliveryState",
-      o.delivery_location->>'postalCode' AS "deliveryPostalCode",
-      (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
-      (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
-      o.delivery_location->>'contactName' AS "deliveryContactName",
-      o.delivery_location->>'contactPhone' AS "deliveryContactPhone",
+      -- JSONB value objects
+      o.pickup_location      AS "pickup",
+      o.delivery_location    AS "delivery",
+      o.items                AS "orderItems",
+      o.pricing              AS "pricing",
+      o.schedule             AS "schedule",
+      o.actual               AS "actual",
+      o.package              AS "package",
+      o.snapshot             AS "snapshot",
 
-          -- OPTIMIZED: Items from JSONB
-      o.items AS "orderItems",
+      -- Status timeline
+      o.created_at           AS "createdAt",
+      o.accepted_at          AS "acceptedAt",
+      o.picked_up_at         AS "pickedUpAt",
+      o.in_transit_at        AS "inTransitAt",
+      o.delivered_at         AS "deliveredAt",
+      o.cancelled_at         AS "cancelledAt",
+      o.cancellation_reason  AS "cancellationReason",
 
-          -- Courier details (if assigned)
-      ca.assignment_id AS "assignmentId",
-      ca.courier_id AS "courierId",
-      cu.full_name AS "courierName",
-      cu.phone_number AS "courierPhone",
+      -- Courier details (if assigned)
+      ca.assignment_id       AS "assignmentId",
+      ca.courier_id          AS "courierId",
+      cu.full_name           AS "courierName",
+      cu.phone_number        AS "courierPhone",
       cu.profile_picture_url AS "courierPhoto",
-      ca.status AS "assignmentStatus",
-      ca.assigned_at AS "assignedAt",
-      ca.accepted_at AS "courierAcceptedAt"
+      ca.status              AS "assignmentStatus",
+      ca.assigned_at         AS "assignedAt",
+      ca.timeline            AS "assignmentTimeline"
 
-      FROM orders.requests o
-      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      JOIN payments.payment_methods pm ON o.payment_method_id = pm.method_id
-      JOIN users.profiles u ON o.client_id = u.user_id
-      LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
-      LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
-      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
-      WHERE o.order_id = $1
+    FROM orders.requests o
+    JOIN users.profiles u ON o.client_id = u.user_id
+    LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
+    LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
+    WHERE o.order_id = $1
       AND o.deleted_at IS NULL
-
   `,
 
   /**
    * Find available orders for courier (within radius)
+   * JOINs: none — delivery type, vehicle category, weight tier all in snapshot JSONB
    */
   FIND_AVAILABLE_ORDERS_FOR_COURIER: `
-      SELECT
-          o.order_id AS "orderId",
-          o.order_uuid AS "orderUuid",
-          o.order_number AS "orderNumber",
-          o.delivery_type_id AS "deliveryTypeId",
-          dt.name AS "deliveryType",
-          dt.display_name AS "deliveryTypeDisplay",
-          o.vehicle_category_id AS "vehicleCategoryId",
-          vc.name AS "vehicleCategory",
-          vc.display_name AS "vehicleCategoryDisplay",
-          o.package_type_id AS "packageTypeId",
-          pt.name AS "packageType",
-          o.weight_tier_id AS "weightTierId",
-          wt.name AS "weightTierName",
-          wt.min_weight_kg AS "weightTierMin",
-          wt.max_weight_kg AS "weightTierMax",
-          -- Pricing details
-          o.base_price AS "basePrice",
-          o.distance_price AS "distancePrice",
-          o.weight_surcharge AS "weightSurcharge",
-          o.platform_fee AS "platformFee",
-          o.special_handling_fee AS "specialHandlingFee",
-          o.gst_amount AS "gstAmount",
-          o.subtotal_before_tax AS "subtotalBeforeTax",
-          o.total_price AS "totalPrice",
+    SELECT
+      o.order_id              AS "orderId",
+      o.order_uuid            AS "orderUuid",
+      o.order_number          AS "orderNumber",
 
-          o.package_description AS "packageDescription",
-          o.special_instructions AS "specialInstructions",
-          o.estimated_distance_km AS "estimatedDistanceKm",
-          o.created_at AS "createdAt",
+      -- FK columns for client-side matching
+      o.delivery_type_id      AS "deliveryTypeId",
+      o.vehicle_category_id   AS "vehicleCategoryId",
+      o.weight_tier_id        AS "weightTierId",
+      o.package_type_id       AS "packageTypeId",
 
-          -- OPTIMIZED: Pickup location from JSONB
-          o.pickup_location->>'fullAddress' AS "pickupAddress",
-          o.pickup_location->>'landmark' AS "pickupLandmark",
-          o.pickup_location->>'city' AS "pickupCity",
-          o.pickup_location->>'state' AS "pickupState",
-          (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
-          (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
+      -- Operational scalars
+      o.total_price           AS "totalPrice",
+      o.estimated_distance_km AS "estimatedDistanceKm",
+      o.created_at            AS "createdAt",
 
-          -- OPTIMIZED: Delivery location from JSONB
-          o.delivery_location->>'fullAddress' AS "deliveryAddress",
-          o.delivery_location->>'landmark' AS "deliveryLandmark",
-          o.delivery_location->>'city' AS "deliveryCity",
-          o.delivery_location->>'state' AS "deliveryState",
-          o.delivery_location->>'postalCode' AS "deliveryPostalCode",
-          (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
-          (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
+      -- JSONB value objects
+      o.pickup_location       AS "pickup",
+      o.delivery_location     AS "delivery",
+      o.pricing               AS "pricing",
+      o.package               AS "package",
+      o.snapshot              AS "snapshot",
 
-          -- OPTIMIZED: Distance from courier using computed PostGIS column (pickup_point)
-          ROUND(
-              ST_Distance(
-                  o.pickup_point,
-                  ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
-              )::numeric / 1000, 2
-          ) AS "distanceFromCourierKm"
-
-      FROM orders.requests o
-      JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-      JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
-      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
-      WHERE o.status = 'pending'
-          AND o.deleted_at IS NULL
-          AND NOT EXISTS (
-              SELECT 1 FROM orders.courier_assignments ca
-              WHERE ca.order_id = o.order_id
-                  AND ca.status NOT IN ('rejected', 'cancelled')
-          )
-          -- OPTIMIZED: Use computed pickup_point column for spatial query
-          AND ST_DWithin(
+      -- OPTIMIZED: Distance from courier using computed PostGIS column
+      ROUND(
+          ST_Distance(
               o.pickup_point,
-              ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
-              $3 * 1000
-          )
-      ORDER BY o.created_at ASC
-      LIMIT $4
+              ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+          )::numeric / 1000, 2
+      ) AS "distanceFromCourierKm"
+
+    FROM orders.requests o
+    WHERE o.status = 'pending'
+      AND o.deleted_at IS NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM orders.courier_assignments ca
+          WHERE ca.order_id = o.order_id
+            AND ca.status NOT IN ('rejected', 'cancelled')
+      )
+      AND ST_DWithin(
+          o.pickup_point,
+          ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+          $3 * 1000
+      )
+    ORDER BY o.created_at ASC
+    LIMIT $4
   `,
 
-  // ============ ORDER STATUS UPDATES ============
+  // ============ STATUS HISTORY ============
 
-  // NOTE: UPDATE_ORDER_STATUS, MARK_ORDER_PICKED_UP, and MARK_ORDER_DELIVERED
-  // have been removed - these are now handled by Drizzle ORM in orders.repository.ts
+  /**
+   * Insert status history record
+   */
+  INSERT_STATUS_HISTORY: `
+    INSERT INTO orders.status_history (order_id, status, previous_status, changed_by, notes)
+    VALUES ($1, $2, $3, $4, $5)
+  `,
 
   // ============ COURIER ASSIGNMENTS ============
 
@@ -226,105 +164,67 @@ export default {
    * Create courier assignment
    */
   CREATE_COURIER_ASSIGNMENT: `
-      INSERT INTO orders.courier_assignments (
-          order_id,
-          courier_id,
-          status
-      )
-      VALUES (
-          $1,
-          $2,
-          'assigned'
-      )
-      RETURNING
-          assignment_id AS "assignmentId",
-          order_id AS "orderId",
-          courier_id AS "courierId",
-          assigned_at AS "assignedAt"
+    INSERT INTO orders.courier_assignments (order_id, courier_id, status)
+    VALUES ($1, $2, 'assigned')
+    RETURNING
+      assignment_id AS "assignmentId",
+      order_id      AS "orderId",
+      courier_id    AS "courierId",
+      assigned_at   AS "assignedAt"
   `,
 
   /**
    * Accept assignment (courier accepts order)
    */
   ACCEPT_ASSIGNMENT: `
-      UPDATE orders.courier_assignments
-      SET
-          status = 'accepted',
-          accepted_at = NOW(),
-          updated_at = NOW()
-      WHERE order_id = $1
-          AND courier_id = $2
-      RETURNING
-          assignment_id AS "assignmentId",
-          accepted_at AS "acceptedAt"
+    UPDATE orders.courier_assignments
+    SET
+      timeline   = jsonb_build_object('acceptedAt', NOW()::TEXT, 'rejectedAt', NULL),
+      updated_at = NOW()
+    WHERE order_id  = $1
+      AND courier_id = $2
+    RETURNING
+      assignment_id AS "assignmentId",
+      timeline      AS "timeline"
   `,
 
   /**
-   * Update order status to assigned
+   * Update order status to accepted
    */
   UPDATE_ORDER_STATUS_TO_ASSIGNED: `
-      UPDATE orders.requests
-      SET
-          status = 'accepted',
-          accepted_at = NOW(),
-          updated_at = NOW()
-      WHERE order_id = $1
-      RETURNING order_id
+    UPDATE orders.requests
+    SET
+      status      = 'accepted',
+      accepted_at = NOW(),
+      updated_at  = NOW()
+    WHERE order_id = $1
+    RETURNING order_id
   `,
 
   /**
    * Update courier status with current assignment
    */
   UPDATE_COURIER_CURRENT_ASSIGNMENT: `
-      UPDATE logistics.courier_status
-      SET
-          current_assignment_id = $2,
-          is_available = false,
-          updated_at = NOW()
-      WHERE courier_id = $1
+    UPDATE logistics.courier_status
+    SET
+      current_assignment_id = $2,
+      is_available          = FALSE,
+      updated_at            = NOW()
+    WHERE courier_id = $1
   `,
 
   /**
    * Reject assignment
    */
   REJECT_ASSIGNMENT: `
-      UPDATE orders.courier_assignments
-      SET
-          status = 'rejected',
-          rejected_at = NOW(),
-          rejection_reason = $3,
-          updated_at = NOW()
-      WHERE assignment_id = $1
-          AND courier_id = $2
-      RETURNING assignment_id, rejected_at
+    UPDATE orders.courier_assignments
+    SET
+      status           = 'rejected',
+      timeline         = jsonb_build_object('acceptedAt', NULL, 'rejectedAt', NOW()::TEXT),
+      rejection_reason = $3,
+      updated_at       = NOW()
+    WHERE assignment_id = $1
+      AND courier_id    = $2
+    RETURNING assignment_id, timeline
   `,
-
-  /**
-   * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
-   */
-  FIND_COURIER_ACTIVE_ASSIGNMENTS: `
-      SELECT
-          ca.assignment_id,
-          ca.order_id,
-          o.order_uuid,
-          o.status AS order_status,
-          ca.status AS assignment_status,
-          -- OPTIMIZED: Pickup location from JSONB
-          o.pickup_location->>'fullAddress' AS pickup_address,
-          (o.pickup_location->>'latitude')::numeric AS pickup_latitude,
-          (o.pickup_location->>'longitude')::numeric AS pickup_longitude,
-          -- OPTIMIZED: Delivery location from JSONB
-          o.delivery_location->>'fullAddress' AS delivery_address,
-          (o.delivery_location->>'latitude')::numeric AS delivery_latitude,
-          (o.delivery_location->>'longitude')::numeric AS delivery_longitude,
-          o.total_price,
-          ca.assigned_at,
-          ca.accepted_at
-      FROM orders.courier_assignments ca
-      JOIN orders.requests o ON ca.order_id = o.order_id
-      WHERE ca.courier_id = $1
-          AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
-      ORDER BY ca.assigned_at DESC
-  `,
-
 };

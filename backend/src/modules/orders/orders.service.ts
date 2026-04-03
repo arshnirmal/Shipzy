@@ -18,85 +18,11 @@ import type {
   CancelOrderResult,
   OrderDetails,
   OrderListItem,
+  OrderRow,
 } from "./orders.zod.js";
 import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
 import type { CreatedOrder } from "../../types/orders.js";
 
-// DB row shape for order queries (only fields used by _formatOrderDetails)
-type OrderRow = {
-  orderId: number;
-  orderUuid: string;
-  orderNumber: string;
-  status?: string;
-  deliveryTypeId?: number;
-  deliveryType?: string;
-  deliveryTypeDisplay?: string;
-  vehicleCategoryId?: number;
-  vehicleCategoryDisplay?: string;
-  packageDescription?: string | null;
-  packageTypeId?: number | null;
-  weightTierId?: number | null;
-  weightTierName?: string | null;
-  weightTierMin?: number | string | null;
-  weightTierMax?: number | string | null;
-  estimatedDistanceKm?: number | string | null;
-  actualDistanceKm?: number | string | null;
-  actualPickupTime?: string | Date | null;
-  actualDeliveryTime?: string | Date | null;
-  paymentMethodId?: number;
-  paymentMethod?: string;
-  createdAt?: Date;
-  acceptedAt?: Date | null;
-  pickedUpAt?: Date | null;
-  deliveredAt?: Date | null;
-  cancelledAt?: Date | null;
-  cancellationReason?: string | null;
-  pickupLocationId?: number;
-  pickupBuilding?: string | null;
-  pickupFloor?: string | null;
-  pickupFlat?: string | null;
-  pickupAddress?: string | null;
-  pickupLandmark?: string | null;
-  pickupCity?: string | null;
-  pickupState?: string | null;
-  pickupPostalCode?: string | null;
-  pickupLatitude?: number | string | null;
-  pickupLongitude?: number | string | null;
-  pickupContactName?: string | null;
-  pickupContactPhone?: string | null;
-  deliveryLocationId?: number;
-  deliveryBuilding?: string | null;
-  deliveryFloor?: string | null;
-  deliveryFlat?: string | null;
-  deliveryAddress?: string | null;
-  deliveryLandmark?: string | null;
-  deliveryCity?: string | null;
-  deliveryState?: string | null;
-  deliveryPostalCode?: string | null;
-  deliveryLatitude?: number | string | null;
-  deliveryLongitude?: number | string | null;
-  deliveryContactName?: string | null;
-  deliveryContactPhone?: string | null;
-  basePrice?: number | string | null;
-  distancePrice?: number | string | null;
-  weightSurcharge?: number | string | null;
-  platformFee?: number | string | null;
-  specialHandlingFee?: number | string | null;
-  gstAmount?: number | string | null;
-  subtotalBeforeTax?: number | string | null;
-  totalPrice?: number | string | null;
-  clientId?: number | null;
-  clientName?: string | null;
-  clientPhone?: string | null;
-  specialInstructions?: string | null;
-  courierId?: number | null;
-  courierName?: string | null;
-  courierPhone?: string | null;
-  courierPhoto?: string | null;
-  assignmentStatus?: string | null;
-  assignedAt?: string | Date | null;
-  courierAcceptedAt?: string | Date | null;
-};
 
 class OrdersService {
   /**
@@ -185,8 +111,7 @@ class OrdersService {
       notifyRecipientSms: orderData.notifyRecipientSms || false,
       couponCode: orderData.couponCode || null,
       pickup: {
-        addressId: orderData.pickup.addressId || null,
-        address: orderData.pickup.fullAddress,
+        fullAddress: orderData.pickup.fullAddress,
         latitude: orderData.pickup.latitude,
         longitude: orderData.pickup.longitude,
         city: orderData.pickup.city,
@@ -200,8 +125,7 @@ class OrdersService {
         contactPhone: orderData.pickup.contactPhone,
       },
       delivery: {
-        addressId: orderData.delivery.addressId || null,
-        address: orderData.delivery.fullAddress,
+        fullAddress: orderData.delivery.fullAddress,
         latitude: orderData.delivery.latitude,
         longitude: orderData.delivery.longitude,
         city: orderData.delivery.city,
@@ -362,25 +286,11 @@ class OrdersService {
 
     return {
       orders: orders.map((order) => {
-        let actualDurationMins = null;
-        if (order.actualPickupTime && order.actualDeliveryTime) {
-          const pickupTime = new Date(order.actualPickupTime).getTime();
-          const deliveryTime = new Date(order.actualDeliveryTime).getTime();
-          actualDurationMins = Math.round(
-            (deliveryTime - pickupTime) / (1000 * 60),
-          );
-        } else if (order.actualPickupTime && !order.actualDeliveryTime) {
-          const pickupTime = new Date(order.actualPickupTime).getTime();
-          actualDurationMins = Math.round(
-            (Date.now() - pickupTime) / (1000 * 60),
-          );
-        }
-
-        const weightTierDisplay =
-          order.weightTierName ||
-          (order.weightTierMin != null && order.weightTierMax != null
-            ? `${order.weightTierMin}-${order.weightTierMax} kg`
-            : null);
+        const snap = order.snapshot;
+        const wt = snap?.weightTier;
+        const weightTierDisplay = wt
+          ? `${wt.minWeightKg}-${wt.maxWeightKg} kg`
+          : null;
 
         return {
           orderId: order.orderId,
@@ -388,28 +298,24 @@ class OrdersService {
           orderNumber: order.orderNumber,
           status: order.status,
           deliveryTypeId: order.deliveryTypeId,
-          deliveryTypeDisplay: order.deliveryTypeDisplay,
+          deliveryTypeDisplay: snap?.deliveryType?.displayName,
           vehicleCategoryId: order.vehicleCategoryId,
-          vehicleCategoryDisplay: order.vehicleCategoryDisplay,
-          packageDescription: order.packageDescription,
+          vehicleCategoryDisplay: snap?.vehicleCategory?.displayName,
+          packageDescription: null,
           weightTierId: order.weightTierId,
           weightTierDisplay,
-          estimatedDistanceKm: order.estimatedDistanceKm
-            ? Number.parseFloat(order.estimatedDistanceKm)
-            : null,
-          actualDistanceKm: order.actualDistanceKm
-            ? Number.parseFloat(order.actualDistanceKm)
-            : null,
-          actualDurationMins,
-          totalPrice: Number.parseFloat(order.totalPrice ?? "0"),
+          estimatedDistanceKm: order.estimatedDistanceKm ?? null,
+          actualDistanceKm: order.actualDistanceKm ?? null,
+          actualDurationMins: null,
+          totalPrice: Number(order.totalPrice ?? 0),
           createdAt: toIsoDateTime(order.createdAt),
           pickup: {
-            address: order.pickupAddress,
-            city: order.pickupCity ?? undefined,
+            address: order.pickup.fullAddress,
+            city: order.pickup.city ?? undefined,
           },
           delivery: {
-            address: order.deliveryAddress,
-            city: order.deliveryCity ?? undefined,
+            address: order.delivery.fullAddress,
+            city: order.delivery.city ?? undefined,
           },
           courier: order.courierId
             ? { name: order.courierName, photo: order.courierPhoto }
@@ -441,49 +347,50 @@ class OrdersService {
       limit,
     );
 
-    return orders.map((order) => ({
-      orderId: order.orderId,
-      orderUuid: order.orderUuid,
-      orderNumber: order.orderNumber,
-      deliveryTypeDisplay: order.deliveryTypeDisplay,
-      vehicleCategoryDisplay: order.vehicleCategoryDisplay,
-      createdAt: toIsoDateTime(order.createdAt),
-      pickup: {
-        address: order.pickupAddress,
-        landmark: order.pickupLandmark,
-        city: order.pickupCity,
-        coordinates: {
-          latitude: Number.parseFloat(order.pickupLatitude),
-          longitude: Number.parseFloat(order.pickupLongitude),
+    return orders.map((order) => {
+      const p = order.pricing;
+      const snap = order.snapshot;
+      return {
+        orderId: order.orderId,
+        orderUuid: order.orderUuid,
+        orderNumber: order.orderNumber,
+        deliveryTypeDisplay: snap?.deliveryType?.displayName ?? "",
+        vehicleCategoryDisplay: snap?.vehicleCategory?.displayName ?? "",
+        createdAt: toIsoDateTime(order.createdAt),
+        pickup: {
+          address: order.pickup.fullAddress,
+          landmark: order.pickup.landmark,
+          city: order.pickup.city ?? "",
+          coordinates: {
+            latitude: order.pickup.latitude,
+            longitude: order.pickup.longitude,
+          },
         },
-      },
-      delivery: {
-        address: order.deliveryAddress,
-        landmark: order.deliveryLandmark,
-        city: order.deliveryCity,
-        coordinates: {
-          latitude: order.deliveryLatitude
-            ? Number.parseFloat(order.deliveryLatitude)
-            : 0,
-          longitude: order.deliveryLongitude
-            ? Number.parseFloat(order.deliveryLongitude)
-            : 0,
+        delivery: {
+          address: order.delivery.fullAddress,
+          landmark: order.delivery.landmark,
+          city: order.delivery.city ?? "",
+          coordinates: {
+            latitude: order.delivery.latitude,
+            longitude: order.delivery.longitude,
+          },
         },
-      },
-      distanceFromDriverKm: Number.parseFloat(order.distanceFromCourierKm),
-      estimatedDistanceKm: Number.parseFloat(order.estimatedDistanceKm),
-      fareBreakdown: {
-        basePrice: Number.parseFloat(order.basePrice || "0"),
-        distanceKm: Number.parseFloat(order.estimatedDistanceKm || "0"),
-        distancePrice: Number.parseFloat(order.distancePrice || "0"),
-        weightSurcharge: Number.parseFloat(order.weightSurcharge || "0"),
-        platformFee: Number.parseFloat(order.platformFee || "0"),
-        specialHandlingFee: Number.parseFloat(order.specialHandlingFee || "0"),
-        gstAmount: Number.parseFloat(order.gstAmount || "0"),
-        totalPrice: Number.parseFloat(order.totalPrice || "0"),
-        subtotalBeforeTax: Number.parseFloat(order.subtotalBeforeTax || "0"),
-      },
-    }));
+        distanceFromDriverKm: Number(order.distanceFromCourierKm),
+        estimatedDistanceKm: Number(order.estimatedDistanceKm),
+        fareBreakdown: {
+          basePrice: Number(p?.basePrice ?? 0),
+          distanceKm: Number(p?.distanceKm ?? order.estimatedDistanceKm ?? 0),
+          distancePrice: Number(p?.distancePrice ?? 0),
+          weightSurcharge: Number(p?.weightSurcharge ?? 0),
+          platformFee: Number(p?.platformFee ?? 0),
+          specialHandlingFee: Number(p?.specialHandlingFee ?? 0),
+          gstAmount: Number(p?.gstAmount ?? 0),
+          totalPrice: Number(order.totalPrice ?? 0),
+          subtotalBeforeTax: Number(p?.subtotalBeforeTax ?? 0),
+        },
+        packageDescription: order.package?.description ?? null,
+      };
+    });
   }
 
   /**
@@ -606,12 +513,21 @@ class OrdersService {
       throw new NotFoundError("Order not found or update failed");
     }
 
+    await ordersRepository.recordStatusHistory(
+      orderId,
+      status,
+      order.status,
+      courierId,
+    );
+
     const timestamp =
       status === "picked_up"
         ? updated.pickedUpAt
-        : status === "delivered"
-          ? updated.deliveredAt
-          : updated.updatedAt;
+        : status === "in_transit"
+          ? updated.inTransitAt
+          : status === "delivered"
+            ? updated.deliveredAt
+            : updated.updatedAt;
     if (!timestamp) {
       throw new AppError("Status timestamp missing after update", 500);
     }
@@ -627,41 +543,44 @@ class OrdersService {
    * Format order details from DB row to API response shape
    */
   _formatOrderDetails(order: OrderRow): OrderDetails {
+    const snap = order.snapshot;
+    const p = order.pricing;
+    const pkg = order.package;
+    const act = order.actual;
+
     let actualDurationMins = null;
-    if (order.actualPickupTime && order.actualDeliveryTime) {
-      const pickupTime = new Date(order.actualPickupTime).getTime();
-      const deliveryTime = new Date(order.actualDeliveryTime).getTime();
+    if (act?.pickupAt && act?.deliveryAt) {
+      const pickupTime = new Date(act.pickupAt).getTime();
+      const deliveryTime = new Date(act.deliveryAt).getTime();
+      actualDurationMins = Math.round((deliveryTime - pickupTime) / (1000 * 60));
+    } else if (act?.pickupAt && !act?.deliveryAt) {
       actualDurationMins = Math.round(
-        (deliveryTime - pickupTime) / (1000 * 60),
+        (Date.now() - new Date(act.pickupAt).getTime()) / (1000 * 60),
       );
-    } else if (order.actualPickupTime && !order.actualDeliveryTime) {
-      const pickupTime = new Date(order.actualPickupTime).getTime();
-      actualDurationMins = Math.round((Date.now() - pickupTime) / (1000 * 60));
     }
 
-    const weightTierDisplay =
-      order.weightTierName ||
-      (order.weightTierMin != null && order.weightTierMax != null
-        ? `${order.weightTierMin}-${order.weightTierMax} kg`
-        : null);
+    const wt = snap?.weightTier;
+    const weightTierDisplay = wt
+      ? `${wt.minWeightKg}-${wt.maxWeightKg} kg`
+      : null;
 
     return {
       orderId: order.orderId,
       orderUuid: order.orderUuid,
       orderNumber: order.orderNumber,
 
-      status: order.status!,
+      status: order.status,
 
-      deliveryTypeId: order.deliveryTypeId!,
-      deliveryTypeDisplay: order.deliveryTypeDisplay,
-      vehicleCategoryId: order.vehicleCategoryId!,
-      vehicleCategoryDisplay: order.vehicleCategoryDisplay,
+      deliveryTypeId: order.deliveryTypeId,
+      deliveryTypeDisplay: snap?.deliveryType?.displayName,
+      vehicleCategoryId: order.vehicleCategoryId,
+      vehicleCategoryDisplay: snap?.vehicleCategory?.displayName,
 
-      packageDescription: order.packageDescription,
-      packageTypeId: order.packageTypeId || null,
+      packageDescription: pkg?.description ?? null,
+      packageTypeId: order.packageTypeId ?? null,
       weightTierId: order.weightTierId,
       weightTierDisplay,
-      specialInstructions: order.specialInstructions,
+      specialInstructions: pkg?.specialInstructions ?? null,
 
       estimatedDistanceKm: order.estimatedDistanceKm
         ? Number(order.estimatedDistanceKm)
@@ -671,14 +590,10 @@ class OrdersService {
         : null,
       actualDurationMins,
 
-      createdAt: order.createdAt
-        ? toIsoDateTime(order.createdAt)
-        : toIsoDateTime(new Date()),
+      createdAt: toIsoDateTime(order.createdAt),
 
       timeline: {
-        confirmedAt: order.createdAt
-          ? toIsoDateTime(order.createdAt)
-          : toIsoDateTime(new Date()),
+        confirmedAt: toIsoDateTime(order.createdAt),
         assignedAt: toIsoDateTimeOrUndefined(order.acceptedAt),
         pickedUpAt: toIsoDateTimeOrUndefined(order.pickedUpAt),
         deliveredAt: toIsoDateTimeOrUndefined(order.deliveredAt),
@@ -686,49 +601,45 @@ class OrdersService {
       },
 
       pickup: {
-        locationId: order.pickupLocationId,
-        address: order.pickupAddress || "",
-        building: order.pickupBuilding,
-        floor: order.pickupFloor,
-        flat: order.pickupFlat,
-        landmark: order.pickupLandmark,
-        city: order.pickupCity ?? undefined,
-        state: order.pickupState ?? undefined,
-        postalCode: order.pickupPostalCode ?? undefined,
-        latitude: Number(order.pickupLatitude),
-        longitude: Number(order.pickupLongitude),
-        contactName: order.pickupContactName ?? undefined,
-        contactPhone: order.pickupContactPhone ?? undefined,
+        address: order.pickup.fullAddress || "",
+        building: order.pickup.building,
+        floor: order.pickup.floor,
+        flat: order.pickup.flatNumber,
+        landmark: order.pickup.landmark,
+        city: order.pickup.city ?? undefined,
+        state: order.pickup.state ?? undefined,
+        postalCode: order.pickup.postalCode ?? undefined,
+        latitude: order.pickup.latitude,
+        longitude: order.pickup.longitude,
+        contactName: order.pickup.contactName ?? undefined,
+        contactPhone: order.pickup.contactPhone ?? undefined,
       },
 
       delivery: {
-        locationId: order.deliveryLocationId,
-        address: order.deliveryAddress || "",
-        building: order.deliveryBuilding,
-        floor: order.deliveryFloor,
-        flat: order.deliveryFlat,
-        landmark: order.deliveryLandmark,
-        city: order.deliveryCity ?? undefined,
-        state: order.deliveryState ?? undefined,
-        postalCode: order.deliveryPostalCode ?? undefined,
-        latitude: Number(order.deliveryLatitude),
-        longitude: Number(order.deliveryLongitude),
-        contactName: order.deliveryContactName ?? undefined,
-        contactPhone: order.deliveryContactPhone ?? undefined,
+        address: order.delivery.fullAddress || "",
+        building: order.delivery.building,
+        floor: order.delivery.floor,
+        flat: order.delivery.flatNumber,
+        landmark: order.delivery.landmark,
+        city: order.delivery.city ?? undefined,
+        state: order.delivery.state ?? undefined,
+        postalCode: order.delivery.postalCode ?? undefined,
+        latitude: order.delivery.latitude,
+        longitude: order.delivery.longitude,
+        contactName: order.delivery.contactName ?? undefined,
+        contactPhone: order.delivery.contactPhone ?? undefined,
       },
 
       fareBreakdown: {
-        basePrice: Number(order.basePrice),
-        distanceKm: order.estimatedDistanceKm
-          ? Number(order.estimatedDistanceKm)
-          : 0,
-        distancePrice: Number(order.distancePrice),
-        weightSurcharge: Number(order.weightSurcharge),
-        platformFee: Number(order.platformFee || 0),
-        specialHandlingFee: Number(order.specialHandlingFee || 0),
-        gstAmount: Number(order.gstAmount || 0),
-        subtotalBeforeTax: Number(order.subtotalBeforeTax || order.totalPrice),
-        totalPrice: Number(order.totalPrice),
+        basePrice: Number(p?.basePrice ?? 0),
+        distanceKm: Number(p?.distanceKm ?? order.estimatedDistanceKm ?? 0),
+        distancePrice: Number(p?.distancePrice ?? 0),
+        weightSurcharge: Number(p?.weightSurcharge ?? 0),
+        platformFee: Number(p?.platformFee ?? 0),
+        specialHandlingFee: Number(p?.specialHandlingFee ?? 0),
+        gstAmount: Number(p?.gstAmount ?? 0),
+        subtotalBeforeTax: Number(p?.subtotalBeforeTax ?? order.totalPrice ?? 0),
+        totalPrice: Number(order.totalPrice ?? 0),
       },
 
       courier: order.courierId

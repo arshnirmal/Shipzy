@@ -1,1786 +1,1425 @@
-# Shipzy API Documentation
+# Shipzy Backend API (v1)
 
-> Complete API reference for the Shipzy hyperlocal delivery backend service.
+This document is generated/maintained to match the **current implementation** under `backend/src/` (Fastify routes + controllers/services).
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Authentication](#authentication)
+- [Base URL & Versioning](#base-url--versioning)
+- [Authentication & Authorization](#authentication--authorization)
+- [Common Schemas](#common-schemas)
+- [Response Envelopes](#response-envelopes)
+- [Auth](#auth)
 - [Users](#users)
 - [Drivers](#drivers)
 - [Orders](#orders)
 - [Addresses](#addresses)
-- [Static Data](#static-data)
-- [Health Check](#health-check)
-- [Error Responses](#error-responses)
+- [Static](#static)
+- [Health](#health)
+- [Errors](#errors)
 - [Rate Limiting](#rate-limiting)
 
 ---
 
-## 🔐 Authentication
+## Base URL & Versioning
 
-### Base URL
+- API prefix: `/api/v1`
+- Interactive Swagger UI (if installed): `/docs`
+- OpenAPI JSON (if installed): `/documentation/json`
+
+Examples:
+
+- Local dev: `http://localhost:<PORT>/api/v1`
+- Production: `https://<your-domain>/api/v1`
+
+---
+
+## Authentication & Authorization
+
+### Bearer Token
+
+Protected endpoints require:
+
 ```
-https://api.shipzy.com/api/v1/auth
-```
-
-### Register
-**POST** `/auth/register`
-
-Register a new user account.
-
-**Request Body:**
-```json
-{
-  "fullName": "string",
-  "email": "string",
-  "password": "string",
-  "role": "client" | "courier",
-  "phoneNumber": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "userId": "number",
-      "userUuid": "string",
-      "role": "client" | "courier",
-      "fullName": "string",
-      "email": "string",
-      "phoneNumber": "string",
-      "profilePictureUrl": "string",
-      "isVerified": "boolean",
-      "isActive": "boolean",
-      "createdAt": "string"
-    },
-    "tokens": {
-      "accessToken": "string",
-      "refreshToken": "string",
-      "expiresIn": "number",
-      "tokenType": "Bearer"
-    }
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+Authorization: Bearer <accessToken>
 ```
 
-### Login
-**POST** `/auth/login`
+Tokens are issued by auth endpoints and validated server-side (JWT + token revocation in DB).
 
-Login with email and password.
+### Roles
 
-**Request Body:**
-```json
-{
-  "email": "string",
-  "password": "string"
-}
-```
+Some endpoints require a role:
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "user": {
-      "userId": "number",
-      "userUuid": "string",
-      "role": "client" | "courier",
-      "fullName": "string",
-      "email": "string",
-      "phoneNumber": "string",
-      "profilePictureUrl": "string",
-      "isVerified": "boolean",
-      "isActive": "boolean",
-      "createdAt": "string"
-    },
-    "tokens": {
-      "accessToken": "string",
-      "refreshToken": "string",
-      "expiresIn": "number",
-      "tokenType": "Bearer"
-    }
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+- `client` (customer)
+- `courier` (driver)
 
-### Google Authentication
-**POST** `/auth/google/verify`
+---
 
-Verify Google ID token and create/login user.
+## Common Schemas
 
-**Request Body:**
-```json
-{
-  "idToken": "string",
-  "role": "client" | "courier"
-}
-```
+Type notation:
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Authentication successful",
-  "data": {
-    "user": {
-      "userId": "number",
-      "userUuid": "string",
-      "role": "client" | "courier",
-      "fullName": "string",
-      "email": "string",
-      "phoneNumber": "string",
-      "profilePictureUrl": "string",
-      "isVerified": "boolean",
-      "isActive": "boolean",
-      "createdAt": "string"
-    },
-    "tokens": {
-      "accessToken": "string",
-      "refreshToken": "string",
-      "expiresIn": "number",
-      "tokenType": "Bearer"
-    }
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+- `string (uuid)` means a UUID string
+- `string (iso-datetime)` means ISO8601 datetime string
+- `T | null` means nullable
+- `field?: T` means optional
 
-### Refresh Token
-**POST** `/auth/refresh`
+```ts
+type UUID = string;
+type ISODateTime = string;
 
-Refresh JWT access token using a refresh token.
+type Coordinates = {
+  latitude: number;   // -90..90
+  longitude: number;  // -180..180
+};
 
-**Request Body:**
-```json
-{
-  "refreshToken": "string"
-}
-```
+type FareBreakdown = {
+  basePrice: number;
+  distanceKm: number;
+  distancePrice: number;
+  weightSurcharge: number;
+  platformFee?: number;
+  subtotalBeforeTax?: number;
+  gstAmount?: number;
+  specialHandlingFee?: number;
+  totalPrice: number;
+  currency?: string;
+};
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Token refreshed successfully",
-  "data": {
-    "accessToken": "string",
-    "refreshToken": "string",
-    "expiresIn": "number",
-    "tokenType": "Bearer"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+type BaseUser = {
+  userId: number;
+  userUuid: UUID;
+  role: "client" | "courier";
+  phoneNumber?: string | null;
+  email?: string | null;
+  fullName: string;
+  profilePictureUrl?: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
+};
 
-### Logout
-**POST** `/auth/logout`
-
-Logout the current user and invalidate tokens.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Logout successful",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+type SavedAddress = {
+  addressId: number;
+  fullAddress: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  latitude: number;
+  longitude: number;
+  building?: string | null;
+  floor?: string | null;
+  flatNumber?: string | null;
+  landmark?: string | null;
+  addressType?: "home" | "work" | "other";
+  label?: string;
+  isDefault?: boolean;
+  createdAt?: ISODateTime;
+};
 ```
 
 ---
 
-## 👥 Users
+## Response Envelopes
 
-### Base URL
-```
-https://api.shipzy.com/api/v1/users
-```
+### SuccessResponse
 
-### Get Current User Profile
-**GET** `/users/me`
-
-Get the current authenticated user's profile information.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
+```ts
+type SuccessResponse<T> = {
+  success: true;
+  message: string;
+  data: T;
+  timestamp: ISODateTime;
+};
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User profile retrieved successfully",
-  "data": {
-    "userId": "number",
-    "userUuid": "string",
-    "role": "client" | "courier",
-    "fullName": "string",
-    "email": "string",
-    "phoneNumber": "string",
-    "profilePictureUrl": "string",
-    "isVerified": "boolean",
-    "isActive": "boolean",
-    "createdAt": "string",
-    "updatedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+### PaginatedResponse
 
-### Update User Profile
-**PUT** `/users/me`
+Used by `GET /api/v1/orders`.
 
-Update the current user's profile information.
+```ts
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "fullName": "string",
-  "email": "string",
-  "phoneNumber": "string",
-  "profilePictureUrl": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Profile updated successfully",
-  "data": {
-    "userId": "number",
-    "userUuid": "string",
-    "role": "client" | "courier",
-    "fullName": "string",
-    "email": "string",
-    "phoneNumber": "string",
-    "profilePictureUrl": "string",
-    "isVerified": "boolean",
-    "isActive": "boolean",
-    "createdAt": "string",
-    "updatedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Get Saved Addresses
-**GET** `/users/me/addresses`
-
-Get all saved addresses for the current user.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Addresses retrieved successfully",
-  "data": [
-    {
-      "addressId": "number",
-      "fullAddress": "string",
-      "city": "string",
-      "state": "string",
-      "postalCode": "string",
-      "latitude": "number",
-      "longitude": "number",
-      "building": "string",
-      "floor": "string",
-      "flatNumber": "string",
-      "landmark": "string",
-      "addressType": "home" | "work" | "other",
-      "label": "string",
-      "isDefault": "boolean",
-      "createdAt": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Save Address
-**POST** `/users/me/addresses`
-
-Save a new address for the current user.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "fullAddress": "string",
-  "city": "string",
-  "state": "string",
-  "postalCode": "string",
-  "latitude": "number",
-  "longitude": "number",
-  "building": "string",
-  "floor": "string",
-  "flatNumber": "string",
-  "landmark": "string",
-  "addressType": "home" | "work" | "other",
-  "label": "string",
-  "isDefault": "boolean"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Address saved successfully",
-  "data": {
-    "addressId": "number",
-    "fullAddress": "string",
-    "city": "string",
-    "state": "string",
-    "postalCode": "string",
-    "latitude": "number",
-    "longitude": "number",
-    "building": "string",
-    "floor": "string",
-    "flatNumber": "string",
-    "landmark": "string",
-    "addressType": "home" | "work" | "other",
-    "label": "string",
-    "isDefault": "boolean",
-    "createdAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Delete Address
-**DELETE** `/users/me/addresses/:id`
-
-Delete a saved address.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Address deleted successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+type PaginatedResponse<T> = {
+  success: true;
+  data: T[];
+  pagination: Pagination;
+  timestamp: ISODateTime;
+};
 ```
 
 ---
 
-## 🚗 Drivers
+## Auth
 
-### Base URL
-```
-https://api.shipzy.com/api/v1/drivers
-```
+Base: `/api/v1/auth`
 
-### Get Driver Profile
-**GET** `/drivers/me`
+### POST /api/v1/auth/register
 
-Get the current authenticated driver's profile information.
+Auth: Public
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
+Request body:
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Driver profile retrieved successfully",
-  "data": {
-    "userId": "number",
-    "userUuid": "string",
-    "role": "courier",
-    "fullName": "string",
-    "email": "string",
-    "phoneNumber": "string",
-    "profilePictureUrl": "string",
-    "isVerified": "boolean",
-    "isActive": "boolean",
-    "status": {
-      "isAvailable": "boolean",
-      "isOnline": "boolean",
-      "totalDeliveriesToday": "number",
-      "currentLocation": {
-        "latitude": "number",
-        "longitude": "number"
-      },
-      "lastLocationUpdate": "string"
-    },
-    "vehicle": {
-      "vehicleId": "number",
-      "categoryId": "number",
-      "category": "string",
-      "isActive": "boolean",
-      "vehicleNumber": "string",
-      "model": "string",
-      "year": "number"
-    },
-    "earnings": {
-      "total": "number",
-      "today": "number",
-      "thisWeek": "number",
-      "thisMonth": "number",
-      "averageOrderValue": "number",
-      "totalDistanceKm": "number"
-    },
-    "rating": {
-      "averageRating": "number",
-      "totalRatings": "number"
-    },
-    "createdAt": "string",
-    "updatedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+```ts
+type RegisterRequest = {
+  fullName: string;                 // 2..100
+  email: string;                    // email
+  password: string;                 // 8..255
+  role: "client" | "courier";
+  phoneNumber?: string;             // 10..20
+};
 ```
 
-### Update Driver Profile
-**PUT** `/drivers/me`
+Response (201):
 
-Update the current driver's profile information.
+```ts
+type AuthTokens = {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;                // seconds
+  tokenType: "Bearer";
+};
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
+type AuthResponseData = {
+  user: BaseUser;
+  tokens: AuthTokens;
+};
 
-**Request Body:**
-```json
-{
-  "fullName": "string",
-  "email": "string",
-  "phoneNumber": "string",
-  "profilePictureUrl": "string"
-}
+type Response = SuccessResponse<AuthResponseData>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Driver profile updated successfully",
-  "data": {
-    "userId": "number",
-    "userUuid": "string",
-    "role": "courier",
-    "fullName": "string",
-    "email": "string",
-    "phoneNumber": "string",
-    "profilePictureUrl": "string",
-    "isVerified": "boolean",
-    "isActive": "boolean",
-    "status": {
-      "isAvailable": "boolean",
-      "isOnline": "boolean",
-      "totalDeliveriesToday": "number",
-      "currentLocation": {
-        "latitude": "number",
-        "longitude": "number"
-      },
-      "lastLocationUpdate": "string"
-    },
-    "vehicle": {
-      "vehicleId": "number",
-      "categoryId": "number",
-      "category": "string",
-      "isActive": "boolean",
-      "vehicleNumber": "string",
-      "model": "string",
-      "year": "number"
-    },
-    "earnings": {
-      "total": "number",
-      "today": "number",
-      "thisWeek": "number",
-      "thisMonth": "number",
-      "averageOrderValue": "number",
-      "totalDistanceKm": "number"
-    },
-    "rating": {
-      "averageRating": "number",
-      "totalRatings": "number"
-    },
-    "createdAt": "string",
-    "updatedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### POST /api/v1/auth/login
+
+Auth: Public
+
+Request body:
+
+```ts
+type LoginRequest = {
+  email: string;
+  password: string;
+};
 ```
 
-### Update Availability
-**PUT** `/drivers/me/availability`
+Response (200):
 
-Update driver's availability status.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
+```ts
+type Response = SuccessResponse<AuthResponseData>;
 ```
 
-**Request Body:**
-```json
-{
-  "isAvailable": "boolean",
-  "isOnline": "boolean",
-  "currentLocation": {
-    "latitude": "number",
-    "longitude": "number"
-  }
-}
+### POST /api/v1/auth/google/verify
+
+Auth: Public
+
+Headers (optional but recommended):
+
+```
+X-Device-Id: <string>
+User-Agent: <string>
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Availability updated successfully",
-  "data": {
-    "isAvailable": "boolean",
-    "isOnline": "boolean",
-    "currentLocation": {
-      "latitude": "number",
-      "longitude": "number"
-    },
-    "lastLocationUpdate": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+Request body:
+
+```ts
+type GoogleAuthRequest = {
+  idToken: string;
+  role: "client" | "courier";
+};
 ```
 
-### Update Location
-**PUT** `/drivers/me/location`
+Response:
 
-Update driver's current location.
+- 201 when `isNewUser=true`
+- 200 when existing user logs in
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
+```ts
+type AuthResponseDataGoogle = AuthResponseData & {
+  isNewUser?: boolean;
+};
 
-**Request Body:**
-```json
-{
-  "latitude": "number",
-  "longitude": "number"
-}
+type Response = SuccessResponse<AuthResponseDataGoogle>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Location updated successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### POST /api/v1/auth/refresh
+
+Auth: Public
+
+Request body:
+
+```ts
+type RefreshTokenRequest = {
+  refreshToken: string;
+};
 ```
 
-### Get Active Assignments
-**GET** `/drivers/me/assignments`
+Response (200):
 
-Get driver's active order assignments.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
+```ts
+type Response = SuccessResponse<AuthResponseData>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Active assignments retrieved successfully",
-  "data": [
-    {
-      "assignmentId": "number",
-      "order": {
-        "orderId": "number",
-        "orderUuid": "string",
-        "orderNumber": "string",
-        "status": "string",
-        "pickup": {
-          "address": "string",
-          "latitude": "number",
-          "longitude": "number",
-          "contactName": "string",
-          "contactPhone": "string"
-        },
-        "delivery": {
-          "address": "string",
-          "latitude": "number",
-          "longitude": "number",
-          "contactName": "string",
-          "contactPhone": "string"
-        },
-        "fareBreakdown": {
-          "basePrice": "number",
-          "distanceKm": "number",
-          "distancePrice": "number",
-          "weightSurcharge": "number",
-          "platformFee": "number",
-          "subtotalBeforeTax": "number",
-          "gstAmount": "number",
-          "totalPrice": "number",
-          "currency": "string"
-        }
-      },
-      "assignedAt": "string",
-      "acceptedAt": "string",
-      "status": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+### POST /api/v1/auth/logout
 
-### Get Earnings
-**GET** `/drivers/me/earnings`
+Auth: Bearer token required
 
-Get driver's earnings summary.
+Response (200):
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Earnings retrieved successfully",
-  "data": {
-    "total": "number",
-    "today": "number",
-    "thisWeek": "number",
-    "thisMonth": "number",
-    "averageOrderValue": "number",
-    "totalDistanceKm": "number",
-    "recentOrders": [
-      {
-        "orderId": "number",
-        "orderNumber": "string",
-        "completedAt": "string",
-        "earnings": "number",
-        "distanceKm": "number"
-      }
-    ]
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Get Rating
-**GET** `/drivers/me/rating`
-
-Get driver's rating statistics.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Rating retrieved successfully",
-  "data": {
-    "averageRating": "number",
-    "totalRatings": "number"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+```ts
+type LogoutData = { message: string };
+type Response = SuccessResponse<LogoutData>;
 ```
 
 ---
 
-## 📦 Orders
+## Users
 
-### Base URL
-```
-https://api.shipzy.com/api/v1/orders
-```
+Base: `/api/v1/users`
 
-### Calculate Fare
-**POST** `/orders/calculate-fare`
+All `/users/*` endpoints require `Authorization: Bearer <accessToken>`.
 
-Calculate fare estimate for a delivery.
+### GET /api/v1/users/me
 
-**Request Body:**
-```json
-{
-  "deliveryTypeId": "number",
-  "vehicleCategoryId": "number",
-  "weightTierId": "number",
-  "packageTypeId": "number",
-  "pickup": {
-    "latitude": "number",
-    "longitude": "number"
-  },
-  "drop": {
-    "latitude": "number",
-    "longitude": "number"
-  }
-}
+Auth: Bearer token required
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<BaseUser>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Fare calculated successfully",
-  "data": {
-    "basePrice": "number",
-    "distanceKm": "number",
-    "distancePrice": "number",
-    "weightSurcharge": "number",
-    "platformFee": "number",
-    "subtotalBeforeTax": "number",
-    "gstAmount": "number",
-    "totalPrice": "number",
-    "currency": "string",
-    "estimatedDurationMins": "number"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### PUT /api/v1/users/me
+
+Auth: Bearer token required
+
+Request body:
+
+```ts
+type UpdateProfileRequest = {
+  fullName?: string;            // 2..100
+  email?: string;               // email
+  profilePictureUrl?: string;   // url
+  phoneNumber?: string;         // 10..20
+};
 ```
 
-### Create Order
-**POST** `/orders`
+Response (200):
 
-Create a new delivery order.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
+```ts
+type Response = SuccessResponse<BaseUser>;
 ```
 
-**Request Body:**
-```json
-{
-  "deliveryTypeId": "number",
-  "vehicleCategoryId": "number",
-  "weightTierId": "number",
-  "packageTypeId": "number",
-  "paymentMethodId": "number",
-  "packageDescription": "string",
-  "specialInstructions": "string",
-  "scheduledPickupTime": "string",
-  "scheduledDeliveryTime": "string",
-  "declaredValue": "number",
-  "notifyRecipientSms": "boolean",
-  "couponCode": "string",
-  "fareBreakdown": {
-    "basePrice": "number",
-    "distanceKm": "number",
-    "distancePrice": "number",
-    "weightSurcharge": "number",
-    "platformFee": "number",
-    "subtotalBeforeTax": "number",
-    "gstAmount": "number",
-    "totalPrice": "number",
-    "currency": "string"
-  },
-  "pickup": {
-    "fullAddress": "string",
-    "city": "string",
-    "state": "string",
-    "postalCode": "string",
-    "latitude": "number",
-    "longitude": "number",
-    "building": "string",
-    "floor": "string",
-    "flatNumber": "string",
-    "landmark": "string",
-    "howToReach": "string",
-    "contactName": "string",
-    "contactPhone": "string"
-  },
-  "delivery": {
-    "fullAddress": "string",
-    "city": "string",
-    "state": "string",
-    "postalCode": "string",
-    "latitude": "number",
-    "longitude": "number",
-    "building": "string",
-    "floor": "string",
-    "flatNumber": "string",
-    "landmark": "string",
-    "howToReach": "string",
-    "contactName": "string",
-    "contactPhone": "string"
-  }
-}
+### GET /api/v1/users/me/addresses
+
+Auth: Bearer token required
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<SavedAddress[]>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order created successfully",
-  "data": {
-    "orderId": "number",
-    "orderUuid": "string",
-    "orderNumber": "string",
-    "status": "string",
-    "fareBreakdown": {
-      "basePrice": "number",
-      "distanceKm": "number",
-      "distancePrice": "number",
-      "weightSurcharge": "number",
-      "platformFee": "number",
-      "subtotalBeforeTax": "number",
-      "gstAmount": "number",
-      "totalPrice": "number",
-      "currency": "string"
-    },
-    "estimatedDistanceKm": "number",
-    "estimatedDurationMins": "number",
-    "createdAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### POST /api/v1/users/me/addresses
+
+Auth: Bearer token required
+
+Request body:
+
+```ts
+type SaveAddressRequest = {
+  fullAddress: string;  // 5..500
+  city: string;         // 2..100
+  state: string;        // 2..100
+  postalCode: string;   // 4..10
+  latitude: number;
+  longitude: number;
+  building?: string | null;
+  floor?: string | null;
+  flatNumber?: string | null;
+  landmark?: string | null;
+
+  addressType?: "home" | "work" | "other";
+  label?: string;       // <= 50
+  isDefault?: boolean;
+};
 ```
 
-### List Orders
-**GET** `/orders`
+Response (201):
 
-Get paginated list of user's orders.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
+```ts
+type Response = SuccessResponse<SavedAddress>;
 ```
 
-**Query Parameters:**
-- `page` (number): Page number (default: 1)
-- `limit` (number): Items per page (default: 20)
-- `status` (string): Filter by order status (active, completed, cancelled)
-- `dateFrom` (string): Filter orders from this date
-- `dateTo` (string): Filter orders to this date
-- `sortBy` (string): Sort field
-- `sortOrder` (string): Sort order (asc, desc)
+### DELETE /api/v1/users/me/addresses/:id
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Orders retrieved successfully",
-  "data": [
-    {
-      "orderId": "number",
-      "orderUuid": "string",
-      "orderNumber": "string",
-      "status": "string",
-      "createdAt": "string",
-      "pickup": {
-        "address": "string",
-        "city": "string"
-      },
-      "delivery": {
-        "address": "string",
-        "city": "string"
-      },
-      "totalPrice": "number",
-      "estimatedDeliveryTime": "string"
-    }
-  ],
-  "meta": {
-    "pagination": {
-      "page": "number",
-      "limit": "number",
-      "total": "number",
-      "totalPages": "number"
-    }
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+Auth: Bearer token required
+
+Path params:
+
+```ts
+type Params = { id: number };
 ```
 
-### Get Available Orders (Drivers)
-**GET** `/orders/available`
+Response (200):
 
-Get available orders for drivers to accept.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Query Parameters:**
-- `latitude` (number): Driver's current latitude
-- `longitude` (number): Driver's current longitude
-- `radius` (number): Search radius in km (default: 10)
-- `limit` (number): Maximum results (default: 20)
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Available orders retrieved successfully",
-  "data": [
-    {
-      "orderId": "number",
-      "orderUuid": "string",
-      "orderNumber": "string",
-      "deliveryTypeDisplay": "string",
-      "vehicleCategoryDisplay": "string",
-      "createdAt": "string",
-      "pickup": {
-        "address": "string",
-        "city": "string",
-        "coordinates": {
-          "latitude": "number",
-          "longitude": "number"
-        }
-      },
-      "delivery": {
-        "address": "string",
-        "city": "string",
-        "coordinates": {
-          "latitude": "number",
-          "longitude": "number"
-        }
-      },
-      "fareBreakdown": {
-        "basePrice": "number",
-        "distanceKm": "number",
-        "distancePrice": "number",
-        "weightSurcharge": "number",
-        "platformFee": "number",
-        "subtotalBeforeTax": "number",
-        "gstAmount": "number",
-        "totalPrice": "number",
-        "currency": "string"
-      },
-      "estimatedDistanceKm": "number",
-      "distanceFromDriverKm": "number",
-      "packageDescription": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Get Order Details
-**GET** `/orders/:id`
-
-Get detailed information about a specific order.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order details retrieved successfully",
-  "data": {
-    "orderId": "number",
-    "orderUuid": "string",
-    "orderNumber": "string",
-    "status": "string",
-    "statusId": "number",
-    "deliveryTypeId": "number",
-    "deliveryTypeDisplay": "string",
-    "vehicleCategoryId": "number",
-    "vehicleCategoryDisplay": "string",
-    "packageDescription": "string",
-    "packageTypeId": "number",
-    "weightTierId": "number",
-    "weightTierDisplay": "string",
-    "specialInstructions": "string",
-    "pickup": {
-      "locationId": "number",
-      "address": "string",
-      "building": "string",
-      "floor": "string",
-      "flat": "string",
-      "landmark": "string",
-      "city": "string",
-      "state": "string",
-      "postalCode": "string",
-      "latitude": "number",
-      "longitude": "number",
-      "contactName": "string",
-      "contactPhone": "string"
-    },
-    "delivery": {
-      "locationId": "number",
-      "address": "string",
-      "building": "string",
-      "floor": "string",
-      "flat": "string",
-      "landmark": "string",
-      "city": "string",
-      "state": "string",
-      "postalCode": "string",
-      "latitude": "number",
-      "longitude": "number",
-      "contactName": "string",
-      "contactPhone": "string"
-    },
-    "fareBreakdown": {
-      "basePrice": "number",
-      "distanceKm": "number",
-      "distancePrice": "number",
-      "weightSurcharge": "number",
-      "platformFee": "number",
-      "subtotalBeforeTax": "number",
-      "gstAmount": "number",
-      "totalPrice": "number",
-      "currency": "string"
-    },
-    "client": {
-      "userId": "number",
-      "name": "string",
-      "phone": "string",
-      "profilePictureUrl": "string"
-    },
-    "courier": {
-      "userId": "number",
-      "name": "string",
-      "phone": "string",
-      "profilePictureUrl": "string",
-      "vehicle": {
-        "vehicleId": "number",
-        "categoryId": "number",
-        "category": "string",
-        "isActive": "boolean",
-        "vehicleNumber": "string",
-        "model": "string",
-        "year": "number"
-      },
-      "rating": {
-        "averageRating": "number",
-        "totalRatings": "number"
-      }
-    },
-    "timeline": {
-      "confirmedAt": "string",
-      "assignedAt": "string",
-      "pickedUpAt": "string",
-      "deliveredAt": "string",
-      "cancelledAt": "string"
-    },
-    "estimatedDistanceKm": "number",
-    "actualDistanceKm": "number",
-    "actualDurationMins": "number",
-    "createdAt": "string",
-    "updatedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Cancel Order
-**POST** `/orders/:id/cancel`
-
-Cancel an existing order.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "cancellationReason": "string"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order cancelled successfully",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Accept Order (Driver)
-**POST** `/orders/:id/accept`
-
-Accept an order as a driver.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order accepted successfully",
-  "data": {
-    "assignmentId": "number",
-    "orderId": "number",
-    "acceptedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Update Order Status (Driver)
-**PUT** `/orders/:id/status`
-
-Update order status (picked up / delivered).
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "status": "picked_up" | "delivered"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order status updated successfully",
-  "data": {
-    "orderId": "number",
-    "status": "string",
-    "updatedAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Rate Order
-**POST** `/orders/:id/rate`
-
-Rate a completed order.
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "rating": "number",
-  "comment": "string",
-  "anonymous": "boolean"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order rated successfully",
-  "data": {
-    "ratingId": "number",
-    "orderId": "number",
-    "rating": "number",
-    "comment": "string",
-    "isAnonymous": "boolean",
-    "createdAt": "string"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+```ts
+type DeleteAddressData = { message: string };
+type Response = SuccessResponse<DeleteAddressData>;
 ```
 
 ---
 
-## 📍 Addresses
+## Drivers
 
-### Base URL
-```
-https://api.shipzy.com/api/v1/addresses
-```
+Base: `/api/v1/drivers`
 
-### Search Addresses
-**POST** `/addresses/search`
+All `/drivers/*` endpoints require:
 
-Search for places using Mapbox Geocoding API.
+- `Authorization: Bearer <accessToken>`
+- Role: `courier`
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
+### GET /api/v1/drivers/me
 
-**Request Body:**
-```json
-{
-  "query": "string",
-  "proximity": "string",
-  "limit": "number"
-}
-```
+Response (200):
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Found X suggestions for 'query'",
-  "data": [
-    {
-      "placeName": "string",
-      "address": "string",
-      "latitude": "number",
-      "longitude": "number",
-      "confidence": "number",
-      "mapboxId": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+```ts
+type DriverStatus = {
+  isAvailable: boolean;
+  isOnline: boolean;
+  totalDeliveriesToday?: number;
+  currentLocation: Coordinates | null;
+  lastLocationUpdate: ISODateTime | null;
+};
 
-### Retrieve Place Details
-**POST** `/addresses/retrieve`
+type Vehicle = {
+  vehicleId?: number;
+  categoryId?: number;
+  category?: string;
+  isActive?: boolean;
+  vehicleNumber?: string;
+  model?: string;
+  year?: number;
+} | null;
 
-Get detailed information about a specific place.
+type DriverEarnings = {
+  total: number;
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  averageOrderValue: number;
+  totalDistanceKm: number;
+};
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
+type DriverProfile = {
+  userId: number;
+  userUuid: UUID;
+  role: "courier";
+  phoneNumber: string | null;
+  fullName: string;
+  email: string;
+  profilePictureUrl: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  status: DriverStatus;
+  vehicle: Vehicle;
+  earnings: DriverEarnings;
+  createdAt: ISODateTime;
+  updatedAt?: ISODateTime;
+};
 
-**Request Body:**
-```json
-{
-  "mapboxId": "string",
-  "sessionToken": "string"
-}
+type Response = SuccessResponse<DriverProfile>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Place details retrieved successfully",
-  "data": {
-    "placeName": "string",
-    "fullAddress": "string",
-    "city": "string",
-    "state": "string",
-    "postalCode": "string",
-    "country": "string",
-    "latitude": "number",
-    "longitude": "number",
-    "coordinates": {
-      "latitude": "number",
-      "longitude": "number"
-    }
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### PUT /api/v1/drivers/me
+
+Request body:
+
+```ts
+type UpdateDriverProfileRequest = {
+  fullName?: string;
+  email?: string;
+  profilePictureUrl?: string;
+  phoneNumber?: string;
+};
 ```
 
-### Reverse Geocode
-**POST** `/addresses/reverse-geocode`
+Response (200):
 
-Convert coordinates to human-readable address.
+```ts
+type UpdatedDriverProfile = {
+  userId: number;
+  fullName: string;
+  email: string | null;
+  profilePictureUrl: string | null;
+  updatedAt: ISODateTime;
+};
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "latitude": "number",
-  "longitude": "number"
-}
+type Response = SuccessResponse<UpdatedDriverProfile>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Reverse geocoding successful",
-  "data": {
-    "fullAddress": "string",
-    "city": "string",
-    "state": "string",
-    "postalCode": "string",
-    "country": "string",
-    "latitude": "number",
-    "longitude": "number"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### PUT /api/v1/drivers/me/availability
+
+Request body:
+
+```ts
+type UpdateAvailabilityRequest = {
+  isAvailable: boolean;
+  isOnline?: boolean;
+  currentLocation?: Coordinates;
+};
 ```
 
-### Get Directions
-**POST** `/addresses/directions`
+Response (200):
 
-Get turn-by-turn directions between two points.
+```ts
+type AvailabilityData = {
+  courierId: number;
+  isAvailable: boolean;
+  isOnline: boolean;
+  updatedAt: ISODateTime;
+};
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "origin": {
-    "latitude": "number",
-    "longitude": "number"
-  },
-  "destination": {
-    "latitude": "number",
-    "longitude": "number"
-  },
-  "profile": "driving" | "walking" | "cycling"
-}
+type Response = SuccessResponse<AvailabilityData>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Directions retrieved successfully",
-  "data": {
-    "distanceKm": "number",
-    "durationMinutes": "number",
-    "geometry": {
-      "type": "LineString",
-      "coordinates": [[number, number]]
-    },
-    "steps": [
-      {
-        "instruction": "string",
-        "distance": "number",
-        "duration": "number"
-      }
-    ]
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### PUT /api/v1/drivers/me/location
+
+Request body:
+
+```ts
+type UpdateLocationRequest = Coordinates;
 ```
 
-### Calculate Distance
-**POST** `/addresses/distance`
+Response (200):
 
-Calculate distance and duration between two points.
+```ts
+type LocationData = {
+  courierId: number;
+  latitude: number;
+  longitude: number;
+  lastLocationUpdate: ISODateTime;
+};
 
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Request Body:**
-```json
-{
-  "lat1": "number",
-  "lon1": "number",
-  "lat2": "number",
-  "lon2": "number"
-}
+type Response = SuccessResponse<LocationData>;
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Distance calculated successfully",
-  "data": {
-    "distanceKm": "number",
-    "durationMinutes": "number"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### GET /api/v1/drivers/me/assignments
+
+Response (200):
+
+```ts
+type EarningsBreakdown = {
+  basePayout: number;
+  distanceEarning: number;
+  weightCompensation: number;
+  peakHourBonus: number;
+  urgencyBonus: number;
+  onTimeBonus: number;
+  qualityBonus: number;
+  platformCommission: number;
+  customerTip: number;
+  grossEarning: number;
+  netEarning: number;
+};
+
+type ActiveAssignment = {
+  assignmentId: number;
+  orderId: number;
+  orderUuid?: UUID;
+  orderNumber?: string;
+  orderStatus?: string;
+  assignmentStatus?: string;
+  vehicleCategory?: string | null;
+  vehicleCategoryDisplay?: string | null;
+  packageType?: string | null;
+  weightTier?: {
+    id?: number;
+    name?: string;
+    minWeightKg?: number;
+    maxWeightKg?: number;
+  } | null;
+  pickup: {
+    address?: string | null;
+    building?: string | null;
+    landmark?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
+  };
+  delivery: {
+    address?: string | null;
+    building?: string | null;
+    landmark?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    contactName?: string | null;
+    contactPhone?: string | null;
+  };
+  packageDescription?: string | null;
+  specialInstructions?: string | null;
+  declaredValue?: number | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  driverEarnings: number;
+  earningsBreakdown: EarningsBreakdown;
+  estimatedDeliveryTime: number;       // minutes
+  assignedAt?: ISODateTime | null;
+  acceptedAt?: ISODateTime | null;
+};
+
+type Response = SuccessResponse<ActiveAssignment[]>;
 ```
 
----
+### GET /api/v1/drivers/me/earnings
 
-## 📊 Static Data
+Query params:
 
-### Base URL
-```
-https://api.shipzy.com/api/v1/static
-```
-
-### Get Delivery Types
-**GET** `/static/delivery-types`
-
-Get all available delivery types with pricing.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Delivery types retrieved successfully",
-  "data": [
-    {
-      "deliveryTypeId": "number",
-      "name": "string",
-      "displayName": "string",
-      "description": "string",
-      "pricing": {
-        "baseRate": "number",
-        "perKmRate": "number"
-      },
-      "labels": ["string"],
-      "supportedVehicles": ["string"],
-      "sortOrder": "number",
-      "isActive": "boolean"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+```ts
+type Query = {
+  period?: "today" | "week" | "month" | "year"; // default: "today"
+};
 ```
 
-### Get Weight Tiers
-**GET** `/static/weight-tiers`
+Response (200):
 
-Get all available weight tiers.
+```ts
+type EarningsSummary = {
+  deliveries: {
+    today?: number;
+    total?: number;
+    thisWeek?: number;
+    thisMonth?: number;
+  };
+  earnings: {
+    today?: number;
+    total?: number;
+    thisWeek?: number;
+    thisMonth?: number;
+    averageOrderValue?: number;
+  };
+  totalDistanceKm: number;
+};
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Weight tiers retrieved successfully",
-  "data": [
-    {
-      "tierId": "number",
-      "name": "string",
-      "minWeightKg": "number",
-      "maxWeightKg": "number",
-      "additionalCharge": "number"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+type Response = SuccessResponse<EarningsSummary>;
 ```
 
-### Get Vehicle Categories
-**GET** `/static/vehicle-categories`
+### GET /api/v1/drivers/me/rating
 
-Get all available vehicle categories.
+Response (200):
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Vehicle categories retrieved successfully",
-  "data": [
-    {
-      "categoryId": "number",
-      "name": "string",
-      "description": "string",
-      "maxWeightKg": "number",
-      "icon": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
+```ts
+type DriverRatingStats = {
+  averageRating: number;   // 0..5
+  totalRatings: number;
+  ratingDistribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  lastUpdated: ISODateTime;
+};
 
-### Get Package Types
-**GET** `/static/package-types`
-
-Get all available package types.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Package types retrieved successfully",
-  "data": [
-    {
-      "packageTypeId": "number",
-      "name": "string",
-      "description": "string",
-      "icon": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Get Payment Methods
-**GET** `/static/payment-methods`
-
-Get all available payment methods.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Payment methods retrieved successfully",
-  "data": [
-    {
-      "methodId": "number",
-      "name": "string",
-      "displayName": "string",
-      "description": "string",
-      "isActive": "boolean"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Get Create Order Data
-**GET** `/static/create-order-data`
-
-Get all data needed for the create order screen.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Create order data retrieved successfully",
-  "data": {
-    "deliveryTypes": [
-      {
-        "deliveryTypeId": "number",
-        "name": "string",
-        "displayName": "string",
-        "description": "string",
-        "pricing": {
-          "baseRate": "number",
-          "perKmRate": "number"
-        },
-        "labels": ["string"],
-        "supportedVehicles": ["string"],
-        "sortOrder": "number",
-        "isActive": "boolean"
-      }
-    ],
-    "packageTypes": [
-      {
-        "packageTypeId": "number",
-        "name": "string",
-        "description": "string",
-        "icon": "string"
-      }
-    ],
-    "paymentMethods": [
-      {
-        "methodId": "number",
-        "name": "string",
-        "displayName": "string",
-        "description": "string",
-        "isActive": "boolean"
-      }
-    ]
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### Get Order Statuses
-**GET** `/static/order-statuses`
-
-Get all available order statuses.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Order statuses retrieved successfully",
-  "data": [
-    {
-      "statusId": "number",
-      "name": "string",
-      "description": "string"
-    }
-  ],
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+type Response = SuccessResponse<DriverRatingStats>;
 ```
 
 ---
 
-## 🏥 Health Check
+## Orders
 
-### Health Check
-**GET** `/health`
+Base: `/api/v1/orders`
 
-Check the health status of the API and database connectivity.
+All `/orders/*` endpoints require `Authorization: Bearer <accessToken>`.
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-01T00:00:00.000Z",
-  "uptime": "number",
-  "environment": "development" | "production",
-  "database": {
-    "connected": "boolean",
-    "pool": {
-      "totalConnections": "number",
-      "idleConnections": "number",
-      "waitingConnections": "number"
-    }
-  },
-  "memory": {
-    "used": "number",
-    "total": "number",
-    "external": "number"
-  }
-}
+### POST /api/v1/orders/calculate-fare
+
+Auth: Bearer token required
+
+Request body:
+
+```ts
+type CalculateFareRequest = {
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId: number;
+  packageTypeId?: number | null;
+  pickup: Coordinates;
+  drop: Coordinates;
+};
 ```
 
-### API Version
-**GET** `/api/v1`
+Response (200):
 
-Get API version information.
+```ts
+type Response = SuccessResponse<FareBreakdown>;
+```
 
-**Response:**
-```json
-{
-  "name": "Shipzy API",
-  "version": "1.0.0",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+### POST /api/v1/orders
+
+Auth: Bearer token required + role `client`
+
+Request body:
+
+```ts
+type OrderAddress = {
+  addressId?: number | null;
+  fullAddress: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  latitude: number;
+  longitude: number;
+  building?: string | null;
+  floor?: string | null;
+  flatNumber?: string | null;
+  landmark?: string | null;
+  howToReach?: string | null;
+  contactName: string;
+  contactPhone: string;
+};
+
+type CreateOrderRequest = {
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId: number;
+  packageTypeId?: number | null;
+  paymentMethodId: number;
+
+  packageDescription?: string | null;
+  specialInstructions?: string | null;
+  scheduledPickupTime?: ISODateTime | null;
+  scheduledDeliveryTime?: ISODateTime | null;
+  declaredValue?: number | null;
+  notifyRecipientSms?: boolean;          // default false
+  couponCode?: string | null;
+
+  fareBreakdown: FareBreakdown;
+  pickup: OrderAddress;
+  delivery: OrderAddress;
+};
+```
+
+Response (201):
+
+```ts
+type CreatedOrder = {
+  orderId: number;
+  orderUuid: UUID;
+  orderNumber: string;
+  status: string;                 // typically "pending"
+  fareBreakdown: FareBreakdown;
+  estimatedDistanceKm: number;
+  estimatedDurationMins?: number;
+  createdAt: ISODateTime;
+};
+
+type Response = SuccessResponse<CreatedOrder>;
+```
+
+### GET /api/v1/orders
+
+Auth: Bearer token required + role `client`
+
+Query params:
+
+```ts
+type ListOrdersQuery = {
+  page?: number;                   // default 1
+  limit?: number;                  // default 20
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";     // default "desc"
+  status?: "active" | "completed" | "cancelled";
+  dateFrom?: ISODateTime;
+  dateTo?: ISODateTime;
+};
+```
+
+Response (200):
+
+```ts
+type OrderListItem = {
+  orderId: number;
+  orderUuid: UUID;
+  orderNumber?: string | null;
+  status: string;
+  statusId: number;
+  deliveryTypeId: number;
+  deliveryTypeDisplay?: string;
+  vehicleCategoryId: number;
+  vehicleCategoryDisplay?: string;
+  packageDescription?: string | null;
+  weightTierId?: number | null;
+  weightTierDisplay?: string | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  actualDurationMins?: number | null;
+  totalPrice: number;
+  createdAt: ISODateTime;
+  pickup: { address?: string | null; city?: string | null };
+  delivery: { address?: string | null; city?: string | null };
+  courier?: { name?: string | null; photo?: string | null } | null;
+};
+
+type Response = PaginatedResponse<OrderListItem>;
+```
+
+### GET /api/v1/orders/available
+
+Auth: Bearer token required + role `courier`
+
+Query params:
+
+```ts
+type AvailableOrdersQuery = {
+  latitude: number;
+  longitude: number;
+  radius?: number; // km, default 10
+  limit?: number;  // default 20
+};
+```
+
+Response (200):
+
+```ts
+type AvailableOrderItem = {
+  orderId: number;
+  orderUuid: UUID;
+  orderNumber: string;
+  deliveryTypeDisplay: string;
+  vehicleCategoryDisplay: string;
+  createdAt: ISODateTime;
+  pickup: {
+    address: string;
+    landmark?: string | null;
+    city: string;
+    coordinates: Coordinates;
+  };
+  delivery: {
+    address: string;
+    landmark?: string | null;
+    city: string;
+    coordinates: Coordinates;
+  };
+  fareBreakdown: FareBreakdown;
+  estimatedDistanceKm: number;
+  distanceFromDriverKm: number;
+  packageDescription?: string | null;
+};
+
+type Response = SuccessResponse<AvailableOrderItem[]>;
+```
+
+### GET /api/v1/orders/:id
+
+Auth: Bearer token required + role `client` or `courier`
+
+Path params:
+
+```ts
+type Params = { id: number };
+```
+
+Response (200):
+
+```ts
+type OrderDetails = {
+  orderId: number;
+  orderUuid: UUID;
+  orderNumber: string;
+  status: string;
+  statusId: number;
+  deliveryTypeId: number;
+  deliveryTypeDisplay?: string;
+  vehicleCategoryId: number;
+  vehicleCategoryDisplay?: string;
+  packageDescription?: string | null;
+  packageTypeId?: number | null;
+  weightTierId?: number | null;
+  weightTierDisplay?: string | null;
+  specialInstructions?: string | null;
+
+  pickup: {
+    locationId?: number;
+    address: string;
+    building?: string | null;
+    floor?: string | null;
+    flat?: string | null;
+    landmark?: string | null;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    latitude: number;
+    longitude: number;
+    contactName?: string;
+    contactPhone?: string;
+  };
+  delivery: {
+    locationId?: number;
+    address: string;
+    building?: string | null;
+    floor?: string | null;
+    flat?: string | null;
+    landmark?: string | null;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    latitude: number;
+    longitude: number;
+    contactName?: string;
+    contactPhone?: string;
+  };
+
+  fareBreakdown: FareBreakdown;
+
+  client?: {
+    userId: number;
+    name?: string;
+    phone?: string;
+    profilePictureUrl?: string | null;
+  };
+  courier?: {
+    userId: number;
+    name?: string;
+    phone?: string;
+    profilePictureUrl?: string | null;
+    vehicle?: {
+      vehicleId?: number;
+      categoryId?: number;
+      category?: string;
+      isActive?: boolean;
+      vehicleNumber?: string;
+      model?: string;
+      year?: number;
+    } | null;
+    rating?: { averageRating: number; totalRatings: number };
+  } | null;
+
+  timeline: {
+    confirmedAt: ISODateTime;
+    assignedAt?: ISODateTime;
+    pickedUpAt?: ISODateTime;
+    deliveredAt?: ISODateTime;
+    cancelledAt?: ISODateTime;
+  };
+
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  actualDurationMins?: number | null;
+  createdAt: ISODateTime;
+};
+
+type Response = SuccessResponse<OrderDetails>;
+```
+
+### POST /api/v1/orders/:id/cancel
+
+Auth: Bearer token required + role `client`
+
+Path params:
+
+```ts
+type Params = { id: number };
+```
+
+Request body:
+
+```ts
+type CancelOrderRequest = { cancellationReason: string };
+```
+
+Response (200):
+
+```ts
+type CancelOrderResult = {
+  success: boolean;
+  orderId?: number;
+  status?: string;
+  refundAmount?: number;
+  refundStatus?: string;
+  error?: string;
+  // Note: the stored procedure may return additional fields
+  [key: string]: unknown;
+};
+
+type Response = SuccessResponse<CancelOrderResult>;
+```
+
+### POST /api/v1/orders/:id/accept
+
+Auth: Bearer token required + role `courier`
+
+Path params:
+
+```ts
+type Params = { id: number };
+```
+
+Response (200):
+
+```ts
+type AcceptOrderData = {
+  assignmentId: number;
+  orderId: number;
+  courierId: number;
+  assignedAt: ISODateTime;
+};
+
+type Response = SuccessResponse<AcceptOrderData>;
+```
+
+### PUT /api/v1/orders/:id/status
+
+Auth: Bearer token required + role `courier`
+
+Path params:
+
+```ts
+type Params = { id: number };
+```
+
+Request body:
+
+```ts
+type UpdateOrderStatusRequest = {
+  status: "picked_up" | "in_transit" | "delivered";
+};
+```
+
+Response (200):
+
+```ts
+type UpdateOrderStatusData = {
+  orderId: number;
+  status: string;
+  timestamp: ISODateTime;
+};
+
+type Response = SuccessResponse<UpdateOrderStatusData>;
+```
+
+### POST /api/v1/orders/:id/rate
+
+Auth: Bearer token required + role `client`
+
+Path params:
+
+```ts
+type Params = { id: number };
+```
+
+Request body:
+
+```ts
+type RateOrderRequest = {
+  rating: number;          // 1..5
+  comment?: string | null; // <= 500
+  anonymous?: boolean;
+};
+```
+
+Response (200):
+
+```ts
+type RatingResponse = {
+  ratingId: number;
+  orderId: number;
+  driverId: number;
+  customerId: number;
+  rating: number;
+  isAnonymous?: boolean;
+  comment?: string | null;
+  createdAt: ISODateTime;
+};
+
+type Response = SuccessResponse<RatingResponse>;
 ```
 
 ---
 
-## ❌ Error Responses
+## Addresses
 
-All endpoints return errors in the following format:
+Base: `/api/v1/addresses`
 
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "error": {
-    "code": "string",
-    "details": "any"
-  },
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
+All `/addresses/*` endpoints require `Authorization: Bearer <accessToken>`.
+
+### POST /api/v1/addresses/search
+
+Request body:
+
+```ts
+type SearchAddressesRequest = {
+  query: string;                 // 2..256
+  proximity?: Coordinates;
+  country?: string;              // "IN" or "IN,US" (comma-separated, uppercase 2-letter)
+  types?: ("address" | "poi" | "place" | "neighborhood" | "locality" | "region" | "country")[];
+  limit?: number;                // 1..10
+};
 ```
 
-### Common HTTP Status Codes
+Response (200):
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Bad Request / Validation Error |
-| 401 | Unauthorized |
-| 403 | Forbidden |
-| 404 | Not Found |
-| 409 | Conflict |
-| 429 | Too Many Requests |
-| 500 | Internal Server Error |
-| 503 | Service Unavailable |
+```ts
+type AddressSearchSuggestion = {
+  mapboxId: string;
+  name: string;
+  fullAddress: string;
+  placeType: string;
+  coordinates?: Coordinates;
+  context: Record<string, string | undefined>;
+  sessionToken: string;
+};
+
+type Response = SuccessResponse<AddressSearchSuggestion[]>;
+```
+
+### POST /api/v1/addresses/retrieve
+
+Request body:
+
+```ts
+type RetrievePlaceRequest = {
+  mapboxId: string;
+  sessionToken: string;
+};
+```
+
+Response (200):
+
+```ts
+type RetrievedPlace = {
+  mapboxId: string;
+  name: string;
+  fullAddress: string;
+  coordinates: Coordinates;
+  context: Record<string, string | undefined>;
+  featureType: string;
+  bbox: number[] | null;
+};
+
+type Response = SuccessResponse<RetrievedPlace>;
+```
+
+### POST /api/v1/addresses/reverse-geocode
+
+Request body:
+
+```ts
+type ReverseGeocodeRequest = {
+  latitude: number;
+  longitude: number;
+  types?: ("address" | "poi" | "place" | "neighborhood" | "locality" | "region" | "country")[];
+  limit?: number; // 1..5
+};
+```
+
+Response (200):
+
+```ts
+type ReverseGeocodeResultItem = {
+  mapboxId: string;
+  name: string;
+  fullAddress: string;
+  placeName: string | null;
+  coordinates: Coordinates;
+  featureType: string;
+  properties: { accuracy: number } | null;
+  context: { id: string; text: string }[] | null;
+  bbox: number[] | null;
+  relevance: number | null;
+};
+
+type ReverseGeocodeResponseData = {
+  coordinates: Coordinates;
+  results: ReverseGeocodeResultItem[];
+  total: number;
+};
+
+type Response = SuccessResponse<ReverseGeocodeResponseData>;
+```
+
+### POST /api/v1/addresses/directions
+
+Request body:
+
+```ts
+type DirectionsRequest = {
+  origin: Coordinates;
+  destination: Coordinates;
+  profile?: "driving" | "walking" | "cycling"; // default "driving"
+};
+```
+
+Response (200):
+
+```ts
+type DirectionsResponseData = {
+  distance: number;              // meters
+  duration: number;              // seconds
+  geometry: {
+    type: "LineString";
+    coordinates: [number, number][]; // [lng, lat]
+  };
+  distanceKm: number;
+  durationMinutes: number;
+  origin: Coordinates;
+  destination: Coordinates;
+};
+
+type Response = SuccessResponse<DirectionsResponseData>;
+```
+
+### POST /api/v1/addresses/distance
+
+Request body:
+
+```ts
+type DistanceRequest = {
+  lat1: number;
+  lon1: number;
+  lat2: number;
+  lon2: number;
+};
+```
+
+Response (200):
+
+```ts
+type DistanceResponseData = { distanceKm: number };
+type Response = SuccessResponse<DistanceResponseData>;
+```
 
 ---
 
-## 🚦 Rate Limiting
+## Static
 
-### General Endpoints
-- **Limit**: 100 requests per minute
-- **Window**: 60 seconds
+Base: `/api/v1/static`
 
-### Authentication Endpoints
-- **Limit**: 10 requests per minute
-- **Window**: 60 seconds
+Static endpoints are **public** (no auth required).
 
-### Headers
-Rate limiting information is included in response headers:
+```ts
+type DeliveryType = {
+  deliveryTypeId: number;
+  name: string;
+  displayName?: string;
+  description?: string | null;
+  pricing?: { baseRate: number; perKmRate: number };
+  supportedVehicles?: string[];
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+type WeightTier = {
+  tierId: number;
+  name: string;
+  minWeightKg: number;
+  maxWeightKg: number;
+  additionalCharge: number;
+};
+
+type VehicleCategory = {
+  categoryId: number;
+  name: string;
+  description?: string;
+  maxWeightKg?: number;
+  icon?: string;
+};
+
+type PackageType = {
+  packageTypeId: number;
+  name: string;
+  description?: string;
+  icon?: string;
+};
+
+type StaticPaymentMethod = {
+  methodId: number;
+  name: string;
+  displayName?: string;
+  description?: string;
+  isActive?: boolean;
+};
+
+type CreateOrderData = {
+  deliveryTypes: DeliveryType[];
+  packageTypes: PackageType[];
+  paymentMethods: StaticPaymentMethod[];
+};
+
+type OrderStatus = {
+  statusId: number;
+  name: string;
+  description?: string;
+};
 ```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1640995200
+
+### GET /api/v1/static/delivery-types
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<DeliveryType[]>;
+```
+
+### GET /api/v1/static/weight-tiers
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<WeightTier[]>;
+```
+
+### GET /api/v1/static/vehicle-categories
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<VehicleCategory[]>;
+```
+
+### GET /api/v1/static/package-types
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<PackageType[]>;
+```
+
+### GET /api/v1/static/payment-methods
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<StaticPaymentMethod[]>;
+```
+
+### GET /api/v1/static/create-order-data
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<CreateOrderData>;
+```
+
+### GET /api/v1/static/order-statuses
+
+Response (200):
+
+```ts
+type Response = SuccessResponse<OrderStatus[]>;
 ```
 
 ---
 
-## 🔑 Authentication
+## Health
 
-Most endpoints require JWT authentication. Include the access token in the Authorization header:
+### GET /health
 
+Auth: Public
+
+Response (200):
+
+```ts
+type HealthOk = {
+  status: "ok";
+  timestamp: ISODateTime;
+  uptime: number;
+  environment: string;
+  database: {
+    connected: boolean;
+    pool: {
+      totalConnections: number;
+      idleConnections: number;
+      waitingConnections: number;
+    };
+  };
+  memory: {
+    used: number;     // MB
+    total: number;    // MB
+    external: number; // MB
+  };
+};
 ```
-Authorization: Bearer <your_access_token>
+
+Response (503):
+
+```ts
+type HealthError = {
+  status: "error";
+  timestamp: ISODateTime;
+  error: string;
+  database: { connected: false };
+};
 ```
 
-### Token Expiration
-- **Access Token**: 7 days
-- **Refresh Token**: 30 days
+### GET /api/v1
 
-Use the refresh token endpoint to obtain a new access token before expiration.
+Auth: Public
 
-### Role-Based Access
-Some endpoints have role restrictions:
-- **client**: For customers placing and managing orders
-- **courier**: For drivers accepting and delivering orders
+```ts
+type ApiInfo = {
+  name: string;
+  version: string;
+  timestamp: ISODateTime;
+};
+```
 
 ---
 
-## 📝 Notes
+## Errors
 
-- All timestamps are in ISO 8601 format (UTC)
-- All monetary values are in the local currency
-- Coordinates use WGS84 decimal degrees format
-- Pagination starts from page 1
-- Maximum page size is 100 items
-- All address and location APIs require authentication
-- Static data endpoints are public and do not require authentication
+Errors are returned in a small number of shapes depending on where they occur (validation vs operational errors vs not-found vs rate-limit). Frontend should handle these as a union.
+
+### ErrorResponse (common)
+
+```ts
+type ValidationErrorItem = { field: string; message?: string };
+
+type ErrorResponse = {
+  success: false;
+  message: string;
+  timestamp: ISODateTime;
+  errors?: ValidationErrorItem[] | unknown | null;
+  error?: string;          // some auth provider errors
+  path?: string;           // notFound handler
+  retryAfter?: number;     // rate limiting
+};
+```
+
+Common status codes:
+
+- `400` validation
+- `401` authentication / token invalid
+- `403` authorization
+- `404` route not found
+- `409` constraint violation
+- `429` rate limited
+- `500` unexpected server error
 
 ---
 
-## 🧪 Testing
+## Rate Limiting
 
-For testing purposes, you can use the following endpoints:
+Global rate limiting is enabled. Auth endpoints have stricter limits than other routes.
 
-**Health Check:**
+When rate-limited:
+
+```ts
+type RateLimitResponse = {
+  success: false;
+  message: "Rate limit exceeded";
+  retryAfter: number;
+  timestamp: ISODateTime;
+};
 ```
-GET /health
-```
-
-Returns the current status of the API and database connectivity.
-
-**API Version:**
-```
-GET /api/v1
-```
-
-Returns API version information.
-
----
-
-*Last updated: March 2026*

@@ -133,77 +133,39 @@ export default {
   // ============ COURIER ASSIGNMENTS ============
 
   /**
-   * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
+   * Find courier's active assignments
+   * No master-table JOINs — delivery type, vehicle category, weight tier all in snapshot JSONB
    */
   FIND_COURIER_ACTIVE_ASSIGNMENTS: `
-      SELECT
-          ca.assignment_id AS "assignmentId",
-          ca.order_id AS "orderId",
-          o.order_uuid AS "orderUuid",
-          o.order_number AS "orderNumber",
-          o.status AS "orderStatus",
-          ca.status AS "assignmentStatus",
+    SELECT
+      ca.assignment_id     AS "assignmentId",
+      ca.order_id          AS "orderId",
+      o.order_uuid         AS "orderUuid",
+      o.order_number       AS "orderNumber",
+      o.status             AS "orderStatus",
+      ca.status            AS "assignmentStatus",
 
-          -- Vehicle and package info
-          vc.name AS "vehicleCategory",
-          vc.display_name AS "vehicleCategoryDisplay",
-          pt.name AS "packageType",
-          wt.tier_id AS "weightTierId",
-          wt.name AS "weightTierName",
-          wt.min_weight_kg AS "weightTierMin",
-          wt.max_weight_kg AS "weightTierMax",
+      -- Whole JSONB location objects
+      o.pickup_location    AS "pickup",
+      o.delivery_location  AS "delivery",
 
-          -- OPTIMIZED: Pickup location from JSONB
-          o.pickup_location->>'fullAddress' AS "pickupAddress",
-          o.pickup_location->>'building' AS "pickupBuilding",
-          o.pickup_location->>'landmark' AS "pickupLandmark",
-          o.pickup_location->>'city' AS "pickupCity",
-          o.pickup_location->>'state' AS "pickupState",
-          o.pickup_location->>'postalCode' AS "pickupPostalCode",
-          (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
-          (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
-          o.pickup_location->>'contactName' AS "pickupContactName",
-          o.pickup_location->>'contactPhone' AS "pickupContactPhone",
+      -- JSONB value objects (master data + pricing — no JOINs needed)
+      o.pricing            AS "pricing",
+      o.snapshot           AS "snapshot",
+      o.package            AS "package",
 
-          -- OPTIMIZED: Delivery location from JSONB
-          o.delivery_location->>'fullAddress' AS "deliveryAddress",
-          o.delivery_location->>'building' AS "deliveryBuilding",
-          o.delivery_location->>'landmark' AS "deliveryLandmark",
-          o.delivery_location->>'city' AS "deliveryCity",
-          o.delivery_location->>'state' AS "deliveryState",
-          o.delivery_location->>'postalCode' AS "deliveryPostalCode",
-          (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
-          (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
-          o.delivery_location->>'contactName' AS "deliveryContactName",
-          o.delivery_location->>'contactPhone' AS "deliveryContactPhone",
+      o.total_price        AS "totalPrice",
+      o.estimated_distance_km AS "estimatedDistanceKm",
+      o.actual_distance_km    AS "actualDistanceKm",
 
-          o.package_description AS "packageDescription",
-          o.special_instructions AS "specialInstructions",
-          o.declared_value AS "declaredValue",
-          o.estimated_distance_km AS "estimatedDistanceKm",
-          o.actual_distance_km AS "actualDistanceKm",
-          -- Delivery type (needed for earnings calculation)
-          dt.name AS "deliveryType",
-          -- Complete pricing breakdown
-          o.base_price AS "basePrice",
-          o.distance_price AS "distancePrice",
-          o.weight_surcharge AS "weightSurcharge",
-          o.platform_fee AS "platformFee",
-          o.special_handling_fee AS "specialHandlingFee",
-          o.gst_amount AS "gstAmount",
-          o.subtotal_before_tax AS "subtotalBeforeTax",
-          o.total_price AS "totalPrice",
-          ca.assigned_at AS "assignedAt",
-          ca.accepted_at AS "acceptedAt"
-      FROM orders.courier_assignments ca
-      JOIN orders.requests o ON ca.order_id = o.order_id
-      LEFT JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-      LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
-      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
-      WHERE ca.courier_id = $1
-          AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
-      ORDER BY ca.assigned_at DESC
+      ca.assigned_at       AS "assignedAt",
+      ca.timeline          AS "timeline"
+
+    FROM orders.courier_assignments ca
+    JOIN orders.requests o ON ca.order_id = o.order_id
+    WHERE ca.courier_id = $1
+      AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
+    ORDER BY ca.assigned_at DESC
   `,
 
   // ============ FUNCTION CALLS ============

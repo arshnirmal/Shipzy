@@ -12,6 +12,12 @@ import type {
   FareCalculationResult,
   OrderCreateResult,
 } from "../../types/orders.js";
+import type {
+  OrderRow,
+  OrderListRow,
+  AvailableOrderRow,
+  CreateOrderPayload,
+} from "./orders.zod.js";
 
 // Whitelist of sortable columns to prevent SQL injection
 const SORT_COLUMN_WHITELIST: Record<string, string> = {
@@ -65,7 +71,7 @@ class OrdersRepository {
    * Create order using stored function
    */
   async createOrder(
-    orderData: Record<string, any>,
+    orderData: CreateOrderPayload,
   ): Promise<OrderCreateResult> {
     try {
       const result = await drizzlePool.query(ordersQueries.CALL_CREATE_ORDER, [
@@ -89,12 +95,12 @@ class OrdersRepository {
   /**
    * Find order by ID
    */
-  async findById(orderId: number) {
+  async findById(orderId: number): Promise<OrderRow | null> {
     try {
       const result = await drizzlePool.query(ordersQueries.FIND_ORDER_BY_ID, [
         orderId,
       ]);
-      return result.rows[0] || null;
+      return (result.rows[0] as OrderRow) || null;
     } catch (error) {
       logger.error({
         msg: "Error finding order by ID",
@@ -116,7 +122,7 @@ class OrdersRepository {
     dateTo?: string,
     sortBy?: string,
     sortOrder: "asc" | "desc" = "desc",
-  ) {
+  ): Promise<{ orders: OrderListRow[]; total: number }> {
     try {
       const sortCol = SORT_COLUMN_WHITELIST[sortBy ?? ""] ?? "o.created_at";
       const sortDir = sortOrder === "asc" ? "ASC" : "DESC";
@@ -154,46 +160,33 @@ class OrdersRepository {
       queryParams.push(limit, offset);
 
       const selectFields = `
-        o.order_id AS "orderId",
-        o.order_uuid AS "orderUuid",
-        o.order_number AS "orderNumber",
-        o.status AS "status",
-        o.delivery_type_id AS "deliveryTypeId",
-        dt.name AS "deliveryType",
-        dt.display_name AS "deliveryTypeDisplay",
-        o.vehicle_category_id AS "vehicleCategoryId",
-        vc.name AS "vehicleCategory",
-        vc.display_name AS "vehicleCategoryDisplay",
-        o.package_description AS "packageDescription",
+        o.order_id             AS "orderId",
+        o.order_uuid           AS "orderUuid",
+        o.order_number         AS "orderNumber",
+        o.status               AS "status",
+        o.delivery_type_id     AS "deliveryTypeId",
+        o.vehicle_category_id  AS "vehicleCategoryId",
+        o.weight_tier_id       AS "weightTierId",
         o.estimated_distance_km AS "estimatedDistanceKm",
-        o.actual_distance_km AS "actualDistanceKm",
-        o.total_price AS "totalPrice",
-        o.created_at AS "createdAt",
-        o.actual_pickup_time AS "actualPickupTime",
-        o.actual_delivery_time AS "actualDeliveryTime",
-        o.accepted_at AS "acceptedAt",
-        o.picked_up_at AS "pickedUpAt",
-        o.delivered_at AS "deliveredAt",
-        o.pickup_location->>'fullAddress' AS "pickupAddress",
-        o.pickup_location->>'city' AS "pickupCity",
-        o.delivery_location->>'fullAddress' AS "deliveryAddress",
-        o.delivery_location->>'city' AS "deliveryCity",
-        ca.courier_id AS "courierId",
-        cu.full_name AS "courierName",
-        cu.profile_picture_url AS "courierPhoto",
-        wt.tier_id AS "weightTierId",
-        wt.name AS "weightTierName",
-        wt.min_weight_kg AS "weightTierMin",
-        wt.max_weight_kg AS "weightTierMax"
+        o.actual_distance_km   AS "actualDistanceKm",
+        o.total_price          AS "totalPrice",
+        o.created_at           AS "createdAt",
+        o.accepted_at          AS "acceptedAt",
+        o.picked_up_at         AS "pickedUpAt",
+        o.delivered_at         AS "deliveredAt",
+        o.pickup_location      AS "pickup",
+        o.delivery_location    AS "delivery",
+        o.pricing              AS "pricing",
+        o.snapshot             AS "snapshot",
+        ca.courier_id          AS "courierId",
+        cu.full_name           AS "courierName",
+        cu.profile_picture_url AS "courierPhoto"
       `;
 
       const fromJoins = `
         FROM orders.requests o
-        JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-        JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
         LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
         LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
-        LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       `;
 
       const whereClause = `
@@ -223,7 +216,7 @@ class OrdersRepository {
       ]);
 
       return {
-        orders: ordersResult.rows,
+        orders: ordersResult.rows as OrderListRow[],
         total: Number.parseInt(countResult.rows[0].total, 10),
       };
     } catch (error) {
@@ -243,14 +236,14 @@ class OrdersRepository {
     longitude: number,
     radiusKm: number,
     limit: number,
-  ) {
+  ): Promise<AvailableOrderRow[]> {
     try {
       const result = await drizzlePool.query(
         ordersQueries.FIND_AVAILABLE_ORDERS_FOR_COURIER,
         [longitude, latitude, radiusKm, limit],
       );
 
-      return result.rows;
+      return result.rows as AvailableOrderRow[];
     } catch (error) {
       logger.error({
         msg: "Error finding available orders",
@@ -327,12 +320,41 @@ class OrdersRepository {
   }
 
   /**
+   * Record a status transition in orders.status_history
+   */
+  async recordStatusHistory(
+    orderId: number,
+    status: string,
+    previousStatus: string | null,
+    changedBy: number | null,
+    notes?: string,
+  ): Promise<void> {
+    try {
+      await drizzlePool.query(ordersQueries.INSERT_STATUS_HISTORY, [
+        orderId,
+        status,
+        previousStatus,
+        changedBy,
+        notes ?? null,
+      ]);
+    } catch (error) {
+      logger.error({
+        msg: "Error recording status history",
+        error: (error as Error).message,
+        orderId,
+        status,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Update order status (picked_up / in_transit / delivered) - Drizzle ORM
    */
   async updateOrderStatus(orderId: number, status: string) {
     try {
-      const validStatuses = new Set(["picked_up", "in_transit", "delivered"]);
-      if (!validStatuses.has(status)) {
+      const validStatuses = new Set(["picked_up", "in_transit", "delivered"] as const);
+      if (!validStatuses.has(status as "picked_up" | "in_transit" | "delivered")) {
         throw new Error(`Invalid status: ${status}`);
       }
       const updateData: any = {
@@ -342,6 +364,8 @@ class OrdersRepository {
 
       if (status === "picked_up") {
         updateData.pickedUpAt = new Date();
+      } else if (status === "in_transit") {
+        updateData.inTransitAt = new Date();
       } else if (status === "delivered") {
         updateData.deliveredAt = new Date();
       }

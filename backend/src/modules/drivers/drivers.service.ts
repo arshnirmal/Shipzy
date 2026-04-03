@@ -351,6 +351,12 @@ class DriversService {
       const assignmentsWithEarnings = await Promise.all(
         assignments.map(async (assignment) => {
           const earnings = await this.calculateDriverEarnings(assignment);
+          const snap = assignment.snapshot;
+          const pkg = assignment.package;
+          const pickup = assignment.pickup;
+          const delivery = assignment.delivery;
+          const wt = snap?.weightTier;
+
           return {
             assignmentId: assignment.assignmentId,
             orderId: assignment.orderId,
@@ -358,46 +364,44 @@ class DriversService {
             orderNumber: assignment.orderNumber ?? undefined,
             orderStatus: assignment.orderStatus ?? undefined,
             assignmentStatus: assignment.assignmentStatus ?? undefined,
-            vehicleCategory: assignment.vehicleCategory,
-            vehicleCategoryDisplay: assignment.vehicleCategoryDisplay,
-            packageType: assignment.packageType,
-            weightTier: assignment.weightTierName
+            vehicleCategory: snap?.vehicleCategory?.name ?? null,
+            vehicleCategoryDisplay: snap?.vehicleCategory?.displayName ?? null,
+            packageType: snap?.packageType?.name ?? null,
+            weightTier: wt
               ? {
-                  id: assignment.weightTierId ?? undefined,
-                  name: assignment.weightTierName,
-                  minWeightKg: Number(assignment.weightTierMin || 0),
-                  maxWeightKg: Number(assignment.weightTierMax || 0),
+                  id: wt.id,
+                  name: wt.name,
+                  minWeightKg: wt.minWeightKg,
+                  maxWeightKg: wt.maxWeightKg,
                 }
               : null,
             pickup: {
-              address: assignment.pickupAddress,
-              building: assignment.pickupBuilding,
-              landmark: assignment.pickupLandmark,
-              city: assignment.pickupCity,
-              state: assignment.pickupState,
-              postalCode: assignment.pickupPostalCode,
-              latitude: Number(assignment.pickupLatitude),
-              longitude: Number(assignment.pickupLongitude),
-              contactName: assignment.pickupContactName,
-              contactPhone: assignment.pickupContactPhone,
+              address: pickup?.fullAddress ?? null,
+              building: pickup?.building ?? null,
+              landmark: pickup?.landmark ?? null,
+              city: pickup?.city ?? null,
+              state: pickup?.state ?? null,
+              postalCode: pickup?.postalCode ?? null,
+              latitude: pickup ? Number(pickup.latitude) : null,
+              longitude: pickup ? Number(pickup.longitude) : null,
+              contactName: pickup?.contactName ?? null,
+              contactPhone: pickup?.contactPhone ?? null,
             },
             delivery: {
-              address: assignment.deliveryAddress,
-              building: assignment.deliveryBuilding,
-              landmark: assignment.deliveryLandmark,
-              city: assignment.deliveryCity,
-              state: assignment.deliveryState,
-              postalCode: assignment.deliveryPostalCode,
-              latitude: Number(assignment.deliveryLatitude),
-              longitude: Number(assignment.deliveryLongitude),
-              contactName: assignment.deliveryContactName,
-              contactPhone: assignment.deliveryContactPhone,
+              address: delivery?.fullAddress ?? null,
+              building: delivery?.building ?? null,
+              landmark: delivery?.landmark ?? null,
+              city: delivery?.city ?? null,
+              state: delivery?.state ?? null,
+              postalCode: delivery?.postalCode ?? null,
+              latitude: delivery ? Number(delivery.latitude) : null,
+              longitude: delivery ? Number(delivery.longitude) : null,
+              contactName: delivery?.contactName ?? null,
+              contactPhone: delivery?.contactPhone ?? null,
             },
-            packageDescription: assignment.packageDescription,
-            specialInstructions: assignment.specialInstructions,
-            declaredValue: assignment.declaredValue
-              ? Number(assignment.declaredValue)
-              : null,
+            packageDescription: pkg?.description ?? null,
+            specialInstructions: pkg?.specialInstructions ?? null,
+            declaredValue: pkg?.declaredValue != null ? Number(pkg.declaredValue) : null,
             estimatedDistanceKm: assignment.estimatedDistanceKm
               ? Number(assignment.estimatedDistanceKm)
               : null,
@@ -408,9 +412,9 @@ class DriversService {
             earningsBreakdown: earnings.earningsBreakdown,
             estimatedDeliveryTime: Math.ceil(
               (Number(assignment.estimatedDistanceKm || 10) / 25) * 60,
-            ), // Estimate based on 25km/h average speed
+            ),
             assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
-            acceptedAt: toIsoDateTimeOrNull(assignment.acceptedAt),
+            acceptedAt: assignment.timeline?.acceptedAt ?? null,
           };
         }),
       );
@@ -474,9 +478,9 @@ class DriversService {
         (await pricingRepo.getPricingConfigValue("quality_bonus_amount")) ||
         5.0;
 
-      const basePrice = Number(assignment.basePrice || 0);
-      const distancePrice = Number(assignment.distancePrice || 0);
-      const weightSurcharge = Number(assignment.weightSurcharge || 0);
+      const basePrice = Number(assignment.pricing?.basePrice || 0);
+      const distancePrice = Number(assignment.pricing?.distancePrice || 0);
+      const weightSurcharge = Number(assignment.pricing?.weightSurcharge || 0);
 
       // Base earnings using configurable rates
       const basePayout = basePrice * commissionRate;
@@ -494,7 +498,7 @@ class DriversService {
 
       // Urgency bonus for "Deliver Now"
       const urgencyBonus =
-        assignment.deliveryType === "deliver_now" ? urgencyBonusAmount : 0;
+        assignment.snapshot?.deliveryType?.name === "deliver_now" ? urgencyBonusAmount : 0;
 
       // On-time delivery bonus (simplified)
       const onTimeBonus =

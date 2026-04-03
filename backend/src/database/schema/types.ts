@@ -4,9 +4,12 @@
 import { z } from "zod";
 import { OrderAddressZ } from "../../schemas/common.zod.js";
 
-// JSONB structure schemas + types
+// ── Location ─────────────────────────────────────────────────────────────────
+
 export const OrderLocationJSONBZ = OrderAddressZ;
 export type OrderLocationJSONB = z.infer<typeof OrderLocationJSONBZ>;
+
+// ── Items ─────────────────────────────────────────────────────────────────────
 
 export const OrderItemJSONBZ = z.object({
   itemName: z.string().min(1),
@@ -25,7 +28,84 @@ export const OrderItemJSONBZ = z.object({
 });
 export type OrderItemJSONB = z.infer<typeof OrderItemJSONBZ>;
 
-export const OrderMetadataJSONBZ = z
-  .object({})
-  .catchall(z.unknown());
+export const OrderMetadataJSONBZ = z.object({}).catchall(z.unknown());
 export type OrderMetadataJSONB = z.infer<typeof OrderMetadataJSONBZ>;
+
+// ── Pricing breakdown ─────────────────────────────────────────────────────────
+
+export const OrderPricingJSONBZ = z.object({
+  basePrice: z.number().nonnegative(),
+  distanceKm: z.number().nonnegative(),
+  distancePrice: z.number().nonnegative(),
+  weightSurcharge: z.number().nonnegative(),
+  platformFee: z.number().nonnegative(),
+  specialHandlingFee: z.number().nonnegative(),
+  subtotalBeforeTax: z.number().nonnegative(),
+  gstAmount: z.number().nonnegative(),
+  currency: z.string().optional(),
+});
+export type OrderPricingJSONB = z.infer<typeof OrderPricingJSONBZ>;
+
+// ── Scheduling ────────────────────────────────────────────────────────────────
+
+export const OrderScheduleJSONBZ = z.object({
+  pickupAt: z.string().nullable().optional(),
+  deliveryAt: z.string().nullable().optional(),
+});
+export type OrderScheduleJSONB = z.infer<typeof OrderScheduleJSONBZ>;
+
+export const OrderActualJSONBZ = z.object({
+  pickupAt: z.string().nullable().optional(),
+  deliveryAt: z.string().nullable().optional(),
+});
+export type OrderActualJSONB = z.infer<typeof OrderActualJSONBZ>;
+
+// ── Package metadata ──────────────────────────────────────────────────────────
+
+export const OrderPackageJSONBZ = z.object({
+  description: z.string().nullable().optional(),
+  specialInstructions: z.string().nullable().optional(),
+  declaredValue: z.number().nonnegative().nullable().optional(),
+  notifyRecipientSms: z.boolean().optional().default(false),
+});
+export type OrderPackageJSONB = z.infer<typeof OrderPackageJSONBZ>;
+
+// ── Master data snapshot (denormalized at order creation) ─────────────────────
+
+export const OrderSnapshotJSONBZ = z.object({
+  deliveryType: z.object({
+    id: z.number(),
+    name: z.string(),
+    displayName: z.string(),
+  }),
+  vehicleCategory: z.object({
+    id: z.number(),
+    name: z.string(),
+    displayName: z.string(),
+    maxWeightKg: z.number().nullable().optional(),
+  }),
+  weightTier: z.object({
+    id: z.number(),
+    name: z.string(),
+    minWeightKg: z.number(),
+    maxWeightKg: z.number(),
+    additionalCharge: z.number(),
+  }).nullable().optional(),
+  packageType: z.object({
+    id: z.number(),
+    name: z.string(),
+  }).nullable().optional(),
+  paymentMethod: z.object({
+    id: z.number(),
+    name: z.string(),
+  }),
+});
+export type OrderSnapshotJSONB = z.infer<typeof OrderSnapshotJSONBZ>;
+
+// ── Assignment timeline ───────────────────────────────────────────────────────
+
+export const AssignmentTimelineJSONBZ = z.object({
+  acceptedAt: z.string().nullable().optional(),
+  rejectedAt: z.string().nullable().optional(),
+});
+export type AssignmentTimelineJSONB = z.infer<typeof AssignmentTimelineJSONBZ>;

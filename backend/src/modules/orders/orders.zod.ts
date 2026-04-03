@@ -332,6 +332,189 @@ export const AvailableOrderItemZ = z.object({
 export type AvailableOrderItem = z.infer<typeof AvailableOrderItemZ>;
 
 // ============================================================================
+// INTERNAL DB ROW TYPES — not API types, used by repository/service
+// ============================================================================
+
+import type {
+  OrderLocationJSONB,
+  OrderPricingJSONB,
+  OrderScheduleJSONB,
+  OrderActualJSONB,
+  OrderPackageJSONB,
+  OrderSnapshotJSONB,
+  AssignmentTimelineJSONB,
+} from "../../database/schema/types.js";
+
+// Row returned by FIND_ORDER_BY_ID
+export type OrderRow = {
+  orderId: number;
+  orderUuid: string;
+  orderNumber: string;
+  clientId?: number | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
+  status: string;
+
+  // FK columns
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId?: number | null;
+  packageTypeId?: number | null;
+  paymentMethodId?: number | null;
+
+  // Operational scalars
+  totalPrice?: number | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  couponCode?: string | null;
+  cancellationReason?: string | null;
+
+  // JSONB value objects
+  pickup: OrderLocationJSONB;
+  delivery: OrderLocationJSONB;
+  orderItems?: unknown[];
+  pricing?: OrderPricingJSONB | null;
+  schedule?: OrderScheduleJSONB | null;
+  actual?: OrderActualJSONB | null;
+  package?: OrderPackageJSONB | null;
+  snapshot?: OrderSnapshotJSONB | null;
+
+  // Status timeline
+  createdAt: Date;
+  acceptedAt?: Date | null;
+  pickedUpAt?: Date | null;
+  inTransitAt?: Date | null;
+  deliveredAt?: Date | null;
+  cancelledAt?: Date | null;
+
+  // Courier assignment
+  assignmentId?: number | null;
+  courierId?: number | null;
+  courierName?: string | null;
+  courierPhone?: string | null;
+  courierPhoto?: string | null;
+  assignmentStatus?: string | null;
+  assignedAt?: string | Date | null;
+  assignmentTimeline?: AssignmentTimelineJSONB | null;
+};
+
+// Row returned by findByClient (list view — fewer fields)
+export type OrderListRow = {
+  orderId: number;
+  orderUuid: string;
+  orderNumber?: string | null;
+  status: string;
+
+  // FK columns
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId?: number | null;
+
+  // Operational scalars
+  totalPrice?: number | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  createdAt: Date;
+  acceptedAt?: Date | null;
+  pickedUpAt?: Date | null;
+  deliveredAt?: Date | null;
+
+  // JSONB value objects
+  pickup: OrderLocationJSONB;
+  delivery: OrderLocationJSONB;
+  pricing?: OrderPricingJSONB | null;
+  snapshot?: OrderSnapshotJSONB | null;
+
+  // Courier info
+  courierId?: number | null;
+  courierName?: string | null;
+  courierPhoto?: string | null;
+};
+
+// Row returned by FIND_AVAILABLE_ORDERS_FOR_COURIER
+export type AvailableOrderRow = {
+  orderId: number;
+  orderUuid: string;
+  orderNumber: string;
+
+  // FK columns
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId?: number | null;
+  packageTypeId?: number | null;
+
+  // Operational scalars
+  totalPrice?: number | null;
+  estimatedDistanceKm?: number | null;
+  createdAt: Date;
+  distanceFromCourierKm: number;
+
+  // JSONB value objects
+  pickup: OrderLocationJSONB;
+  delivery: OrderLocationJSONB;
+  pricing?: OrderPricingJSONB | null;
+  snapshot?: OrderSnapshotJSONB | null;
+  package?: OrderPackageJSONB | null;
+};
+
+// Parameter type for createOrder repository method
+export type CreateOrderPayload = {
+  clientId: number;
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId: number;
+  packageTypeId: number | null;
+  paymentMethodId: number;
+  notifyRecipientSms: boolean;
+  couponCode: string | null;
+  pickup: {
+    fullAddress: string;
+    latitude: number;
+    longitude: number;
+    city: string;
+    state: string;
+    postalCode: string;
+    howToReach: string | null;
+    building: string | null;
+    floor: string | null;
+    flatNumber: string | null;
+    contactName: string;
+    contactPhone: string;
+  };
+  delivery: {
+    fullAddress: string;
+    latitude: number;
+    longitude: number;
+    city: string;
+    state: string;
+    postalCode: string;
+    howToReach: string | null;
+    building: string | null;
+    floor: string | null;
+    flatNumber: string | null;
+    contactName: string;
+    contactPhone: string;
+  };
+  packageDescription: string | null;
+  specialInstructions: string | null;
+  declaredValue: number | null;
+  scheduledPickupTime: string | null;
+  scheduledDeliveryTime: string | null;
+  fareBreakdown: {
+    basePrice: number;
+    distanceKm: number;
+    distancePrice: number;
+    weightSurcharge: number;
+    platformFee: number;
+    specialHandlingFee: number;
+    subtotalBeforeTax: number;
+    gstAmount?: number;
+    totalPrice: number;
+    currency?: string;
+  };
+};
+
+// ============================================================================
 // ROUTE PARAMS
 // ============================================================================
 

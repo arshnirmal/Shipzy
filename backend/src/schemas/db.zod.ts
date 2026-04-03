@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  OrderLocationJSONBZ,
+  OrderPricingJSONBZ,
+  OrderSnapshotJSONBZ,
+  OrderPackageJSONBZ,
+  AssignmentTimelineJSONBZ,
+} from "../database/schema/types.js";
 
 // ============================================================================
 // DB ROW SCHEMAS - Internal camelCase row shapes
@@ -102,52 +109,21 @@ export const CourierAssignmentDbZ = z
     orderNumber: z.string().nullable().optional(),
     orderStatus: z.string().nullable().optional(),
     assignmentStatus: z.string().nullable().optional(),
-    vehicleCategory: z.string().nullable().optional(),
-    vehicleCategoryDisplay: z.string().nullable().optional(),
-    packageType: z.string().nullable().optional(),
-    weightTierId: z.number().int().nullable().optional(),
-    weightTierName: z.string().nullable().optional(),
-    weightTierMin: z.union([z.number(), z.string()]).nullable().optional(),
-    weightTierMax: z.union([z.number(), z.string()]).nullable().optional(),
-    pickupAddress: z.string().nullable().optional(),
-    pickupBuilding: z.string().nullable().optional(),
-    pickupLandmark: z.string().nullable().optional(),
-    pickupCity: z.string().nullable().optional(),
-    pickupState: z.string().nullable().optional(),
-    pickupPostalCode: z.string().nullable().optional(),
-    pickupLatitude: z.union([z.number(), z.string()]).nullable().optional(),
-    pickupLongitude: z.union([z.number(), z.string()]).nullable().optional(),
-    pickupContactName: z.string().nullable().optional(),
-    pickupContactPhone: z.string().nullable().optional(),
-    deliveryAddress: z.string().nullable().optional(),
-    deliveryBuilding: z.string().nullable().optional(),
-    deliveryLandmark: z.string().nullable().optional(),
-    deliveryCity: z.string().nullable().optional(),
-    deliveryState: z.string().nullable().optional(),
-    deliveryPostalCode: z.string().nullable().optional(),
-    deliveryLatitude: z.union([z.number(), z.string()]).nullable().optional(),
-    deliveryLongitude: z.union([z.number(), z.string()]).nullable().optional(),
-    deliveryContactName: z.string().nullable().optional(),
-    deliveryContactPhone: z.string().nullable().optional(),
-    packageDescription: z.string().nullable().optional(),
-    specialInstructions: z.string().nullable().optional(),
-    declaredValue: z.union([z.number(), z.string()]).nullable().optional(),
-    estimatedDistanceKm: z
-      .union([z.number(), z.string()])
-      .nullable()
-      .optional(),
-    actualDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
-    deliveryType: z.string().nullable().optional(),
-    basePrice: z.union([z.number(), z.string()]).nullable().optional(),
-    distancePrice: z.union([z.number(), z.string()]).nullable().optional(),
-    weightSurcharge: z.union([z.number(), z.string()]).nullable().optional(),
-    platformFee: z.union([z.number(), z.string()]).nullable().optional(),
-    specialHandlingFee: z.union([z.number(), z.string()]).nullable().optional(),
-    gstAmount: z.union([z.number(), z.string()]).nullable().optional(),
-    subtotalBeforeTax: z.union([z.number(), z.string()]).nullable().optional(),
+
+    // Whole JSONB location objects
+    pickup: OrderLocationJSONBZ.nullable().optional(),
+    delivery: OrderLocationJSONBZ.nullable().optional(),
+
+    // JSONB value objects
+    pricing: OrderPricingJSONBZ.nullable().optional(),
+    snapshot: OrderSnapshotJSONBZ.nullable().optional(),
+    package: OrderPackageJSONBZ.nullable().optional(),
+    timeline: AssignmentTimelineJSONBZ.nullable().optional(),
+
     totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
+    estimatedDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
+    actualDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
     assignedAt: z.date().nullable().optional(),
-    acceptedAt: z.date().nullable().optional(),
   })
   .passthrough();
 export type CourierAssignmentDb = z.infer<typeof CourierAssignmentDbZ>;
