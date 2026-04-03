@@ -29,6 +29,13 @@ export default {
     SELECT orders.cancel_order_with_refund($1, $2, $3) AS result
   `,
 
+  /**
+   * Call stored function: Assign order to courier atomically
+   */
+  CALL_ASSIGN_ORDER_TO_COURIER: `
+    SELECT orders.assign_order_to_courier($1, $2) AS result
+  `,
+
   // ============ ORDER RETRIEVAL ============
 
   /**
@@ -104,12 +111,14 @@ export default {
       o.order_id              AS "orderId",
       o.order_uuid            AS "orderUuid",
       o.order_number          AS "orderNumber",
+      o.status                AS "status",
 
       -- FK columns for client-side matching
       o.delivery_type_id      AS "deliveryTypeId",
       o.vehicle_category_id   AS "vehicleCategoryId",
       o.weight_tier_id        AS "weightTierId",
       o.package_type_id       AS "packageTypeId",
+      o.payment_method_id     AS "paymentMethodId",
 
       -- Operational scalars
       o.total_price           AS "totalPrice",

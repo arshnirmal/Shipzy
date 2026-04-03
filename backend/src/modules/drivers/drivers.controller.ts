@@ -1,14 +1,17 @@
 // services/backend/src/modules/drivers/drivers.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import driversService from "./drivers.service.js";
 import ratingsService from "../ratings/ratings.service.js";
 
-import type {
-  UpdateDriverProfileRequest,
-  UpdateAvailabilityRequest,
-  UpdateLocationRequest,
+import {
+  EarningsPeriodQueryZ,
+  type EarningsPeriodQuery,
+  type UpdateAvailabilityRequest,
+  type UpdateDriverProfileRequest,
+  type UpdateLocationRequest,
 } from "./drivers.zod.js";
 
 class DriversController {
@@ -38,7 +41,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -71,7 +74,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -104,7 +107,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -130,7 +133,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -161,7 +164,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -172,15 +175,12 @@ class DriversController {
    * Query params: ?period=today|week|month|year (default: today)
    */
   async getEarnings(
-    request: FastifyRequest,
+    request: FastifyRequest<{ Querystring: EarningsPeriodQuery }>,
     reply: FastifyReply,
   ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
-      const query = request.query as { period?: string };
-
-      // Default to today for home screen (lightweight)
-      const period = query.period || "today";
+      const { period } = EarningsPeriodQueryZ.parse(request.query);
 
       const earnings = await driversService.getEarningsSummary(userId, period);
 
@@ -197,7 +197,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -206,7 +206,10 @@ class DriversController {
    * GET /api/v1/drivers/me/rating
    * Get driver rating stats
    */
-  async getRating(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  async getRating(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 
@@ -225,7 +228,7 @@ class DriversController {
       return errorResponse(
         reply,
         (error as Error).message,
-        (error as any).statusCode || 500,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }

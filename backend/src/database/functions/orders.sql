@@ -34,6 +34,7 @@ DECLARE
     v_subtotal_before_tax  NUMERIC;
     v_gst_amount           NUMERIC;
     v_total_price          NUMERIC;
+    v_pricing_json         JSON;
 
     result JSON;
 
@@ -129,9 +130,7 @@ BEGIN
     -- ============================================================
     -- STEP 7: Return structured result
     -- ============================================================
-    result := json_build_object(
-        'success', TRUE,
-        'fare_breakdown', json_build_object(
+    v_pricing_json := json_build_object(
             'basePrice',          v_base_price,
             'distanceKm',         p_distance_km,
             'distancePrice',      v_distance_price,
@@ -141,9 +140,12 @@ BEGIN
             'subtotalBeforeTax',  v_subtotal_before_tax,
             'gstAmount',          v_gst_amount,
             'totalPrice',         v_total_price,
-            'currency',           'INR',
-            'gstRate',            v_gst_rate
-        )
+            'currency',           'INR'
+        );
+
+    result := json_build_object(
+        'success', TRUE,
+        'pricing', v_pricing_json
     );
 
     RETURN result;
@@ -215,17 +217,18 @@ DECLARE
     v_wt_additional_charge NUMERIC;
     v_pt_name              VARCHAR;
     v_pm_name              VARCHAR;
+    v_now_iso              TEXT;
 
     result JSON;
 
 BEGIN
     -- Extract IDs
     v_client_id           := (p_order_data ->> 'clientId')::INT;
-    v_delivery_type_id    := (p_order_data ->> 'deliveryTypeId')::INT;
-    v_vehicle_category_id := (p_order_data ->> 'vehicleCategoryId')::INT;
-    v_payment_method_id   := (p_order_data ->> 'paymentMethodId')::INT;
-    v_weight_tier_id      := (p_order_data ->> 'weightTierId')::INT;
-    v_package_type_id     := (p_order_data ->> 'packageTypeId')::INT;
+    v_delivery_type_id    := (p_order_data -> 'fulfillment' ->> 'deliveryTypeId')::INT;
+    v_vehicle_category_id := (p_order_data -> 'fulfillment' ->> 'vehicleCategoryId')::INT;
+    v_payment_method_id   := (p_order_data -> 'fulfillment' ->> 'paymentMethodId')::INT;
+    v_weight_tier_id      := (p_order_data -> 'fulfillment' ->> 'weightTierId')::INT;
+    v_package_type_id     := (p_order_data -> 'fulfillment' ->> 'packageTypeId')::INT;
 
     -- Validate client
     IF NOT EXISTS (
@@ -250,53 +253,53 @@ BEGIN
     WHERE config_key = 'platform_fee' AND is_active = TRUE
     LIMIT 1;
 
-    -- Extract fare values from provided fareBreakdown
-    v_base_price           := (p_order_data -> 'fareBreakdown' ->> 'basePrice')::NUMERIC;
-    v_distance_price       := (p_order_data -> 'fareBreakdown' ->> 'distancePrice')::NUMERIC;
-    v_weight_surcharge     := (p_order_data -> 'fareBreakdown' ->> 'weightSurcharge')::NUMERIC;
-    v_platform_fee         := COALESCE((p_order_data -> 'fareBreakdown' ->> 'platformFee')::NUMERIC, v_platform_fee_default);
-    v_special_handling_fee := COALESCE((p_order_data -> 'fareBreakdown' ->> 'specialHandlingFee')::NUMERIC, 0.00);
+    -- Extract fare values from provided pricing object
+    v_base_price           := (p_order_data -> 'pricing' ->> 'basePrice')::NUMERIC;
+    v_distance_price       := (p_order_data -> 'pricing' ->> 'distancePrice')::NUMERIC;
+    v_weight_surcharge     := (p_order_data -> 'pricing' ->> 'weightSurcharge')::NUMERIC;
+    v_platform_fee         := COALESCE((p_order_data -> 'pricing' ->> 'platformFee')::NUMERIC, v_platform_fee_default);
+    v_special_handling_fee := COALESCE((p_order_data -> 'pricing' ->> 'specialHandlingFee')::NUMERIC, 0.00);
     v_subtotal_before_tax  := COALESCE(
-        (p_order_data -> 'fareBreakdown' ->> 'subtotalBeforeTax')::NUMERIC,
+        (p_order_data -> 'pricing' ->> 'subtotalBeforeTax')::NUMERIC,
         v_base_price + v_distance_price + v_weight_surcharge + v_platform_fee + v_special_handling_fee
     );
     v_gst_amount           := COALESCE(
-        (p_order_data -> 'fareBreakdown' ->> 'gstAmount')::NUMERIC,
+        (p_order_data -> 'pricing' ->> 'gstAmount')::NUMERIC,
         ROUND(v_subtotal_before_tax * 0.18, 2)
     );
-    v_total_price          := (p_order_data -> 'fareBreakdown' ->> 'totalPrice')::NUMERIC;
+    v_total_price          := (p_order_data -> 'pricing' ->> 'totalPrice')::NUMERIC;
 
     -- Build location JSONB objects
     v_pickup_location := jsonb_build_object(
-        'fullAddress', p_order_data -> 'pickup' ->> 'fullAddress',
-        'city',        p_order_data -> 'pickup' ->> 'city',
-        'state',       p_order_data -> 'pickup' ->> 'state',
-        'postalCode',  p_order_data -> 'pickup' ->> 'postalCode',
-        'latitude',   (p_order_data -> 'pickup' ->> 'latitude')::NUMERIC,
-        'longitude',  (p_order_data -> 'pickup' ->> 'longitude')::NUMERIC,
-        'building',    p_order_data -> 'pickup' ->> 'building',
-        'floor',       p_order_data -> 'pickup' ->> 'floor',
-        'flatNumber',  p_order_data -> 'pickup' ->> 'flatNumber',
-        'landmark',    p_order_data -> 'pickup' ->> 'landmark',
-        'howToReach',  p_order_data -> 'pickup' ->> 'howToReach',
-        'contactName', p_order_data -> 'pickup' ->> 'contactName',
-        'contactPhone',p_order_data -> 'pickup' ->> 'contactPhone'
+        'fullAddress', p_order_data -> 'locations' -> 'pickup' ->> 'fullAddress',
+        'city',        p_order_data -> 'locations' -> 'pickup' ->> 'city',
+        'state',       p_order_data -> 'locations' -> 'pickup' ->> 'state',
+        'postalCode',  p_order_data -> 'locations' -> 'pickup' ->> 'postalCode',
+        'latitude',   (p_order_data -> 'locations' -> 'pickup' ->> 'latitude')::NUMERIC,
+        'longitude',  (p_order_data -> 'locations' -> 'pickup' ->> 'longitude')::NUMERIC,
+        'building',    p_order_data -> 'locations' -> 'pickup' ->> 'building',
+        'floor',       p_order_data -> 'locations' -> 'pickup' ->> 'floor',
+        'flatNumber',  p_order_data -> 'locations' -> 'pickup' ->> 'flatNumber',
+        'landmark',    p_order_data -> 'locations' -> 'pickup' ->> 'landmark',
+        'howToReach',  p_order_data -> 'locations' -> 'pickup' ->> 'howToReach',
+        'contactName', p_order_data -> 'locations' -> 'pickup' ->> 'contactName',
+        'contactPhone',p_order_data -> 'locations' -> 'pickup' ->> 'contactPhone'
     );
 
     v_delivery_location := jsonb_build_object(
-        'fullAddress', p_order_data -> 'delivery' ->> 'fullAddress',
-        'city',        p_order_data -> 'delivery' ->> 'city',
-        'state',       p_order_data -> 'delivery' ->> 'state',
-        'postalCode',  p_order_data -> 'delivery' ->> 'postalCode',
-        'latitude',   (p_order_data -> 'delivery' ->> 'latitude')::NUMERIC,
-        'longitude',  (p_order_data -> 'delivery' ->> 'longitude')::NUMERIC,
-        'building',    p_order_data -> 'delivery' ->> 'building',
-        'floor',       p_order_data -> 'delivery' ->> 'floor',
-        'flatNumber',  p_order_data -> 'delivery' ->> 'flatNumber',
-        'landmark',    p_order_data -> 'delivery' ->> 'landmark',
-        'howToReach',  p_order_data -> 'delivery' ->> 'howToReach',
-        'contactName', p_order_data -> 'delivery' ->> 'contactName',
-        'contactPhone',p_order_data -> 'delivery' ->> 'contactPhone'
+        'fullAddress', p_order_data -> 'locations' -> 'delivery' ->> 'fullAddress',
+        'city',        p_order_data -> 'locations' -> 'delivery' ->> 'city',
+        'state',       p_order_data -> 'locations' -> 'delivery' ->> 'state',
+        'postalCode',  p_order_data -> 'locations' -> 'delivery' ->> 'postalCode',
+        'latitude',   (p_order_data -> 'locations' -> 'delivery' ->> 'latitude')::NUMERIC,
+        'longitude',  (p_order_data -> 'locations' -> 'delivery' ->> 'longitude')::NUMERIC,
+        'building',    p_order_data -> 'locations' -> 'delivery' ->> 'building',
+        'floor',       p_order_data -> 'locations' -> 'delivery' ->> 'floor',
+        'flatNumber',  p_order_data -> 'locations' -> 'delivery' ->> 'flatNumber',
+        'landmark',    p_order_data -> 'locations' -> 'delivery' ->> 'landmark',
+        'howToReach',  p_order_data -> 'locations' -> 'delivery' ->> 'howToReach',
+        'contactName', p_order_data -> 'locations' -> 'delivery' ->> 'contactName',
+        'contactPhone',p_order_data -> 'locations' -> 'delivery' ->> 'contactPhone'
     );
 
     v_items := COALESCE(p_order_data -> 'items', '[]'::JSONB);
@@ -304,29 +307,32 @@ BEGIN
     -- Build pricing JSONB
     v_pricing := jsonb_build_object(
         'basePrice',          v_base_price,
-        'distanceKm',        (p_order_data -> 'fareBreakdown' ->> 'distanceKm')::NUMERIC,
+        'distanceKm',        (p_order_data -> 'pricing' ->> 'distanceKm')::NUMERIC,
         'distancePrice',      v_distance_price,
         'weightSurcharge',    v_weight_surcharge,
         'platformFee',        v_platform_fee,
         'specialHandlingFee', v_special_handling_fee,
         'subtotalBeforeTax',  v_subtotal_before_tax,
         'gstAmount',          v_gst_amount,
+        'totalPrice',         v_total_price,
         'currency',           'INR'
     );
 
     -- Build schedule JSONB
     v_schedule := jsonb_build_object(
-        'pickupAt',   p_order_data ->> 'scheduledPickupTime',
-        'deliveryAt', p_order_data ->> 'scheduledDeliveryTime'
+        'pickupAt',   p_order_data -> 'schedule' ->> 'pickupAt',
+        'deliveryAt', p_order_data -> 'schedule' ->> 'deliveryAt'
     );
 
     -- Build package JSONB
     v_package := jsonb_build_object(
-        'description',         p_order_data ->> 'packageDescription',
-        'specialInstructions', p_order_data ->> 'specialInstructions',
-        'declaredValue',      (p_order_data ->> 'declaredValue')::NUMERIC,
-        'notifyRecipientSms',  COALESCE((p_order_data ->> 'notifyRecipientSms')::BOOLEAN, FALSE)
+        'description',         p_order_data -> 'package' ->> 'description',
+        'specialInstructions', p_order_data -> 'package' ->> 'specialInstructions',
+        'declaredValue',      (p_order_data -> 'package' ->> 'declaredValue')::NUMERIC,
+        'notifyRecipientSms',  COALESCE((p_order_data -> 'package' ->> 'notifyRecipientSms')::BOOLEAN, FALSE)
     );
+
+    v_now_iso := to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
 
     -- Build snapshot JSONB (denormalize master data at creation time)
     SELECT dt.name, dt.display_name
@@ -399,7 +405,7 @@ BEGIN
         v_package_type_id, v_payment_method_id, v_status,
         v_pickup_location, v_delivery_location, v_items,
         v_pricing, v_schedule, v_package, v_snapshot,
-        (p_order_data -> 'fareBreakdown' ->> 'distanceKm')::NUMERIC,
+        (p_order_data -> 'pricing' ->> 'distanceKm')::NUMERIC,
         v_total_price,
         p_order_data ->> 'couponCode'
     )
@@ -422,12 +428,44 @@ BEGIN
     result := json_build_object(
         'success', TRUE,
         'order', json_build_object(
-            'orderId',     v_order_id,
-            'orderUuid',   v_order_uuid,
-            'orderNumber', v_order_number,
+            'identifiers', json_build_object(
+                'orderId', v_order_id,
+                'orderUuid', v_order_uuid,
+                'orderNumber', v_order_number
+            ),
             'status',      'pending',
-            'pricing',     v_pricing,
-            'createdAt',   NOW()
+            'fulfillment', json_build_object(
+                'deliveryTypeId', v_delivery_type_id,
+                'vehicleCategoryId', v_vehicle_category_id,
+                'weightTierId', v_weight_tier_id,
+                'packageTypeId', v_package_type_id,
+                'paymentMethodId', v_payment_method_id
+            ),
+            'locations', json_build_object(
+                'pickup', v_pickup_location,
+                'delivery', v_delivery_location
+            ),
+            'package', v_package,
+            'schedule', v_schedule,
+            'pricing', v_pricing,
+            'couponCode', p_order_data ->> 'couponCode',
+            'items', v_items,
+            'metrics', json_build_object(
+                'estimatedDistanceKm', (p_order_data -> 'pricing' ->> 'distanceKm')::NUMERIC,
+                'actualDistanceKm', NULL,
+                'actualDurationMins', NULL,
+                'totalPrice', v_total_price
+            ),
+            'timeline', json_build_object(
+                'createdAt', v_now_iso,
+                'acceptedAt', NULL,
+                'pickedUpAt', NULL,
+                'inTransitAt', NULL,
+                'deliveredAt', NULL,
+                'cancelledAt', NULL
+            ),
+            'snapshot', v_snapshot,
+            'actual', jsonb_build_object()
         )
     );
 
@@ -463,6 +501,7 @@ DECLARE
     v_payment_transaction_id INT;
     v_client_id             INT;
     v_order_total           NUMERIC;
+    v_cancelled_at_iso      TEXT;
 
     result JSON;
 
@@ -491,6 +530,8 @@ BEGIN
         cancellation_reason = p_cancellation_reason,
         updated_at         = NOW()
     WHERE order_id = p_order_id;
+
+    v_cancelled_at_iso := to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
 
     -- Record status transition
     INSERT INTO orders.status_history (order_id, status, previous_status, changed_by, notes)
@@ -540,10 +581,17 @@ BEGIN
 
     result := json_build_object(
         'success',         TRUE,
-        'order_id',        p_order_id,
-        'refund_initiated', v_payment_transaction_id IS NOT NULL,
-        'refund_amount',   CASE WHEN v_payment_transaction_id IS NOT NULL THEN v_order_total ELSE 0 END,
-        'cancelled_at',    NOW()
+        'order', json_build_object(
+            'orderId', p_order_id,
+            'status', 'cancelled',
+            'cancelledAt', v_cancelled_at_iso,
+            'cancellationReason', p_cancellation_reason
+        ),
+        'refund', json_build_object(
+            'initiated', v_payment_transaction_id IS NOT NULL,
+            'amount', CASE WHEN v_payment_transaction_id IS NOT NULL THEN v_order_total ELSE 0 END,
+            'status', CASE WHEN v_payment_transaction_id IS NOT NULL THEN 'pending' ELSE 'not_required' END
+        )
     );
 
     RETURN result;
@@ -575,6 +623,8 @@ AS $$
 DECLARE
     v_order_status   order_status;
     v_assignment_id  INT;
+    v_assigned_at_iso TEXT;
+    v_accepted_at_iso TEXT;
 
 BEGIN
     -- Lock the order row to prevent concurrent assignments
@@ -607,8 +657,16 @@ BEGIN
     END IF;
 
     -- Create assignment
-    INSERT INTO orders.courier_assignments (order_id, courier_id, status)
-    VALUES (p_order_id, p_courier_id, 'assigned')
+    INSERT INTO orders.courier_assignments (order_id, courier_id, status, timeline)
+    VALUES (
+        p_order_id,
+        p_courier_id,
+        'accepted',
+        jsonb_build_object(
+            'acceptedAt', to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+            'rejectedAt', NULL
+        )
+    )
     RETURNING assignment_id INTO v_assignment_id;
 
     -- Update courier status and order status atomically
@@ -624,7 +682,25 @@ BEGIN
         updated_at  = NOW()
     WHERE order_id = p_order_id;
 
-    RETURN json_build_object('success', TRUE, 'assignment_id', v_assignment_id);
+    v_assigned_at_iso := to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+    v_accepted_at_iso := v_assigned_at_iso;
+
+    RETURN json_build_object(
+        'success', TRUE,
+        'assignment', json_build_object(
+            'assignmentId', v_assignment_id,
+            'orderId', p_order_id,
+            'courierId', p_courier_id,
+            'status', 'accepted',
+            'assignedAt', v_assigned_at_iso,
+            'acceptedAt', v_accepted_at_iso
+        ),
+        'order', json_build_object(
+            'orderId', p_order_id,
+            'status', 'accepted',
+            'acceptedAt', v_accepted_at_iso
+        )
+    );
 
 EXCEPTION WHEN OTHERS THEN
     RETURN json_build_object('success', FALSE, 'error', SQLERRM);

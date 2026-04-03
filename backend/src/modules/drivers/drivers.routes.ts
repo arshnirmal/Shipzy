@@ -3,6 +3,7 @@ import { authorize } from "../../middleware/auth.middleware.js";
 import { FastifyInstance } from "fastify";
 import driversController from "./drivers.controller.js";
 import {
+  getEarningsSchema,
   updateAvailabilitySchema,
   updateDriverProfileSchema,
   updateLocationSchema,
@@ -51,6 +52,7 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   // GET /api/v1/drivers/me/earnings - Get earnings summary
   fastify.get(
     "/me/earnings",
+    { schema: getEarningsSchema },
     driversController.getEarnings.bind(driversController),
   );
 

@@ -12,14 +12,43 @@ import {
   AvailableOrdersQueryZ,
 } from "./orders.zod.js";
 
-const paramsJson = zodToJsonSchema(OrderParamsZ as any);
+type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
 
-export const calculateFareSchema: FastifySchema = { body: zodToJsonSchema(CalculateFareRequestZ as any) };
-export const createOrderSchema: FastifySchema = { body: zodToJsonSchema(CreateOrderRequestZ as any) };
+const paramsJson = zodToJsonSchema(
+  OrderParamsZ as unknown as ZodToJsonSchemaInput,
+);
+
+export const calculateFareSchema: FastifySchema = {
+  body: zodToJsonSchema(
+    CalculateFareRequestZ as unknown as ZodToJsonSchemaInput,
+  ),
+};
+export const createOrderSchema: FastifySchema = {
+  body: zodToJsonSchema(CreateOrderRequestZ as unknown as ZodToJsonSchemaInput),
+};
 export const getOrderByIdSchema: FastifySchema = { params: paramsJson };
-export const listOrdersSchema: FastifySchema = { querystring: zodToJsonSchema(ListOrdersQueryZ as any) };
-export const getAvailableOrdersSchema: FastifySchema = { querystring: zodToJsonSchema(AvailableOrdersQueryZ as any) };
-export const cancelOrderSchema: FastifySchema = { params: paramsJson, body: zodToJsonSchema(CancelOrderRequestZ as any) };
+export const listOrdersSchema: FastifySchema = {
+  querystring: zodToJsonSchema(
+    ListOrdersQueryZ as unknown as ZodToJsonSchemaInput,
+  ),
+};
+export const getAvailableOrdersSchema: FastifySchema = {
+  querystring: zodToJsonSchema(
+    AvailableOrdersQueryZ as unknown as ZodToJsonSchemaInput,
+  ),
+};
+export const cancelOrderSchema: FastifySchema = {
+  params: paramsJson,
+  body: zodToJsonSchema(CancelOrderRequestZ as unknown as ZodToJsonSchemaInput),
+};
 export const acceptOrderSchema: FastifySchema = { params: paramsJson };
-export const updateOrderStatusSchema: FastifySchema = { params: paramsJson, body: zodToJsonSchema(UpdateOrderStatusRequestZ as any) };
-export const rateOrderSchema: FastifySchema = { params: paramsJson, body: zodToJsonSchema(RateOrderRequestZ as any) };
+export const updateOrderStatusSchema: FastifySchema = {
+  params: paramsJson,
+  body: zodToJsonSchema(
+    UpdateOrderStatusRequestZ as unknown as ZodToJsonSchemaInput,
+  ),
+};
+export const rateOrderSchema: FastifySchema = {
+  params: paramsJson,
+  body: zodToJsonSchema(RateOrderRequestZ as unknown as ZodToJsonSchemaInput),
+};

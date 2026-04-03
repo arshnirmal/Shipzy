@@ -42,6 +42,7 @@ export const OrderPricingJSONBZ = z.object({
   specialHandlingFee: z.number().nonnegative(),
   subtotalBeforeTax: z.number().nonnegative(),
   gstAmount: z.number().nonnegative(),
+  totalPrice: z.number().nonnegative(),
   currency: z.string().optional(),
 });
 export type OrderPricingJSONB = z.infer<typeof OrderPricingJSONBZ>;
@@ -49,14 +50,14 @@ export type OrderPricingJSONB = z.infer<typeof OrderPricingJSONBZ>;
 // ── Scheduling ────────────────────────────────────────────────────────────────
 
 export const OrderScheduleJSONBZ = z.object({
-  pickupAt: z.string().nullable().optional(),
-  deliveryAt: z.string().nullable().optional(),
+  pickupAt: z.iso.datetime().nullable().optional(),
+  deliveryAt: z.iso.datetime().nullable().optional(),
 });
 export type OrderScheduleJSONB = z.infer<typeof OrderScheduleJSONBZ>;
 
 export const OrderActualJSONBZ = z.object({
-  pickupAt: z.string().nullable().optional(),
-  deliveryAt: z.string().nullable().optional(),
+  pickupAt: z.iso.datetime().nullable().optional(),
+  deliveryAt: z.iso.datetime().nullable().optional(),
 });
 export type OrderActualJSONB = z.infer<typeof OrderActualJSONBZ>;
 
@@ -84,17 +85,23 @@ export const OrderSnapshotJSONBZ = z.object({
     displayName: z.string(),
     maxWeightKg: z.number().nullable().optional(),
   }),
-  weightTier: z.object({
-    id: z.number(),
-    name: z.string(),
-    minWeightKg: z.number(),
-    maxWeightKg: z.number(),
-    additionalCharge: z.number(),
-  }).nullable().optional(),
-  packageType: z.object({
-    id: z.number(),
-    name: z.string(),
-  }).nullable().optional(),
+  weightTier: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+      minWeightKg: z.number(),
+      maxWeightKg: z.number(),
+      additionalCharge: z.number(),
+    })
+    .nullable()
+    .optional(),
+  packageType: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+    })
+    .nullable()
+    .optional(),
   paymentMethod: z.object({
     id: z.number(),
     name: z.string(),
@@ -105,7 +112,7 @@ export type OrderSnapshotJSONB = z.infer<typeof OrderSnapshotJSONBZ>;
 // ── Assignment timeline ───────────────────────────────────────────────────────
 
 export const AssignmentTimelineJSONBZ = z.object({
-  acceptedAt: z.string().nullable().optional(),
-  rejectedAt: z.string().nullable().optional(),
+  acceptedAt: z.iso.datetime().nullable().optional(),
+  rejectedAt: z.iso.datetime().nullable().optional(),
 });
 export type AssignmentTimelineJSONB = z.infer<typeof AssignmentTimelineJSONBZ>;

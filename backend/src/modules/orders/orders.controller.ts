@@ -37,7 +37,9 @@ class OrdersController {
       logger.info({
         msg: "POST /api/v1/orders/calculate-fare",
         statusCode: 200,
-        distanceKm: fareData.drop?.latitude ? "calculated" : "pending",
+        distanceKm: fareData.locations?.delivery?.latitude
+          ? "calculated"
+          : "pending",
       });
 
       return successResponse(reply, result, "Fare calculated successfully");
@@ -61,7 +63,7 @@ class OrdersController {
     let requestId: string | undefined;
 
     try {
-      const { userId, role } = request.user!;
+      const { userId } = request.user!;
       const orderData = request.body;
       requestId = request.id;
 
@@ -71,7 +73,7 @@ class OrdersController {
         msg: "Order created",
         requestId,
         userId,
-        orderId: result.orderId,
+        orderId: result.order.identifiers.orderId,
         statusCode: 201,
       });
 
@@ -97,11 +99,7 @@ class OrdersController {
       const { userId, role } = request.user!;
       const { id } = request.params;
 
-      const order = await ordersService.getOrderById(
-        id,
-        userId,
-        role,
-      );
+      const order = await ordersService.getOrderById(id, userId, role);
 
       logger.info({
         msg: "GET /api/v1/orders/:id",
@@ -260,10 +258,7 @@ class OrdersController {
       const { userId } = request.user!;
       const { id } = request.params;
 
-      const result = await ordersService.acceptOrder(
-        id,
-        userId,
-      );
+      const result = await ordersService.acceptOrder(id, userId);
 
       logger.info({
         msg: "POST /api/v1/orders/:id/accept",
@@ -298,11 +293,7 @@ class OrdersController {
       const { id } = request.params;
       const { status } = request.body;
 
-      const result = await ordersService.updateOrderStatus(
-        id,
-        status,
-        userId,
-      );
+      const result = await ordersService.updateOrderStatus(id, status, userId);
 
       logger.info({
         msg: "PUT /api/v1/orders/:id/status",

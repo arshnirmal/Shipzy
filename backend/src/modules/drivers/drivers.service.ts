@@ -11,7 +11,11 @@ import {
 } from "../../utils/datetime.util.js";
 import driversRepository from "./drivers.repository.js";
 
-import type { DriverProfileResponse } from "./drivers.zod.js";
+import type {
+  ActiveAssignment,
+  DriverEarningsSummary,
+  DriverProfileResponse,
+} from "./drivers.zod.js";
 
 type UpdateProfileData = import("./drivers.zod.js").UpdateDriverProfileRequest;
 type UpdateAvailabilityData =
@@ -19,89 +23,6 @@ type UpdateAvailabilityData =
 type LocationData = import("./drivers.zod.js").UpdateLocationRequest;
 
 type DriverProfile = DriverProfileResponse;
-
-// API return shape for earnings summary (used by `getEarningsSummary`)
-type EarningsSummary = {
-  deliveries: {
-    today?: number;
-    total?: number;
-    thisWeek?: number;
-    thisMonth?: number;
-  };
-  earnings: {
-    today?: number;
-    total?: number;
-    thisWeek?: number;
-    thisMonth?: number;
-    averageOrderValue?: number;
-  };
-  totalDistanceKm: number;
-};
-
-// API return shape for active assignments (frontend-friendly)
-type ActiveAssignment = {
-  assignmentId: number;
-  orderId: number;
-  orderUuid?: string;
-  orderNumber?: string;
-  orderStatus?: string;
-  assignmentStatus?: string;
-  vehicleCategory?: string | null;
-  vehicleCategoryDisplay?: string | null;
-  packageType?: string | null;
-  weightTier?: {
-    id?: number;
-    name?: string;
-    minWeightKg?: number;
-    maxWeightKg?: number;
-  } | null;
-  pickup: {
-    address?: string | null;
-    building?: string | null;
-    landmark?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postalCode?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
-  };
-  delivery: {
-    address?: string | null;
-    building?: string | null;
-    landmark?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postalCode?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
-  };
-  packageDescription?: string | null;
-  specialInstructions?: string | null;
-  declaredValue?: number | null;
-  estimatedDistanceKm?: number | null;
-  actualDistanceKm?: number | null;
-  driverEarnings: number;
-  earningsBreakdown: {
-    basePayout: number;
-    distanceEarning: number;
-    weightCompensation: number;
-    peakHourBonus: number;
-    urgencyBonus: number;
-    onTimeBonus: number;
-    qualityBonus: number;
-    platformCommission: number;
-    customerTip: number;
-    grossEarning: number;
-    netEarning: number;
-  };
-  estimatedDeliveryTime: number;
-  assignedAt?: string | null;
-  acceptedAt?: string | null;
-};
 
 class DriversService {
   /**
@@ -401,7 +322,8 @@ class DriversService {
             },
             packageDescription: pkg?.description ?? null,
             specialInstructions: pkg?.specialInstructions ?? null,
-            declaredValue: pkg?.declaredValue != null ? Number(pkg.declaredValue) : null,
+            declaredValue:
+              pkg?.declaredValue != null ? Number(pkg.declaredValue) : null,
             estimatedDistanceKm: assignment.estimatedDistanceKm
               ? Number(assignment.estimatedDistanceKm)
               : null,
@@ -498,11 +420,12 @@ class DriversService {
 
       // Urgency bonus for "Deliver Now"
       const urgencyBonus =
-        assignment.snapshot?.deliveryType?.name === "deliver_now" ? urgencyBonusAmount : 0;
+        assignment.snapshot?.deliveryType?.name === "deliver_now"
+          ? urgencyBonusAmount
+          : 0;
 
-      // On-time delivery bonus (simplified)
-      const onTimeBonus =
-        Math.random() > 0.7 ? basePayout * onTimeBonusRate : 0;
+      // TODO: calculate from actual delivery timing against requested schedule.
+      const onTimeBonus = 0;
 
       // Quality bonus
       const qualityBonus = qualityBonusAmount;
@@ -579,7 +502,7 @@ class DriversService {
   async getEarningsSummary(
     userId: number,
     period: string = "today",
-  ): Promise<EarningsSummary> {
+  ): Promise<DriverEarningsSummary> {
     try {
       const earnings = await driversRepository.getEarningsSummary(userId);
 
