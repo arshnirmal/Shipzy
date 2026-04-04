@@ -31,12 +31,12 @@ class AddressesController {
         userId: request.user?.userId,
       });
 
-      const suggestions = await addressesService.searchAddresses(request.body);
+      const result = await addressesService.searchAddresses(request.body);
 
       return successResponse(
         reply,
-        suggestions,
-        `Found ${suggestions.length} suggestions for "${query}"`,
+        result,
+        `Found ${result.search.total} suggestions for "${query}"`,
       );
     } catch (error) {
       logger.error({
@@ -78,7 +78,7 @@ class AddressesController {
 
       return successResponse(
         reply,
-        placeDetails,
+        { place: placeDetails },
         "Place details retrieved successfully",
       );
     } catch (error) {
@@ -123,7 +123,7 @@ class AddressesController {
 
       return successResponse(
         reply,
-        result,
+        { reverseGeocode: result },
         `Reverse geocode completed for (${longitude}, ${latitude})`,
       );
     } catch (error) {
@@ -165,10 +165,25 @@ class AddressesController {
         profile,
       );
 
+      const response = {
+        route: {
+          distanceMeters: result.distance,
+          durationSeconds: result.duration,
+          distanceKm: result.distanceKm,
+          durationMinutes: result.durationMinutes,
+          geometry: result.geometry,
+        },
+        navigation: {
+          origin: result.origin,
+          destination: result.destination,
+          profile: profile ?? "driving",
+        },
+      };
+
       return successResponse(
         reply,
-        result,
-        `Directions calculated: ${result.distanceKm}km, ${result.durationMinutes}min`,
+        response,
+        `Directions calculated: ${response.route.distanceKm}km, ${response.route.durationMinutes}min`,
       );
     } catch (error) {
       logger.error({
@@ -196,7 +211,12 @@ class AddressesController {
     try {
       const { lat1, lon1, lat2, lon2 } = request.body;
 
-      const distance = addressesService.calculateDistance(lat1, lon1, lat2, lon2);
+      const distance = addressesService.calculateDistance(
+        lat1,
+        lon1,
+        lat2,
+        lon2,
+      );
 
       logger.info({
         msg: "POST /api/v1/addresses/distance",
@@ -207,7 +227,15 @@ class AddressesController {
 
       return successResponse(
         reply,
-        { distanceKm: distance },
+        {
+          distance: {
+            kilometers: distance,
+          },
+          points: {
+            origin: { latitude: lat1, longitude: lon1 },
+            destination: { latitude: lat2, longitude: lon2 },
+          },
+        },
         `Distance calculated: ${distance}km`,
       );
     } catch (error) {

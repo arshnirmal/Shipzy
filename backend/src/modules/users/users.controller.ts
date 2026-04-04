@@ -34,7 +34,7 @@ class UsersController {
 
       return successResponse(
         reply,
-        user,
+        { profile: user },
         "User profile retrieved successfully",
       );
     } catch (error) {
@@ -62,11 +62,14 @@ class UsersController {
     try {
       const { userId } = this._requireAuthenticatedUser(request);
 
-      const updatedUser = await usersService.updateProfile(userId, request.body);
+      const updatedUser = await usersService.updateProfile(
+        userId,
+        request.body,
+      );
 
       return successResponse(
         reply,
-        updatedUser,
+        { profile: updatedUser },
         "Profile updated successfully",
       );
     } catch (error) {
@@ -98,7 +101,10 @@ class UsersController {
 
       return successResponse(
         reply,
-        addresses,
+        {
+          addresses,
+          total: addresses.length,
+        },
         "Addresses retrieved successfully",
       );
     } catch (error) {
@@ -130,7 +136,7 @@ class UsersController {
 
       return successResponse(
         reply,
-        savedAddress,
+        { address: savedAddress },
         "Address saved successfully",
         201,
       );
@@ -162,7 +168,11 @@ class UsersController {
 
       const result = await usersService.deleteAddress(id, userId);
 
-      return successResponse(reply, result, "Address deleted successfully");
+      return successResponse(
+        reply,
+        { deletion: result },
+        "Address deleted successfully",
+      );
     } catch (error) {
       logger.error({
         msg: "Delete address controller error",

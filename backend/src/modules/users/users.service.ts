@@ -1,26 +1,92 @@
 // services/backend/src/modules/users/users.service.ts
 import logger from "../../config/logger.js";
-import {
-  AuthorizationError,
-  NotFoundError,
-} from "../../utils/error.util.js";
+import { AuthorizationError, NotFoundError } from "../../utils/error.util.js";
 import {
   toIsoDateTime,
   toIsoDateTimeOrUndefined,
 } from "../../utils/datetime.util.js";
 import usersRepository from "./users.repository.js";
 
-import type { UserProfileResponse } from "./users.zod.js";
 import type {
+  UserProfile,
+  SavedAddressResponse,
   UpdateProfileRequest as UpdateProfileData,
   SaveAddressRequest as AddressData,
 } from "./users.zod.js";
 
 class UsersService {
+  private _mapUserProfile(user: {
+    userId: number;
+    userUuid: string;
+    roleName: string;
+    phoneNumber?: string | null;
+    email?: string | null;
+    fullName: string;
+    profilePictureUrl?: string | null;
+    isVerified: boolean;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt?: Date;
+  }): UserProfile {
+    return {
+      userId: user.userId,
+      userUuid: user.userUuid,
+      role: user.roleName as UserProfile["role"],
+      phoneNumber: user.phoneNumber ?? null,
+      email: user.email ?? null,
+      fullName: user.fullName,
+      profilePictureUrl: user.profilePictureUrl ?? null,
+      isVerified: user.isVerified,
+      isActive: user.isActive,
+      createdAt: toIsoDateTime(user.createdAt),
+      updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
+    };
+  }
+
+  private _mapSavedAddress(address: {
+    addressId: number;
+    addressType?: string | null;
+    label?: string | null;
+    fullAddress: string;
+    building?: string | null;
+    floor?: string | null;
+    flatNumber?: string | null;
+    landmark?: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    latitude: number | string;
+    longitude: number | string;
+    isDefault: boolean;
+    createdAt?: Date;
+  }): SavedAddressResponse {
+    return {
+      addressId: address.addressId,
+      addressType:
+        (address.addressType as SavedAddressResponse["addressType"]) ??
+        undefined,
+      label: address.label ?? undefined,
+      fullAddress: address.fullAddress,
+      building: address.building ?? undefined,
+      floor: address.floor ?? undefined,
+      flatNumber: address.flatNumber ?? undefined,
+      landmark: address.landmark ?? undefined,
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      latitude: Number(address.latitude),
+      longitude: Number(address.longitude),
+      isDefault: address.isDefault,
+      createdAt: address.createdAt
+        ? toIsoDateTime(address.createdAt)
+        : undefined,
+    };
+  }
+
   /**
    * Get current user profile
    */
-  async getCurrentUser(userUuid: string): Promise<UserProfileResponse> {
+  async getCurrentUser(userUuid: string): Promise<UserProfile> {
     try {
       const user = await usersRepository.findByUuid(userUuid);
 
@@ -28,19 +94,7 @@ class UsersService {
         throw new NotFoundError("User not found");
       }
 
-      return {
-        userId: user.userId,
-        userUuid: user.userUuid,
-        role: user.roleName as UserProfileResponse["role"],
-        phoneNumber: user.phoneNumber ?? null,
-        email: user.email ?? null,
-        fullName: user.fullName,
-        profilePictureUrl: user.profilePictureUrl ?? null,
-        isVerified: user.isVerified,
-        isActive: user.isActive,
-        createdAt: toIsoDateTime(user.createdAt),
-        updatedAt: toIsoDateTimeOrUndefined(user.updatedAt),
-      };
+      return this._mapUserProfile(user);
     } catch (error) {
       logger.error({
         msg: "Error getting current user",
@@ -56,26 +110,14 @@ class UsersService {
   async updateProfile(
     userId: number,
     updateData: UpdateProfileData,
-  ): Promise<UserProfileResponse> {
+  ): Promise<UserProfile> {
     try {
       const updatedUser = await usersRepository.updateProfile(
         userId,
         updateData,
       );
 
-      return {
-        userId: updatedUser.userId,
-        userUuid: updatedUser.userUuid,
-        fullName: updatedUser.fullName,
-        email: updatedUser.email ?? null,
-        profilePictureUrl: updatedUser.profilePictureUrl ?? null,
-        role: updatedUser.roleName as UserProfileResponse["role"],
-        phoneNumber: updatedUser.phoneNumber ?? null,
-        isVerified: updatedUser.isVerified,
-        isActive: updatedUser.isActive,
-        createdAt: toIsoDateTime(updatedUser.createdAt),
-        updatedAt: toIsoDateTimeOrUndefined(updatedUser.updatedAt),
-      };
+      return this._mapUserProfile(updatedUser);
     } catch (error) {
       logger.error({
         msg: "Error updating user profile",
@@ -88,30 +130,11 @@ class UsersService {
   /**
    * Get user addresses
    */
-  async getAddresses(
-    userId: number,
-  ): Promise<import("./users.zod.js").SavedAddressResponse[]> {
+  async getAddresses(userId: number): Promise<SavedAddressResponse[]> {
     try {
       const addresses = await usersRepository.getAddresses(userId);
 
-      return addresses.map((addr) => ({
-        addressId: addr.addressId,
-        addressType:
-          addr.addressType as import("./users.zod.js").SavedAddressResponse["addressType"],
-        label: addr.label,
-        fullAddress: addr.fullAddress,
-        building: addr.building || undefined,
-        floor: addr.floor || undefined,
-        flatNumber: addr.flatNumber || undefined,
-        landmark: addr.landmark,
-        city: addr.city,
-        state: addr.state,
-        postalCode: addr.postalCode,
-        latitude: addr.latitude,
-        longitude: addr.longitude,
-        isDefault: addr.isDefault,
-        createdAt: toIsoDateTime(addr.createdAt),
-      }));
+      return addresses.map((address) => this._mapSavedAddress(address));
     } catch (error) {
       logger.error({
         msg: "Error getting user addresses",
@@ -127,31 +150,14 @@ class UsersService {
   async saveAddress(
     userId: number,
     addressData: AddressData,
-  ): Promise<import("./users.zod.js").SavedAddressResponse> {
+  ): Promise<SavedAddressResponse> {
     try {
       const savedAddress = await usersRepository.saveAddress(
         userId,
         addressData,
       );
 
-      return {
-        addressId: savedAddress.addressId,
-        addressType:
-          savedAddress.addressType as import("./users.zod.js").SavedAddressResponse["addressType"],
-        label: savedAddress.label,
-        fullAddress: savedAddress.fullAddress,
-        building: savedAddress.building || undefined,
-        floor: savedAddress.floor || undefined,
-        flatNumber: savedAddress.flatNumber || undefined,
-        landmark: savedAddress.landmark || undefined,
-        city: savedAddress.city,
-        state: savedAddress.state,
-        postalCode: savedAddress.postalCode,
-        latitude: savedAddress.latitude,
-        longitude: savedAddress.longitude,
-        isDefault: savedAddress.isDefault,
-        createdAt: toIsoDateTime(savedAddress.createdAt),
-      };
+      return this._mapSavedAddress(savedAddress);
     } catch (error) {
       logger.error({
         msg: "Error saving address",
@@ -167,7 +173,7 @@ class UsersService {
   async deleteAddress(
     addressId: number,
     userId: number,
-  ): Promise<{ message: string }> {
+  ): Promise<{ addressId: number; deleted: true }> {
     try {
       // Verify address belongs to user
       const address = await usersRepository.getAddressById(addressId);
@@ -186,7 +192,7 @@ class UsersService {
         throw new NotFoundError("Address not found");
       }
 
-      return { message: "Address deleted successfully" };
+      return { addressId, deleted: true };
     } catch (error) {
       logger.error({
         msg: "Error deleting address",

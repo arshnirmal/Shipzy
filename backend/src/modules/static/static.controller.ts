@@ -19,7 +19,10 @@ class StaticController {
 
       return successResponse(
         reply,
-        deliveryTypes,
+        {
+          deliveryTypes,
+          total: deliveryTypes.length,
+        },
         "Delivery types retrieved successfully",
       );
     } catch (error) {
@@ -49,7 +52,10 @@ class StaticController {
 
       return successResponse(
         reply,
-        weightTiers,
+        {
+          weightTiers,
+          total: weightTiers.length,
+        },
         "Weight tiers retrieved successfully",
       );
     } catch (error) {
@@ -79,7 +85,10 @@ class StaticController {
 
       return successResponse(
         reply,
-        categories,
+        {
+          vehicleCategories: categories,
+          total: categories.length,
+        },
         "Vehicle categories retrieved successfully",
       );
     } catch (error) {
@@ -109,7 +118,10 @@ class StaticController {
 
       return successResponse(
         reply,
-        packageTypes,
+        {
+          packageTypes,
+          total: packageTypes.length,
+        },
         "Package types retrieved successfully",
       );
     } catch (error) {
@@ -139,7 +151,10 @@ class StaticController {
 
       return successResponse(
         reply,
-        paymentMethods,
+        {
+          paymentMethods,
+          total: paymentMethods.length,
+        },
         "Payment methods retrieved successfully",
       );
     } catch (error) {
@@ -169,7 +184,7 @@ class StaticController {
 
       return successResponse(
         reply,
-        data,
+        { createOrder: data },
         "Create order data retrieved successfully",
       );
     } catch (error) {
@@ -199,7 +214,10 @@ class StaticController {
 
       return successResponse(
         reply,
-        statuses,
+        {
+          orderStatuses: statuses,
+          total: statuses.length,
+        },
         "Order statuses retrieved successfully",
       );
     } catch (error) {

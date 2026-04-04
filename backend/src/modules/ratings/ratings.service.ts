@@ -8,22 +8,21 @@ import {
 import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ratingsRepository from "./ratings.repository.js";
 
-import type { CreateRatingRequest } from "./ratings.zod.js";
+import type { DriverRatingStats, RatingResponse } from "./ratings.zod.js";
 
-interface DriverRatingStats {
-  averageRating: number;
-  totalRatings: number;
-  ratingDistribution: { [key: number]: number };
-  lastUpdated: string;
+interface CreateRatingInput {
+  orderId: number;
+  customerId: number;
+  rating: number;
+  isAnonymous?: boolean;
+  comment?: string | null;
 }
 
 class RatingsService {
   /**
    * Create a new driver rating
    */
-  async createRating(
-    ratingData: CreateRatingRequest,
-  ): Promise<import("./ratings.zod.js").RatingResponse> {
+  async createRating(ratingData: CreateRatingInput): Promise<RatingResponse> {
     try {
       const { orderId, customerId, rating, isAnonymous, comment } = ratingData;
 
@@ -102,6 +101,7 @@ class RatingsService {
           averageRating: 0,
           totalRatings: 0,
           ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          recentRatings: [],
           lastUpdated: toIsoDateTime(new Date()),
         };
       }
@@ -140,10 +140,17 @@ class RatingsService {
         }
       }
 
+      const recentRatings = ratings.slice(0, 5).map((entry) => ({
+        rating: entry.rating,
+        comment: entry.comment ?? null,
+        createdAt: toIsoDateTime(entry.createdAt),
+      }));
+
       return {
         averageRating,
         totalRatings: validRatingsCount,
         ratingDistribution: distribution,
+        recentRatings,
         lastUpdated: toIsoDateTime(lastUpdated),
       };
     } catch (error) {

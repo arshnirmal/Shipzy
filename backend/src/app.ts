@@ -27,6 +27,7 @@ import addressesRoutes from "./modules/addresses/addresses.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import driversRoutes from "./modules/drivers/drivers.routes.js";
 import ordersRoutes from "./modules/orders/orders.routes.js";
+import ratingsRoutes from "./modules/ratings/ratings.routes.js";
 import staticRoutes from "./modules/static/static.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 
@@ -100,7 +101,7 @@ export const buildApp = async (
     });
   } catch (err) {
     // swagger packages not installed — continue without interactive docs
-    app.log?.debug?.("Swagger plugins not available")
+    app.log?.debug?.("Swagger plugins not available");
   }
 
   // ============ DECORATORS ============
@@ -202,6 +203,7 @@ export const buildApp = async (
   await app.register(usersRoutes, { prefix: "/api/v1/users" });
   await app.register(driversRoutes, { prefix: "/api/v1/drivers" });
   await app.register(ordersRoutes, { prefix: "/api/v1/orders" });
+  await app.register(ratingsRoutes, { prefix: "/api/v1/ratings" });
   await app.register(staticRoutes, { prefix: "/api/v1/static" });
 
   // ============ ERROR HANDLERS ============

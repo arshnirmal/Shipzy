@@ -1,13 +1,22 @@
 // services/backend/src/modules/ratings/ratings.repository.ts
 import { eq, and, isNotNull, sql } from "drizzle-orm";
+import { z } from "zod";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import ratingsQueries from "../../database/queries/ratings.queries.js";
 import { driverRatings } from "../../database/schema/ratings.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { courierStatus } from "../../database/schema/logistics.js";
+import { AppError } from "../../utils/error.util.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
 
-import type { RatingRow } from "../../types/ratings.js";
+import { RatingRowDbZ, type RatingRow } from "../../types/ratings.js";
+
+const OrderCourierIdRowZ = z
+  .object({
+    courierId: z.number().int().positive(),
+  })
+  .strict();
 
 class RatingsRepository {
   /**
@@ -37,7 +46,7 @@ class RatingsRepository {
 
         const row = result[0];
         if (!row) {
-          throw new Error("Rating insert returned no row");
+          throw new AppError("Rating insert returned no row", 500);
         }
 
         const updatedCourier = await tx
@@ -51,24 +60,16 @@ class RatingsRepository {
           .returning({ courierId: courierStatus.courierId });
 
         if (updatedCourier.length === 0) {
-          throw new Error(
+          throw new AppError(
             `Courier status not found for driver ${ratingData.driverId}`,
+            500,
           );
         }
 
         return row;
       });
 
-      return {
-        ratingId: insertedRating.ratingId,
-        orderId: insertedRating.orderId,
-        driverId: insertedRating.driverId,
-        customerId: insertedRating.customerId,
-        rating: insertedRating.rating,
-        isAnonymous: insertedRating.isAnonymous,
-        comment: insertedRating.comment || null,
-        createdAt: insertedRating.createdAt,
-      } as RatingRow;
+      return parseDbRow(RatingRowDbZ, insertedRating, "created rating");
     } catch (error) {
       logger.error({
         msg: "Error creating driver rating",
@@ -92,7 +93,7 @@ class RatingsRepository {
         ratingsQueries.FIND_DRIVER_RATINGS_RECENT,
         [driverId, since],
       );
-      return result.rows;
+      return parseDbRows(RatingRowDbZ, result.rows, "driver recent ratings");
     } catch (error) {
       logger.error({
         msg: "Error getting driver ratings",
@@ -142,7 +143,11 @@ class RatingsRepository {
       const result = await drizzlePool.query(ratingsQueries.ORDER_HAS_DRIVER, [
         orderId,
       ]);
-      return result.rows[0]?.courierId || null;
+      const row = result.rows[0];
+      if (!row) return null;
+
+      const parsed = parseDbRow(OrderCourierIdRowZ, row, "order courier");
+      return parsed.courierId;
     } catch (error) {
       logger.error({
         msg: "Error getting driver for order",

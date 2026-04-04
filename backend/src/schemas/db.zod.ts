@@ -41,6 +41,17 @@ export const RequestUserZ = z.object({
 });
 export type RequestUser = z.infer<typeof RequestUserZ>;
 
+export const PricingConfigRowDbZ = z.object({
+  configKey: z.string(),
+  configValue: z.union([z.number(), z.string()]),
+});
+export type PricingConfigRowDb = z.infer<typeof PricingConfigRowDbZ>;
+
+export const PackageHandlingFeeDbZ = z.object({
+  specialHandlingFee: z.union([z.number(), z.string()]),
+});
+export type PackageHandlingFeeDb = z.infer<typeof PackageHandlingFeeDbZ>;
+
 export const CourierDbZ = z.object({
   courierId: z.number().int().positive(),
   userId: z.number().int().positive(),
@@ -355,3 +366,93 @@ export const SaveAddressResultDbZ = z.object({
   createdAt: z.date(),
 });
 export type SaveAddressResultDb = z.infer<typeof SaveAddressResultDbZ>;
+
+// ============================================================================
+// STATIC DATA
+// ============================================================================
+
+export const StaticWeightTierDbZ = z.object({
+  tierId: z.number().int().positive(),
+  name: z.string(),
+  minWeightKg: z.union([z.number(), z.string()]),
+  maxWeightKg: z.union([z.number(), z.string()]),
+  additionalCharge: z.union([z.number(), z.string()]),
+});
+export type StaticWeightTierDb = z.infer<typeof StaticWeightTierDbZ>;
+
+export const StaticSupportedVehicleDbZ = z.object({
+  categoryId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  maxWeightKg: z.union([z.number(), z.string()]),
+  iconUrl: z.string().nullable().optional(),
+  weightTiers: z.array(StaticWeightTierDbZ),
+});
+export type StaticSupportedVehicleDb = z.infer<
+  typeof StaticSupportedVehicleDbZ
+>;
+
+export const StaticDeliveryTypeDbZ = z.object({
+  deliveryTypeId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  baseRate: z.union([z.number(), z.string()]),
+  perKmRate: z.union([z.number(), z.string()]),
+  sortOrder: z.union([z.number(), z.string()]),
+  isActive: z.boolean(),
+  supportedVehicles: z.array(StaticSupportedVehicleDbZ),
+});
+export type StaticDeliveryTypeDb = z.infer<typeof StaticDeliveryTypeDbZ>;
+
+export const StaticDeliveryTypeMasterDbZ = z.object({
+  deliveryTypeId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  baseRate: z.union([z.number(), z.string()]),
+  perKmRate: z.union([z.number(), z.string()]),
+  sortOrder: z.union([z.number(), z.string()]),
+  isActive: z.boolean(),
+});
+export type StaticDeliveryTypeMasterDb = z.infer<
+  typeof StaticDeliveryTypeMasterDbZ
+>;
+
+export const StaticVehicleCategoryDbZ = z.object({
+  categoryId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  maxWeightKg: z.union([z.number(), z.string()]),
+  iconUrl: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
+export type StaticVehicleCategoryDb = z.infer<typeof StaticVehicleCategoryDbZ>;
+
+export const StaticPackageTypeDbZ = z.object({
+  packageTypeId: z.number().int().positive(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+});
+export type StaticPackageTypeDb = z.infer<typeof StaticPackageTypeDbZ>;
+
+export const StaticPaymentMethodDbZ = z.object({
+  methodId: z.number().int().positive(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
+export type StaticPaymentMethodDb = z.infer<typeof StaticPaymentMethodDbZ>;
+
+export const StaticStatusRowDbZ = z.object({
+  name: z.string(),
+});
+export type StaticStatusRowDb = z.infer<typeof StaticStatusRowDbZ>;
+
+export const StaticCreateOrderDataDbZ = z.object({
+  deliveryTypes: z.array(StaticDeliveryTypeDbZ),
+  packageTypes: z.array(StaticPackageTypeDbZ),
+  paymentMethods: z.array(StaticPaymentMethodDbZ),
+});
+export type StaticCreateOrderDataDb = z.infer<typeof StaticCreateOrderDataDbZ>;

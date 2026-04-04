@@ -6,6 +6,17 @@ import { AppError } from "../../utils/error.util.js";
 import cacheUtil from "../../utils/cache.util.js";
 import staticQueries from "../../database/queries/static.queries.js";
 import {
+  StaticCreateOrderDataDbZ,
+  StaticDeliveryTypeDbZ,
+  StaticDeliveryTypeMasterDbZ,
+  StaticPackageTypeDbZ,
+  StaticPaymentMethodDbZ,
+  StaticStatusRowDbZ,
+  StaticVehicleCategoryDbZ,
+  StaticWeightTierDbZ,
+} from "../../schemas/db.zod.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
+import {
   deliveryTypes,
   weightTiers,
   vehicleCategories,
@@ -20,7 +31,11 @@ class StaticRepository {
   async getDeliveryTypes() {
     try {
       const result = await drizzlePool.query(staticQueries.GET_DELIVERY_TYPES);
-      return result.rows;
+      return parseDbRows(
+        StaticDeliveryTypeDbZ,
+        result.rows,
+        "static delivery types",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting delivery types",
@@ -39,7 +54,11 @@ class StaticRepository {
       const cacheKey = `delivery_type:${deliveryTypeId}`;
       const cached = await cacheUtil.get(cacheKey);
       if (cached) {
-        return cached;
+        return parseDbRow(
+          StaticDeliveryTypeMasterDbZ,
+          cached,
+          "static delivery type",
+        );
       }
 
       const result = await drizzleDb
@@ -54,12 +73,18 @@ class StaticRepository {
         .limit(1);
 
       const deliveryType = result[0] || null;
-      
+
       // Cache for 1 hour
       if (deliveryType) {
-        await cacheUtil.set(cacheKey, deliveryType, 3600);
+        const parsedDeliveryType = parseDbRow(
+          StaticDeliveryTypeMasterDbZ,
+          deliveryType,
+          "static delivery type",
+        );
+        await cacheUtil.set(cacheKey, parsedDeliveryType, 3600);
+        return parsedDeliveryType;
       }
-      
+
       return deliveryType;
     } catch (error) {
       logger.error({
@@ -81,7 +106,7 @@ class StaticRepository {
         .from(weightTiers)
         .orderBy(weightTiers.minWeightKg);
 
-      return result;
+      return parseDbRows(StaticWeightTierDbZ, result, "static weight tiers");
     } catch (error) {
       logger.error({
         msg: "Error getting weight tiers",
@@ -107,7 +132,12 @@ class StaticRepository {
         )
         .limit(1);
 
-      return result[0] || null;
+      const tier = result[0] || null;
+      if (!tier) {
+        return null;
+      }
+
+      return parseDbRow(StaticWeightTierDbZ, tier, "static weight tier");
     } catch (error) {
       logger.error({
         msg: "Error getting weight tier for weight",
@@ -128,7 +158,11 @@ class StaticRepository {
         .where(eq(vehicleCategories.isActive, true))
         .orderBy(vehicleCategories.maxWeightKg);
 
-      return result;
+      return parseDbRows(
+        StaticVehicleCategoryDbZ,
+        result,
+        "static vehicle categories",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting vehicle categories",
@@ -148,7 +182,7 @@ class StaticRepository {
         .from(packageTypes)
         .orderBy(packageTypes.name);
 
-      return result;
+      return parseDbRows(StaticPackageTypeDbZ, result, "static package types");
     } catch (error) {
       logger.error({
         msg: "Error getting package types",
@@ -169,7 +203,11 @@ class StaticRepository {
         .where(eq(paymentMethods.isActive, true))
         .orderBy(paymentMethods.methodId);
 
-      return result;
+      return parseDbRows(
+        StaticPaymentMethodDbZ,
+        result,
+        "static payment methods",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting payment methods",
@@ -185,7 +223,7 @@ class StaticRepository {
   async getOrderStatuses() {
     try {
       const result = await drizzlePool.query(staticQueries.GET_ORDER_STATUSES);
-      return result.rows;
+      return parseDbRows(StaticStatusRowDbZ, result.rows, "order statuses");
     } catch (error) {
       logger.error({
         msg: "Error getting order statuses",
@@ -203,7 +241,11 @@ class StaticRepository {
       const result = await drizzlePool.query(
         staticQueries.GET_ASSIGNMENT_STATUSES,
       );
-      return result.rows;
+      return parseDbRows(
+        StaticStatusRowDbZ,
+        result.rows,
+        "assignment statuses",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting assignment statuses",
@@ -220,12 +262,18 @@ class StaticRepository {
    */
   async getCreateOrderData() {
     try {
-      const result = await drizzlePool.query(staticQueries.GET_CREATE_ORDER_DATA);
+      const result = await drizzlePool.query(
+        staticQueries.GET_CREATE_ORDER_DATA,
+      );
       const data = result.rows[0]?.data;
       if (!data) {
         throw new AppError("Create order static data is unavailable", 500);
       }
-      return data;
+      return parseDbRow(
+        StaticCreateOrderDataDbZ,
+        data,
+        "create order static data",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting create order data",

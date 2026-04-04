@@ -2,6 +2,11 @@ import { and, eq } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import { packageTypes, pricingConfig } from "../../database/schema/public.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
+import {
+  PackageHandlingFeeDbZ,
+  PricingConfigRowDbZ,
+} from "../../types/pricing.js";
 
 class PricingRepository {
   async getPricingConfigValue(key: string): Promise<number | null> {
@@ -9,14 +14,22 @@ class PricingRepository {
       const result = await drizzleDb
         .select({
           configValue: pricingConfig.configValue,
+          configKey: pricingConfig.configKey,
         })
         .from(pricingConfig)
         .where(
-          and(eq(pricingConfig.configKey, key), eq(pricingConfig.isActive, true)),
+          and(
+            eq(pricingConfig.configKey, key),
+            eq(pricingConfig.isActive, true),
+          ),
         )
         .limit(1);
 
-      const value = result[0]?.configValue;
+      const row = result[0];
+      if (!row) return null;
+
+      const parsed = parseDbRow(PricingConfigRowDbZ, row, "pricing config");
+      const value = parsed.configValue;
       return value == null ? null : this._toNumber(value);
     } catch (error) {
       logger.error({
@@ -38,8 +51,14 @@ class PricingRepository {
         .from(pricingConfig)
         .where(eq(pricingConfig.isActive, true));
 
+      const parsedRows = parseDbRows(
+        PricingConfigRowDbZ,
+        rows,
+        "pricing config",
+      );
+
       const config = new Map<string, number>();
-      for (const row of rows) {
+      for (const row of parsedRows) {
         config.set(row.configKey, this._toNumber(row.configValue));
       }
       return config;
@@ -87,7 +106,15 @@ class PricingRepository {
         .where(eq(packageTypes.packageTypeId, packageTypeId))
         .limit(1);
 
-      const fee = result[0]?.specialHandlingFee;
+      const row = result[0];
+      if (!row) return 0;
+
+      const parsed = parseDbRow(
+        PackageHandlingFeeDbZ,
+        row,
+        "package handling fee",
+      );
+      const fee = parsed.specialHandlingFee;
       return fee == null ? 0 : this._toNumber(fee);
     } catch (error) {
       logger.error({

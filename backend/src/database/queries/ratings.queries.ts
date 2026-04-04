@@ -10,7 +10,7 @@ export default {
    * Insert a new driver rating
    */
   INSERT_RATING: `
-    INSERT INTO public.driver_ratings (
+    INSERT INTO logistics.driver_ratings (
       order_id, driver_id, customer_id, rating, comment
     ) VALUES ($1, $2, $3, $4, $5)
     RETURNING
@@ -30,13 +30,15 @@ export default {
     SELECT
       r.rating_id AS "ratingId",
       r.order_id AS "orderId",
+      r.driver_id AS "driverId",
       r.customer_id AS "customerId",
+      r.is_anonymous AS "isAnonymous",
       r.rating AS "rating",
       r.comment AS "comment",
       r.created_at AS "createdAt",
       o.order_number AS "orderNumber",
       o.delivered_at AS "deliveredAt"
-    FROM public.driver_ratings r
+    FROM logistics.driver_ratings r
     JOIN orders.requests o ON r.order_id = o.order_id
     WHERE r.driver_id = $1
       AND r.created_at >= $2
@@ -79,7 +81,7 @@ export default {
    * Check if rating already exists for order
    */
   RATING_EXISTS_FOR_ORDER: `
-    SELECT 1 FROM public.driver_ratings
+    SELECT 1 FROM logistics.driver_ratings
     WHERE order_id = $1
     LIMIT 1
   `,

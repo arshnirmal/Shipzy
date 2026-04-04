@@ -33,7 +33,15 @@ type SearchSuggestion = {
   placeType: string;
   coordinates?: Coordinates;
   context: Record<string, string | undefined>;
-  sessionToken: string;
+};
+
+type SearchAddressesResult = {
+  search: {
+    query: string;
+    sessionToken: string;
+    suggestions: SearchSuggestion[];
+    total: number;
+  };
 };
 
 type RetrieveResult = {
@@ -77,7 +85,9 @@ class AddressesService {
     }
   }
 
-  async searchAddresses(searchParams: SearchParams): Promise<SearchSuggestion[]> {
+  async searchAddresses(
+    searchParams: SearchParams,
+  ): Promise<SearchAddressesResult> {
     if (!this.mapboxAccessToken) {
       throw new AppError("Address provider is not configured", 500);
     }
@@ -102,6 +112,7 @@ class AddressesService {
       : undefined;
 
     const cacheKey = `search:${normalizedQuery}:${proximityParam ?? ""}:${limit}:${typesParam}:${country ?? ""}:${language}`;
+    const sessionToken = this._generateSessionToken();
     const cached = searchCache.get(cacheKey) as SearchSuggestion[] | undefined;
     if (cached) {
       logger.info({
@@ -109,11 +120,17 @@ class AddressesService {
         query: normalizedQuery,
         resultCount: cached.length,
       });
-      return cached;
+      return {
+        search: {
+          query: normalizedQuery,
+          sessionToken,
+          suggestions: cached,
+          total: cached.length,
+        },
+      };
     }
 
     try {
-      const sessionToken = this._generateSessionToken();
       const suggestions = await addressesRepository.suggest({
         query: normalizedQuery,
         sessionToken,
@@ -125,7 +142,7 @@ class AddressesService {
       });
 
       const result = suggestions
-        .map((item) => this._mapSuggestion(item, sessionToken))
+        .map((item) => this._mapSuggestion(item))
         .filter((item): item is SearchSuggestion => item !== null);
 
       searchCache.set(cacheKey, result);
@@ -136,7 +153,14 @@ class AddressesService {
         resultCount: result.length,
       });
 
-      return result;
+      return {
+        search: {
+          query: normalizedQuery,
+          sessionToken,
+          suggestions: result,
+          total: result.length,
+        },
+      };
     } catch (error) {
       this._handleMapboxError(error, "address search");
     }
@@ -151,7 +175,10 @@ class AddressesService {
     }
 
     try {
-      const feature = await addressesRepository.retrieve(mapboxId, sessionToken);
+      const feature = await addressesRepository.retrieve(
+        mapboxId,
+        sessionToken,
+      );
       if (!feature) {
         throw new ValidationError("No place found for the selected location");
       }
@@ -241,7 +268,9 @@ class AddressesService {
     try {
       const route = await addressesRepository.directions(profile, coords);
       if (!route) {
-        throw new ValidationError("No route found between the specified points");
+        throw new ValidationError(
+          "No route found between the specified points",
+        );
       }
 
       const distance =
@@ -312,7 +341,9 @@ class AddressesService {
         typeof distanceInMeters !== "number" ||
         !Number.isFinite(distanceInMeters)
       ) {
-        throw new ValidationError("No route found between the specified points");
+        throw new ValidationError(
+          "No route found between the specified points",
+        );
       }
 
       const result = {
@@ -385,18 +416,18 @@ class AddressesService {
     );
   }
 
-  private _resolveReverseTypes(types: string[] | undefined, limit: number): string {
+  private _resolveReverseTypes(
+    types: string[] | undefined,
+    limit: number,
+  ): string {
     if (types && types.length > 0) {
-      return limit > 1 ? (types[0] || "address") : types.join(",");
+      return limit > 1 ? types[0] || "address" : types.join(",");
     }
 
     return limit > 1 ? "address" : "address,neighborhood,place";
   }
 
-  private _mapSuggestion(
-    item: MapboxSuggestionRaw,
-    sessionToken: string,
-  ): SearchSuggestion | null {
+  private _mapSuggestion(item: MapboxSuggestionRaw): SearchSuggestion | null {
     const mapboxId = this._asString(item.mapbox_id);
     if (!mapboxId) return null;
 
@@ -417,7 +448,6 @@ class AddressesService {
             }
           : undefined,
       context: this._parseContext(item.context),
-      sessionToken,
     };
   }
 
@@ -595,7 +625,10 @@ class AddressesService {
       throw new ValidationError(`Invalid ${operation} parameters`);
     }
     if (status === 429) {
-      throw new AppError("Address provider rate limited. Try again shortly", 503);
+      throw new AppError(
+        "Address provider rate limited. Try again shortly",
+        503,
+      );
     }
     if (status === 401 || status === 403) {
       throw new AppError("Address provider authentication failed", 502);

@@ -12,6 +12,7 @@ This document is generated/maintained to match the **current implementation** un
 - [Users](#users)
 - [Drivers](#drivers)
 - [Orders](#orders)
+- [Ratings](#ratings)
 - [Addresses](#addresses)
 - [Static](#static)
 - [Health](#health)
@@ -313,7 +314,9 @@ Auth: Bearer token required
 Response (200):
 
 ```ts
-type Response = SuccessResponse<BaseUser>;
+type Response = SuccessResponse<{
+  profile: BaseUser;
+}>;
 ```
 
 ### PUT /api/v1/users/me
@@ -334,7 +337,9 @@ type UpdateProfileRequest = {
 Response (200):
 
 ```ts
-type Response = SuccessResponse<BaseUser>;
+type Response = SuccessResponse<{
+  profile: BaseUser;
+}>;
 ```
 
 ### GET /api/v1/users/me/addresses
@@ -344,7 +349,10 @@ Auth: Bearer token required
 Response (200):
 
 ```ts
-type Response = SuccessResponse<SavedAddress[]>;
+type Response = SuccessResponse<{
+  addresses: SavedAddress[];
+  total: number;
+}>;
 ```
 
 ### POST /api/v1/users/me/addresses
@@ -375,7 +383,9 @@ type SaveAddressRequest = {
 Response (201):
 
 ```ts
-type Response = SuccessResponse<SavedAddress>;
+type Response = SuccessResponse<{
+  address: SavedAddress;
+}>;
 ```
 
 ### DELETE /api/v1/users/me/addresses/:id
@@ -391,7 +401,12 @@ type Params = { id: number };
 Response (200):
 
 ```ts
-type DeleteAddressData = { message: string };
+type DeleteAddressData = {
+  deletion: {
+    addressId: number;
+    deleted: true;
+  };
+};
 type Response = SuccessResponse<DeleteAddressData>;
 ```
 
@@ -1149,6 +1164,97 @@ type Response = SuccessResponse<RatingResponse>;
 
 ---
 
+## Ratings
+
+Base: `/api/v1/ratings`
+
+All `/ratings/*` endpoints require `Authorization: Bearer <accessToken>`.
+
+### POST /api/v1/ratings/orders/:orderId
+
+Auth: `client`
+
+Path params:
+
+```ts
+type Params = {
+  orderId: number;
+};
+```
+
+Request body:
+
+```ts
+type CreateRatingRequest = {
+  feedback: {
+    score: number; // 1..5
+    comment?: string | null; // <= 500
+    anonymous?: boolean;
+  };
+};
+```
+
+Response (201):
+
+```ts
+type CreateRatingResponseData = {
+  rating: {
+    ratingId: number;
+    orderId: number;
+    driverId: number;
+    customerId: number;
+    rating: number;
+    isAnonymous?: boolean;
+    comment?: string | null;
+    createdAt: ISODateTime;
+  };
+};
+
+type Response = SuccessResponse<CreateRatingResponseData>;
+```
+
+### GET /api/v1/ratings/drivers/:driverId
+
+Auth: `client | courier | admin | business`
+
+Path params:
+
+```ts
+type Params = {
+  driverId: number;
+};
+```
+
+Response (200):
+
+```ts
+type DriverRatingStatsResponseData = {
+  rating: {
+    summary: {
+      average: number; // 0..5
+      total: number;
+    };
+    distribution: {
+      1: number;
+      2: number;
+      3: number;
+      4: number;
+      5: number;
+    };
+    recent?: {
+      rating: number; // 1..5
+      comment?: string | null;
+      createdAt: ISODateTime;
+    }[];
+    lastUpdated: ISODateTime;
+  };
+};
+
+type Response = SuccessResponse<DriverRatingStatsResponseData>;
+```
+
+---
+
 ## Addresses
 
 Base: `/api/v1/addresses`
@@ -1187,10 +1293,18 @@ type AddressSearchSuggestion = {
   placeType: string;
   coordinates?: Coordinates;
   context: Record<string, string | undefined>;
-  sessionToken: string;
 };
 
-type Response = SuccessResponse<AddressSearchSuggestion[]>;
+type AddressSearchResponseData = {
+  search: {
+    query: string;
+    sessionToken: string;
+    suggestions: AddressSearchSuggestion[];
+    total: number;
+  };
+};
+
+type Response = SuccessResponse<AddressSearchResponseData>;
 ```
 
 ### POST /api/v1/addresses/retrieve
@@ -1208,13 +1322,15 @@ Response (200):
 
 ```ts
 type RetrievedPlace = {
-  mapboxId: string;
-  name: string;
-  fullAddress: string;
-  coordinates: Coordinates;
-  context: Record<string, string | undefined>;
-  featureType: string;
-  bbox: number[] | null;
+  place: {
+    mapboxId: string;
+    name: string;
+    fullAddress: string;
+    coordinates: Coordinates;
+    context: Record<string, string | undefined>;
+    featureType: string;
+    bbox: number[] | null;
+  };
 };
 
 type Response = SuccessResponse<RetrievedPlace>;
@@ -1258,9 +1374,11 @@ type ReverseGeocodeResultItem = {
 };
 
 type ReverseGeocodeResponseData = {
-  coordinates: Coordinates;
-  results: ReverseGeocodeResultItem[];
-  total: number;
+  reverseGeocode: {
+    coordinates: Coordinates;
+    results: ReverseGeocodeResultItem[];
+    total: number;
+  };
 };
 
 type Response = SuccessResponse<ReverseGeocodeResponseData>;
@@ -1282,16 +1400,21 @@ Response (200):
 
 ```ts
 type DirectionsResponseData = {
-  distance: number; // meters
-  duration: number; // seconds
-  geometry: {
-    type: "LineString";
-    coordinates: [number, number][]; // [lng, lat]
+  route: {
+    distanceMeters: number;
+    durationSeconds: number;
+    distanceKm: number;
+    durationMinutes: number;
+    geometry: {
+      type: "LineString";
+      coordinates: [number, number][]; // [lng, lat]
+    };
   };
-  distanceKm: number;
-  durationMinutes: number;
-  origin: Coordinates;
-  destination: Coordinates;
+  navigation: {
+    origin: Coordinates;
+    destination: Coordinates;
+    profile: "driving" | "walking" | "cycling";
+  };
 };
 
 type Response = SuccessResponse<DirectionsResponseData>;
@@ -1313,7 +1436,16 @@ type DistanceRequest = {
 Response (200):
 
 ```ts
-type DistanceResponseData = { distanceKm: number };
+type DistanceResponseData = {
+  distance: {
+    kilometers: number;
+  };
+  points: {
+    origin: Coordinates;
+    destination: Coordinates;
+  };
+};
+
 type Response = SuccessResponse<DistanceResponseData>;
 ```
 
@@ -1331,10 +1463,10 @@ type DeliveryType = {
   name: string;
   displayName?: string;
   description?: string | null;
-  pricing?: { baseRate: number; perKmRate: number };
-  supportedVehicles?: string[];
-  sortOrder?: number;
-  isActive?: boolean;
+  pricing: { baseRate: number; perKmRate: number };
+  supportedVehicles: SupportedVehicle[];
+  sortOrder: number;
+  isActive: boolean;
 };
 
 type WeightTier = {
@@ -1345,19 +1477,29 @@ type WeightTier = {
   additionalCharge: number;
 };
 
+type SupportedVehicle = {
+  categoryId: number;
+  name: string;
+  displayName?: string;
+  maxWeightKg: number;
+  iconUrl?: string;
+  weightTiers: WeightTier[];
+};
+
 type VehicleCategory = {
   categoryId: number;
   name: string;
+  displayName?: string;
   description?: string;
-  maxWeightKg?: number;
-  icon?: string;
+  maxWeightKg: number;
+  iconUrl?: string;
+  isActive: boolean;
 };
 
 type PackageType = {
   packageTypeId: number;
   name: string;
   description?: string;
-  icon?: string;
 };
 
 type StaticPaymentMethod = {
@@ -1365,7 +1507,7 @@ type StaticPaymentMethod = {
   name: string;
   displayName?: string;
   description?: string;
-  isActive?: boolean;
+  isActive: boolean;
 };
 
 type CreateOrderData = {
@@ -1375,9 +1517,7 @@ type CreateOrderData = {
 };
 
 type OrderStatus = {
-  statusId: number;
   name: string;
-  description?: string;
 };
 ```
 
@@ -1386,7 +1526,10 @@ type OrderStatus = {
 Response (200):
 
 ```ts
-type Response = SuccessResponse<DeliveryType[]>;
+type Response = SuccessResponse<{
+  deliveryTypes: DeliveryType[];
+  total: number;
+}>;
 ```
 
 ### GET /api/v1/static/weight-tiers
@@ -1394,7 +1537,10 @@ type Response = SuccessResponse<DeliveryType[]>;
 Response (200):
 
 ```ts
-type Response = SuccessResponse<WeightTier[]>;
+type Response = SuccessResponse<{
+  weightTiers: WeightTier[];
+  total: number;
+}>;
 ```
 
 ### GET /api/v1/static/vehicle-categories
@@ -1402,7 +1548,10 @@ type Response = SuccessResponse<WeightTier[]>;
 Response (200):
 
 ```ts
-type Response = SuccessResponse<VehicleCategory[]>;
+type Response = SuccessResponse<{
+  vehicleCategories: VehicleCategory[];
+  total: number;
+}>;
 ```
 
 ### GET /api/v1/static/package-types
@@ -1410,7 +1559,10 @@ type Response = SuccessResponse<VehicleCategory[]>;
 Response (200):
 
 ```ts
-type Response = SuccessResponse<PackageType[]>;
+type Response = SuccessResponse<{
+  packageTypes: PackageType[];
+  total: number;
+}>;
 ```
 
 ### GET /api/v1/static/payment-methods
@@ -1418,7 +1570,10 @@ type Response = SuccessResponse<PackageType[]>;
 Response (200):
 
 ```ts
-type Response = SuccessResponse<StaticPaymentMethod[]>;
+type Response = SuccessResponse<{
+  paymentMethods: StaticPaymentMethod[];
+  total: number;
+}>;
 ```
 
 ### GET /api/v1/static/create-order-data
@@ -1426,7 +1581,9 @@ type Response = SuccessResponse<StaticPaymentMethod[]>;
 Response (200):
 
 ```ts
-type Response = SuccessResponse<CreateOrderData>;
+type Response = SuccessResponse<{
+  createOrder: CreateOrderData;
+}>;
 ```
 
 ### GET /api/v1/static/order-statuses
@@ -1434,7 +1591,10 @@ type Response = SuccessResponse<CreateOrderData>;
 Response (200):
 
 ```ts
-type Response = SuccessResponse<OrderStatus[]>;
+type Response = SuccessResponse<{
+  orderStatuses: string[];
+  total: number;
+}>;
 ```
 
 ---
