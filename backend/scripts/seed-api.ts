@@ -348,7 +348,9 @@ async function seedDrivers(count = 2) {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         };
         const updateData = {
-          profilePictureUrl: faker.image.avatar(),
+          profile: {
+            profilePictureUrl: faker.image.avatar(),
+          },
         };
         const profileRes = await api.put(
           "/drivers/me",
@@ -366,7 +368,11 @@ async function seedDrivers(count = 2) {
         const location = generateMumbaiCoordinates();
         const locationRes = await api.put(
           "/drivers/me/location",
-          location,
+          {
+            location: {
+              current: location,
+            },
+          },
           tokenHeader,
         );
         if (
@@ -379,7 +385,9 @@ async function seedDrivers(count = 2) {
         }
         const availabilityRes = await api.put(
           "/drivers/me/availability",
-          { isAvailable: true, isOnline: true },
+          {
+            availability: { isAvailable: true, isOnline: true },
+          },
           tokenHeader,
         );
         if (

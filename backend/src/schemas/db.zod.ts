@@ -57,6 +57,8 @@ export const CourierDbZ = z.object({
   currentLongitude: z.union([z.number(), z.string()]).nullable().optional(),
   lastLocationUpdate: z.date().nullable().optional(),
   totalDeliveriesToday: z.number().int().nonnegative(),
+  avgRating: z.union([z.number(), z.string()]).nullable().optional(),
+  totalRatings: z.number().int().nonnegative().optional(),
   vehicleId: z.number().int().positive().nullable().optional(),
   vehicleNumber: z.string().nullable().optional(),
   vehicleModel: z.string().nullable().optional(),
@@ -121,7 +123,10 @@ export const CourierAssignmentDbZ = z
     timeline: AssignmentTimelineJSONBZ.nullable().optional(),
 
     totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
-    estimatedDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
+    estimatedDistanceKm: z
+      .union([z.number(), z.string()])
+      .nullable()
+      .optional(),
     actualDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
     assignedAt: z.date().nullable().optional(),
   })
@@ -148,7 +153,9 @@ export const AddTrackingEventResultDbZ = z.object({
   eventId: z.number().int().positive(),
   timestamp: z.date(),
 });
-export type AddTrackingEventResultDb = z.infer<typeof AddTrackingEventResultDbZ>;
+export type AddTrackingEventResultDb = z.infer<
+  typeof AddTrackingEventResultDbZ
+>;
 
 export const TrackingCountDbZ = z.object({
   totalEvents: z.union([z.number(), z.string()]),
@@ -199,19 +206,25 @@ export const MarkPaymentCompletedResultDbZ = z.object({
   transactionId: z.number().int().positive(),
   paymentCompletedAt: z.date(),
 });
-export type MarkPaymentCompletedResultDb = z.infer<typeof MarkPaymentCompletedResultDbZ>;
+export type MarkPaymentCompletedResultDb = z.infer<
+  typeof MarkPaymentCompletedResultDbZ
+>;
 
 export const MarkPaymentFailedResultDbZ = z.object({
   transactionId: z.number().int().positive(),
   paymentFailedAt: z.date(),
 });
-export type MarkPaymentFailedResultDb = z.infer<typeof MarkPaymentFailedResultDbZ>;
+export type MarkPaymentFailedResultDb = z.infer<
+  typeof MarkPaymentFailedResultDbZ
+>;
 
 export const MarkRefundProcessedResultDbZ = z.object({
   refundId: z.number().int().positive(),
   processedAt: z.date(),
 });
-export type MarkRefundProcessedResultDb = z.infer<typeof MarkRefundProcessedResultDbZ>;
+export type MarkRefundProcessedResultDb = z.infer<
+  typeof MarkRefundProcessedResultDbZ
+>;
 
 // ============================================================================
 // NOTIFICATIONS
@@ -243,19 +256,25 @@ export const QueueNotificationResultDbZ = z.object({
   notificationId: z.number().int().positive(),
   createdAt: z.date(),
 });
-export type QueueNotificationResultDb = z.infer<typeof QueueNotificationResultDbZ>;
+export type QueueNotificationResultDb = z.infer<
+  typeof QueueNotificationResultDbZ
+>;
 
 export const MarkNotificationSentResultDbZ = z.object({
   notificationId: z.number().int().positive(),
   sentAt: z.date(),
 });
-export type MarkNotificationSentResultDb = z.infer<typeof MarkNotificationSentResultDbZ>;
+export type MarkNotificationSentResultDb = z.infer<
+  typeof MarkNotificationSentResultDbZ
+>;
 
 export const MarkNotificationFailedResultDbZ = z.object({
   notificationId: z.number().int().positive(),
   retryCount: z.number().int().nonnegative(),
 });
-export type MarkNotificationFailedResultDb = z.infer<typeof MarkNotificationFailedResultDbZ>;
+export type MarkNotificationFailedResultDb = z.infer<
+  typeof MarkNotificationFailedResultDbZ
+>;
 
 export const SaveFcmTokenResultDbZ = z.object({
   tokenId: z.number().int().positive(),
@@ -266,7 +285,9 @@ export type SaveFcmTokenResultDb = z.infer<typeof SaveFcmTokenResultDbZ>;
 export const DeactivateFcmTokenResultDbZ = z.object({
   tokenId: z.number().int().positive(),
 });
-export type DeactivateFcmTokenResultDb = z.infer<typeof DeactivateFcmTokenResultDbZ>;
+export type DeactivateFcmTokenResultDb = z.infer<
+  typeof DeactivateFcmTokenResultDbZ
+>;
 
 // ============================================================================
 // SESSIONS

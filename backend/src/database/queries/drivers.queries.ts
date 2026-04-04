@@ -13,6 +13,7 @@ export default {
    */
   FIND_COURIER_BY_USER_ID: `
     SELECT
+                        u.user_id AS "courierId",
             u.user_id AS "userId",
             u.user_uuid AS "userUuid",
             u.phone_number AS "phoneNumber",
@@ -22,12 +23,14 @@ export default {
             u.is_verified AS "isVerified",
             u.is_active AS "isActive",
             cs.status_id AS "courierStatusId",
-            cs.is_available AS "isAvailable",
-            cs.is_online AS "isOnline",
-            cs.total_deliveries_today AS "totalDeliveriesToday",
+                        COALESCE(cs.is_available, false) AS "isAvailable",
+                        COALESCE(cs.is_online, false) AS "isOnline",
+                        COALESCE(cs.total_deliveries_today, 0) AS "totalDeliveriesToday",
             cs.last_location_update AS "lastLocationUpdate",
             ST_Y(cs.current_location::geometry) AS "currentLatitude",
             ST_X(cs.current_location::geometry) AS "currentLongitude",
+                        cs.avg_rating AS "avgRating",
+                        COALESCE(cs.total_ratings, 0) AS "totalRatings",
             cv.vehicle_id AS "vehicleId",
             cv.vehicle_number AS "vehicleNumber",
             cv.model AS "vehicleModel",
@@ -36,8 +39,8 @@ export default {
             vc.name AS "vehicleCategory",
             vc.max_weight_kg AS "vehicleMaxWeight",
             cv.is_active AS "vehicleIsActive",
-            cs.created_at AS "createdAt",
-            cs.updated_at AS "updatedAt"
+                        u.created_at AS "createdAt",
+                        u.updated_at AS "updatedAt"
       FROM users.profiles u
       LEFT JOIN logistics.courier_status cs ON u.user_id = cs.courier_id
       LEFT JOIN logistics.courier_vehicles cv ON u.user_id = cv.courier_id AND cv.is_active = true

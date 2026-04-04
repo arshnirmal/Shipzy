@@ -1,30 +1,61 @@
 // services/backend/src/modules/drivers/drivers.zod.ts
 import { z } from "zod";
-import { DriverUserZ, CoordinatesZ } from "../../schemas/common.zod.js";
+import {
+  BaseUserZ,
+  CoordinatesZ,
+  EarningsZ,
+  VehicleZ,
+} from "../../schemas/common.zod.js";
+import {
+  OrderLocationJSONBZ,
+  OrderPackageJSONBZ,
+  OrderPricingJSONBZ,
+  OrderSnapshotJSONBZ,
+} from "../../database/schema/types.js";
 
 // ============================================================================
 // REQUEST SCHEMAS - API request payloads
 // ============================================================================
 
+export const DriverProfilePatchZ = z
+  .object({
+    fullName: z.string().min(2).max(100).optional(),
+    email: z.string().email().max(100).optional(),
+    profilePictureUrl: z.string().url().optional(),
+    phoneNumber: z.string().min(10).max(20).optional(),
+  })
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one profile field must be provided",
+  });
+
 // Update Driver Profile Request
 export const UpdateDriverProfileRequestZ = z
   .object({
-    fullName: z.string().min(2).max(100).optional(),
-    email: z.string().email().optional(),
-    profilePictureUrl: z.string().url().optional(),
-    phoneNumber: z.string().min(10).max(20).optional(),
+    profile: DriverProfilePatchZ,
   })
   .strict();
 export type UpdateDriverProfileRequest = z.infer<
   typeof UpdateDriverProfileRequestZ
 >;
 
-// Update Availability Request
-export const UpdateAvailabilityRequestZ = z
+const DriverAvailabilityToggleZ = z
   .object({
     isAvailable: z.boolean(),
     isOnline: z.boolean().optional(),
-    currentLocation: CoordinatesZ.optional(),
+  })
+  .strict();
+
+// Update Availability Request
+export const UpdateAvailabilityRequestZ = z
+  .object({
+    availability: DriverAvailabilityToggleZ,
+    tracking: z
+      .object({
+        currentLocation: CoordinatesZ.optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type UpdateAvailabilityRequest = z.infer<
@@ -32,16 +63,64 @@ export type UpdateAvailabilityRequest = z.infer<
 >;
 
 // Update Location Request
-export const UpdateLocationRequestZ = CoordinatesZ;
+export const UpdateLocationRequestZ = z
+  .object({
+    location: z
+      .object({
+        current: CoordinatesZ,
+      })
+      .strict(),
+  })
+  .strict();
 export type UpdateLocationRequest = z.infer<typeof UpdateLocationRequestZ>;
 
 // ============================================================================
 // RESPONSE SCHEMAS - API responses
 // ============================================================================
 
-// Driver Profile Response
-export const DriverProfileResponseZ = DriverUserZ;
+export const DriverStatusZ = z
+  .object({
+    isAvailable: z.boolean(),
+    isOnline: z.boolean(),
+    totalDeliveriesToday: z.number().int().nonnegative(),
+    currentLocation: CoordinatesZ.nullable(),
+    lastLocationUpdate: z.iso.datetime().nullable(),
+  })
+  .strict();
+
+export const DriverPerformanceRatingZ = z
+  .object({
+    averageRating: z.number().min(0).max(5),
+    totalRatings: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const BaseDriverCoreZ = BaseUserZ.extend({
+  role: z.literal("courier"),
+  status: DriverStatusZ,
+  vehicle: VehicleZ.nullable(),
+}).strict();
+
+export const BaseDriverZ = BaseDriverCoreZ.extend({
+  earnings: EarningsZ,
+  rating: DriverPerformanceRatingZ,
+}).strict();
+
+export const DriverProfileResponseZ = z
+  .object({
+    driver: BaseDriverZ,
+  })
+  .strict();
 export type DriverProfileResponse = z.infer<typeof DriverProfileResponseZ>;
+
+export const DriverProfileMutationResponseZ = z
+  .object({
+    driver: BaseDriverCoreZ,
+  })
+  .strict();
+export type DriverProfileMutationResponse = z.infer<
+  typeof DriverProfileMutationResponseZ
+>;
 
 const WeightTierZ = z
   .object({
@@ -49,21 +128,6 @@ const WeightTierZ = z
     name: z.string().optional(),
     minWeightKg: z.number().nonnegative().optional(),
     maxWeightKg: z.number().nonnegative().optional(),
-  })
-  .strict();
-
-const AssignmentAddressZ = z
-  .object({
-    address: z.string().nullable().optional(),
-    building: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-    state: z.string().nullable().optional(),
-    postalCode: z.string().nullable().optional(),
-    latitude: z.number().nullable().optional(),
-    longitude: z.number().nullable().optional(),
-    contactName: z.string().nullable().optional(),
-    contactPhone: z.string().nullable().optional(),
   })
   .strict();
 
@@ -86,56 +150,163 @@ const EarningsBreakdownZ = z
 // Active Assignment Response
 export const ActiveAssignmentZ = z
   .object({
-    assignmentId: z.number().int().positive(),
-    orderId: z.number().int().positive(),
-    orderUuid: z.string().uuid().optional(),
-    orderNumber: z.string().optional(),
-    orderStatus: z.string().optional(),
-    assignmentStatus: z.string().optional(),
-    vehicleCategory: z.string().nullable().optional(),
-    vehicleCategoryDisplay: z.string().nullable().optional(),
-    packageType: z.string().nullable().optional(),
-    weightTier: WeightTierZ.nullable().optional(),
-    pickup: AssignmentAddressZ,
-    delivery: AssignmentAddressZ,
-    packageDescription: z.string().nullable().optional(),
-    specialInstructions: z.string().nullable().optional(),
-    declaredValue: z.number().nullable().optional(),
-    estimatedDistanceKm: z.number().nullable().optional(),
-    actualDistanceKm: z.number().nullable().optional(),
-    driverEarnings: z.number(),
-    earningsBreakdown: EarningsBreakdownZ,
-    estimatedDeliveryTime: z.number(),
-    assignedAt: z.iso.datetime().nullable().optional(),
-    acceptedAt: z.iso.datetime().nullable().optional(),
+    assignment: z
+      .object({
+        assignmentId: z.number().int().positive(),
+        orderId: z.number().int().positive(),
+        orderUuid: z.string().uuid().nullable().optional(),
+        orderNumber: z.string().nullable().optional(),
+      })
+      .strict(),
+    status: z
+      .object({
+        order: z.string().nullable().optional(),
+        assignment: z.string().nullable().optional(),
+      })
+      .strict(),
+    routing: z
+      .object({
+        pickup: OrderLocationJSONBZ.nullable().optional(),
+        delivery: OrderLocationJSONBZ.nullable().optional(),
+        estimatedDistanceKm: z.number().nullable().optional(),
+        actualDistanceKm: z.number().nullable().optional(),
+        estimatedDeliveryMinutes: z.number().int().positive(),
+      })
+      .strict(),
+    snapshot: z
+      .object({
+        deliveryType: OrderSnapshotJSONBZ.shape.deliveryType.optional(),
+        vehicleCategory: OrderSnapshotJSONBZ.shape.vehicleCategory.optional(),
+        packageType: OrderSnapshotJSONBZ.shape.packageType.optional(),
+        weightTier: WeightTierZ.nullable().optional(),
+      })
+      .strict(),
+    package: OrderPackageJSONBZ.nullable().optional(),
+    pricing: OrderPricingJSONBZ.nullable().optional(),
+    earnings: z
+      .object({
+        net: z.number(),
+        breakdown: EarningsBreakdownZ,
+      })
+      .strict(),
+    timeline: z
+      .object({
+        assignedAt: z.iso.datetime().nullable().optional(),
+        acceptedAt: z.iso.datetime().nullable().optional(),
+      })
+      .strict(),
   })
   .strict();
 export type ActiveAssignment = z.infer<typeof ActiveAssignmentZ>;
 
+export const ActiveAssignmentsResponseZ = z
+  .object({
+    assignments: z.array(ActiveAssignmentZ),
+  })
+  .strict();
+export type ActiveAssignmentsResponse = z.infer<
+  typeof ActiveAssignmentsResponseZ
+>;
+
 // Driver Earnings Summary Response
 export const DriverEarningsSummaryZ = z
   .object({
+    scope: z
+      .object({
+        period: z.enum(["today", "week", "month", "year"]),
+      })
+      .strict(),
     deliveries: z
       .object({
-        today: z.number().optional(),
-        total: z.number().optional(),
-        thisWeek: z.number().optional(),
-        thisMonth: z.number().optional(),
+        today: z.number(),
+        total: z.number(),
+        thisWeek: z.number(),
+        thisMonth: z.number(),
       })
       .strict(),
     earnings: z
       .object({
-        today: z.number().optional(),
-        total: z.number().optional(),
-        thisWeek: z.number().optional(),
-        thisMonth: z.number().optional(),
-        averageOrderValue: z.number().optional(),
+        today: z.number(),
+        total: z.number(),
+        thisWeek: z.number(),
+        thisMonth: z.number(),
+        averageOrderValue: z.number(),
       })
       .strict(),
-    totalDistanceKm: z.number(),
+    activity: z
+      .object({
+        totalDistanceKm: z.number(),
+      })
+      .strict(),
   })
   .strict();
 export type DriverEarningsSummary = z.infer<typeof DriverEarningsSummaryZ>;
+
+export const DriverEarningsSummaryResponseZ = z
+  .object({
+    earnings: DriverEarningsSummaryZ,
+  })
+  .strict();
+export type DriverEarningsSummaryResponse = z.infer<
+  typeof DriverEarningsSummaryResponseZ
+>;
+
+export const DriverRatingResponseZ = z
+  .object({
+    rating: z
+      .object({
+        averageRating: z.number().min(0).max(5),
+        totalRatings: z.number().int().nonnegative(),
+        ratingDistribution: z
+          .object({
+            1: z.number().int().nonnegative(),
+            2: z.number().int().nonnegative(),
+            3: z.number().int().nonnegative(),
+            4: z.number().int().nonnegative(),
+            5: z.number().int().nonnegative(),
+          })
+          .strict(),
+        lastUpdated: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type DriverRatingResponse = z.infer<typeof DriverRatingResponseZ>;
+
+export const DriverAvailabilityResponseZ = z
+  .object({
+    availability: z
+      .object({
+        courierId: z.number().int().positive(),
+        isAvailable: z.boolean(),
+        isOnline: z.boolean(),
+        updatedAt: z.iso.datetime(),
+      })
+      .strict(),
+    tracking: z
+      .object({
+        currentLocation: CoordinatesZ.optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+export type DriverAvailabilityResponse = z.infer<
+  typeof DriverAvailabilityResponseZ
+>;
+
+export const DriverLocationResponseZ = z
+  .object({
+    location: z
+      .object({
+        courierId: z.number().int().positive(),
+        current: CoordinatesZ,
+        lastLocationUpdate: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type DriverLocationResponse = z.infer<typeof DriverLocationResponseZ>;
 
 export const EarningsPeriodQueryZ = z
   .object({

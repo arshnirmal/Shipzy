@@ -406,56 +406,65 @@ All `/drivers/*` endpoints require:
 - `Authorization: Bearer <accessToken>`
 - Role: `courier`
 
+Shared driver base contract:
+
+```ts
+type BaseDriverCore = {
+  userId: number;
+  userUuid: UUID;
+  role: "courier";
+  phoneNumber: string | null;
+  email: string | null;
+  fullName: string;
+  profilePictureUrl: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  status: {
+    isAvailable: boolean;
+    isOnline: boolean;
+    totalDeliveriesToday: number;
+    currentLocation: Coordinates | null;
+    lastLocationUpdate: ISODateTime | null;
+  };
+  vehicle: {
+    vehicleId?: number;
+    categoryId?: number;
+    category?: string;
+    isActive?: boolean;
+    vehicleNumber?: string;
+    model?: string;
+    year?: number;
+  } | null;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
+};
+
+type BaseDriver = BaseDriverCore & {
+  earnings: {
+    total: number;
+    today: number;
+    thisWeek: number;
+    thisMonth: number;
+    averageOrderValue: number;
+    totalDistanceKm: number;
+  };
+  rating: {
+    averageRating: number;
+    totalRatings: number;
+  };
+};
+```
+
 ### GET /api/v1/drivers/me
 
 Response (200):
 
 ```ts
-type DriverStatus = {
-  isAvailable: boolean;
-  isOnline: boolean;
-  totalDeliveriesToday?: number;
-  currentLocation: Coordinates | null;
-  lastLocationUpdate: ISODateTime | null;
+type DriverProfileData = {
+  driver: BaseDriver;
 };
 
-type Vehicle = {
-  vehicleId?: number;
-  categoryId?: number;
-  category?: string;
-  isActive?: boolean;
-  vehicleNumber?: string;
-  model?: string;
-  year?: number;
-} | null;
-
-type DriverEarnings = {
-  total: number;
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-  averageOrderValue: number;
-  totalDistanceKm: number;
-};
-
-type DriverProfile = {
-  userId: number;
-  userUuid: UUID;
-  role: "courier";
-  phoneNumber: string | null;
-  fullName: string;
-  email: string;
-  profilePictureUrl: string | null;
-  isVerified: boolean;
-  isActive: boolean;
-  status: DriverStatus;
-  vehicle: Vehicle;
-  earnings: DriverEarnings;
-  createdAt: ISODateTime;
-  updatedAt?: ISODateTime;
-};
-
-type Response = SuccessResponse<DriverProfile>;
+type Response = SuccessResponse<DriverProfileData>;
 ```
 
 ### PUT /api/v1/drivers/me
@@ -464,25 +473,23 @@ Request body:
 
 ```ts
 type UpdateDriverProfileRequest = {
-  fullName?: string;
-  email?: string;
-  profilePictureUrl?: string;
-  phoneNumber?: string;
+  profile: {
+    fullName?: string;
+    email?: string;
+    profilePictureUrl?: string;
+    phoneNumber?: string;
+  };
 };
 ```
 
 Response (200):
 
 ```ts
-type UpdatedDriverProfile = {
-  userId: number;
-  fullName: string;
-  email: string | null;
-  profilePictureUrl: string | null;
-  updatedAt: ISODateTime;
+type UpdatedDriverProfileData = {
+  driver: BaseDriverCore;
 };
 
-type Response = SuccessResponse<UpdatedDriverProfile>;
+type Response = SuccessResponse<UpdatedDriverProfileData>;
 ```
 
 ### PUT /api/v1/drivers/me/availability
@@ -491,9 +498,13 @@ Request body:
 
 ```ts
 type UpdateAvailabilityRequest = {
-  isAvailable: boolean;
-  isOnline?: boolean;
-  currentLocation?: Coordinates;
+  availability: {
+    isAvailable: boolean;
+    isOnline?: boolean;
+  };
+  tracking?: {
+    currentLocation?: Coordinates;
+  };
 };
 ```
 
@@ -501,10 +512,15 @@ Response (200):
 
 ```ts
 type AvailabilityData = {
-  courierId: number;
-  isAvailable: boolean;
-  isOnline: boolean;
-  updatedAt: ISODateTime;
+  availability: {
+    courierId: number;
+    isAvailable: boolean;
+    isOnline: boolean;
+    updatedAt: ISODateTime;
+  };
+  tracking?: {
+    currentLocation?: Coordinates;
+  };
 };
 
 type Response = SuccessResponse<AvailabilityData>;
@@ -515,17 +531,22 @@ type Response = SuccessResponse<AvailabilityData>;
 Request body:
 
 ```ts
-type UpdateLocationRequest = Coordinates;
+type UpdateLocationRequest = {
+  location: {
+    current: Coordinates;
+  };
+};
 ```
 
 Response (200):
 
 ```ts
 type LocationData = {
-  courierId: number;
-  latitude: number;
-  longitude: number;
-  lastLocationUpdate: ISODateTime;
+  location: {
+    courierId: number;
+    current: Coordinates;
+    lastLocationUpdate: ISODateTime;
+  };
 };
 
 type Response = SuccessResponse<LocationData>;
@@ -551,58 +572,79 @@ type EarningsBreakdown = {
 };
 
 type ActiveAssignment = {
-  assignmentId: number;
-  orderId: number;
-  orderUuid?: UUID;
-  orderNumber?: string;
-  orderStatus?: string;
-  assignmentStatus?: string;
-  vehicleCategory?: string | null;
-  vehicleCategoryDisplay?: string | null;
-  packageType?: string | null;
-  weightTier?: {
-    id?: number;
-    name?: string;
-    minWeightKg?: number;
-    maxWeightKg?: number;
+  assignment: {
+    assignmentId: number;
+    orderId: number;
+    orderUuid?: UUID | null;
+    orderNumber?: string | null;
+  };
+  status: {
+    order?: string | null;
+    assignment?: string | null;
+  };
+  routing: {
+    pickup?: OrderLocation | null;
+    delivery?: OrderLocation | null;
+    estimatedDistanceKm?: number | null;
+    actualDistanceKm?: number | null;
+    estimatedDeliveryMinutes: number;
+  };
+  snapshot: {
+    deliveryType?: {
+      id: number;
+      name: string;
+      displayName: string;
+    };
+    vehicleCategory?: {
+      id: number;
+      name: string;
+      displayName: string;
+      maxWeightKg?: number | null;
+    };
+    packageType?: {
+      id: number;
+      name: string;
+    } | null;
+    weightTier?: {
+      id?: number;
+      name?: string;
+      minWeightKg?: number;
+      maxWeightKg?: number;
+    } | null;
+  };
+  package?: {
+    description?: string | null;
+    specialInstructions?: string | null;
+    declaredValue?: number | null;
+    notifyRecipientSms?: boolean;
   } | null;
-  pickup: {
-    address?: string | null;
-    building?: string | null;
-    landmark?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postalCode?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
+  pricing?: {
+    basePrice: number;
+    distanceKm: number;
+    distancePrice: number;
+    weightSurcharge: number;
+    platformFee: number;
+    specialHandlingFee: number;
+    subtotalBeforeTax: number;
+    gstAmount: number;
+    totalPrice: number;
+    currency?: string;
+  } | null;
+  earnings: {
+    net: number;
+    breakdown: EarningsBreakdown;
   };
-  delivery: {
-    address?: string | null;
-    building?: string | null;
-    landmark?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postalCode?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
+  timeline: {
+    assignedAt?: ISODateTime | null;
+    acceptedAt?: ISODateTime | null;
   };
-  packageDescription?: string | null;
-  specialInstructions?: string | null;
-  declaredValue?: number | null;
-  estimatedDistanceKm?: number | null;
-  actualDistanceKm?: number | null;
-  driverEarnings: number;
-  earningsBreakdown: EarningsBreakdown;
-  estimatedDeliveryTime: number; // minutes
-  assignedAt?: ISODateTime | null;
-  acceptedAt?: ISODateTime | null;
 };
 
-type Response = SuccessResponse<ActiveAssignment[]>;
+type ActiveAssignmentsData = {
+  assignments: ActiveAssignment[];
+};
+
+type Response = SuccessResponse<ActiveAssignmentsData>;
 ```
 
 ### GET /api/v1/drivers/me/earnings
@@ -619,23 +661,32 @@ Response (200):
 
 ```ts
 type EarningsSummary = {
+  scope: {
+    period: "today" | "week" | "month" | "year";
+  };
   deliveries: {
-    today?: number;
-    total?: number;
-    thisWeek?: number;
-    thisMonth?: number;
+    today: number;
+    total: number;
+    thisWeek: number;
+    thisMonth: number;
   };
   earnings: {
-    today?: number;
-    total?: number;
-    thisWeek?: number;
-    thisMonth?: number;
-    averageOrderValue?: number;
+    today: number;
+    total: number;
+    thisWeek: number;
+    thisMonth: number;
+    averageOrderValue: number;
   };
-  totalDistanceKm: number;
+  activity: {
+    totalDistanceKm: number;
+  };
 };
 
-type Response = SuccessResponse<EarningsSummary>;
+type EarningsResponseData = {
+  earnings: EarningsSummary;
+};
+
+type Response = SuccessResponse<EarningsResponseData>;
 ```
 
 ### GET /api/v1/drivers/me/rating
@@ -656,7 +707,11 @@ type DriverRatingStats = {
   lastUpdated: ISODateTime;
 };
 
-type Response = SuccessResponse<DriverRatingStats>;
+type DriverRatingData = {
+  rating: DriverRatingStats;
+};
+
+type Response = SuccessResponse<DriverRatingData>;
 ```
 
 ---

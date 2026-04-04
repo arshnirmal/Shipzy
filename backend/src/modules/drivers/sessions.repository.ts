@@ -37,8 +37,8 @@ class SessionsRepository {
       const result = await drizzlePool.query(sessionsQueries.CREATE_SESSION, [
         sessionData.driverId,
         sessionData.startedAt,
-        sessionData.lastLocationLat || null,
-        sessionData.lastLocationLng || null,
+        sessionData.lastLocationLat ?? null,
+        sessionData.lastLocationLng ?? null,
       ]);
       return result.rows[0];
     } catch (error) {
@@ -56,9 +56,10 @@ class SessionsRepository {
    */
   async findActiveSession(driverId: number): Promise<DriverSession | null> {
     try {
-      const result = await drizzlePool.query(sessionsQueries.FIND_ACTIVE_SESSION, [
-        driverId,
-      ]);
+      const result = await drizzlePool.query(
+        sessionsQueries.FIND_ACTIVE_SESSION,
+        [driverId],
+      );
       return result.rows[0] || null;
     } catch (error) {
       logger.error({
@@ -78,8 +79,8 @@ class SessionsRepository {
       const result = await drizzlePool.query(sessionsQueries.END_SESSION, [
         endData.sessionId,
         endData.endedAt,
-        endData.lastLocationLat || null,
-        endData.lastLocationLng || null,
+        endData.lastLocationLat ?? null,
+        endData.lastLocationLng ?? null,
       ]);
       return result.rows[0];
     } catch (error) {
@@ -101,11 +102,10 @@ class SessionsRepository {
     endDate: Date,
   ): Promise<DriverSession[]> {
     try {
-      const result = await drizzlePool.query(sessionsQueries.GET_SESSIONS_IN_RANGE, [
-        driverId,
-        startDate,
-        endDate,
-      ]);
+      const result = await drizzlePool.query(
+        sessionsQueries.GET_SESSIONS_IN_RANGE,
+        [driverId, startDate, endDate],
+      );
       return result.rows;
     } catch (error) {
       logger.error({

@@ -58,7 +58,7 @@ class DriversController {
       const { userId } = request.user!;
       const updatedDriver = await driversService.updateProfile(
         userId,
-        request.body,
+        request.body.profile,
       );
 
       return successResponse(
@@ -122,7 +122,10 @@ class DriversController {
   ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
-      const result = await driversService.updateLocation(userId, request.body);
+      const result = await driversService.updateLocation(
+        userId,
+        request.body.location.current,
+      );
 
       return successResponse(reply, result, "Location updated successfully");
     } catch (error) {
@@ -186,7 +189,7 @@ class DriversController {
 
       return successResponse(
         reply,
-        earnings,
+        { earnings },
         "Earnings retrieved successfully",
       );
     } catch (error) {
@@ -217,7 +220,7 @@ class DriversController {
 
       return successResponse(
         reply,
-        ratingStats,
+        { rating: ratingStats },
         "Rating stats retrieved successfully",
       );
     } catch (error) {

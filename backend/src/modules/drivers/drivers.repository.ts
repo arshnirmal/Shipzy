@@ -1,10 +1,9 @@
 // services/backend/src/modules/drivers/drivers.repository.ts
-import { eq, and, isNull } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
-import sessionsRepository, { DriverSession } from "./sessions.repository.js";
+import sessionsRepository from "./sessions.repository.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
@@ -23,6 +22,7 @@ type UpdateProfileData = {
   fullName?: string;
   email?: string;
   profilePictureUrl?: string;
+  phoneNumber?: string;
 };
 
 class DriversRepository {
@@ -53,14 +53,15 @@ class DriversRepository {
     updateData: UpdateProfileData,
   ): Promise<Courier> {
     try {
-      const { fullName, email, profilePictureUrl } = updateData;
+      const { fullName, email, profilePictureUrl, phoneNumber } = updateData;
 
       await drizzleDb
         .update(userProfiles)
         .set({
-          fullName: fullName || undefined,
-          email: email || undefined,
-          profilePictureUrl: profilePictureUrl || undefined,
+          fullName: fullName ?? undefined,
+          email: email ?? undefined,
+          profilePictureUrl: profilePictureUrl ?? undefined,
+          phoneNumber: phoneNumber ?? undefined,
           updatedAt: new Date(),
         })
         .where(eq(userProfiles.userId, userId));
@@ -129,11 +130,10 @@ class DriversRepository {
     longitude: number,
   ): Promise<CourierLocationResult> {
     try {
-      const result = await drizzlePool.query(driversQueries.UPDATE_COURIER_LOCATION, [
-        courierId,
-        longitude,
-        latitude,
-      ]);
+      const result = await drizzlePool.query(
+        driversQueries.UPDATE_COURIER_LOCATION,
+        [courierId, longitude, latitude],
+      );
 
       return result.rows[0] as CourierLocationResult;
     } catch (error) {

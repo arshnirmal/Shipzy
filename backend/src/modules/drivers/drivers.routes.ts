@@ -4,6 +4,9 @@ import { FastifyInstance } from "fastify";
 import driversController from "./drivers.controller.js";
 import {
   getEarningsSchema,
+  getActiveAssignmentsSchema,
+  getDriverProfileSchema,
+  getDriverRatingSchema,
   updateAvailabilitySchema,
   updateDriverProfileSchema,
   updateLocationSchema,
@@ -19,6 +22,7 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   // GET /api/v1/drivers/me - Get driver profile
   fastify.get(
     "/me",
+    { schema: getDriverProfileSchema },
     driversController.getDriverProfile.bind(driversController),
   );
 
@@ -46,6 +50,7 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   // GET /api/v1/drivers/me/assignments - Get active assignments
   fastify.get(
     "/me/assignments",
+    { schema: getActiveAssignmentsSchema },
     driversController.getActiveAssignments.bind(driversController),
   );
 
@@ -59,6 +64,7 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   // GET /api/v1/drivers/me/rating - Get driver rating stats
   fastify.get(
     "/me/rating",
+    { schema: getDriverRatingSchema },
     driversController.getRating.bind(driversController),
   );
 }

@@ -12,23 +12,95 @@ import {
 import driversRepository from "./drivers.repository.js";
 
 import type {
+  ActiveAssignmentsResponse,
   ActiveAssignment,
+  DriverAvailabilityResponse,
   DriverEarningsSummary,
+  DriverLocationResponse,
+  DriverProfileMutationResponse,
   DriverProfileResponse,
+  UpdateDriverProfileRequest,
+  UpdateLocationRequest,
 } from "./drivers.zod.js";
 
-type UpdateProfileData = import("./drivers.zod.js").UpdateDriverProfileRequest;
+type UpdateProfileData = UpdateDriverProfileRequest["profile"];
 type UpdateAvailabilityData =
   import("./drivers.zod.js").UpdateAvailabilityRequest;
-type LocationData = import("./drivers.zod.js").UpdateLocationRequest;
+type LocationData = UpdateLocationRequest["location"]["current"];
 
-type DriverProfile = DriverProfileResponse;
+type DriverProfile = DriverProfileResponse["driver"];
 
 class DriversService {
+  private mapDriverCore(
+    driver: import("../../types/drivers.js").DbCourier,
+  ): DriverProfileMutationResponse["driver"] {
+    const hasCurrentLocation =
+      driver.currentLatitude != null && driver.currentLongitude != null;
+
+    return {
+      userId: driver.userId,
+      userUuid: driver.userUuid,
+      phoneNumber: driver.phoneNumber ?? null,
+      fullName: driver.fullName,
+      email: driver.email ?? null,
+      role: "courier",
+      profilePictureUrl: driver.profilePictureUrl ?? null,
+      isVerified: driver.isVerified,
+      isActive: driver.isActive,
+      status: {
+        isAvailable: driver.isAvailable,
+        isOnline: driver.isOnline,
+        totalDeliveriesToday: driver.totalDeliveriesToday,
+        currentLocation: hasCurrentLocation
+          ? {
+              latitude: Number(driver.currentLatitude),
+              longitude: Number(driver.currentLongitude),
+            }
+          : null,
+        lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
+      },
+      vehicle: driver.vehicleId
+        ? {
+            vehicleId: driver.vehicleId,
+            categoryId: driver.vehicleCategoryId ?? undefined,
+            category: driver.vehicleCategory || "",
+            isActive: Boolean(driver.vehicleIsActive),
+            vehicleNumber: driver.vehicleNumber || "",
+            model: driver.vehicleModel || "",
+            year: driver.vehicleYear || 0,
+          }
+        : null,
+      createdAt: toIsoDateTime(driver.createdAt),
+      updatedAt: toIsoDateTime(driver.updatedAt),
+    };
+  }
+
+  private mapDriverProfile(
+    driver: import("../../types/drivers.js").DbCourier,
+  ): DriverProfile {
+    const core = this.mapDriverCore(driver);
+
+    return {
+      ...core,
+      earnings: {
+        total: 0,
+        today: 0,
+        thisWeek: 0,
+        thisMonth: 0,
+        averageOrderValue: 0,
+        totalDistanceKm: 0,
+      },
+      rating: {
+        averageRating: driver.avgRating != null ? Number(driver.avgRating) : 0,
+        totalRatings: driver.totalRatings ?? 0,
+      },
+    };
+  }
+
   /**
    * Get driver profile
    */
-  async getDriverProfile(userId: number): Promise<DriverProfile> {
+  async getDriverProfile(userId: number): Promise<DriverProfileResponse> {
     try {
       const driver = await driversRepository.findCourierById(userId);
 
@@ -37,49 +109,7 @@ class DriversService {
       }
 
       return {
-        userId: driver.userId,
-        userUuid: driver.userUuid,
-        phoneNumber: driver.phoneNumber ?? null,
-        fullName: driver.fullName,
-        email: driver.email || "",
-        role: "courier",
-        profilePictureUrl: driver.profilePictureUrl ?? null,
-        isVerified: driver.isVerified,
-        isActive: driver.isActive,
-        status: {
-          isAvailable: driver.isAvailable,
-          isOnline: driver.isOnline,
-          totalDeliveriesToday: driver.totalDeliveriesToday,
-          currentLocation:
-            driver.currentLatitude && driver.currentLongitude
-              ? {
-                  latitude: Number(driver.currentLatitude),
-                  longitude: Number(driver.currentLongitude),
-                }
-              : null,
-          lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
-        },
-        vehicle: driver.vehicleId
-          ? {
-              vehicleId: driver.vehicleId,
-              categoryId: driver.vehicleCategoryId ?? undefined,
-              category: driver.vehicleCategory || "",
-              isActive: Boolean(driver.vehicleIsActive),
-              vehicleNumber: driver.vehicleNumber || "",
-              model: driver.vehicleModel || "",
-              year: driver.vehicleYear || 0,
-            }
-          : null,
-        earnings: {
-          total: 0,
-          today: 0,
-          thisWeek: 0,
-          thisMonth: 0,
-          averageOrderValue: 0,
-          totalDistanceKm: 0,
-        },
-        createdAt: toIsoDateTime(driver.createdAt),
-        updatedAt: toIsoDateTime(driver.updatedAt),
+        driver: this.mapDriverProfile(driver),
       };
     } catch (error) {
       logger.error({
@@ -96,12 +126,7 @@ class DriversService {
   async updateProfile(
     userId: number,
     updateData: UpdateProfileData,
-  ): Promise<
-    Pick<
-      DriverProfileResponse,
-      "userId" | "fullName" | "email" | "profilePictureUrl" | "updatedAt"
-    >
-  > {
+  ): Promise<DriverProfileMutationResponse> {
     try {
       // Validate role is courier
       const driver = await driversRepository.findCourierById(userId);
@@ -115,11 +140,7 @@ class DriversService {
       );
 
       return {
-        userId: updatedDriver.userId,
-        fullName: updatedDriver.fullName,
-        email: updatedDriver.email ?? null,
-        profilePictureUrl: updatedDriver.profilePictureUrl ?? null,
-        updatedAt: toIsoDateTime(updatedDriver.updatedAt),
+        driver: this.mapDriverCore(updatedDriver),
       };
     } catch (error) {
       logger.error({
@@ -136,18 +157,13 @@ class DriversService {
   async updateAvailability(
     userId: number,
     availabilityData: UpdateAvailabilityData,
-  ): Promise<{
-    courierId: number;
-    isAvailable: boolean;
-    isOnline: boolean;
-    updatedAt: string;
-  }> {
+  ): Promise<DriverAvailabilityResponse> {
     try {
       const {
-        isAvailable,
-        isOnline = false,
-        currentLocation,
+        availability: { isAvailable, isOnline = false },
+        tracking,
       } = availabilityData;
+      const currentLocation = tracking?.currentLocation;
 
       // Get current status before update
       const currentProfile = await driversRepository.findCourierById(userId);
@@ -203,10 +219,17 @@ class DriversService {
       }
 
       return {
-        courierId: result.courierId,
-        isAvailable: result.isAvailable,
-        isOnline: result.isOnline,
-        updatedAt: toIsoDateTime(result.updatedAt),
+        availability: {
+          courierId: result.courierId,
+          isAvailable: result.isAvailable,
+          isOnline: result.isOnline,
+          updatedAt: toIsoDateTime(result.updatedAt),
+        },
+        tracking: currentLocation
+          ? {
+              currentLocation,
+            }
+          : undefined,
       };
     } catch (error) {
       logger.error({
@@ -223,12 +246,7 @@ class DriversService {
   async updateLocation(
     userId: number,
     locationData: LocationData,
-  ): Promise<{
-    courierId: number;
-    latitude: number;
-    longitude: number;
-    lastLocationUpdate: string;
-  }> {
+  ): Promise<DriverLocationResponse> {
     try {
       const { latitude, longitude } = locationData;
 
@@ -247,10 +265,14 @@ class DriversService {
       );
 
       return {
-        courierId: result.courierId,
-        latitude: Number(result.latitude),
-        longitude: Number(result.longitude),
-        lastLocationUpdate: toIsoDateTime(result.lastLocationUpdate),
+        location: {
+          courierId: result.courierId,
+          current: {
+            latitude: Number(result.latitude),
+            longitude: Number(result.longitude),
+          },
+          lastLocationUpdate: toIsoDateTime(result.lastLocationUpdate),
+        },
       };
     } catch (error) {
       logger.error({
@@ -264,84 +286,69 @@ class DriversService {
   /**
    * Get driver active assignments
    */
-  async getActiveAssignments(userId: number): Promise<ActiveAssignment[]> {
+  async getActiveAssignments(
+    userId: number,
+  ): Promise<ActiveAssignmentsResponse> {
     try {
       const assignments = await driversRepository.getActiveAssignments(userId);
 
       // Calculate earnings for all assignments
-      const assignmentsWithEarnings = await Promise.all(
+      const assignmentsWithEarnings: ActiveAssignment[] = await Promise.all(
         assignments.map(async (assignment) => {
           const earnings = await this.calculateDriverEarnings(assignment);
           const snap = assignment.snapshot;
-          const pkg = assignment.package;
-          const pickup = assignment.pickup;
-          const delivery = assignment.delivery;
-          const wt = snap?.weightTier;
+          const estimatedDistanceKm =
+            assignment.estimatedDistanceKm != null
+              ? Number(assignment.estimatedDistanceKm)
+              : null;
+          const actualDistanceKm =
+            assignment.actualDistanceKm != null
+              ? Number(assignment.actualDistanceKm)
+              : null;
 
           return {
-            assignmentId: assignment.assignmentId,
-            orderId: assignment.orderId,
-            orderUuid: assignment.orderUuid ?? undefined,
-            orderNumber: assignment.orderNumber ?? undefined,
-            orderStatus: assignment.orderStatus ?? undefined,
-            assignmentStatus: assignment.assignmentStatus ?? undefined,
-            vehicleCategory: snap?.vehicleCategory?.name ?? null,
-            vehicleCategoryDisplay: snap?.vehicleCategory?.displayName ?? null,
-            packageType: snap?.packageType?.name ?? null,
-            weightTier: wt
-              ? {
-                  id: wt.id,
-                  name: wt.name,
-                  minWeightKg: wt.minWeightKg,
-                  maxWeightKg: wt.maxWeightKg,
-                }
-              : null,
-            pickup: {
-              address: pickup?.fullAddress ?? null,
-              building: pickup?.building ?? null,
-              landmark: pickup?.landmark ?? null,
-              city: pickup?.city ?? null,
-              state: pickup?.state ?? null,
-              postalCode: pickup?.postalCode ?? null,
-              latitude: pickup ? Number(pickup.latitude) : null,
-              longitude: pickup ? Number(pickup.longitude) : null,
-              contactName: pickup?.contactName ?? null,
-              contactPhone: pickup?.contactPhone ?? null,
+            assignment: {
+              assignmentId: assignment.assignmentId,
+              orderId: assignment.orderId,
+              orderUuid: assignment.orderUuid ?? null,
+              orderNumber: assignment.orderNumber ?? null,
             },
-            delivery: {
-              address: delivery?.fullAddress ?? null,
-              building: delivery?.building ?? null,
-              landmark: delivery?.landmark ?? null,
-              city: delivery?.city ?? null,
-              state: delivery?.state ?? null,
-              postalCode: delivery?.postalCode ?? null,
-              latitude: delivery ? Number(delivery.latitude) : null,
-              longitude: delivery ? Number(delivery.longitude) : null,
-              contactName: delivery?.contactName ?? null,
-              contactPhone: delivery?.contactPhone ?? null,
+            status: {
+              order: assignment.orderStatus ?? null,
+              assignment: assignment.assignmentStatus ?? null,
             },
-            packageDescription: pkg?.description ?? null,
-            specialInstructions: pkg?.specialInstructions ?? null,
-            declaredValue:
-              pkg?.declaredValue != null ? Number(pkg.declaredValue) : null,
-            estimatedDistanceKm: assignment.estimatedDistanceKm
-              ? Number(assignment.estimatedDistanceKm)
-              : null,
-            actualDistanceKm: assignment.actualDistanceKm
-              ? Number(assignment.actualDistanceKm)
-              : null,
-            driverEarnings: earnings.netEarning,
-            earningsBreakdown: earnings.earningsBreakdown,
-            estimatedDeliveryTime: Math.ceil(
-              (Number(assignment.estimatedDistanceKm || 10) / 25) * 60,
-            ),
-            assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
-            acceptedAt: assignment.timeline?.acceptedAt ?? null,
+            routing: {
+              pickup: assignment.pickup ?? null,
+              delivery: assignment.delivery ?? null,
+              estimatedDistanceKm,
+              actualDistanceKm,
+              estimatedDeliveryMinutes: Math.ceil(
+                ((estimatedDistanceKm ?? 10) / 25) * 60,
+              ),
+            },
+            snapshot: {
+              deliveryType: snap?.deliveryType,
+              vehicleCategory: snap?.vehicleCategory,
+              packageType: snap?.packageType,
+              weightTier: snap?.weightTier ?? null,
+            },
+            package: assignment.package ?? null,
+            pricing: assignment.pricing ?? null,
+            earnings: {
+              net: earnings.netEarning,
+              breakdown: earnings.earningsBreakdown,
+            },
+            timeline: {
+              assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
+              acceptedAt: assignment.timeline?.acceptedAt ?? null,
+            },
           };
         }),
       );
 
-      return assignmentsWithEarnings;
+      return {
+        assignments: assignmentsWithEarnings,
+      };
     } catch (error) {
       logger.error({
         msg: "Error getting driver assignments",
@@ -506,21 +513,10 @@ class DriversService {
     try {
       const earnings = await driversRepository.getEarningsSummary(userId);
 
-      // For home screen (today only) - lightweight response
-      if (period === "today") {
-        return {
-          deliveries: {
-            today: Number(earnings.todayDeliveries),
-          },
-          earnings: {
-            today: Number(earnings.todayEarnings),
-          },
-          totalDistanceKm: Number(earnings.totalDistanceKm),
-        };
-      }
-
-      // For detailed screens - full response
       return {
+        scope: {
+          period: period as "today" | "week" | "month" | "year",
+        },
         deliveries: {
           total: Number(earnings.totalDeliveries),
           today: Number(earnings.todayDeliveries),
@@ -534,7 +530,9 @@ class DriversService {
           thisMonth: Number(earnings.monthEarnings),
           averageOrderValue: Number(earnings.avgOrderValue),
         },
-        totalDistanceKm: Number(earnings.totalDistanceKm),
+        activity: {
+          totalDistanceKm: Number(earnings.totalDistanceKm),
+        },
       };
     } catch (error) {
       logger.error({
