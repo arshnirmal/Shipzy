@@ -4,10 +4,19 @@ import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository from "./sessions.repository.js";
+import { AppError } from "../../utils/error.util.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
 
+import {
+  CourierAssignmentDbZ,
+  CourierAvailabilityDbZ,
+  CourierDbZ,
+  CourierLocationDbZ,
+  EarningsSummaryDbZ,
+} from "../../types/drivers.js";
 import type {
   DbCourier,
   CourierAvailabilityResult,
@@ -35,7 +44,10 @@ class DriversRepository {
         driversQueries.FIND_COURIER_BY_USER_ID,
         [userId],
       );
-      return result.rows[0] || null;
+      const row = result.rows[0];
+      if (!row) return null;
+
+      return parseDbRow(CourierDbZ, row, "courier profile");
     } catch (error) {
       logger.error({
         msg: "Error finding courier by ID",
@@ -72,7 +84,12 @@ class DriversRepository {
         [userId],
       );
 
-      return result.rows[0];
+      const row = result.rows[0];
+      if (!row) {
+        throw new AppError("Updated courier profile row not found", 500);
+      }
+
+      return parseDbRow(CourierDbZ, row, "updated courier profile");
     } catch (error) {
       logger.error({
         msg: "Error updating courier profile",
@@ -108,10 +125,10 @@ class DriversRepository {
 
       const row = result[0];
       if (!row) {
-        throw new Error("Courier availability update returned no row");
+        throw new AppError("Courier availability update returned no row", 500);
       }
 
-      return row as CourierAvailabilityResult;
+      return parseDbRow(CourierAvailabilityDbZ, row, "courier availability");
     } catch (error) {
       logger.error({
         msg: "Error updating courier availability",
@@ -135,7 +152,7 @@ class DriversRepository {
         [courierId, longitude, latitude],
       );
 
-      return result.rows[0] as CourierLocationResult;
+      return parseDbRow(CourierLocationDbZ, result.rows[0], "courier location");
     } catch (error) {
       logger.error({
         msg: "Error updating courier location",
@@ -156,7 +173,12 @@ class DriversRepository {
         driversQueries.FIND_COURIER_ACTIVE_ASSIGNMENTS,
         [courierId],
       );
-      return result.rows as CourierAssignmentRow[];
+
+      return parseDbRows(
+        CourierAssignmentDbZ,
+        result.rows,
+        "courier assignment",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting courier assignments",
@@ -175,7 +197,12 @@ class DriversRepository {
         driversQueries.GET_COURIER_EARNINGS_SUMMARY,
         [courierId],
       );
-      return result.rows[0] as EarningsSummaryRow;
+
+      return parseDbRow(
+        EarningsSummaryDbZ,
+        result.rows[0],
+        "courier earnings summary",
+      );
     } catch (error) {
       logger.error({
         msg: "Error getting courier earnings",

@@ -16,6 +16,7 @@ import type {
   ActiveAssignment,
   DriverAvailabilityResponse,
   DriverEarningsSummary,
+  EarningsPeriodQuery,
   DriverLocationResponse,
   DriverProfileMutationResponse,
   DriverProfileResponse,
@@ -508,14 +509,14 @@ class DriversService {
    */
   async getEarningsSummary(
     userId: number,
-    period: string = "today",
+    period: EarningsPeriodQuery["period"] = "today",
   ): Promise<DriverEarningsSummary> {
     try {
       const earnings = await driversRepository.getEarningsSummary(userId);
 
       return {
         scope: {
-          period: period as "today" | "week" | "month" | "year",
+          period,
         },
         deliveries: {
           total: Number(earnings.totalDeliveries),

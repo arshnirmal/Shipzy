@@ -2,17 +2,13 @@
 import logger from "../../config/logger.js";
 import { drizzlePool } from "../../database/drizzle.js";
 import sessionsQueries from "../../database/queries/sessions.queries.js";
+import {
+  DriverSessionDbZ,
+  type DriverSessionDb,
+} from "../../schemas/db.zod.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
 
-export interface DriverSession {
-  sessionId: number;
-  driverId: number;
-  startedAt: Date;
-  endedAt?: Date;
-  totalOnlineMinutes?: number;
-  lastLocationLat?: number;
-  lastLocationLng?: number;
-  createdAt: Date;
-}
+export type DriverSession = DriverSessionDb;
 
 interface CreateSessionData {
   driverId: number;
@@ -40,7 +36,7 @@ class SessionsRepository {
         sessionData.lastLocationLat ?? null,
         sessionData.lastLocationLng ?? null,
       ]);
-      return result.rows[0];
+      return parseDbRow(DriverSessionDbZ, result.rows[0], "driver session");
     } catch (error) {
       logger.error({
         msg: "Error creating driver session",
@@ -60,7 +56,10 @@ class SessionsRepository {
         sessionsQueries.FIND_ACTIVE_SESSION,
         [driverId],
       );
-      return result.rows[0] || null;
+      const row = result.rows[0];
+      if (!row) return null;
+
+      return parseDbRow(DriverSessionDbZ, row, "active driver session");
     } catch (error) {
       logger.error({
         msg: "Error finding active session",
@@ -82,7 +81,11 @@ class SessionsRepository {
         endData.lastLocationLat ?? null,
         endData.lastLocationLng ?? null,
       ]);
-      return result.rows[0];
+      return parseDbRow(
+        DriverSessionDbZ,
+        result.rows[0],
+        "ended driver session",
+      );
     } catch (error) {
       logger.error({
         msg: "Error ending driver session",
@@ -106,7 +109,8 @@ class SessionsRepository {
         sessionsQueries.GET_SESSIONS_IN_RANGE,
         [driverId, startDate, endDate],
       );
-      return result.rows;
+
+      return parseDbRows(DriverSessionDbZ, result.rows, "driver session range");
     } catch (error) {
       logger.error({
         msg: "Error getting sessions in range",

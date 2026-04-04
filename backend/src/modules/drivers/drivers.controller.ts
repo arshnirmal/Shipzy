@@ -7,7 +7,6 @@ import driversService from "./drivers.service.js";
 import ratingsService from "../ratings/ratings.service.js";
 
 import {
-  EarningsPeriodQueryZ,
   type EarningsPeriodQuery,
   type UpdateAvailabilityRequest,
   type UpdateDriverProfileRequest,
@@ -183,7 +182,7 @@ class DriversController {
   ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
-      const { period } = EarningsPeriodQueryZ.parse(request.query);
+      const period = request.query.period ?? "today";
 
       const earnings = await driversService.getEarningsSummary(userId, period);
 
