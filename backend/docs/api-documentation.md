@@ -68,8 +68,8 @@ type UUID = string;
 type ISODateTime = string;
 
 type Coordinates = {
-  latitude: number;   // -90..90
-  longitude: number;  // -180..180
+  latitude: number; // -90..90
+  longitude: number; // -180..180
 };
 
 type FareBreakdown = {
@@ -167,11 +167,11 @@ Request body:
 
 ```ts
 type RegisterRequest = {
-  fullName: string;                 // 2..100
-  email: string;                    // email
-  password: string;                 // 8..255
+  fullName: string; // 2..100
+  email: string; // email
+  password: string; // 8..255
   role: "client" | "courier";
-  phoneNumber?: string;             // 10..20
+  phoneNumber?: string; // 10..20
 };
 ```
 
@@ -181,7 +181,7 @@ Response (201):
 type AuthTokens = {
   accessToken: string;
   refreshToken: string;
-  expiresIn: number;                // seconds
+  expiresIn: number; // seconds
   tokenType: "Bearer";
 };
 
@@ -300,10 +300,10 @@ Request body:
 
 ```ts
 type UpdateProfileRequest = {
-  fullName?: string;            // 2..100
-  email?: string;               // email
-  profilePictureUrl?: string;   // url
-  phoneNumber?: string;         // 10..20
+  fullName?: string; // 2..100
+  email?: string; // email
+  profilePictureUrl?: string; // url
+  phoneNumber?: string; // 10..20
 };
 ```
 
@@ -331,10 +331,10 @@ Request body:
 
 ```ts
 type SaveAddressRequest = {
-  fullAddress: string;  // 5..500
-  city: string;         // 2..100
-  state: string;        // 2..100
-  postalCode: string;   // 4..10
+  fullAddress: string; // 5..500
+  city: string; // 2..100
+  state: string; // 2..100
+  postalCode: string; // 4..10
   latitude: number;
   longitude: number;
   building?: string | null;
@@ -343,7 +343,7 @@ type SaveAddressRequest = {
   landmark?: string | null;
 
   addressType?: "home" | "work" | "other";
-  label?: string;       // <= 50
+  label?: string; // <= 50
   isDefault?: boolean;
 };
 ```
@@ -573,7 +573,7 @@ type ActiveAssignment = {
   actualDistanceKm?: number | null;
   driverEarnings: number;
   earningsBreakdown: EarningsBreakdown;
-  estimatedDeliveryTime: number;       // minutes
+  estimatedDeliveryTime: number; // minutes
   assignedAt?: ISODateTime | null;
   acceptedAt?: ISODateTime | null;
 };
@@ -620,7 +620,7 @@ Response (200):
 
 ```ts
 type DriverRatingStats = {
-  averageRating: number;   // 0..5
+  averageRating: number; // 0..5
   totalRatings: number;
   ratingDistribution: {
     1: number;
@@ -643,37 +643,36 @@ Base: `/api/v1/orders`
 
 All `/orders/*` endpoints require `Authorization: Bearer <accessToken>`.
 
-### POST /api/v1/orders/calculate-fare
-
-Auth: Bearer token required
-
-Request body:
-
 ```ts
-type CalculateFareRequest = {
+type OrderStatus =
+  | "pending"
+  | "accepted"
+  | "picked_up"
+  | "in_transit"
+  | "delivered"
+  | "cancelled"
+  | "undeliverable"
+  | "returned";
+
+type AssignmentStatus =
+  | "assigned"
+  | "accepted"
+  | "rejected"
+  | "picked_up"
+  | "in_transit"
+  | "delivered"
+  | "cancelled"
+  | "returned";
+
+type OrderFulfillment = {
   deliveryTypeId: number;
   vehicleCategoryId: number;
-  weightTierId: number;
+  weightTierId?: number | null;
   packageTypeId?: number | null;
-  pickup: Coordinates;
-  drop: Coordinates;
+  paymentMethodId?: number | null;
 };
-```
 
-Response (200):
-
-```ts
-type Response = SuccessResponse<FareBreakdown>;
-```
-
-### POST /api/v1/orders
-
-Auth: Bearer token required + role `client`
-
-Request body:
-
-```ts
-type OrderAddress = {
+type OrderLocation = {
   addressId?: number | null;
   fullAddress: string;
   city: string;
@@ -690,42 +689,132 @@ type OrderAddress = {
   contactPhone: string;
 };
 
-type CreateOrderRequest = {
-  deliveryTypeId: number;
-  vehicleCategoryId: number;
-  weightTierId: number;
-  packageTypeId?: number | null;
-  paymentMethodId: number;
-
-  packageDescription?: string | null;
+type OrderPackage = {
+  description?: string | null;
   specialInstructions?: string | null;
-  scheduledPickupTime?: ISODateTime | null;
-  scheduledDeliveryTime?: ISODateTime | null;
   declaredValue?: number | null;
-  notifyRecipientSms?: boolean;          // default false
-  couponCode?: string | null;
+  notifyRecipientSms?: boolean;
+};
 
-  fareBreakdown: FareBreakdown;
-  pickup: OrderAddress;
-  delivery: OrderAddress;
+type OrderSchedule = {
+  pickupAt?: ISODateTime | null;
+  deliveryAt?: ISODateTime | null;
+};
+
+type OrderItem = {
+  itemName: string;
+  quantity: number;
+  weightKg?: number | null;
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+  } | null;
+  description?: string | null;
+  value?: number | null;
+};
+
+type BaseOrderCore = {
+  fulfillment: OrderFulfillment;
+  locations: {
+    pickup: OrderLocation;
+    delivery: OrderLocation;
+  };
+  package: OrderPackage;
+  schedule?: OrderSchedule;
+  pricing: FareBreakdown;
+  couponCode?: string | null;
+  items?: OrderItem[];
+};
+
+type BaseOrder = BaseOrderCore & {
+  identifiers: {
+    orderId: number;
+    orderUuid: UUID;
+    orderNumber?: string | null;
+  };
+  status: OrderStatus;
+  metrics: {
+    estimatedDistanceKm?: number | null;
+    actualDistanceKm?: number | null;
+    actualDurationMins?: number | null;
+    totalPrice: number;
+  };
+  timeline: {
+    createdAt: ISODateTime;
+    acceptedAt?: ISODateTime | null;
+    pickedUpAt?: ISODateTime | null;
+    inTransitAt?: ISODateTime | null;
+    deliveredAt?: ISODateTime | null;
+    cancelledAt?: ISODateTime | null;
+  };
+  snapshot?: Record<string, unknown>;
+  actual?: {
+    pickupAt?: ISODateTime | null;
+    deliveryAt?: ISODateTime | null;
+  };
+};
+```
+
+### POST /api/v1/orders/calculate-fare
+
+Auth: Bearer token required
+
+Request body:
+
+```ts
+type CalculateFareRequest = {
+  fulfillment: {
+    deliveryTypeId: number;
+    vehicleCategoryId: number;
+    weightTierId: number;
+    packageTypeId?: number | null;
+  };
+  locations: {
+    pickup: Coordinates;
+    delivery: Coordinates;
+  };
+};
+```
+
+Response (200):
+
+```ts
+type CalculateFareResponse = {
+  pricing: FareBreakdown;
+  estimatedDurationMins?: number;
+};
+
+type Response = SuccessResponse<CalculateFareResponse>;
+```
+
+### POST /api/v1/orders
+
+Auth: Bearer token required + role `client`
+
+Request body:
+
+```ts
+type CreateOrderRequest = BaseOrderCore & {
+  fulfillment: {
+    deliveryTypeId: number;
+    vehicleCategoryId: number;
+    weightTierId: number;
+    packageTypeId?: number | null;
+    paymentMethodId: number;
+  };
+  package: OrderPackage;
 };
 ```
 
 Response (201):
 
 ```ts
-type CreatedOrder = {
-  orderId: number;
-  orderUuid: UUID;
-  orderNumber: string;
-  status: string;                 // typically "pending"
-  fareBreakdown: FareBreakdown;
-  estimatedDistanceKm: number;
-  estimatedDurationMins?: number;
-  createdAt: ISODateTime;
+type CreateOrderResponse = {
+  order: BaseOrder;
 };
 
-type Response = SuccessResponse<CreatedOrder>;
+type Response = SuccessResponse<CreateOrderResponse>;
 ```
 
 ### GET /api/v1/orders
@@ -736,10 +825,10 @@ Query params:
 
 ```ts
 type ListOrdersQuery = {
-  page?: number;                   // default 1
-  limit?: number;                  // default 20
+  page?: number; // default 1
+  limit?: number; // default 20
   sortBy?: string;
-  sortOrder?: "asc" | "desc";     // default "desc"
+  sortOrder?: "asc" | "desc"; // default "desc"
   status?: "active" | "completed" | "cancelled";
   dateFrom?: ISODateTime;
   dateTo?: ISODateTime;
@@ -750,26 +839,13 @@ Response (200):
 
 ```ts
 type OrderListItem = {
-  orderId: number;
-  orderUuid: UUID;
-  orderNumber?: string | null;
-  status: string;
-  statusId: number;
-  deliveryTypeId: number;
-  deliveryTypeDisplay?: string;
-  vehicleCategoryId: number;
-  vehicleCategoryDisplay?: string;
-  packageDescription?: string | null;
-  weightTierId?: number | null;
-  weightTierDisplay?: string | null;
-  estimatedDistanceKm?: number | null;
-  actualDistanceKm?: number | null;
-  actualDurationMins?: number | null;
-  totalPrice: number;
-  createdAt: ISODateTime;
-  pickup: { address?: string | null; city?: string | null };
-  delivery: { address?: string | null; city?: string | null };
-  courier?: { name?: string | null; photo?: string | null } | null;
+  order: BaseOrder;
+  courier?: {
+    userId: number;
+    name?: string | null;
+    phone?: string | null;
+    profilePictureUrl?: string | null;
+  } | null;
 };
 
 type Response = PaginatedResponse<OrderListItem>;
@@ -786,7 +862,7 @@ type AvailableOrdersQuery = {
   latitude: number;
   longitude: number;
   radius?: number; // km, default 10
-  limit?: number;  // default 20
+  limit?: number; // default 20
 };
 ```
 
@@ -794,28 +870,8 @@ Response (200):
 
 ```ts
 type AvailableOrderItem = {
-  orderId: number;
-  orderUuid: UUID;
-  orderNumber: string;
-  deliveryTypeDisplay: string;
-  vehicleCategoryDisplay: string;
-  createdAt: ISODateTime;
-  pickup: {
-    address: string;
-    landmark?: string | null;
-    city: string;
-    coordinates: Coordinates;
-  };
-  delivery: {
-    address: string;
-    landmark?: string | null;
-    city: string;
-    coordinates: Coordinates;
-  };
-  fareBreakdown: FareBreakdown;
-  estimatedDistanceKm: number;
+  order: BaseOrder;
   distanceFromDriverKm: number;
-  packageDescription?: string | null;
 };
 
 type Response = SuccessResponse<AvailableOrderItem[]>;
@@ -835,89 +891,33 @@ Response (200):
 
 ```ts
 type OrderDetails = {
-  orderId: number;
-  orderUuid: UUID;
-  orderNumber: string;
-  status: string;
-  statusId: number;
-  deliveryTypeId: number;
-  deliveryTypeDisplay?: string;
-  vehicleCategoryId: number;
-  vehicleCategoryDisplay?: string;
-  packageDescription?: string | null;
-  packageTypeId?: number | null;
-  weightTierId?: number | null;
-  weightTierDisplay?: string | null;
-  specialInstructions?: string | null;
-
-  pickup: {
-    locationId?: number;
-    address: string;
-    building?: string | null;
-    floor?: string | null;
-    flat?: string | null;
-    landmark?: string | null;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    latitude: number;
-    longitude: number;
-    contactName?: string;
-    contactPhone?: string;
-  };
-  delivery: {
-    locationId?: number;
-    address: string;
-    building?: string | null;
-    floor?: string | null;
-    flat?: string | null;
-    landmark?: string | null;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    latitude: number;
-    longitude: number;
-    contactName?: string;
-    contactPhone?: string;
-  };
-
-  fareBreakdown: FareBreakdown;
-
-  client?: {
-    userId: number;
-    name?: string;
-    phone?: string;
-    profilePictureUrl?: string | null;
-  };
-  courier?: {
-    userId: number;
-    name?: string;
-    phone?: string;
-    profilePictureUrl?: string | null;
-    vehicle?: {
-      vehicleId?: number;
-      categoryId?: number;
-      category?: string;
-      isActive?: boolean;
-      vehicleNumber?: string;
-      model?: string;
-      year?: number;
+  order: BaseOrder & {
+    assignment?: {
+      assignmentId: number;
+      status: AssignmentStatus;
+      assignedAt?: ISODateTime | null;
+      timeline?: {
+        acceptedAt?: ISODateTime | null;
+        rejectedAt?: ISODateTime | null;
+      } | null;
     } | null;
-    rating?: { averageRating: number; totalRatings: number };
-  } | null;
-
-  timeline: {
-    confirmedAt: ISODateTime;
-    assignedAt?: ISODateTime;
-    pickedUpAt?: ISODateTime;
-    deliveredAt?: ISODateTime;
-    cancelledAt?: ISODateTime;
+    cancellation?: {
+      reason?: string | null;
+    };
   };
-
-  estimatedDistanceKm?: number | null;
-  actualDistanceKm?: number | null;
-  actualDurationMins?: number | null;
-  createdAt: ISODateTime;
+  actors: {
+    client: {
+      userId: number;
+      name?: string | null;
+      phone?: string | null;
+    };
+    courier?: {
+      userId: number;
+      name?: string | null;
+      phone?: string | null;
+      profilePictureUrl?: string | null;
+    } | null;
+  };
 };
 
 type Response = SuccessResponse<OrderDetails>;
@@ -943,14 +943,17 @@ Response (200):
 
 ```ts
 type CancelOrderResult = {
-  success: boolean;
-  orderId?: number;
-  status?: string;
-  refundAmount?: number;
-  refundStatus?: string;
-  error?: string;
-  // Note: the stored procedure may return additional fields
-  [key: string]: unknown;
+  order: {
+    orderId: number;
+    status: "cancelled";
+    cancelledAt?: ISODateTime;
+    cancellationReason?: string | null;
+  };
+  refund: {
+    initiated: boolean;
+    amount: number;
+    status?: string;
+  };
 };
 
 type Response = SuccessResponse<CancelOrderResult>;
@@ -970,10 +973,19 @@ Response (200):
 
 ```ts
 type AcceptOrderData = {
-  assignmentId: number;
-  orderId: number;
-  courierId: number;
-  assignedAt: ISODateTime;
+  assignment: {
+    assignmentId: number;
+    orderId: number;
+    courierId: number;
+    status: AssignmentStatus;
+    assignedAt: ISODateTime;
+    acceptedAt?: ISODateTime | null;
+  };
+  order: {
+    orderId: number;
+    status: OrderStatus;
+    acceptedAt?: ISODateTime | null;
+  };
 };
 
 type Response = SuccessResponse<AcceptOrderData>;
@@ -1001,9 +1013,11 @@ Response (200):
 
 ```ts
 type UpdateOrderStatusData = {
-  orderId: number;
-  status: string;
-  timestamp: ISODateTime;
+  order: {
+    orderId: number;
+    status: "picked_up" | "in_transit" | "delivered";
+    timestamp: ISODateTime;
+  };
 };
 
 type Response = SuccessResponse<UpdateOrderStatusData>;
@@ -1023,7 +1037,7 @@ Request body:
 
 ```ts
 type RateOrderRequest = {
-  rating: number;          // 1..5
+  rating: number; // 1..5
   comment?: string | null; // <= 500
   anonymous?: boolean;
 };
@@ -1060,11 +1074,19 @@ Request body:
 
 ```ts
 type SearchAddressesRequest = {
-  query: string;                 // 2..256
+  query: string; // 2..256
   proximity?: Coordinates;
-  country?: string;              // "IN" or "IN,US" (comma-separated, uppercase 2-letter)
-  types?: ("address" | "poi" | "place" | "neighborhood" | "locality" | "region" | "country")[];
-  limit?: number;                // 1..10
+  country?: string; // "IN" or "IN,US" (comma-separated, uppercase 2-letter)
+  types?: (
+    | "address"
+    | "poi"
+    | "place"
+    | "neighborhood"
+    | "locality"
+    | "region"
+    | "country"
+  )[];
+  limit?: number; // 1..10
 };
 ```
 
@@ -1119,7 +1141,15 @@ Request body:
 type ReverseGeocodeRequest = {
   latitude: number;
   longitude: number;
-  types?: ("address" | "poi" | "place" | "neighborhood" | "locality" | "region" | "country")[];
+  types?: (
+    | "address"
+    | "poi"
+    | "place"
+    | "neighborhood"
+    | "locality"
+    | "region"
+    | "country"
+  )[];
   limit?: number; // 1..5
 };
 ```
@@ -1165,8 +1195,8 @@ Response (200):
 
 ```ts
 type DirectionsResponseData = {
-  distance: number;              // meters
-  duration: number;              // seconds
+  distance: number; // meters
+  duration: number; // seconds
   geometry: {
     type: "LineString";
     coordinates: [number, number][]; // [lng, lat]
@@ -1345,8 +1375,8 @@ type HealthOk = {
     };
   };
   memory: {
-    used: number;     // MB
-    total: number;    // MB
+    used: number; // MB
+    total: number; // MB
     external: number; // MB
   };
 };
@@ -1391,9 +1421,9 @@ type ErrorResponse = {
   message: string;
   timestamp: ISODateTime;
   errors?: ValidationErrorItem[] | unknown | null;
-  error?: string;          // some auth provider errors
-  path?: string;           // notFound handler
-  retryAfter?: number;     // rate limiting
+  error?: string; // some auth provider errors
+  path?: string; // notFound handler
+  retryAfter?: number; // rate limiting
 };
 ```
 

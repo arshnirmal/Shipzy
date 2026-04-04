@@ -115,7 +115,9 @@ function printSeedSummary() {
     total: stats.success + stats.failure,
   }));
 
-  rows.sort((a, b) => b.failure - a.failure || a.action.localeCompare(b.action));
+  rows.sort(
+    (a, b) => b.failure - a.failure || a.action.localeCompare(b.action),
+  );
 
   for (const row of rows) {
     const icon = row.failure > 0 ? "⚠️" : "✅";
@@ -213,6 +215,13 @@ async function fetchStaticData() {
       }
     }
 
+    if (!state.staticData.paymentMethods) {
+      const pmRes = await api.get("/static/payment-methods");
+      if (ensureApiSuccess("Fallback fetch payment methods", pmRes)) {
+        state.staticData.paymentMethods = pmRes.data.data;
+      }
+    }
+
     // Also need weight tiers and vehicle categories
     const wtRes = await api.get("/static/weight-tiers");
     if (ensureApiSuccess("Fetch weight tiers", wtRes)) {
@@ -277,8 +286,7 @@ async function seedUsers(count = 3) {
 
         if (ensureApiSuccess(`Create address for ${userData.email}`, addrRes)) {
           console.log(`   📍 Address added: ${addressData.fullAddress}`);
-          state.users.at(-1).addressId =
-            addrRes.data.data.addressId;
+          state.users.at(-1).addressId = addrRes.data.data.addressId;
         }
       }
     } catch (error: any) {
@@ -318,13 +326,31 @@ async function seedDrivers(count = 2) {
         const updateData = {
           profilePictureUrl: faker.image.avatar(),
         };
-        const profileRes = await api.put("/drivers/me", updateData, tokenHeader);
-        if (!ensureApiSuccess(`Update driver profile ${driverData.email}`, profileRes)) {
+        const profileRes = await api.put(
+          "/drivers/me",
+          updateData,
+          tokenHeader,
+        );
+        if (
+          !ensureApiSuccess(
+            `Update driver profile ${driverData.email}`,
+            profileRes,
+          )
+        ) {
           continue;
         }
         const location = generateMumbaiCoordinates();
-        const locationRes = await api.put("/drivers/me/location", location, tokenHeader);
-        if (!ensureApiSuccess(`Update driver location ${driverData.email}`, locationRes)) {
+        const locationRes = await api.put(
+          "/drivers/me/location",
+          location,
+          tokenHeader,
+        );
+        if (
+          !ensureApiSuccess(
+            `Update driver location ${driverData.email}`,
+            locationRes,
+          )
+        ) {
           continue;
         }
         const availabilityRes = await api.put(
@@ -359,6 +385,18 @@ async function seedOrders(count = 3) {
 
   if (state.users.length === 0 || !state.staticData.deliveryTypes?.length) {
     console.log("⚠️ No users or static data available. Skipping.");
+    return;
+  }
+
+  if (!state.staticData.paymentMethods?.length) {
+    const pmRes = await api.get("/static/payment-methods");
+    if (ensureApiSuccess("Fetch payment methods", pmRes)) {
+      state.staticData.paymentMethods = pmRes.data.data;
+    }
+  }
+
+  if (!state.staticData.paymentMethods?.length) {
+    console.log("⚠️ No payment methods available. Skipping orders.");
     return;
   }
 
@@ -420,14 +458,25 @@ async function seedOrders(count = 3) {
           ];
     }
 
-    const pm = state.staticData.paymentMethods[0]; // Cash
+    const pm =
+      state.staticData.paymentMethods.find(
+        (method) => method?.isActive !== false,
+      ) ?? state.staticData.paymentMethods[0];
 
     const farePayload = {
-      deliveryTypeId: dt.deliveryTypeId,
-      vehicleCategoryId: vc.categoryId,
-      weightTierId: wt.tierId,
-      pickup: { latitude: pickup.latitude, longitude: pickup.longitude },
-      drop: { latitude: delivery.latitude, longitude: delivery.longitude },
+      fulfillment: {
+        deliveryTypeId: dt.deliveryTypeId,
+        vehicleCategoryId: vc.categoryId,
+        weightTierId: wt.tierId,
+        packageTypeId: pt.packageTypeId,
+      },
+      locations: {
+        pickup: { latitude: pickup.latitude, longitude: pickup.longitude },
+        delivery: {
+          latitude: delivery.latitude,
+          longitude: delivery.longitude,
+        },
+      },
     };
 
     try {
@@ -442,7 +491,11 @@ async function seedOrders(count = 3) {
         continue;
       }
 
-      const fareBreakdown = fareRes.data.data;
+      const pricing = fareRes.data.data?.pricing;
+      if (!pricing) {
+        console.error("❌ Fare response missing pricing payload");
+        continue;
+      }
 
       // Prepare full addresses (include both `fullAddress` and `address` for compatibility)
       const pickupFullAddress =
@@ -451,52 +504,77 @@ async function seedOrders(count = 3) {
         faker.location.streetAddress({ useFullAddress: true }) + ", Mumbai";
 
       const orderData = {
-        deliveryTypeId: dt.deliveryTypeId,
-        vehicleCategoryId: vc.categoryId,
-        weightTierId: wt.tierId,
-        packageTypeId: pt.packageTypeId,
-        paymentMethodId: pm.methodId,
-
-        pickup: {
-          fullAddress: pickupFullAddress,
-          address: pickupFullAddress,
-          city: "Mumbai",
-          state: "Maharashtra",
-          postalCode: "400001",
-          latitude: pickup.latitude,
-          longitude: pickup.longitude,
-          contactName: user.fullName || "Unknown",
-          contactPhone: user.phoneNumber || "+91" + faker.string.numeric(10),
-          addressId: user.addressId || null,
+        fulfillment: {
+          deliveryTypeId: dt.deliveryTypeId,
+          vehicleCategoryId: vc.categoryId,
+          weightTierId: wt.tierId,
+          packageTypeId: pt.packageTypeId,
+          paymentMethodId: pm.methodId,
         },
-
-        delivery: {
-          fullAddress: deliveryFullAddress,
-          address: deliveryFullAddress,
-          city: "Mumbai",
-          state: "Maharashtra",
-          postalCode: "400058",
-          latitude: delivery.latitude,
-          longitude: delivery.longitude,
-          contactName: faker.person.fullName(),
-          contactPhone: "+91" + faker.string.numeric(10),
-          addressId: null,
+        locations: {
+          pickup: {
+            fullAddress: pickupFullAddress,
+            city: "Mumbai",
+            state: "Maharashtra",
+            postalCode: "400001",
+            latitude: pickup.latitude,
+            longitude: pickup.longitude,
+            contactName: user.fullName || "Unknown",
+            contactPhone: user.phoneNumber || "+91" + faker.string.numeric(10),
+            building: faker.location.buildingNumber(),
+            floor: faker.number.int({ min: 1, max: 20 }).toString(),
+            flatNumber: faker.number.int({ min: 101, max: 2004 }).toString(),
+            landmark: "Near " + faker.location.street(),
+            howToReach: "Use main gate",
+          },
+          delivery: {
+            fullAddress: deliveryFullAddress,
+            city: "Mumbai",
+            state: "Maharashtra",
+            postalCode: "400058",
+            latitude: delivery.latitude,
+            longitude: delivery.longitude,
+            contactName: faker.person.fullName(),
+            contactPhone: "+91" + faker.string.numeric(10),
+            building: faker.location.buildingNumber(),
+            floor: faker.number.int({ min: 1, max: 30 }).toString(),
+            flatNumber: faker.number.int({ min: 101, max: 3004 }).toString(),
+            landmark: "Near " + faker.location.street(),
+            howToReach: "Security desk to assist",
+          },
         },
-
-        fareBreakdown,
-        packageDescription: faker.commerce.productDescription(),
-        specialInstructions: Math.random() > 0.5 ? "Ring doorbell" : "",
-        declaredValue: faker.number.int({ min: 100, max: 5000 }),
+        package: {
+          description: faker.commerce.productDescription(),
+          specialInstructions:
+            Math.random() > 0.5 ? "Ring doorbell" : "Call on arrival",
+          declaredValue: faker.number.int({ min: 100, max: 5000 }),
+          notifyRecipientSms: Math.random() > 0.5,
+        },
+        schedule: {
+          pickupAt: null,
+          deliveryAt: null,
+        },
+        pricing,
+        couponCode: null,
+        items: [],
       };
 
       console.log(`Creating order for user ${user.fullName} (${dt.name})...`);
       const orderRes = await api.post("/orders", orderData, tokenHeader);
 
       if (ensureApiSuccess(`Create order for ${user.fullName}`, orderRes)) {
-        const order = orderRes.data.data;
-        state.orders.push(order);
+        const createdOrder = orderRes.data.data?.order;
+        const createdOrderId = createdOrder?.identifiers?.orderId;
+        const createdOrderNumber = createdOrder?.identifiers?.orderNumber;
+
+        if (!createdOrderId) {
+          console.error("❌ Create order response missing identifiers.orderId");
+          continue;
+        }
+
+        state.orders.push(createdOrder);
         console.log(
-          `✅ Order created: ${order.orderNumber} (ID: ${order.orderId})`,
+          `✅ Order created: ${createdOrderNumber || "N/A"} (ID: ${createdOrderId})`,
         );
 
         // Fetch existing drivers if needed for simulation
@@ -507,7 +585,7 @@ async function seedOrders(count = 3) {
         if (state.drivers.length > 0 && Math.random() > 0.3) {
           const driver =
             state.drivers[Math.floor(Math.random() * state.drivers.length)];
-          await simulateDriverFlow(driver, order.orderId);
+          await simulateDriverFlow(driver, createdOrderId);
         }
       }
     } catch (error: any) {
