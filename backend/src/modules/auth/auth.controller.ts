@@ -45,7 +45,9 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<FastifyReply> {
     try {
-      const result = await authService.refreshToken(request.body.refreshToken);
+      const result = await authService.refreshToken(
+        request.body.tokens.refreshToken,
+      );
 
       return successResponse(reply, result, "Token refreshed successfully");
     } catch (error) {
@@ -56,7 +58,7 @@ class AuthController {
       return errorResponse(
         reply,
         (error as Error).message,
-        error instanceof AppError ? error.statusCode : 401,
+        error instanceof AppError ? error.statusCode : 500,
       );
     }
   }
@@ -70,7 +72,10 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<FastifyReply> {
     try {
-      const { idToken, role } = request.body;
+      const {
+        provider: { idToken },
+        identity: { role },
+      } = request.body;
       const deviceInfo = this._getDeviceInfo(request);
       const userData: { roleName?: string } = { roleName: role };
 
@@ -83,10 +88,10 @@ class AuthController {
       return successResponse(
         reply,
         result,
-        result.isNewUser
+        result.auth.session.isNewUser
           ? "User registered successfully"
           : "User logged in successfully",
-        result.isNewUser ? 201 : 200,
+        result.auth.session.isNewUser ? 201 : 200,
       );
     } catch (error) {
       logger.error({
@@ -105,7 +110,10 @@ class AuthController {
    * POST /api/v1/auth/logout
    * Logout user (revoke token)
    */
-  async logout(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  async logout(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
     try {
       // Get token from Authorization header
       const token = request.headers.authorization?.replace("Bearer ", "");

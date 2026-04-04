@@ -7,6 +7,7 @@ import { authSessions } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
 
 import type { AuthUser } from "../../types/user.js";
+import type { DeviceInfo } from "../../types/index.js";
 
 type User = AuthUser;
 
@@ -46,7 +47,7 @@ function mapProfileRowToUser(
 }
 
 interface CreateUserData {
-  role: string;
+  role: "client" | "courier";
   firebaseUid?: string;
   phoneNumber?: string | null;
   fullName: string;
@@ -55,7 +56,7 @@ interface CreateUserData {
 }
 
 interface CreateEmailUserData {
-  role: string;
+  role: "client" | "courier";
   fullName: string;
   email: string;
   passwordHash: string;
@@ -65,12 +66,11 @@ interface CreateEmailUserData {
 interface StoreJwtTokenData {
   userId: number;
   email?: string;
-  phoneNumber?: string;
   tokenHash: string;
   deviceId?: string | null;
-  deviceInfo?: unknown;
+  deviceInfo?: DeviceInfo | null;
   ipAddress?: string | null;
-  authMethod?: "email" | "phone" | "google" | "firebase";
+  authMethod?: "email" | "google";
 }
 
 class AuthRepository {
@@ -156,47 +156,6 @@ class AuthRepository {
   }
 
   /**
-   * Find user by phone number (migrated to Drizzle)
-   */
-  async findByPhone(phoneNumber: string): Promise<User | null> {
-    try {
-      const result = await drizzleDb
-        .select({
-          userId: userProfiles.userId,
-          userUuid: userProfiles.userUuid,
-          roleName: userProfiles.role,
-          firebaseUid: userProfiles.firebaseUid,
-          phoneNumber: userProfiles.phoneNumber,
-          email: userProfiles.email,
-          fullName: userProfiles.fullName,
-          profilePictureUrl: userProfiles.profilePictureUrl,
-          passwordHash: userProfiles.passwordHash,
-          isVerified: userProfiles.isVerified,
-          isActive: userProfiles.isActive,
-          createdAt: userProfiles.createdAt,
-          updatedAt: userProfiles.updatedAt,
-        })
-        .from(userProfiles)
-        .where(
-          and(
-            eq(userProfiles.phoneNumber, phoneNumber),
-            isNull(userProfiles.deletedAt),
-          ),
-        )
-        .limit(1);
-
-      const row = result[0];
-      return row ? mapProfileRowToUser(row) : null;
-    } catch (error) {
-      logger.error({
-        msg: "Error finding user by phone",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
-  }
-
-  /**
    * Find user by email (migrated to Drizzle)
    */
   async findByEmail(email: string): Promise<User | null> {
@@ -235,7 +194,7 @@ class AuthRepository {
   }
 
   /**
-   * Create new user (for social/OTP auth - migrated to Drizzle)
+   * Create new user for social auth (migrated to Drizzle)
    */
   async createUser(userData: CreateUserData): Promise<User> {
     try {
@@ -251,7 +210,7 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          role: role as "client" | "courier" | "admin" | "business",
+          role,
           firebaseUid: firebaseUid || undefined,
           phoneNumber: phoneNumber || undefined,
           fullName,
@@ -310,7 +269,7 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          role: role as "client" | "courier" | "admin" | "business",
+          role,
           fullName,
           email,
           passwordHash,
@@ -360,7 +319,6 @@ class AuthRepository {
       const {
         userId,
         email,
-        phoneNumber,
         tokenHash,
         deviceId,
         deviceInfo,
@@ -371,22 +329,19 @@ class AuthRepository {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      await drizzleDb
-        .insert(authSessions)
-        .values({
-          userId,
-          email: email || undefined,
-          phoneNumber: phoneNumber || undefined,
-          jwtTokenHash: tokenHash,
-          deviceId: deviceId || undefined,
-          deviceInfo: deviceInfo || undefined,
-          ipAddress: ipAddress || undefined,
-          authMethod,
-          isVerified: true,
-          verifiedAt: new Date(),
-          expiresAt,
-          lastActivityAt: new Date(),
-        });
+      await drizzleDb.insert(authSessions).values({
+        userId,
+        email: email || undefined,
+        jwtTokenHash: tokenHash,
+        deviceId: deviceId || undefined,
+        deviceInfo: deviceInfo ?? undefined,
+        ipAddress: ipAddress || undefined,
+        authMethod,
+        isVerified: true,
+        verifiedAt: new Date(),
+        expiresAt,
+        lastActivityAt: new Date(),
+      });
     } catch (error) {
       logger.error({
         msg: "Error storing JWT token",

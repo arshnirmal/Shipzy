@@ -167,11 +167,15 @@ Request body:
 
 ```ts
 type RegisterRequest = {
-  fullName: string; // 2..100
-  email: string; // email
-  password: string; // 8..255
-  role: "client" | "courier";
-  phoneNumber?: string; // 10..20
+  identity: {
+    fullName: string; // 2..100
+    role: "client" | "courier";
+    phoneNumber?: string; // 10..20
+  };
+  credentials: {
+    email: string; // email
+    password: string; // 8..255
+  };
 };
 ```
 
@@ -186,8 +190,16 @@ type AuthTokens = {
 };
 
 type AuthResponseData = {
-  user: BaseUser;
-  tokens: AuthTokens;
+  actor: {
+    user: BaseUser;
+  };
+  auth: {
+    tokens: AuthTokens;
+    session: {
+      method: "email" | "google" | "refresh";
+      isNewUser?: boolean;
+    };
+  };
 };
 
 type Response = SuccessResponse<AuthResponseData>;
@@ -201,8 +213,10 @@ Request body:
 
 ```ts
 type LoginRequest = {
-  email: string;
-  password: string;
+  credentials: {
+    email: string;
+    password: string;
+  };
 };
 ```
 
@@ -227,8 +241,12 @@ Request body:
 
 ```ts
 type GoogleAuthRequest = {
-  idToken: string;
-  role: "client" | "courier";
+  provider: {
+    idToken: string;
+  };
+  identity: {
+    role: "client" | "courier";
+  };
 };
 ```
 
@@ -239,7 +257,11 @@ Response:
 
 ```ts
 type AuthResponseDataGoogle = AuthResponseData & {
-  isNewUser?: boolean;
+  auth: AuthResponseData["auth"] & {
+    session: AuthResponseData["auth"]["session"] & {
+      isNewUser?: boolean;
+    };
+  };
 };
 
 type Response = SuccessResponse<AuthResponseDataGoogle>;
@@ -253,7 +275,9 @@ Request body:
 
 ```ts
 type RefreshTokenRequest = {
-  refreshToken: string;
+  tokens: {
+    refreshToken: string;
+  };
 };
 ```
 
@@ -936,7 +960,11 @@ type Params = { id: number };
 Request body:
 
 ```ts
-type CancelOrderRequest = { cancellationReason: string };
+type CancelOrderRequest = {
+  cancellation: {
+    reason: string;
+  };
+};
 ```
 
 Response (200):
@@ -1005,7 +1033,9 @@ Request body:
 
 ```ts
 type UpdateOrderStatusRequest = {
-  status: "picked_up" | "in_transit" | "delivered";
+  transition: {
+    status: "picked_up" | "in_transit" | "delivered";
+  };
 };
 ```
 
@@ -1037,9 +1067,11 @@ Request body:
 
 ```ts
 type RateOrderRequest = {
-  rating: number; // 1..5
-  comment?: string | null; // <= 500
-  anonymous?: boolean;
+  feedback: {
+    rating: number; // 1..5
+    comment?: string | null; // <= 500
+    anonymous?: boolean;
+  };
 };
 ```
 

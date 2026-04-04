@@ -1,39 +1,73 @@
 // services/backend/src/modules/auth/auth.zod.ts
 import { z } from "zod";
-import { ClientUserZ, DriverUserZ } from "../../schemas/common.zod.js";
+import { BaseUserZ } from "../../schemas/common.zod.js";
 
 // ============================================================================
 // REQUEST SCHEMAS - API request payloads
 // ============================================================================
 
+export const AuthRoleZ = z.enum(["client", "courier"]);
+
 // Register Request
-export const RegisterRequestZ = z.object({
-  fullName: z.string().min(2).max(100),
-  email: z.string().email().max(100),
-  password: z.string().min(8).max(255),
-  role: z.enum(["client", "courier"]),
-  phoneNumber: z.string().min(10).max(20).optional(),
-}).strict();
+export const RegisterRequestZ = z
+  .object({
+    identity: z
+      .object({
+        fullName: z.string().min(2).max(100),
+        role: AuthRoleZ,
+        phoneNumber: z.string().min(10).max(20).optional(),
+      })
+      .strict(),
+    credentials: z
+      .object({
+        email: z.string().email().max(100),
+        password: z.string().min(8).max(255),
+      })
+      .strict(),
+  })
+  .strict();
 export type RegisterRequest = z.infer<typeof RegisterRequestZ>;
 
 // Login Request
-export const LoginRequestZ = z.object({
-  email: z.string().email().max(100),
-  password: z.string().min(1).max(255),
-}).strict();
+export const LoginRequestZ = z
+  .object({
+    credentials: z
+      .object({
+        email: z.string().email().max(100),
+        password: z.string().min(1).max(255),
+      })
+      .strict(),
+  })
+  .strict();
 export type LoginRequest = z.infer<typeof LoginRequestZ>;
 
 // Google Auth Request
-export const GoogleAuthRequestZ = z.object({
-  idToken: z.string().min(1),
-  role: z.enum(["client", "courier"]),
-}).strict();
+export const GoogleAuthRequestZ = z
+  .object({
+    provider: z
+      .object({
+        idToken: z.string().min(1),
+      })
+      .strict(),
+    identity: z
+      .object({
+        role: AuthRoleZ,
+      })
+      .strict(),
+  })
+  .strict();
 export type GoogleAuthRequest = z.infer<typeof GoogleAuthRequestZ>;
 
 // Refresh Token Request
-export const RefreshTokenRequestZ = z.object({
-  refreshToken: z.string().min(1),
-}).strict();
+export const RefreshTokenRequestZ = z
+  .object({
+    tokens: z
+      .object({
+        refreshToken: z.string().min(1),
+      })
+      .strict(),
+  })
+  .strict();
 export type RefreshTokenRequest = z.infer<typeof RefreshTokenRequestZ>;
 
 // ============================================================================
@@ -41,18 +75,38 @@ export type RefreshTokenRequest = z.infer<typeof RefreshTokenRequestZ>;
 // ============================================================================
 
 // Auth Tokens
-export const AuthTokensZ = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  expiresIn: z.number().int().positive(),
-  tokenType: z.literal("Bearer"),
-}).strict();
+export const AuthTokensZ = z
+  .object({
+    accessToken: z.string(),
+    refreshToken: z.string(),
+    expiresIn: z.number().int().positive(),
+    tokenType: z.literal("Bearer"),
+  })
+  .strict();
 export type AuthTokens = z.infer<typeof AuthTokensZ>;
 
+export const AuthSessionZ = z
+  .object({
+    method: z.enum(["email", "google", "refresh"]),
+    isNewUser: z.boolean().optional(),
+  })
+  .strict();
+export type AuthSession = z.infer<typeof AuthSessionZ>;
+
 // Auth Response (includes user and tokens)
-export const AuthResponseZ = z.object({
-  user: z.union([ClientUserZ, DriverUserZ]),
-  tokens: AuthTokensZ,
-  isNewUser: z.boolean().optional(),
-}).strict();
+export const AuthResponseZ = z
+  .object({
+    actor: z
+      .object({
+        user: BaseUserZ,
+      })
+      .strict(),
+    auth: z
+      .object({
+        tokens: AuthTokensZ,
+        session: AuthSessionZ,
+      })
+      .strict(),
+  })
+  .strict();
 export type AuthResponse = z.infer<typeof AuthResponseZ>;

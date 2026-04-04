@@ -153,14 +153,22 @@ export type CreateOrderRequest = z.infer<typeof CreateOrderRequestZ>;
 
 export const CancelOrderRequestZ = z
   .object({
-    cancellationReason: z.string().min(5).max(500),
+    cancellation: z
+      .object({
+        reason: z.string().min(5).max(500),
+      })
+      .strict(),
   })
   .strict();
 export type CancelOrderRequest = z.infer<typeof CancelOrderRequestZ>;
 
 export const UpdateOrderStatusRequestZ = z
   .object({
-    status: z.enum(["picked_up", "in_transit", "delivered"]),
+    transition: z
+      .object({
+        status: z.enum(["picked_up", "in_transit", "delivered"]),
+      })
+      .strict(),
   })
   .strict();
 export type UpdateOrderStatusRequest = z.infer<
@@ -169,9 +177,13 @@ export type UpdateOrderStatusRequest = z.infer<
 
 export const RateOrderRequestZ = z
   .object({
-    rating: z.number().int().min(1).max(5),
-    comment: z.string().max(500).nullable().optional(),
-    anonymous: z.boolean().optional(),
+    feedback: z
+      .object({
+        rating: z.number().int().min(1).max(5),
+        comment: z.string().max(500).nullable().optional(),
+        anonymous: z.boolean().optional(),
+      })
+      .strict(),
   })
   .strict();
 export type RateOrderRequest = z.infer<typeof RateOrderRequestZ>;

@@ -12,10 +12,7 @@ import {
   OrderCreateResultZ,
 } from "./orders.zod.js";
 import { NotFoundError, ValidationError } from "../../utils/error.util.js";
-import type {
-  FareCalculationResult,
-  OrderCreateResult,
-} from "../../types/orders.js";
+import type { FareCalculationResult, OrderCreateResult } from "./orders.zod.js";
 import type {
   AcceptOrderResult,
   CancelOrderResult,

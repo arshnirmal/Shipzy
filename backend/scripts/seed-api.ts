@@ -135,10 +135,12 @@ async function fetchExistingUsers() {
       "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role = $1 AND deleted_at IS NULL AND email IS NOT NULL";
     const res = await drizzlePool.query(query, ["client"]);
     for (const row of res.rows) {
-      const loginData = { email: row.email, password: "Password123!" };
+      const loginData = {
+        credentials: { email: row.email, password: "Password123!" },
+      };
       const loginRes = await api.post("/auth/login", loginData);
       if (ensureApiSuccess(`Login existing user ${row.email}`, loginRes)) {
-        const tokens = loginRes.data.data.tokens;
+        const tokens = loginRes.data.data.auth.tokens;
         // Fetch address
         const addrRes = await api.get("/users/me/addresses", {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
@@ -175,10 +177,12 @@ async function fetchExistingDrivers() {
       "SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role = $1 AND deleted_at IS NULL AND email IS NOT NULL";
     const res = await drizzlePool.query(query, ["courier"]);
     for (const row of res.rows) {
-      const loginData = { email: row.email, password: "Password123!" };
+      const loginData = {
+        credentials: { email: row.email, password: "Password123!" },
+      };
       const loginRes = await api.post("/auth/login", loginData);
       if (ensureApiSuccess(`Login existing driver ${row.email}`, loginRes)) {
-        const tokens = loginRes.data.data.tokens;
+        const tokens = loginRes.data.data.auth.tokens;
         state.drivers.push({
           userId: row.user_id,
           fullName: row.full_name,
@@ -244,20 +248,26 @@ async function seedUsers(count = 3) {
 
   for (let i = 0; i < count; i++) {
     const userData = {
-      fullName: faker.person.fullName(),
-      email: faker.internet.email().toLowerCase(),
-      password: "Password123!",
-      phoneNumber: "+91" + faker.string.numeric(10),
-      role: "client",
+      identity: {
+        fullName: faker.person.fullName(),
+        phoneNumber: "+91" + faker.string.numeric(10),
+        role: "client",
+      },
+      credentials: {
+        email: faker.internet.email().toLowerCase(),
+        password: "Password123!",
+      },
     };
 
     try {
-      console.log(`Registering user: ${userData.email}`);
+      console.log(`Registering user: ${userData.credentials.email}`);
       const regRes = await api.post("/auth/register", userData);
 
-      if (ensureApiSuccess(`Register user ${userData.email}`, regRes)) {
-        const user = regRes.data.data.user;
-        const tokens = regRes.data.data.tokens;
+      if (
+        ensureApiSuccess(`Register user ${userData.credentials.email}`, regRes)
+      ) {
+        const user = regRes.data.data.actor.user;
+        const tokens = regRes.data.data.auth.tokens;
 
         state.users.push({
           ...user,
@@ -284,7 +294,12 @@ async function seedUsers(count = 3) {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         });
 
-        if (ensureApiSuccess(`Create address for ${userData.email}`, addrRes)) {
+        if (
+          ensureApiSuccess(
+            `Create address for ${userData.credentials.email}`,
+            addrRes,
+          )
+        ) {
           console.log(`   📍 Address added: ${addressData.fullAddress}`);
           state.users.at(-1).addressId = addrRes.data.data.addressId;
         }
@@ -301,20 +316,29 @@ async function seedDrivers(count = 2) {
 
   for (let i = 0; i < count; i++) {
     const driverData = {
-      fullName: faker.person.fullName(),
-      email: faker.internet.email().toLowerCase(),
-      password: "Password123!",
-      phoneNumber: "+91" + faker.string.numeric(10),
-      role: "courier",
+      identity: {
+        fullName: faker.person.fullName(),
+        phoneNumber: "+91" + faker.string.numeric(10),
+        role: "courier",
+      },
+      credentials: {
+        email: faker.internet.email().toLowerCase(),
+        password: "Password123!",
+      },
     };
 
     try {
-      console.log(`Registering driver: ${driverData.email}`);
+      console.log(`Registering driver: ${driverData.credentials.email}`);
       const regRes = await api.post("/auth/register", driverData);
 
-      if (ensureApiSuccess(`Register driver ${driverData.email}`, regRes)) {
-        const driver = regRes.data.data.user;
-        const tokens = regRes.data.data.tokens;
+      if (
+        ensureApiSuccess(
+          `Register driver ${driverData.credentials.email}`,
+          regRes,
+        )
+      ) {
+        const driver = regRes.data.data.actor.user;
+        const tokens = regRes.data.data.auth.tokens;
         state.drivers.push({ ...driver, accessToken: tokens.accessToken });
         console.log(
           `✅ Driver created: ${driver.fullName} (ID: ${driver.userId})`,
@@ -333,7 +357,7 @@ async function seedDrivers(count = 2) {
         );
         if (
           !ensureApiSuccess(
-            `Update driver profile ${driverData.email}`,
+            `Update driver profile ${driverData.credentials.email}`,
             profileRes,
           )
         ) {
@@ -347,7 +371,7 @@ async function seedDrivers(count = 2) {
         );
         if (
           !ensureApiSuccess(
-            `Update driver location ${driverData.email}`,
+            `Update driver location ${driverData.credentials.email}`,
             locationRes,
           )
         ) {
@@ -360,7 +384,7 @@ async function seedDrivers(count = 2) {
         );
         if (
           !ensureApiSuccess(
-            `Update driver availability ${driverData.email}`,
+            `Update driver availability ${driverData.credentials.email}`,
             availabilityRes,
           )
         ) {
@@ -618,7 +642,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
       await delay(2000);
       const pickupRes = await api.put(
         `/orders/${orderId}/status`,
-        { status: "picked_up" },
+        { transition: { status: "picked_up" } },
         tokenHeader,
       );
       if (ensureApiSuccess(`Mark picked_up for order ${orderId}`, pickupRes))
@@ -628,7 +652,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
       await delay(1500);
       const transitRes = await api.put(
         `/orders/${orderId}/status`,
-        { status: "in_transit" },
+        { transition: { status: "in_transit" } },
         tokenHeader,
       );
       if (ensureApiSuccess(`Mark in_transit for order ${orderId}`, transitRes))
@@ -639,7 +663,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
         await delay(2000);
         const deliverRes = await api.put(
           `/orders/${orderId}/status`,
-          { status: "delivered" },
+          { transition: { status: "delivered" } },
           tokenHeader,
         );
         if (ensureApiSuccess(`Mark delivered for order ${orderId}`, deliverRes))

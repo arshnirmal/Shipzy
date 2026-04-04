@@ -220,7 +220,9 @@ class OrdersController {
     try {
       const { userId, role } = request.user!;
       const { id } = request.params;
-      const { cancellationReason } = request.body;
+      const {
+        cancellation: { reason: cancellationReason },
+      } = request.body;
 
       const result = await ordersService.cancelOrder(
         id,
@@ -291,7 +293,9 @@ class OrdersController {
     try {
       const { userId } = request.user!;
       const { id } = request.params;
-      const { status } = request.body;
+      const {
+        transition: { status },
+      } = request.body;
 
       const result = await ordersService.updateOrderStatus(id, status, userId);
 
@@ -331,7 +335,9 @@ class OrdersController {
     try {
       const { userId } = request.user!;
       const { id } = request.params;
-      const { rating, anonymous, comment } = request.body;
+      const {
+        feedback: { rating, anonymous, comment },
+      } = request.body;
 
       const result = await ratingsService.createRating({
         orderId: id,
