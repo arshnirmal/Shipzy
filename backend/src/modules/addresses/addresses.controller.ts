@@ -45,11 +45,10 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -88,11 +87,10 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -133,11 +131,10 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -192,11 +189,10 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -245,11 +241,10 @@ class AddressesController {
         error: (error as Error).message,
       });
 
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

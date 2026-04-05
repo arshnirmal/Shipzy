@@ -6,6 +6,7 @@ import {
   pgSchema,
   serial,
   index,
+  uniqueIndex,
   check,
   uuid,
   varchar,
@@ -67,6 +68,7 @@ export const authSessions = usersSchema.table("auth_sessions", {
   isVerified: boolean("is_verified").default(false).notNull(),
   verificationAttempts: integer("verification_attempts").default(0).notNull(),
   jwtTokenHash: varchar("jwt_token_hash", { length: 255 }).notNull().unique(),
+  refreshTokenHash: varchar("refresh_token_hash", { length: 255 }).unique(),
   deviceId: varchar("device_id", { length: 255 }),
   deviceInfo: jsonb("device_info"),
   ipAddress: inet("ip_address"),
@@ -84,6 +86,10 @@ export const authSessions = usersSchema.table("auth_sessions", {
     "auth_sessions_contact_present_chk",
     sql`${table.email} IS NOT NULL OR ${table.phoneNumber} IS NOT NULL`,
   ),
+  // One active session per device per user — enables UPSERT on login
+  uniqueIndex("uq_auth_sessions_user_device")
+    .on(table.userId, table.deviceId)
+    .where(sql`${table.deviceId} IS NOT NULL`),
 ]);
 
 // User Addresses (for saved addresses - uses PostGIS)

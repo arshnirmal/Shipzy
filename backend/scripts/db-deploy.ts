@@ -44,6 +44,8 @@ const pool = process.env.DATABASE_URL
       ssl: sslConfig,
     });
 
+const ADVISORY_LOCK_ID = 7482910; // Fixed lock ID for Shipzy migrations
+
 async function deploy() {
   const client = await pool.connect();
   try {
@@ -51,6 +53,10 @@ async function deploy() {
     console.log(
       `📡 Connected to: ${process.env.DB_HOST || (process.env.DATABASE_URL ? "DATABASE_URL" : "localhost")}`,
     );
+
+    // Acquire advisory lock to prevent concurrent migration runs
+    await client.query("SELECT pg_advisory_lock($1)", [ADVISORY_LOCK_ID]);
+    console.log("🔒 Advisory lock acquired");
 
     // 1. Create Deployment Log Table
     await client.query(`
@@ -187,6 +193,13 @@ async function deploy() {
     console.error("\n❌ Deployment Failed:", err);
     process.exit(1);
   } finally {
+    // Release advisory lock before disconnecting
+    try {
+      await client.query("SELECT pg_advisory_unlock($1)", [ADVISORY_LOCK_ID]);
+      console.log("🔓 Advisory lock released");
+    } catch {
+      // Lock is auto-released on connection close; ignore unlock errors
+    }
     client.release();
     await pool.end();
   }

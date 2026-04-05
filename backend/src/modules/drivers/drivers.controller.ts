@@ -37,11 +37,10 @@ class DriversController {
         msg: "Get driver profile controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -70,11 +69,10 @@ class DriversController {
         msg: "Update driver profile controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -103,11 +101,10 @@ class DriversController {
         msg: "Update availability controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -132,11 +129,10 @@ class DriversController {
         msg: "Update location controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -163,11 +159,10 @@ class DriversController {
         msg: "Get assignments controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -196,11 +191,10 @@ class DriversController {
         msg: "Get earnings controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -227,11 +221,10 @@ class DriversController {
         msg: "Get rating stats controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

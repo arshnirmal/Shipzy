@@ -8,12 +8,16 @@ import {
   loginSchema,
 } from "./auth.schema.js";
 
+// Stricter rate limit applied per-route for all auth endpoints
+const AUTH_RATE_LIMIT = { max: 10, timeWindow: "15 minutes" };
+
 async function authRoutes(fastify: FastifyInstance, _options: unknown) {
   // POST /api/v1/auth/google/verify
   fastify.post(
     "/google/verify",
     {
       schema: verifyGoogleSchema,
+      config: { rateLimit: AUTH_RATE_LIMIT },
     },
     authController.verifyGoogle.bind(authController),
   );
@@ -23,6 +27,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/refresh",
     {
       schema: refreshTokenSchema,
+      config: { rateLimit: AUTH_RATE_LIMIT },
     },
     authController.refreshToken.bind(authController),
   );
@@ -32,6 +37,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/register",
     {
       schema: registerSchema,
+      config: { rateLimit: AUTH_RATE_LIMIT },
     },
     authController.register.bind(authController),
   );
@@ -41,6 +47,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/login",
     {
       schema: loginSchema,
+      config: { rateLimit: AUTH_RATE_LIMIT },
     },
     authController.login.bind(authController),
   );

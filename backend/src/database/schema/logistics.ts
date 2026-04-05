@@ -98,6 +98,7 @@ export const courierStatus = logisticsSchema.table(
       sql`${table.totalRatings} >= 0`,
     ),
     index("idx_courier_status_assignment").on(table.currentAssignmentId),
+    // GIST index on current_location is created by src/database/functions/spatial.sql
   ],
 );
 

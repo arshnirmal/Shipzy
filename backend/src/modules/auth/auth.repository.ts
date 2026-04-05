@@ -1,5 +1,5 @@
 // services/backend/src/modules/auth/auth.repository.ts
-import { eq, and, isNull, gt, sql } from "drizzle-orm";
+import { eq, and, isNull, gt, sql, not } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import { userProfiles } from "../../database/schema/users.js";
@@ -67,6 +67,7 @@ interface StoreJwtTokenData {
   userId: number;
   email?: string;
   tokenHash: string;
+  refreshTokenHash?: string;
   deviceId?: string | null;
   deviceInfo?: DeviceInfo | null;
   ipAddress?: string | null;
@@ -320,6 +321,7 @@ class AuthRepository {
         userId,
         email,
         tokenHash,
+        refreshTokenHash,
         deviceId,
         deviceInfo,
         ipAddress,
@@ -329,10 +331,11 @@ class AuthRepository {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      await drizzleDb.insert(authSessions).values({
+      const values = {
         userId,
         email: email || undefined,
         jwtTokenHash: tokenHash,
+        refreshTokenHash: refreshTokenHash || undefined,
         deviceId: deviceId || undefined,
         deviceInfo: deviceInfo ?? undefined,
         ipAddress: ipAddress || undefined,
@@ -341,10 +344,83 @@ class AuthRepository {
         verifiedAt: new Date(),
         expiresAt,
         lastActivityAt: new Date(),
-      });
+      };
+
+      if (deviceId) {
+        // UPSERT: replace the existing session for this user+device
+        await drizzleDb
+          .insert(authSessions)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [authSessions.userId, authSessions.deviceId],
+            set: {
+              jwtTokenHash: tokenHash,
+              refreshTokenHash: refreshTokenHash || undefined,
+              ipAddress: ipAddress || undefined,
+              deviceInfo: deviceInfo ?? undefined,
+              authMethod,
+              expiresAt,
+              lastActivityAt: new Date(),
+            },
+          });
+      } else {
+        // No deviceId: simple insert (anonymous/web session)
+        await drizzleDb.insert(authSessions).values(values);
+      }
     } catch (error) {
       logger.error({
         msg: "Error storing JWT token",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Find an active session by refresh token hash and update access token hash
+   * Returns the userId if valid, null if not found or expired
+   */
+  async refreshSession(
+    refreshTokenHash: string,
+    newAccessTokenHash: string,
+  ): Promise<{ userId: number; userUuid: string } | null> {
+    try {
+      const result = await drizzleDb
+        .update(authSessions)
+        .set({
+          jwtTokenHash: newAccessTokenHash,
+          lastActivityAt: new Date(),
+        })
+        .where(
+          and(
+            eq(authSessions.refreshTokenHash, refreshTokenHash),
+            gt(authSessions.expiresAt, sql`NOW()`),
+          ),
+        )
+        .returning({ userId: authSessions.userId });
+
+      if (!result[0]?.userId) return null;
+
+      const userId = result[0].userId;
+      const user = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+        })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.userId, userId),
+            eq(userProfiles.isActive, true),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      return user[0] ?? null;
+    } catch (error) {
+      logger.error({
+        msg: "Error refreshing session",
         error: (error as Error).message,
       });
       throw error;

@@ -293,10 +293,16 @@ class DriversService {
     try {
       const assignments = await driversRepository.getActiveAssignments(userId);
 
+      // Fetch all pricing config once to avoid N+1 queries per assignment
+      const pricingRepo = await import("../pricing/pricing.repository.js").then(
+        (m) => m.default,
+      );
+      const pricingConfig = await pricingRepo.getAllPricingConfig();
+
       // Calculate earnings for all assignments
       const assignmentsWithEarnings: ActiveAssignment[] = await Promise.all(
         assignments.map(async (assignment) => {
-          const earnings = await this.calculateDriverEarnings(assignment);
+          const earnings = await this.calculateDriverEarnings(assignment, pricingConfig);
           const snap = assignment.snapshot;
           const estimatedDistanceKm =
             assignment.estimatedDistanceKm != null
@@ -365,6 +371,7 @@ class DriversService {
    */
   private async calculateDriverEarnings(
     assignment: import("../../types/drivers.js").CourierAssignmentRow,
+    pricingConfig?: Map<string, number>,
   ): Promise<{
     netEarning: number;
     earningsBreakdown: {
@@ -382,31 +389,23 @@ class DriversService {
     };
   }> {
     try {
-      // Import pricing repository for configurable rates
-      const pricingRepo = await import("../pricing/pricing.repository.js").then(
-        (m) => m.default,
-      );
+      // Use pre-fetched pricing config if provided, otherwise fetch (fallback for direct calls)
+      let config = pricingConfig;
+      if (!config) {
+        const pricingRepo = await import(
+          "../pricing/pricing.repository.js"
+        ).then((m) => m.default);
+        config = await pricingRepo.getAllPricingConfig();
+      }
 
-      // Get configurable rates
-      const commissionRate =
-        (await pricingRepo.getPricingConfigValue("driver_commission_rate")) ||
-        0.7;
-      const distanceRate =
-        (await pricingRepo.getPricingConfigValue("driver_distance_rate")) ||
-        0.65;
-      const weightRate =
-        (await pricingRepo.getPricingConfigValue("driver_weight_rate")) || 0.6;
-      const peakHourBonusRate =
-        (await pricingRepo.getPricingConfigValue("peak_hour_bonus_rate")) ||
-        0.15;
-      const urgencyBonusAmount =
-        (await pricingRepo.getPricingConfigValue("urgency_bonus_amount")) ||
-        15.0;
-      const onTimeBonusRate =
-        (await pricingRepo.getPricingConfigValue("on_time_bonus_rate")) || 0.05;
-      const qualityBonusAmount =
-        (await pricingRepo.getPricingConfigValue("quality_bonus_amount")) ||
-        5.0;
+      // Get configurable rates from pre-fetched map with defaults
+      const commissionRate = config.get("driver_commission_rate") ?? 0.7;
+      const distanceRate = config.get("driver_distance_rate") ?? 0.65;
+      const weightRate = config.get("driver_weight_rate") ?? 0.6;
+      const peakHourBonusRate = config.get("peak_hour_bonus_rate") ?? 0.15;
+      const urgencyBonusAmount = config.get("urgency_bonus_amount") ?? 15.0;
+      const onTimeBonusRate = config.get("on_time_bonus_rate") ?? 0.05;
+      const qualityBonusAmount = config.get("quality_bonus_amount") ?? 5.0;
 
       const basePrice = Number(assignment.pricing?.basePrice || 0);
       const distancePrice = Number(assignment.pricing?.distancePrice || 0);

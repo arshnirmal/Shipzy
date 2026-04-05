@@ -27,21 +27,21 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   );
 
   // PUT /api/v1/drivers/me - Update driver profile
-  fastify.put(
+  fastify.patch(
     "/me",
     { schema: updateDriverProfileSchema },
     driversController.updateProfile.bind(driversController),
   );
 
   // PUT /api/v1/drivers/me/availability - Toggle availability
-  fastify.put(
+  fastify.patch(
     "/me/availability",
     { schema: updateAvailabilitySchema },
     driversController.updateAvailability.bind(driversController),
   );
 
   // PUT /api/v1/drivers/me/location - Update location
-  fastify.put(
+  fastify.patch(
     "/me/location",
     { schema: updateLocationSchema },
     driversController.updateLocation.bind(driversController),

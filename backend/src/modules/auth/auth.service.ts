@@ -66,21 +66,29 @@ class AuthService {
 
   /**
    * Refresh JWT access token
+   * Validates refresh token against DB to prevent replay after logout
    */
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
+      // Cryptographic validation first
       const decoded = verifyToken(refreshToken);
 
+      // Reject access tokens presented as refresh tokens
+      if (decoded.type !== "refresh") {
+        throw new AuthenticationError("Invalid token type");
+      }
+
+      // Fetch user to get current role/email for new access token
       const user = await authRepository.findByUuid(decoded.userUuid);
       if (!user) throw new AuthenticationError("User not found");
       if (!user.isActive)
         throw new AuthenticationError("User account is inactive");
 
-      if (!user.email) {
-        throw new AuthenticationError(
-          "Only email-backed accounts are supported for token refresh",
-        );
-      }
+      // Hash the incoming refresh token and validate it exists as an active session
+      const refreshTokenHash = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
 
       const newAccessToken = generateAccessToken({
         userId: user.userId,
@@ -88,24 +96,19 @@ class AuthService {
         role: user.roleName,
         email: user.email ?? undefined,
       });
-
-      const tokenHash = crypto
+      const newAccessTokenHash = crypto
         .createHash("sha256")
         .update(newAccessToken)
         .digest("hex");
-      const refreshAuthMethod: "email" | "google" = user.firebaseUid
-        ? "google"
-        : "email";
 
-      await authRepository.storeJwtToken({
-        userId: user.userId,
-        email: user.email ?? undefined,
-        tokenHash,
-        deviceId: null,
-        deviceInfo: null,
-        ipAddress: null,
-        authMethod: refreshAuthMethod,
-      });
+      // Update the session — atomically validates refresh token and swaps access token hash
+      const session = await authRepository.refreshSession(
+        refreshTokenHash,
+        newAccessTokenHash,
+      );
+      if (!session) {
+        throw new AuthenticationError("Invalid or expired refresh token");
+      }
 
       return this.buildAuthResponse(
         user,
@@ -118,6 +121,7 @@ class AuthService {
         "refresh",
       );
     } catch (error) {
+      if (error instanceof AuthenticationError) throw error;
       logger.error({
         msg: "Token refresh failed",
         error: (error as Error).message,
@@ -225,11 +229,16 @@ class AuthService {
         .createHash("sha256")
         .update(accessToken)
         .digest("hex");
+      const refreshTokenHashValue = crypto
+        .createHash("sha256")
+        .update(newRefreshToken)
+        .digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
         email: user.email ?? undefined,
         tokenHash,
+        refreshTokenHash: refreshTokenHashValue,
         deviceId: deviceInfo?.deviceId,
         deviceInfo,
         ipAddress: deviceInfo?.ipAddress,
@@ -321,11 +330,16 @@ class AuthService {
         .createHash("sha256")
         .update(accessToken)
         .digest("hex");
+      const refreshTokenHashValue = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
         email: user.email ?? undefined,
         tokenHash,
+        refreshTokenHash: refreshTokenHashValue,
         deviceId: deviceInfo?.deviceId,
         deviceInfo,
         ipAddress: deviceInfo?.ipAddress,
@@ -405,11 +419,16 @@ class AuthService {
         .createHash("sha256")
         .update(accessToken)
         .digest("hex");
+      const refreshTokenHashValue = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
 
       await authRepository.storeJwtToken({
         userId: user.userId,
         email: user.email ?? undefined,
         tokenHash,
+        refreshTokenHash: refreshTokenHashValue,
         deviceId: deviceInfo?.deviceId,
         deviceInfo,
         ipAddress: deviceInfo?.ipAddress,

@@ -55,11 +55,10 @@ class AuthController {
         msg: "Token refresh controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -98,11 +97,10 @@ class AuthController {
         msg: "Google verification controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -133,11 +131,10 @@ class AuthController {
         msg: "Logout controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -167,11 +164,10 @@ class AuthController {
         msg: "Registration controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -193,11 +189,10 @@ class AuthController {
         msg: "Login controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 401,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

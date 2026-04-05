@@ -5,6 +5,7 @@ interface PaginationMeta {
   page: number;
   limit: number;
   total: number;
+  totalPages?: number;
 }
 
 /**
@@ -51,23 +52,29 @@ export const errorResponse = (
 
 /**
  * Paginated response
+ * Shape: { success, message, data, meta: { pagination }, timestamp }
  * @param reply - Fastify reply
  * @param data - Response data
  * @param pagination - Pagination metadata
+ * @param message - Human-readable message
  */
 export const paginatedResponse = <T = unknown>(
   reply: FastifyReply,
   data: T[],
   pagination: PaginationMeta,
+  message: string = "Success",
 ): FastifyReply => {
   return reply.status(200).send({
     success: true,
+    message,
     data,
-    pagination: {
-      page: pagination.page,
-      limit: pagination.limit,
-      total: pagination.total,
-      totalPages: Math.ceil(pagination.total / pagination.limit),
+    meta: {
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: pagination.total,
+        totalPages: pagination.totalPages ?? Math.ceil(pagination.total / pagination.limit),
+      },
     },
     timestamp: new Date().toISOString(),
   });

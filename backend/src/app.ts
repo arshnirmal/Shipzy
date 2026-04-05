@@ -11,10 +11,7 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middleware/error.middleware.js";
-import {
-  authRateLimitConfig,
-  rateLimitConfig,
-} from "./middleware/ratelimit.middleware.js";
+import { rateLimitConfig } from "./middleware/ratelimit.middleware.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -142,17 +139,28 @@ export const buildApp = async (
 
   // ============ ROUTES ============
 
-  // Health check with database connectivity and server uptime
+  // Public health check — minimal info only (no internals exposed)
   app.get("/health", async (request, reply) => {
     try {
-      // Test database connectivity
-      const dbTest = await drizzlePool.query("SELECT 1 as test");
+      await drizzlePool.query("SELECT 1");
+      return { status: "ok", timestamp: new Date().toISOString() };
+    } catch {
+      return reply.status(503).send({
+        status: "error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
 
+  // Internal health check — detailed diagnostics, should be protected by infra-level auth
+  // (e.g., accessible only from internal network / load balancer health probe path)
+  app.get("/_internal/health", async (request, reply) => {
+    try {
+      const dbTest = await drizzlePool.query("SELECT 1 as test");
       return {
         status: "ok",
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        environment: config.nodeEnv,
         database: {
           connected: dbTest.rows.length > 0,
           pool: {
@@ -164,22 +172,13 @@ export const buildApp = async (
         memory: {
           used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
           total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-          external: Math.round(process.memoryUsage().external / 1024 / 1024),
         },
       };
     } catch (error) {
-      logger.error({
-        msg: "Health check failed",
-        error: (error as Error).message,
-      });
-
+      logger.error({ msg: "Health check failed", error: (error as Error).message });
       return reply.status(503).send({
         status: "error",
         timestamp: new Date().toISOString(),
-        error: "Service unavailable",
-        database: {
-          connected: false,
-        },
       });
     }
   });
@@ -194,10 +193,7 @@ export const buildApp = async (
   });
 
   // Register module routes
-  await app.register(authRoutes, {
-    prefix: "/api/v1/auth",
-    config: authRateLimitConfig, // Stricter rate limit for auth
-  });
+  await app.register(authRoutes, { prefix: "/api/v1/auth" });
 
   await app.register(addressesRoutes, { prefix: "/api/v1/addresses" });
   await app.register(usersRoutes, { prefix: "/api/v1/users" });

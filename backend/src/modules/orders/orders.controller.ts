@@ -8,12 +8,10 @@ import {
   successResponse,
 } from "../../utils/response.util.js";
 import ordersService from "./orders.service.js";
-import ratingsService from "../ratings/ratings.service.js";
 import type {
   CreateOrderRequest as OrderData,
   CalculateFareRequest,
   CancelOrderRequest,
-  RateOrderRequest,
   UpdateOrderStatusRequest,
   OrderParams,
   ListOrdersQuery,
@@ -44,11 +42,10 @@ class OrdersController {
 
       return successResponse(reply, result, "Fare calculated successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -79,11 +76,10 @@ class OrdersController {
 
       return successResponse(reply, result, "Order created successfully", 201);
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -110,11 +106,10 @@ class OrdersController {
 
       return successResponse(reply, order, "Order retrieved successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -159,13 +154,12 @@ class OrdersController {
         total: result.pagination.total,
       });
 
-      return paginatedResponse(reply, result.orders, result.pagination);
+      return paginatedResponse(reply, result.orders, result.pagination, "Orders retrieved successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -201,11 +195,10 @@ class OrdersController {
         "Available orders retrieved successfully",
       );
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -240,11 +233,10 @@ class OrdersController {
 
       return successResponse(reply, result, "Order cancelled successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -271,11 +263,10 @@ class OrdersController {
 
       return successResponse(reply, result, "Order accepted successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -313,57 +304,13 @@ class OrdersController {
         "Order status updated successfully",
       );
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
-  /**
-   * POST /api/v1/orders/:id/rate
-   * Rate a delivered order (customer only)
-   */
-  async rateOrder(
-    request: FastifyRequest<{
-      Params: OrderParams;
-      Body: RateOrderRequest;
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { userId } = request.user!;
-      const { id } = request.params;
-      const {
-        feedback: { rating, anonymous, comment },
-      } = request.body;
-
-      const result = await ratingsService.createRating({
-        orderId: id,
-        customerId: userId,
-        rating,
-        isAnonymous: anonymous ?? false,
-        comment: comment ?? undefined,
-      });
-
-      logger.info({
-        msg: "POST /api/v1/orders/:id/rate",
-        statusCode: 200,
-        userId,
-        orderId: id,
-        rating,
-      });
-
-      return successResponse(reply, result, "Order rated successfully");
-    } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
-    }
-  }
 }
 
 export default new OrdersController();

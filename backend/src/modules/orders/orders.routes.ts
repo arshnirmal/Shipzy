@@ -11,7 +11,6 @@ import {
   getOrderByIdSchema,
   listOrdersSchema,
   updateOrderStatusSchema,
-  rateOrderSchema,
 } from "./orders.schema.js";
 
 async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
@@ -85,8 +84,8 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     ordersController.acceptOrder.bind(ordersController) as any,
   );
 
-  // PUT /api/v1/orders/:id/status - Update order status (couriers only)
-  fastify.put(
+  // PATCH /api/v1/orders/:id/status - Update order status (couriers only)
+  fastify.patch(
     "/:id/status",
     {
       schema: updateOrderStatusSchema,
@@ -95,15 +94,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     ordersController.updateOrderStatus.bind(ordersController) as any,
   );
 
-  // POST /api/v1/orders/:id/rate - Rate delivered order (clients only)
-  fastify.post(
-    "/:id/rate",
-    {
-      schema: rateOrderSchema,
-      onRequest: [authorize("client")],
-    },
-    ordersController.rateOrder.bind(ordersController) as any,
-  );
+  // Rating endpoint removed — use POST /api/v1/ratings/orders/:orderId (canonical path)
 }
 
 export default ordersRoutes;

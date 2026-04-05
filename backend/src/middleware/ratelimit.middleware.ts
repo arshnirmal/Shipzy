@@ -34,11 +34,3 @@ export const rateLimitConfig = {
   },
 };
 
-/**
- * Stricter rate limit for auth endpoints
- */
-export const authRateLimitConfig = {
-  ...rateLimitConfig,
-  max: 10,
-  timeWindow: "15 minutes",
-};

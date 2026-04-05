@@ -20,8 +20,8 @@ async function usersRoutes(fastify: FastifyInstance, _options: unknown) {
     usersController.getCurrentUser.bind(usersController),
   );
 
-  // PUT /api/v1/users/me - Update user profile
-  fastify.put(
+  // PATCH /api/v1/users/me - Partial profile update
+  fastify.patch(
     "/me",
     { schema: updateProfileSchema },
     usersController.updateProfile.bind(usersController),
