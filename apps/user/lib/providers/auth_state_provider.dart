@@ -59,17 +59,12 @@ class AuthState extends _$AuthState {
       }
 
       // Sign in to Firebase Auth using Google credentials
-      final credential = firebase.GoogleAuthProvider.credential(
-        accessToken: googleAccessToken,
-        idToken: googleIdToken,
-      );
+      final credential = firebase.GoogleAuthProvider.credential(accessToken: googleAccessToken, idToken: googleIdToken);
 
-      final currentFirebaseUser =
-          await firebase.FirebaseAuth.instance.signInWithCredential(credential);
+      final currentFirebaseUser = await firebase.FirebaseAuth.instance.signInWithCredential(credential);
 
       // Obtain the Firebase ID token which the backend verifies
-      final firebaseIdToken =
-          await currentFirebaseUser.user?.getIdToken(true);
+      final firebaseIdToken = await currentFirebaseUser.user?.getIdToken(true);
 
       if (firebaseIdToken == null) {
         return const AuthResult.error('Failed to get Firebase ID token');
@@ -79,11 +74,11 @@ class AuthState extends _$AuthState {
       // Send Firebase ID Token to backend
       final response = await authService.verifyGoogleToken(firebaseIdToken, role: role);
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(response.data.authSection.tokens.accessToken, response.data.authSection.tokens.refreshToken);
 
-      state = AsyncData(AuthStateData.authenticated(response.data.user, isNewUser: response.data.isNewUser));
+      state = AsyncData(AuthStateData.authenticated(response.data.actor.user, isNewUser: response.data.authSection.session.isNewUser));
 
-      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
+      return AuthResult.success(response.data.actor.user, isNewUser: response.data.authSection.session.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -101,11 +96,11 @@ class AuthState extends _$AuthState {
       final authService = ref.read(authServiceProvider);
       final response = await authService.register(fullName: fullName, email: email, password: password, phoneNumber: phoneNumber, role: role);
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(response.data.authSection.tokens.accessToken, response.data.authSection.tokens.refreshToken);
 
-      state = AsyncData(AuthStateData.authenticated(response.data.user, isNewUser: response.data.isNewUser));
+      state = AsyncData(AuthStateData.authenticated(response.data.actor.user, isNewUser: response.data.authSection.session.isNewUser));
 
-      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
+      return AuthResult.success(response.data.actor.user, isNewUser: response.data.authSection.session.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -119,11 +114,11 @@ class AuthState extends _$AuthState {
 
       AppLogger.d('Login response: ${response.data.toJson()}');
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(response.data.authSection.tokens.accessToken, response.data.authSection.tokens.refreshToken);
 
-      state = AsyncData(AuthStateData.authenticated(response.data.user));
+      state = AsyncData(AuthStateData.authenticated(response.data.actor.user, isNewUser: response.data.authSection.session.isNewUser));
 
-      return AuthResult.success(response.data.user, isNewUser: false);
+      return AuthResult.success(response.data.actor.user, isNewUser: response.data.authSection.session.isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -142,7 +137,8 @@ class AuthState extends _$AuthState {
       final authService = ref.read(authServiceProvider);
       final response = await authService.refreshToken(refreshToken);
 
-      await storage.write(key: 'access_token', value: response.data.accessToken);
+      await storage.write(key: 'access_token', value: response.data.authSection.tokens.accessToken);
+      await storage.write(key: 'refresh_token', value: response.data.authSection.tokens.refreshToken);
 
       return true;
     } catch (e) {

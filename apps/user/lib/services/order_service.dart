@@ -57,7 +57,12 @@ class OrderService {
 
   Future<void> cancelOrder(int orderId, String reason) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>('/orders/$orderId/cancel', data: {'cancellationReason': reason});
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/orders/$orderId/cancel',
+        data: {
+          'cancellation': {'reason': reason},
+        },
+      );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to cancel order');

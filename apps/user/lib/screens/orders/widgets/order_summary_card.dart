@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../models/orders/create_order.dart';
+import '../../../models/orders/fare_breakdown.dart';
 import '../../../models/orders/order.dart';
 
 class OrderSummaryCard extends StatelessWidget {
@@ -45,11 +45,7 @@ class OrderSummaryCard extends StatelessWidget {
           _SummaryRow(icon: Icons.local_shipping, label: 'Vehicle', subtitle: vehicleType),
           const Divider(height: 24),
 
-          _SummaryRow(
-            icon: Icons.inventory_2_outlined,
-            label: 'Package',
-            subtitle: packageType + (weight != null ? ' Weight: $weight' : ''),
-          ),
+          _SummaryRow(icon: Icons.inventory_2_outlined, label: 'Package', subtitle: packageType + (weight != null ? ' Weight: $weight' : '')),
           if (distance != null) ...[const Divider(height: 24), _SummaryRow(icon: Icons.straighten, label: 'Distance', subtitle: distance)],
           const Divider(height: 24),
 
@@ -68,9 +64,7 @@ class OrderSummaryCard extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     _PaymentRow(label: 'Base Fare', value: order!.fareBreakdown.basePrice),
-                    if (order!.fareBreakdown.distancePrice > 0) ...[
-                      _PaymentRow(label: 'Distance Charge', value: order!.fareBreakdown.distancePrice),
-                    ],
+                    if (order!.fareBreakdown.distancePrice > 0) ...[_PaymentRow(label: 'Distance Charge', value: order!.fareBreakdown.distancePrice)],
                     if (order!.fareBreakdown.weightSurcharge > 0) ...[
                       _PaymentRow(label: 'Weight Surcharge', value: order!.fareBreakdown.weightSurcharge),
                     ],
@@ -123,7 +117,6 @@ class OrderSummaryCard extends StatelessWidget {
         distancePrice: order!.fareBreakdown.distancePrice,
         weightSurcharge: order!.fareBreakdown.weightSurcharge,
         platformFee: order!.fareBreakdown.platformFee,
-        specialHandlingFee: 0,
         subtotalBeforeTax: order!.fareBreakdown.subtotalBeforeTax,
         gstAmount: order!.fareBreakdown.gstAmount,
         totalPrice: order!.totalPrice,
@@ -135,12 +128,7 @@ class OrderSummaryCard extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({
-    required this.icon,
-    required this.label,
-    this.subtitle,
-    this.valueStyle,
-  });
+  const _SummaryRow({required this.icon, required this.label, this.subtitle, this.valueStyle});
 
   final IconData icon;
   final String label;
@@ -166,10 +154,7 @@ class _SummaryRow extends StatelessWidget {
             ],
           ),
         ),
-        Text(
-          subtitle ?? '',
-          style: valueStyle ?? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-        ),
+        Text(subtitle ?? '', style: valueStyle ?? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ],
     );
   }

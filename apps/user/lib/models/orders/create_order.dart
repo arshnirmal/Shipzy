@@ -1,138 +1,114 @@
-// lib/models/orders/create_order.dart
-
 import 'package:freezed_annotation/freezed_annotation.dart';
+
+import 'fare_breakdown.dart';
+import 'order.dart';
 
 part 'create_order.freezed.dart';
 part 'create_order.g.dart';
 
-/// Pickup location for create order
 @freezed
-abstract class CreateOrderPickup with _$CreateOrderPickup {
-  const factory CreateOrderPickup({
-    @JsonKey(name: 'fullAddress') required String fullAddress,
-    required double latitude,
-    required double longitude,
-    required String city,
-    required String state,
-    required String postalCode,
-    required String contactName,
-    required String contactPhone,
-    int? addressId,
-    String? howToReach,
-    String? building,
-    String? floor,
-    String? flatNumber,
-  }) = _CreateOrderPickup;
-
-  factory CreateOrderPickup.fromJson(Map<String, dynamic> json) => _$CreateOrderPickupFromJson(json);
-}
-
-/// Delivery location for create order
-@freezed
-abstract class CreateOrderDelivery with _$CreateOrderDelivery {
-  const factory CreateOrderDelivery({
-    @JsonKey(name: 'fullAddress') required String fullAddress,
-    required double latitude,
-    required double longitude,
-    required String city,
-    required String state,
-    required String postalCode,
-    required String contactName,
-    required String contactPhone,
-    int? addressId,
-    String? howToReach,
-    String? building,
-    String? floor,
-    String? flatNumber,
-  }) = _CreateOrderDelivery;
-
-  factory CreateOrderDelivery.fromJson(Map<String, dynamic> json) => _$CreateOrderDeliveryFromJson(json);
-}
-
-/// Fare breakdown from calculate-fare API
-@freezed
-abstract class FareBreakdown with _$FareBreakdown {
-  const factory FareBreakdown({
-    required double basePrice,
-    required double distanceKm,
-    required double distancePrice,
-    required double weightSurcharge,
-    required double platformFee,
-    required double specialHandlingFee,
-    required double subtotalBeforeTax,
-    required double gstAmount,
-    required double totalPrice,
-    required String currency,
-  }) = _FareBreakdown;
-
-  factory FareBreakdown.fromJson(Map<String, dynamic> json) => _$FareBreakdownFromJson(json);
-}
-
-/// Request for create order endpoint
-@freezed
-abstract class CreateOrderRequest with _$CreateOrderRequest {
-  const factory CreateOrderRequest({
+abstract class CreateOrderFulfillment with _$CreateOrderFulfillment {
+  const factory CreateOrderFulfillment({
     required int deliveryTypeId,
     required int vehicleCategoryId,
     required int weightTierId,
     required int paymentMethodId,
-    required CreateOrderPickup pickup,
-    required CreateOrderDelivery delivery,
-    required FareBreakdown fareBreakdown,
     int? packageTypeId,
-    String? packageDescription,
+  }) = _CreateOrderFulfillment;
+
+  factory CreateOrderFulfillment.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderFulfillmentFromJson(json);
+}
+
+@freezed
+abstract class CreateOrderContactLocation with _$CreateOrderContactLocation {
+  const factory CreateOrderContactLocation({
+    required String fullAddress,
+    required double latitude,
+    required double longitude,
+    required String city,
+    required String state,
+    required String postalCode,
+    required String contactName,
+    required String contactPhone,
+    int? addressId,
+    String? howToReach,
+    String? building,
+    String? floor,
+    String? flatNumber,
+    String? landmark,
+  }) = _CreateOrderContactLocation;
+
+  factory CreateOrderContactLocation.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderContactLocationFromJson(json);
+}
+
+@freezed
+abstract class CreateOrderLocations with _$CreateOrderLocations {
+  const factory CreateOrderLocations({
+    required CreateOrderContactLocation pickup,
+    required CreateOrderContactLocation delivery,
+  }) = _CreateOrderLocations;
+
+  factory CreateOrderLocations.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderLocationsFromJson(json);
+}
+
+@freezed
+abstract class CreateOrderPackage with _$CreateOrderPackage {
+  const factory CreateOrderPackage({
+    String? description,
     String? specialInstructions,
-    DateTime? scheduledPickupTime,
-    DateTime? scheduledDeliveryTime,
     double? declaredValue,
     @Default(false) bool notifyRecipientSms,
+  }) = _CreateOrderPackage;
+
+  factory CreateOrderPackage.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderPackageFromJson(json);
+}
+
+@freezed
+abstract class CreateOrderSchedule with _$CreateOrderSchedule {
+  const factory CreateOrderSchedule({DateTime? pickupAt, DateTime? deliveryAt}) =
+      _CreateOrderSchedule;
+
+  factory CreateOrderSchedule.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderScheduleFromJson(json);
+}
+
+@freezed
+abstract class CreateOrderRequest with _$CreateOrderRequest {
+  const factory CreateOrderRequest({
+    required CreateOrderFulfillment fulfillment,
+    required CreateOrderLocations locations,
+    required CreateOrderPackage package,
+    required FareBreakdown pricing,
+    CreateOrderSchedule? schedule,
     String? couponCode,
   }) = _CreateOrderRequest;
 
-  factory CreateOrderRequest.fromJson(Map<String, dynamic> json) => _$CreateOrderRequestFromJson(json);
+  factory CreateOrderRequest.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderRequestFromJson(json);
 }
 
-/// Response for create order endpoint
 @freezed
 abstract class CreateOrderResponse with _$CreateOrderResponse {
-  const factory CreateOrderResponse({required bool success, required String message, required CreatedOrderData data, required DateTime timestamp}) =
-      _CreateOrderResponse;
+  const factory CreateOrderResponse({
+    required bool success,
+    required String message,
+    required CreateOrderResponseData data,
+    required String timestamp,
+  }) = _CreateOrderResponse;
 
-  factory CreateOrderResponse.fromJson(Map<String, dynamic> json) => _$CreateOrderResponseFromJson(json);
+  factory CreateOrderResponse.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderResponseFromJson(json);
 }
 
-/// Enhanced pricing breakdown for created orders
 @freezed
-abstract class CreatedOrderPricing with _$CreatedOrderPricing {
-  const factory CreatedOrderPricing({
-    required double basePrice,
-    required double distanceKm,
-    required double distancePrice,
-    required double weightSurcharge,
-    required double platformFee,
-    required double specialHandlingFee,
-    required double subtotalBeforeTax,
-    required double gstAmount,
-    required double totalPrice,
-    required String currency,
-  }) = _CreatedOrderPricing;
+abstract class CreateOrderResponseData with _$CreateOrderResponseData {
+  const factory CreateOrderResponseData({required Order order}) =
+      _CreateOrderResponseData;
 
-  factory CreatedOrderPricing.fromJson(Map<String, dynamic> json) => _$CreatedOrderPricingFromJson(json);
-}
-
-/// Created order data
-@freezed
-abstract class CreatedOrderData with _$CreatedOrderData {
-  const factory CreatedOrderData({
-    required int orderId,
-    required String orderUuid,
-    required String orderNumber,
-    required String status,
-    @JsonKey(name: 'fareBreakdown') required CreatedOrderPricing fareBreakdown,
-    required DateTime createdAt,
-    double? estimatedDistanceKm,
-    int? estimatedDurationMins,
-  }) = _CreatedOrderData;
-
-  factory CreatedOrderData.fromJson(Map<String, dynamic> json) => _$CreatedOrderDataFromJson(json);
+  factory CreateOrderResponseData.fromJson(Map<String, dynamic> json) =>
+      _$CreateOrderResponseDataFromJson(json);
 }

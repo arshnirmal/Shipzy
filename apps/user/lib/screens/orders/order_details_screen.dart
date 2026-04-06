@@ -97,9 +97,9 @@ class OrderDetailsScreen extends ConsumerWidget {
 
           // Order Summary
           OrderSummaryCard(
-            vehicleType: order.vehicleCategoryDisplay,
+            vehicleType: order.vehicleCategoryDisplay ?? 'Standard',
             packageType: order.packageType,
-            deliveryType: order.deliveryTypeDisplay,
+            deliveryType: order.deliveryTypeDisplay ?? 'Standard',
             distance: order.distance != null ? '${order.distance!.toStringAsFixed(1)} km' : null,
             weight: order.packageWeight != null ? '${order.packageWeight}' : null,
             order: order,

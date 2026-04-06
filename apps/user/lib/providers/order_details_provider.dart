@@ -29,7 +29,7 @@ class OrderDetails extends _$OrderDetails {
     final orderService = ref.read(orderServiceProvider);
     try {
       final response = await orderService.getOrderDetails(orderId);
-      return response.data;
+      return response.data.order;
     } catch (e) {
       throw Exception('Failed to fetch order: $e');
     }

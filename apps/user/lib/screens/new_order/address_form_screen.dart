@@ -492,7 +492,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
       if (details == null) {
         // If no session token or retrieve failed, use coordinates from suggestion directly
         final newCoords = suggestion.coordinates;
-        if (newCoords.latitude == null || newCoords.longitude == null) {
+        if (newCoords == null || newCoords.latitude == null || newCoords.longitude == null) {
           if (mounted) {
             SnackbarUtils.showError(context, 'Location details not available. Please select another result.');
           }
