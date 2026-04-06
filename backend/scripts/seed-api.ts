@@ -47,6 +47,35 @@ const generateMumbaiCoordinates = () => {
   };
 };
 
+const haversineDistanceKm = (
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+};
+
+const generateOrderCoordinates = (minDistanceKm = 0.6) => {
+  const pickup = generateMumbaiCoordinates();
+  let delivery = generateMumbaiCoordinates();
+
+  for (let i = 0; i < 8; i++) {
+    if (haversineDistanceKm(pickup, delivery) >= minDistanceKm) {
+      break;
+    }
+    delivery = generateMumbaiCoordinates();
+  }
+
+  return { pickup, delivery };
+};
+
 // Helper for delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -127,6 +156,10 @@ function printSeedSummary() {
   }
 }
 
+function getDataPayload(res: any): any {
+  return res?.data?.data ?? {};
+}
+
 // Fetch existing users from DB and login to get tokens
 async function fetchExistingUsers() {
   console.log("📊 Fetching existing users from DB...");
@@ -146,11 +179,16 @@ async function fetchExistingUsers() {
           headers: { Authorization: `Bearer ${tokens.accessToken}` },
         });
         let addressId = null;
+        const addressesData = getDataPayload(addrRes);
+        const addresses = Array.isArray(addressesData)
+          ? addressesData
+          : addressesData.addresses;
         if (
           ensureApiSuccess(`Fetch addresses for ${row.email}`, addrRes) &&
-          addrRes.data.data.length > 0
+          Array.isArray(addresses) &&
+          addresses.length > 0
         ) {
-          addressId = addrRes.data.data[0].addressId;
+          addressId = addresses[0].addressId;
         }
         state.users.push({
           userId: row.user_id,
@@ -203,38 +241,43 @@ async function fetchStaticData() {
   console.log("📊 Fetching static data for IDs...");
   const res = await api.get("/static/create-order-data");
   if (ensureApiSuccess("Fetch create-order static data", res)) {
-    state.staticData = res.data.data;
+    const staticData = getDataPayload(res);
+    state.staticData = staticData.createOrder || staticData;
 
     // Fallback if some are still null (though we just seeded them)
     if (!state.staticData.deliveryTypes) {
       const dtRes = await api.get("/static/delivery-types");
       if (ensureApiSuccess("Fallback fetch delivery types", dtRes)) {
-        state.staticData.deliveryTypes = dtRes.data.data;
+        state.staticData.deliveryTypes =
+          getDataPayload(dtRes).deliveryTypes || [];
       }
     }
     if (!state.staticData.packageTypes) {
       const ptRes = await api.get("/static/package-types");
       if (ensureApiSuccess("Fallback fetch package types", ptRes)) {
-        state.staticData.packageTypes = ptRes.data.data;
+        state.staticData.packageTypes =
+          getDataPayload(ptRes).packageTypes || [];
       }
     }
 
     if (!state.staticData.paymentMethods) {
       const pmRes = await api.get("/static/payment-methods");
       if (ensureApiSuccess("Fallback fetch payment methods", pmRes)) {
-        state.staticData.paymentMethods = pmRes.data.data;
+        state.staticData.paymentMethods =
+          getDataPayload(pmRes).paymentMethods || [];
       }
     }
 
     // Also need weight tiers and vehicle categories
     const wtRes = await api.get("/static/weight-tiers");
     if (ensureApiSuccess("Fetch weight tiers", wtRes)) {
-      state.staticData.weightTiers = wtRes.data.data;
+      state.staticData.weightTiers = getDataPayload(wtRes).weightTiers || [];
     }
 
     const vcRes = await api.get("/static/vehicle-categories");
     if (ensureApiSuccess("Fetch vehicle categories", vcRes)) {
-      state.staticData.vehicleCategories = vcRes.data.data;
+      state.staticData.vehicleCategories =
+        getDataPayload(vcRes).vehicleCategories || [];
     }
 
     console.log(
@@ -301,7 +344,8 @@ async function seedUsers(count = 3) {
           )
         ) {
           console.log(`   📍 Address added: ${addressData.fullAddress}`);
-          state.users.at(-1).addressId = addrRes.data.data.addressId;
+          state.users.at(-1).addressId =
+            getDataPayload(addrRes).address?.addressId;
         }
       }
     } catch (error: any) {
@@ -352,7 +396,7 @@ async function seedDrivers(count = 2) {
             profilePictureUrl: faker.image.avatar(),
           },
         };
-        const profileRes = await api.put(
+        const profileRes = await api.patch(
           "/drivers/me",
           updateData,
           tokenHeader,
@@ -366,7 +410,7 @@ async function seedDrivers(count = 2) {
           continue;
         }
         const location = generateMumbaiCoordinates();
-        const locationRes = await api.put(
+        const locationRes = await api.patch(
           "/drivers/me/location",
           {
             location: {
@@ -383,7 +427,7 @@ async function seedDrivers(count = 2) {
         ) {
           continue;
         }
-        const availabilityRes = await api.put(
+        const availabilityRes = await api.patch(
           "/drivers/me/availability",
           {
             availability: { isAvailable: true, isOnline: true },
@@ -438,8 +482,7 @@ async function seedOrders(count = 3) {
       headers: { Authorization: `Bearer ${user.accessToken}` },
     };
 
-    const pickup = generateMumbaiCoordinates();
-    const delivery = generateMumbaiCoordinates();
+    const { pickup, delivery } = generateOrderCoordinates(0.6);
 
     const dt =
       state.staticData.deliveryTypes[
@@ -648,7 +691,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
 
       // 2. Simulate Pick up
       await delay(2000);
-      const pickupRes = await api.put(
+      const pickupRes = await api.patch(
         `/orders/${orderId}/status`,
         { transition: { status: "picked_up" } },
         tokenHeader,
@@ -658,7 +701,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
 
       // 3. Simulate in_transit (required before delivered)
       await delay(1500);
-      const transitRes = await api.put(
+      const transitRes = await api.patch(
         `/orders/${orderId}/status`,
         { transition: { status: "in_transit" } },
         tokenHeader,
@@ -669,7 +712,7 @@ async function simulateDriverFlow(driver: any, orderId: number) {
       // 4. Simulate Delivery
       if (Math.random() > 0.5) {
         await delay(2000);
-        const deliverRes = await api.put(
+        const deliverRes = await api.patch(
           `/orders/${orderId}/status`,
           { transition: { status: "delivered" } },
           tokenHeader,

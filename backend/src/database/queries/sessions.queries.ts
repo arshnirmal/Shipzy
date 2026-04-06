@@ -22,9 +22,11 @@ export default {
       END
     )
     RETURNING
-      session_id AS "sessionId",
+      session_id::int AS "sessionId",
       driver_id AS "driverId",
       started_at AS "startedAt",
+      ended_at AS "endedAt",
+      total_online_minutes AS "totalOnlineMinutes",
       ST_Y(last_location::geometry) AS "lastLocationLat",
       ST_X(last_location::geometry) AS "lastLocationLng",
       created_at AS "createdAt"
@@ -35,9 +37,11 @@ export default {
    */
   FIND_ACTIVE_SESSION: `
     SELECT
-      session_id AS "sessionId",
+      session_id::int AS "sessionId",
       driver_id AS "driverId",
       started_at AS "startedAt",
+      ended_at AS "endedAt",
+      total_online_minutes AS "totalOnlineMinutes",
       ST_Y(last_location::geometry) AS "lastLocationLat",
       ST_X(last_location::geometry) AS "lastLocationLng",
       created_at AS "createdAt"
@@ -62,13 +66,14 @@ export default {
       END
     WHERE session_id = $1
     RETURNING
-      session_id AS "sessionId",
+      session_id::int AS "sessionId",
       driver_id AS "driverId",
       started_at AS "startedAt",
       ended_at AS "endedAt",
       total_online_minutes AS "totalOnlineMinutes",
       ST_Y(last_location::geometry) AS "lastLocationLat",
       ST_X(last_location::geometry) AS "lastLocationLng"
+      created_at AS "createdAt"
   `,
 
   /**
@@ -76,7 +81,7 @@ export default {
    */
   GET_SESSIONS_IN_RANGE: `
     SELECT
-      session_id AS "sessionId",
+      session_id::int AS "sessionId",
       driver_id AS "driverId",
       started_at AS "startedAt",
       ended_at AS "endedAt",
