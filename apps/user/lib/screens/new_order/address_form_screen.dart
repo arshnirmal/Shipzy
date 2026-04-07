@@ -451,17 +451,12 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
     try {
       final addressService = ref.read(addressServiceProvider);
-      final proximity = _center != null ? '${_center!.longitude},${_center!.latitude}' : null;
-
-      final results = await addressService.searchPlaces(query: query, proximity: proximity, limit: 10);
+      final result = await addressService.searchPlaces(query: query, proximity: _center, limit: 10);
 
       if (mounted) {
         setState(() {
-          _suggestions = results;
-          // Store session token from first suggestion if available
-          if (results.isNotEmpty && results.first.sessionToken != null) {
-            _sessionToken = results.first.sessionToken;
-          }
+          _suggestions = result.suggestions;
+          _sessionToken = result.sessionToken;
           _loadingSuggestions = false;
         });
       }
@@ -480,13 +475,13 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
     try {
       final addressService = ref.read(addressServiceProvider);
 
-      // Use session token from suggestion or stored token
-      final sessionToken = suggestion.sessionToken ?? _sessionToken ?? '';
+      // Use stored session token (from search result)
+      final sessionToken = _sessionToken ?? '';
 
       PlaceDetails? details;
       if (sessionToken.isNotEmpty) {
         // Retrieve full place details
-        details = await addressService.retrievePlaceDetails(mapboxId: suggestion.id, sessionToken: sessionToken);
+        details = await addressService.retrievePlaceDetails(mapboxId: suggestion.mapboxId, sessionToken: sessionToken);
       }
 
       if (details == null) {
@@ -516,11 +511,11 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
 
       // Extract location metadata from context and fullAddress
       setState(() {
-        // Extract from PlaceContext if available
+        // Extract from context map if available
         final context = details?.context;
         if (context != null) {
-          _city = context.locality ?? context.country;
-          _state = context.region;
+          _city = context['locality'] ?? context['country'];
+          _state = context['region'];
         }
 
         // Extract postal code from fullAddress (pattern: 6 digits for Indian postal codes)

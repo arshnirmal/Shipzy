@@ -104,6 +104,29 @@ class OrderService {
     }
   }
 
+  /// Rate a completed order
+
+  Future<void> rateOrder(int orderId, int rating, {String? comment, bool? anonymous}) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/orders/$orderId/rate',
+        data: {
+          'feedback': {
+            'rating': rating,
+            if (comment != null) 'comment': comment,
+            if (anonymous != null) 'anonymous': anonymous,
+          },
+        },
+      );
+
+      if (response.data?['success'] != true) {
+        throw Exception(response.data?['message'] ?? 'Failed to rate order');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Rate order');
+    }
+  }
+
   /// Create a new order
 
   Future<CreateOrderResponse> createOrder(CreateOrderRequest request) async {

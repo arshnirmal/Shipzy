@@ -12,15 +12,6 @@ abstract class Coordinates with _$Coordinates {
 }
 
 @freezed
-abstract class PlaceContext with _$PlaceContext {
-  const factory PlaceContext({String? locality, String? region, String? country}) =
-      _PlaceContext;
-
-  factory PlaceContext.fromJson(Map<String, dynamic> json) =>
-      _$PlaceContextFromJson(json);
-}
-
-@freezed
 abstract class PlaceSuggestion with _$PlaceSuggestion {
   const factory PlaceSuggestion({
     required String mapboxId,
@@ -28,16 +19,24 @@ abstract class PlaceSuggestion with _$PlaceSuggestion {
     @JsonKey(name: 'fullAddress') required String fullAddress,
     @JsonKey(name: 'placeType') required String placeType,
     Coordinates? coordinates,
-    PlaceContext? context,
-    @JsonKey(name: 'sessionToken') String? sessionToken,
+    Map<String, String?>? context,
   }) = _PlaceSuggestion;
-
-  const PlaceSuggestion._();
 
   factory PlaceSuggestion.fromJson(Map<String, dynamic> json) =>
       _$PlaceSuggestionFromJson(json);
+}
 
-  String get id => mapboxId;
+@freezed
+abstract class AddressSearchResult with _$AddressSearchResult {
+  const factory AddressSearchResult({
+    required String query,
+    required String sessionToken,
+    required List<PlaceSuggestion> suggestions,
+    required int total,
+  }) = _AddressSearchResult;
+
+  factory AddressSearchResult.fromJson(Map<String, dynamic> json) =>
+      _$AddressSearchResultFromJson(json);
 }
 
 @freezed
@@ -49,15 +48,11 @@ abstract class PlaceDetails with _$PlaceDetails {
     required Coordinates coordinates,
     @JsonKey(name: 'featureType') required String featureType,
     List<double>? bbox,
-    PlaceContext? context,
+    Map<String, String?>? context,
   }) = _PlaceDetails;
-
-  const PlaceDetails._();
 
   factory PlaceDetails.fromJson(Map<String, dynamic> json) =>
       _$PlaceDetailsFromJson(json);
-
-  String get id => mapboxId;
 }
 
 @freezed
@@ -84,12 +79,8 @@ abstract class ReverseGeocodeResultItem with _$ReverseGeocodeResultItem {
     double? relevance,
   }) = _ReverseGeocodeResultItem;
 
-  const ReverseGeocodeResultItem._();
-
   factory ReverseGeocodeResultItem.fromJson(Map<String, dynamic> json) =>
       _$ReverseGeocodeResultItemFromJson(json);
-
-  String get id => mapboxId;
 }
 
 @freezed
@@ -105,26 +96,47 @@ abstract class ReverseGeocodeResult with _$ReverseGeocodeResult {
 }
 
 @freezed
-abstract class RouteGeometry with _$RouteGeometry {
-  const factory RouteGeometry({
+abstract class DirectionsGeometry with _$DirectionsGeometry {
+  const factory DirectionsGeometry({
     required String type,
     @Default(<List<double>>[]) List<List<double>> coordinates,
-  }) = _RouteGeometry;
+  }) = _DirectionsGeometry;
 
-  factory RouteGeometry.fromJson(Map<String, dynamic> json) =>
-      _$RouteGeometryFromJson(json);
+  factory DirectionsGeometry.fromJson(Map<String, dynamic> json) =>
+      _$DirectionsGeometryFromJson(json);
+}
+
+@freezed
+abstract class DirectionsRoute with _$DirectionsRoute {
+  const factory DirectionsRoute({
+    required double distanceMeters,
+    required double durationSeconds,
+    required double distanceKm,
+    required double durationMinutes,
+    required DirectionsGeometry geometry,
+  }) = _DirectionsRoute;
+
+  factory DirectionsRoute.fromJson(Map<String, dynamic> json) =>
+      _$DirectionsRouteFromJson(json);
+}
+
+@freezed
+abstract class DirectionsNavigation with _$DirectionsNavigation {
+  const factory DirectionsNavigation({
+    required Coordinates origin,
+    required Coordinates destination,
+    required String profile,
+  }) = _DirectionsNavigation;
+
+  factory DirectionsNavigation.fromJson(Map<String, dynamic> json) =>
+      _$DirectionsNavigationFromJson(json);
 }
 
 @freezed
 abstract class DirectionsResult with _$DirectionsResult {
   const factory DirectionsResult({
-    required int distance,
-    required int duration,
-    required RouteGeometry geometry,
-    required String distanceKm,
-    required int durationMinutes,
-    required Coordinates origin,
-    required Coordinates destination,
+    required DirectionsRoute route,
+    required DirectionsNavigation navigation,
   }) = _DirectionsResult;
 
   factory DirectionsResult.fromJson(Map<String, dynamic> json) =>
@@ -133,21 +145,23 @@ abstract class DirectionsResult with _$DirectionsResult {
 
 @freezed
 abstract class DistanceResult with _$DistanceResult {
-  const factory DistanceResult({required double kilometers}) = _DistanceResult;
-
-  const DistanceResult._();
+  const factory DistanceResult({
+    @JsonKey(name: 'kilometers') required double distanceKm,
+  }) = _DistanceResult;
 
   factory DistanceResult.fromJson(Map<String, dynamic> json) =>
       _$DistanceResultFromJson(json);
-
-  double get distanceKm => kilometers;
 }
+
+// ─── Request models ───────────────────────────────────────────────────────────
 
 @freezed
 abstract class SearchPlacesRequest with _$SearchPlacesRequest {
   const factory SearchPlacesRequest({
     required String query,
     Coordinates? proximity,
+    String? country,
+    List<String>? types,
     int? limit,
   }) = _SearchPlacesRequest;
 
@@ -157,8 +171,10 @@ abstract class SearchPlacesRequest with _$SearchPlacesRequest {
 
 @freezed
 abstract class RetrievePlaceRequest with _$RetrievePlaceRequest {
-  const factory RetrievePlaceRequest({required String mapboxId, required String sessionToken}) =
-      _RetrievePlaceRequest;
+  const factory RetrievePlaceRequest({
+    required String mapboxId,
+    required String sessionToken,
+  }) = _RetrievePlaceRequest;
 
   factory RetrievePlaceRequest.fromJson(Map<String, dynamic> json) =>
       _$RetrievePlaceRequestFromJson(json);
@@ -166,8 +182,12 @@ abstract class RetrievePlaceRequest with _$RetrievePlaceRequest {
 
 @freezed
 abstract class ReverseGeocodeRequest with _$ReverseGeocodeRequest {
-  const factory ReverseGeocodeRequest({required double latitude, required double longitude}) =
-      _ReverseGeocodeRequest;
+  const factory ReverseGeocodeRequest({
+    required double latitude,
+    required double longitude,
+    List<String>? types,
+    int? limit,
+  }) = _ReverseGeocodeRequest;
 
   factory ReverseGeocodeRequest.fromJson(Map<String, dynamic> json) =>
       _$ReverseGeocodeRequestFromJson(json);
@@ -175,8 +195,11 @@ abstract class ReverseGeocodeRequest with _$ReverseGeocodeRequest {
 
 @freezed
 abstract class DirectionsRequest with _$DirectionsRequest {
-  const factory DirectionsRequest({required Coordinates origin, required Coordinates destination, String? profile}) =
-      _DirectionsRequest;
+  const factory DirectionsRequest({
+    required Coordinates origin,
+    required Coordinates destination,
+    String? profile,
+  }) = _DirectionsRequest;
 
   factory DirectionsRequest.fromJson(Map<String, dynamic> json) =>
       _$DirectionsRequestFromJson(json);
@@ -184,8 +207,12 @@ abstract class DirectionsRequest with _$DirectionsRequest {
 
 @freezed
 abstract class DistanceRequest with _$DistanceRequest {
-  const factory DistanceRequest({required double lat1, required double lon1, required double lat2, required double lon2}) =
-      _DistanceRequest;
+  const factory DistanceRequest({
+    required double lat1,
+    required double lon1,
+    required double lat2,
+    required double lon2,
+  }) = _DistanceRequest;
 
   factory DistanceRequest.fromJson(Map<String, dynamic> json) =>
       _$DistanceRequestFromJson(json);

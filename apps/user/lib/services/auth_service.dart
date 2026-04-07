@@ -132,6 +132,34 @@ class AuthService {
     }
   }
 
+  /// Update user profile
+  Future<AppUser> updateProfile({
+    String? fullName,
+    String? email,
+    String? profilePictureUrl,
+    String? phoneNumber,
+  }) async {
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/users/me',
+        data: {
+          if (fullName != null) 'fullName': fullName,
+          if (email != null) 'email': email,
+          if (profilePictureUrl != null) 'profilePictureUrl': profilePictureUrl,
+          if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        },
+      );
+
+      if (response.data?['success'] != true) {
+        throw Exception(response.data?['message'] ?? 'Failed to update profile');
+      }
+
+      return AppUser.fromJson(response.data!['data']['profile'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Update profile');
+    }
+  }
+
   /// Logout user
   Future<void> logout(String accessToken) async {
     try {
