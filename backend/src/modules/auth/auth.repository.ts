@@ -353,6 +353,7 @@ class AuthRepository {
           .values(values)
           .onConflictDoUpdate({
             target: [authSessions.userId, authSessions.deviceId],
+            targetWhere: sql`${authSessions.deviceId} IS NOT NULL`,
             set: {
               jwtTokenHash: tokenHash,
               refreshTokenHash: refreshTokenHash || undefined,

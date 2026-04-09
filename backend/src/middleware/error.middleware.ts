@@ -44,7 +44,7 @@ export const errorHandler = (
     });
   }
 
-  // Database errors
+  // Database constraint errors (23xxx)
   if (error.code && error.code.startsWith("23")) {
     let message = "Database constraint violation";
 
@@ -57,6 +57,15 @@ export const errorHandler = (
     return reply.status(409).send({
       success: false,
       message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Database semantic/schema errors (42xxx) — query construction bugs, never leak internals
+  if (error.code && error.code.startsWith("42")) {
+    return reply.status(500).send({
+      success: false,
+      message: "Internal server error",
       timestamp: new Date().toISOString(),
     });
   }
