@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'providers/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'utils/app_router.dart';
+import 'widgets/dev_theme_toggle.dart';
 
 /// The main application widget that sets up the app's theme, routing, and providers.
 ///
@@ -36,10 +38,16 @@ class ShipzyApp extends ConsumerWidget {
       routerConfig: router,
 
       // Builder for global wrappers
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-        child: child!,
-      ),
+      builder: (context, child) {
+        final inner = MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          child: child!,
+        );
+        if (!kDebugMode) {
+          return inner;
+        }
+        return Stack(children: [inner, const DevThemeToggle()]);
+      },
     );
   }
 }

@@ -35,6 +35,11 @@ const state = {
 type ActionStats = { success: number; failure: number };
 const actionStats = new Map<string, ActionStats>();
 
+type OrderSeedOptions = {
+  targetUserId?: number;
+  targetUserEmail?: string;
+};
+
 // Helper to generate coordinates in Mumbai
 const generateMumbaiCoordinates = () => {
   const minLat = 18.89;
@@ -104,6 +109,14 @@ function isApiSuccess(res: any): boolean {
   );
 }
 
+function isPasswordLoginUnavailable(res: any): boolean {
+  const rawMessage = res?.data?.message || res?.data?.error || "";
+  return (
+    typeof rawMessage === "string" &&
+    rawMessage.toLowerCase().includes("password login is not available")
+  );
+}
+
 function logApiFailure(action: string, res: any) {
   const status = res?.status ?? "unknown";
   const message =
@@ -158,6 +171,134 @@ function printSeedSummary() {
 
 function getDataPayload(res: any): any {
   return res?.data?.data ?? {};
+}
+
+function normalizeEmail(email?: string): string | undefined {
+  if (!email) return undefined;
+  const normalized = email.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function findTargetUserInState(options: OrderSeedOptions): any | null {
+  const targetEmail = normalizeEmail(options.targetUserEmail);
+
+  return (
+    state.users.find((user) => {
+      const userEmail = normalizeEmail(user?.email);
+      if (
+        typeof options.targetUserId === "number" &&
+        Number.isFinite(options.targetUserId)
+      ) {
+        return Number(user?.userId) === options.targetUserId;
+      }
+
+      if (targetEmail) {
+        return userEmail === targetEmail;
+      }
+
+      return false;
+    }) || null
+  );
+}
+
+async function fetchAndLoginUserForOrders(
+  options: OrderSeedOptions,
+): Promise<any | null> {
+  const targetEmail = normalizeEmail(options.targetUserEmail);
+  const hasUserId =
+    typeof options.targetUserId === "number" &&
+    Number.isFinite(options.targetUserId);
+
+  if (!hasUserId && !targetEmail) {
+    return null;
+  }
+
+  const whereClause = hasUserId ? "user_id = $1" : "LOWER(email) = LOWER($1)";
+  const value = hasUserId ? options.targetUserId : targetEmail;
+
+  try {
+    const query = `SELECT user_id, full_name, email, phone_number FROM users.profiles WHERE role = 'client' AND deleted_at IS NULL AND email IS NOT NULL AND ${whereClause} LIMIT 1`;
+    const result = await drizzlePool.query(query, [value]);
+    const row = result.rows[0];
+
+    if (!row) {
+      console.error(
+        `❌ Target user not found (${hasUserId ? `userId=${options.targetUserId}` : `email=${targetEmail}`})`,
+      );
+      return null;
+    }
+
+    const loginRes = await api.post("/auth/login", {
+      credentials: { email: row.email, password: "Password123!" },
+    });
+
+    if (!ensureApiSuccess(`Login target user ${row.email}`, loginRes)) {
+      if (isPasswordLoginUnavailable(loginRes)) {
+        console.error(
+          `❌ Target user ${row.email} does not support password login (likely OAuth-only). Cannot seed orders for this user via script auth flow.`,
+        );
+      }
+      return null;
+    }
+
+    const tokens = loginRes.data.data.auth.tokens;
+    const user = {
+      userId: row.user_id,
+      fullName: row.full_name,
+      email: row.email,
+      phoneNumber: row.phone_number,
+      accessToken: tokens.accessToken,
+      addressId: null,
+    };
+
+    const addrRes = await api.get("/users/me/addresses", {
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+    });
+
+    const addressesData = getDataPayload(addrRes);
+    const addresses = Array.isArray(addressesData)
+      ? addressesData
+      : addressesData.addresses;
+
+    if (
+      ensureApiSuccess(
+        `Fetch addresses for target user ${row.email}`,
+        addrRes,
+      ) &&
+      Array.isArray(addresses) &&
+      addresses.length > 0
+    ) {
+      user.addressId = addresses[0].addressId;
+    }
+
+    state.users.push(user);
+    return user;
+  } catch (error: any) {
+    console.error(
+      `❌ Error loading target user (${hasUserId ? `userId=${options.targetUserId}` : `email=${targetEmail}`}): ${error.message}`,
+    );
+    return null;
+  }
+}
+
+async function resolveTargetUserForOrders(
+  options: OrderSeedOptions,
+): Promise<any | null> {
+  const hasFilter =
+    (typeof options.targetUserId === "number" &&
+      Number.isFinite(options.targetUserId)) ||
+    !!normalizeEmail(options.targetUserEmail);
+
+  if (!hasFilter) {
+    return null;
+  }
+
+  const stateUser = findTargetUserInState(options);
+  if (stateUser) {
+    return stateUser;
+  }
+
+  return fetchAndLoginUserForOrders(options);
 }
 
 // Fetch existing users from DB and login to get tokens
@@ -451,12 +592,35 @@ async function seedDrivers(count = 2) {
   }
 }
 
-async function seedOrders(count = 3) {
+async function seedOrders(count = 3, options: OrderSeedOptions = {}) {
   console.log(`\n📦 Seeding ${count} orders...`);
 
-  // Fetch existing users if none in state
-  if (state.users.length === 0) {
+  const hasTargetUserFilter =
+    (typeof options.targetUserId === "number" &&
+      Number.isFinite(options.targetUserId)) ||
+    !!normalizeEmail(options.targetUserEmail);
+
+  let targetUser: any | null = null;
+
+  // In targeted mode, avoid bulk login of all users to prevent unnecessary rate-limit hits.
+  if (hasTargetUserFilter) {
+    targetUser = await resolveTargetUserForOrders(options);
+  } else if (state.users.length === 0) {
+    // Non-targeted mode keeps existing behavior: load users and pick random users.
     await fetchExistingUsers();
+  }
+
+  if (hasTargetUserFilter && !targetUser) {
+    console.log(
+      "⚠️ Target user could not be resolved. Skipping order seeding.",
+    );
+    return;
+  }
+
+  if (targetUser) {
+    console.log(
+      `🎯 Targeting user ${targetUser.fullName || "Unknown"} (ID: ${targetUser.userId}, email: ${targetUser.email}) for all seeded orders`,
+    );
   }
 
   if (state.users.length === 0 || !state.staticData.deliveryTypes?.length) {
@@ -477,7 +641,8 @@ async function seedOrders(count = 3) {
   }
 
   for (let i = 0; i < count; i++) {
-    const user = state.users[Math.floor(Math.random() * state.users.length)];
+    const user =
+      targetUser || state.users[Math.floor(Math.random() * state.users.length)];
     const tokenHeader = {
       headers: { Authorization: `Bearer ${user.accessToken}` },
     };
@@ -733,6 +898,8 @@ async function main() {
   let userCount = 3;
   let driverCount = 2;
   let orderCount = 5;
+  let targetOrderUserId: number | undefined;
+  let targetOrderUserEmail: string | undefined;
 
   // Parse flags and counts
   for (let i = 0; i < args.length; i++) {
@@ -754,6 +921,30 @@ async function main() {
         orderCount = count;
       }
       i++;
+    } else if (args[i] === "--user-id" && i + 1 < args.length) {
+      const parsedUserId = Number.parseInt(args[i + 1]);
+      if (!Number.isNaN(parsedUserId) && parsedUserId > 0) {
+        targetOrderUserId = parsedUserId;
+      }
+      i++;
+    } else if (args[i] === "--user-email" && i + 1 < args.length) {
+      const normalized = normalizeEmail(args[i + 1]);
+      if (normalized) {
+        targetOrderUserEmail = normalized;
+      }
+      i++;
+    } else if (args[i] === "--user" && i + 1 < args.length) {
+      const raw = args[i + 1]?.trim();
+      const parsedUserId = Number.parseInt(raw);
+      if (!Number.isNaN(parsedUserId) && parsedUserId > 0) {
+        targetOrderUserId = parsedUserId;
+      } else {
+        const normalized = normalizeEmail(raw);
+        if (normalized) {
+          targetOrderUserEmail = normalized;
+        }
+      }
+      i++;
     }
   }
 
@@ -763,9 +954,22 @@ async function main() {
 
   if (args.length === 0) {
     console.log(
-      "No flags provided. Use --users <count>, --drivers <count>, --orders <count>, or --full to seed specific data.",
+      "No flags provided. Use --users <count>, --drivers <count>, --orders <count>, --user-id <id>, --user-email <email>, --user <id|email>, or --full to seed specific data.",
     );
     return;
+  }
+
+  if (targetOrderUserId && targetOrderUserEmail) {
+    console.log(
+      "⚠️ Both --user-id and --user-email provided. --user-id will be used for order targeting.",
+    );
+    targetOrderUserEmail = undefined;
+  }
+
+  if ((targetOrderUserId || targetOrderUserEmail) && !runOrders) {
+    console.log(
+      "⚠️ User targeting flags were provided without --orders/--full. They will be ignored.",
+    );
   }
 
   try {
@@ -774,7 +978,11 @@ async function main() {
     if (runDrivers) await seedDrivers(driverCount);
     // Give drivers a moment to register/online before orders come in
     await delay(1000);
-    if (runOrders) await seedOrders(orderCount);
+    if (runOrders)
+      await seedOrders(orderCount, {
+        targetUserId: targetOrderUserId,
+        targetUserEmail: targetOrderUserEmail,
+      });
 
     console.log("\n✨ Seeding complete!");
   } catch (error) {

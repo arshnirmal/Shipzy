@@ -11,6 +11,8 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: UTC
+      PGTZ: UTC
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./src/database:/src/database
@@ -30,6 +32,8 @@ services:
       postgres
       -c shared_preload_libraries=pg_stat_statements
       -c pg_stat_statements.track=all
+      -c timezone=UTC
+      -c log_timezone=UTC
       -c max_connections=200
       -c shared_buffers=256MB
       -c effective_cache_size=1GB
@@ -59,6 +63,7 @@ services:
       - /app/node_modules
     environment:
       NODE_ENV: development
+      TZ: UTC
       PORT: ${BACKEND_PORT}
       HOST: ${BACKEND_HOST}
 
