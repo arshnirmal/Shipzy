@@ -14,7 +14,7 @@ class AppTheme {
       surfaceContainerHigh: AppColors.lightSurfaceHigh,
       onSurface: AppColors.lightOnSurface,
       onSurfaceVariant: AppColors.lightOnSurfaceVariant,
-      outlineVariant: AppColors.outlineVariant,
+      outlineVariant: AppColors.lightOutlineVariant,
       error: AppColors.error,
       tertiaryContainer: AppColors.tertiaryContainer,
     ),
@@ -46,7 +46,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+        side: BorderSide(color: AppColors.lightOutlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         textStyle: AppTypography.lightTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
@@ -64,11 +64,11 @@ class AppTheme {
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       border: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.lightOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.lightOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
@@ -98,7 +98,7 @@ class AppTheme {
       surfaceContainerHigh: AppColors.darkSurfaceHigh,
       onSurface: AppColors.darkOnSurface,
       onSurfaceVariant: AppColors.darkOnSurfaceVariant,
-      outlineVariant: AppColors.outlineVariant,
+      outlineVariant: AppColors.darkOutlineVariant,
       error: AppColors.error,
       tertiaryContainer: AppColors.tertiaryContainer,
     ),
@@ -130,7 +130,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+        side: BorderSide(color: AppColors.darkOutlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         textStyle: AppTypography.darkTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
@@ -148,11 +148,11 @@ class AppTheme {
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       border: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.darkOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.darkOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,

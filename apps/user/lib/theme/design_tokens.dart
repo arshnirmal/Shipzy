@@ -4,24 +4,25 @@ class AppColors {
   AppColors._();
 
   static const Color primary = Color(0xFF6366F1);
-  static const Color primaryGradientStart = Color(0xFF4648D4);
-  static const Color primaryGradientEnd = Color(0xFF6063EE);
+  static const Color primaryGradientStart = Color(0xFF6366F1);
+  static const Color primaryGradientEnd = Color(0xFF8083FF);
 
   static const Color lightOnSurface = Color(0xFF0B1C30);
-  static const Color darkOnSurface = Color(0xFFF8FAFC);
+  static const Color darkOnSurface = Color(0xFFF1F5F9);
 
   static const Color lightSurfaceLowest = Color(0xFFFFFFFF);
   static const Color lightSurfaceLow = Color(0xFFEFF4FF);
   static const Color lightSurfaceHigh = Color(0xFFDCE9FF);
 
-  static const Color darkSurfaceLowest = Color(0xFF111827);
-  static const Color darkSurfaceLow = Color(0xFF1B263A);
-  static const Color darkSurfaceHigh = Color(0xFF233148);
+  static const Color darkSurfaceLowest = Color(0xFF121212);
+  static const Color darkSurfaceLow = Color(0xFF1E1E1E);
+  static const Color darkSurfaceHigh = Color(0xFF252525);
 
   static const Color lightOnSurfaceVariant = Color(0xFF5F6E82);
-  static const Color darkOnSurfaceVariant = Color(0xFFB8C4D5);
+  static const Color darkOnSurfaceVariant = Color(0xFF94A3B8);
 
-  static const Color outlineVariant = Color(0xFF9AA7BA);
+  static const Color lightOutlineVariant = Color(0xFFE2E8F0);
+  static const Color darkOutlineVariant = Color(0xFF334155);
   static const Color tertiaryContainer = Color(0xFFFCE2A6);
 
   static const Color error = Color(0xFFD32F2F);
@@ -46,9 +47,11 @@ class AppRadius {
   AppRadius._();
 
   static const double lg = 8;
+  static const double xl = 16;
   static const double onboardingHero = 24;
 
   static BorderRadius get radiusLg => BorderRadius.circular(lg);
+  static BorderRadius get radiusXl => BorderRadius.circular(xl);
   static BorderRadius get radiusOnboardingHero => BorderRadius.circular(onboardingHero);
 }
 
@@ -61,9 +64,11 @@ class AppDepth {
 
   static List<BoxShadow> ambientShadow(Brightness brightness) => [
     BoxShadow(
-      color: (brightness == Brightness.dark ? Colors.black : const Color(0xFF0B1C30)).withValues(alpha: 0.06),
-      blurRadius: 32,
-      offset: const Offset(0, 12),
+      color: (brightness == Brightness.dark ? Colors.black : const Color(0xFF6366F1)).withValues(
+        alpha: brightness == Brightness.dark ? 0.3 : 0.08,
+      ),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
     ),
   ];
 }
