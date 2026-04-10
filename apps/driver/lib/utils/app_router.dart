@@ -6,11 +6,9 @@ import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
-import '../screens/delivery/active_delivery_screen.dart';
 import '../screens/earnings/earnings_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
-import '../screens/orders/order_details_screen.dart';
 import '../screens/orders/orders_list_screen.dart';
 import '../screens/profile/document_upload_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -88,23 +86,6 @@ GoRouter router(Ref ref) {
             routes: [GoRoute(path: AppRoutes.profile, name: 'profile', builder: (context, state) => const ProfileScreen())],
           ),
         ],
-      ),
-      // ============ ORDER ROUTES ============
-      GoRoute(
-        path: '/order-details/:id',
-        name: 'orderDetails',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return OrderDetailsScreen(orderId: id);
-        },
-      ),
-      GoRoute(
-        path: '/active-delivery/:id',
-        name: 'activeDelivery',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return ActiveDeliveryScreen(orderId: id);
-        },
       ),
     ],
   );

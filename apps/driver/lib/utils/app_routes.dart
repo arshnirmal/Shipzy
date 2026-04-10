@@ -39,12 +39,4 @@ class AppRoutes {
 
   /// Route for the profile screen.
   static const String profile = '/profile';
-
-  // ============ ORDER ROUTES ============
-
-  /// Route for viewing order details (with orderId parameter).
-  static String orderDetails(String orderId) => '/order-details/$orderId';
-
-  /// Route for active delivery screen (with orderId parameter).
-  static String activeDelivery(String orderId) => '/active-delivery/$orderId';
 }

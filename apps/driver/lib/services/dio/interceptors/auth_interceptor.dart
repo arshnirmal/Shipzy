@@ -64,11 +64,16 @@ class AuthInterceptor extends Interceptor {
         );
 
         if (response.data?['success'] == true) {
-          // Extract access token from new nested structure: data.auth.tokens.accessToken
-          final newAccessToken = response.data!['data']['auth']['tokens']['accessToken'] as String;
+          // Extract refreshed tokens from nested response payload.
+          final tokens = response.data!['data']['auth']['tokens'] as Map<String, dynamic>;
+          final newAccessToken = tokens['accessToken'] as String;
+          final newRefreshToken = tokens['refreshToken'] as String?;
 
-          // Store new access token
+          // Store refreshed tokens for future requests.
           await storage.write(key: 'access_token', value: newAccessToken);
+          if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+            await storage.write(key: 'refresh_token', value: newRefreshToken);
+          }
 
           // Retry the original request with new token
           final retryOptions = err.requestOptions;
