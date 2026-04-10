@@ -14,6 +14,7 @@ class AppTheme {
       surfaceContainerHigh: AppColors.lightSurfaceHigh,
       onSurface: AppColors.lightOnSurface,
       onSurfaceVariant: AppColors.lightOnSurfaceVariant,
+      surfaceContainer: AppColors.lightSurfaceLowest,
       outlineVariant: AppColors.lightOutlineVariant,
       error: AppColors.error,
       tertiaryContainer: AppColors.tertiaryContainer,
@@ -21,7 +22,7 @@ class AppTheme {
     textTheme: AppTypography.lightTextTheme,
     scaffoldBackgroundColor: AppColors.lightSurfaceLow,
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.lightSurfaceLow,
+      backgroundColor: AppColors.lightSurfaceLowest,
       foregroundColor: AppColors.lightOnSurface,
       elevation: 0,
       centerTitle: true,
@@ -98,6 +99,7 @@ class AppTheme {
       surfaceContainerHigh: AppColors.darkSurfaceHigh,
       onSurface: AppColors.darkOnSurface,
       onSurfaceVariant: AppColors.darkOnSurfaceVariant,
+      surfaceContainer: AppColors.darkSurfaceHigh,
       outlineVariant: AppColors.darkOutlineVariant,
       error: AppColors.error,
       tertiaryContainer: AppColors.tertiaryContainer,
@@ -105,7 +107,7 @@ class AppTheme {
     textTheme: AppTypography.darkTextTheme,
     scaffoldBackgroundColor: AppColors.darkSurfaceLow,
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.darkSurfaceLow,
+      backgroundColor: AppColors.darkSurfaceHigh,
       surfaceTintColor: Colors.transparent,
       foregroundColor: AppColors.darkOnSurface,
       elevation: 0,
@@ -114,7 +116,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
-      color: AppColors.darkSurfaceLowest,
+      color: AppColors.darkSurfaceHigh,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(

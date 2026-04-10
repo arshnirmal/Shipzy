@@ -19,7 +19,7 @@ class CustomHomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final locationState = ref.watch(locationNotifierProvider);
 
     return AppBar(
-      backgroundColor: theme.colorScheme.surfaceContainerLowest,
+      backgroundColor: theme.colorScheme.surfaceContainer,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
@@ -209,7 +209,7 @@ class _NotificationButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: theme.colorScheme.error,
                 shape: BoxShape.circle,
-                border: Border.all(color: theme.colorScheme.surfaceContainerLowest, width: 1.5),
+                border: Border.all(color: theme.colorScheme.surfaceContainer, width: 1.5),
               ),
             ),
           ),

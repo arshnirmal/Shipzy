@@ -87,16 +87,15 @@ class _LocationCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: theme.colorScheme.surface,
+      color: theme.colorScheme.surfaceContainer,
       borderRadius: AppRadius.radiusLg,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadius.radiusLg,
         child: Container(
-          width: 144, // 36 * 4 approx
-          padding: const EdgeInsets.all(AppSpacing.md),
+          width: 144,
+          padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
             borderRadius: AppRadius.radiusLg,
             boxShadow: AppDepth.ambientShadow(theme.brightness),
           ),
@@ -104,15 +103,15 @@ class _LocationCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
+                child: Icon(icon, size: 18, color: theme.colorScheme.primary),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 title,
                 style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),

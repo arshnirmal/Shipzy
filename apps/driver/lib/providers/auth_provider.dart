@@ -28,10 +28,7 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final user = await authService.getCurrentUser(accessToken);
 
-      // Check if user profile is complete (determines if new user)
-      final isNewUser = !user.profileComplete;
-
-      return AuthState.authenticated(user, isNewUser: isNewUser);
+      return AuthState.authenticated(user);
     } catch (e) {
       AppLogger.e('Auth status check failed: $e');
       await _clearTokens();
@@ -40,7 +37,7 @@ class Auth extends _$Auth {
   }
 
   /// Google Sign-In
-  Future<AuthResult> signInWithGoogle({String role = 'driver'}) async {
+  Future<AuthResult> signInWithGoogle({String role = 'courier'}) async {
     try {
       final googleAuth = ref.read(googleAuthProvider.notifier);
       final account = await googleAuth.signIn();
@@ -57,27 +54,49 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final response = await authService.verifyGoogleToken(idToken, role: role);
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(
+        response.data.authSection.tokens.accessToken,
+        response.data.authSection.tokens.refreshToken,
+      );
 
-      state = AsyncData(AuthState.authenticated(response.data.user, isNewUser: response.data.isNewUser));
+      final isNewUser = response.data.authSection.session.isNewUser;
+      final user = response.data.actor.user;
 
-      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
+      state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
+
+      return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
   /// Register
-  Future<AuthResult> createUserWithEmailAndPassword(String email, String password, {String? fullName, String? phoneNumber}) async {
+  Future<AuthResult> createUserWithEmailAndPassword(
+    String email,
+    String password, {
+    String? fullName,
+    String? phoneNumber,
+  }) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.register(fullName: fullName ?? '', email: email, password: password, phoneNumber: phoneNumber ?? '');
+      final response = await authService.register(
+        fullName: fullName ?? '',
+        email: email,
+        password: password,
+        phoneNumber: phoneNumber ?? '',
+      );
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(
+        response.data.authSection.tokens.accessToken,
+        response.data.authSection.tokens.refreshToken,
+      );
 
-      state = AsyncData(AuthState.authenticated(response.data.user, isNewUser: response.data.isNewUser));
+      final isNewUser = response.data.authSection.session.isNewUser;
+      final user = response.data.actor.user;
 
-      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
+      state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
+
+      return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -91,11 +110,16 @@ class Auth extends _$Auth {
 
       AppLogger.d('Login response: ${response.data.toJson()}');
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(
+        response.data.authSection.tokens.accessToken,
+        response.data.authSection.tokens.refreshToken,
+      );
 
-      state = AsyncData(AuthState.authenticated(response.data.user));
+      final user = response.data.actor.user;
 
-      return AuthResult.success(response.data.user, isNewUser: false);
+      state = AsyncData(AuthState.authenticated(user));
+
+      return AuthResult.success(user, isNewUser: false);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -114,7 +138,7 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final response = await authService.refreshToken(refreshToken);
 
-      await storage.write(key: 'access_token', value: response.data.accessToken);
+      await storage.write(key: 'access_token', value: response.data.authSection.tokens.accessToken);
 
       return true;
     } catch (e) {
@@ -167,7 +191,11 @@ sealed class AuthState {
   const factory AuthState.authenticated(AppUser user, {bool isNewUser}) = Authenticated;
   const factory AuthState.unauthenticated() = Unauthenticated;
 
-  T maybeWhen<T>({required T Function() orElse, T Function(AppUser user, {required bool isNewUser})? authenticated, T Function()? unauthenticated}) {
+  T maybeWhen<T>({
+    required T Function() orElse,
+    T Function(AppUser user, {required bool isNewUser})? authenticated,
+    T Function()? unauthenticated,
+  }) {
     if (this is Authenticated) {
       final auth = this as Authenticated;
       return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ?? orElse();
@@ -195,7 +223,10 @@ sealed class AuthResult {
   const factory AuthResult.success(AppUser user, {required bool isNewUser}) = AuthSuccess;
   const factory AuthResult.error(String message) = AuthError;
 
-  T when<T>({required T Function(AppUser user, {required bool isNewUser}) success, required T Function(String message) error}) {
+  T when<T>({
+    required T Function(AppUser user, {required bool isNewUser}) success,
+    required T Function(String message) error,
+  }) {
     if (this is AuthSuccess) {
       final s = this as AuthSuccess;
       return success(s.user, isNewUser: s.isNewUser);

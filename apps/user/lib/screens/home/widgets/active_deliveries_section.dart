@@ -89,9 +89,8 @@ class _ActiveDeliveryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.colorScheme.surfaceContainer,
         borderRadius: AppRadius.radiusLg,
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
         boxShadow: AppDepth.ambientShadow(theme.brightness),
       ),
       child: Column(
@@ -290,9 +289,9 @@ class _EmptyState extends StatelessWidget {
       width: MediaQuery.of(context).size.width,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.colorScheme.surfaceContainer,
         borderRadius: AppRadius.radiusLg,
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+        boxShadow: AppDepth.ambientShadow(theme.brightness),
       ),
       child: Column(
         children: [

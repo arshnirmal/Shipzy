@@ -55,11 +55,17 @@ class AuthInterceptor extends Interceptor {
         // Create a new Dio instance for refresh request (to avoid interceptor loops)
         final dio = Dio(BaseOptions(baseUrl: err.requestOptions.baseUrl, headers: {'Content-Type': 'application/json'}));
 
-        // Call refresh endpoint
-        final response = await dio.post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refreshToken});
+        // Call refresh endpoint — body must match API: { tokens: { refreshToken } }
+        final response = await dio.post<Map<String, dynamic>>(
+          '/auth/refresh',
+          data: {
+            'tokens': {'refreshToken': refreshToken},
+          },
+        );
 
         if (response.data?['success'] == true) {
-          final newAccessToken = response.data!['data']['accessToken'];
+          // Extract access token from new nested structure: data.auth.tokens.accessToken
+          final newAccessToken = response.data!['data']['auth']['tokens']['accessToken'] as String;
 
           // Store new access token
           await storage.write(key: 'access_token', value: newAccessToken);
@@ -70,7 +76,6 @@ class AuthInterceptor extends Interceptor {
 
           _isRefreshing = false;
 
-          // Use the same Dio instance to retry
           final retryDio = Dio(BaseOptions(baseUrl: retryOptions.baseUrl));
           final retryResponse = await retryDio.request<dynamic>(
             retryOptions.path,
@@ -87,7 +92,7 @@ class AuthInterceptor extends Interceptor {
       } catch (refreshError) {
         _isRefreshing = false;
 
-        // Refresh failed - clear tokens (user needs to login again)
+        // Refresh failed — clear tokens so user must log in again
         final storage = ref.read(secureStorageProvider);
         await storage.deleteAll();
 

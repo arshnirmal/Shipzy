@@ -20,9 +20,9 @@ class DriverHome extends _$DriverHome {
 
   @override
   DriverHomeState build() {
-    // Keep driver status in sync with backend profile & active order on startup
+    // Keep driver status in sync with backend profile & active assignment on startup
     final profileAsync = ref.watch(driverProfileProvider);
-    final activeOrderAsync = ref.watch(activeOrderProvider);
+    final activeAssignmentAsync = ref.watch(activeOrderProvider);
 
     // Default values
     var initialStatus = DriverStatus.offline;
@@ -43,15 +43,14 @@ class DriverHome extends _$DriverHome {
       }
     }
 
-    // 2. Override if there's an active order
-    if (activeOrderAsync.hasValue) {
-      final order = activeOrderAsync.value;
-      if (order != null) {
+    // 2. Override if there's an active assignment
+    if (activeAssignmentAsync.hasValue) {
+      final assignment = activeAssignmentAsync.value;
+      if (assignment != null) {
         initialStatus = DriverStatus.onDelivery;
       }
     }
 
-    // Return the calculated state
     return DriverHomeState(status: initialStatus, error: initialError);
   }
 
@@ -68,17 +67,17 @@ class DriverHome extends _$DriverHome {
         location = {'latitude': position.latitude, 'longitude': position.longitude};
       } catch (e) {
         // If location fails, continue without it (graceful degradation)
-        // Backend will still work, just won't update lastActiveLocation
       }
 
-      // Call API to update status with location
-      await ref.read(apiServiceProvider).updateDriverAvailability(isAvailable: isGoingOnline, isOnline: isGoingOnline, location: location);
+      await ref.read(apiServiceProvider).updateDriverAvailability(
+            isAvailable: isGoingOnline,
+            isOnline: isGoingOnline,
+            location: location,
+          );
 
       state = state.copyWith(status: newStatus, isLoading: false, error: null);
 
       if (isGoingOnline) {
-        _startPolling();
-        // Refresh nearby orders when going online
         ref.invalidate(nearbyOrdersProvider);
       } else {
         _stopPolling();
@@ -86,13 +85,6 @@ class DriverHome extends _$DriverHome {
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
-  }
-
-  void _startPolling() {
-    _pollingTimer?.cancel();
-    // Note: nearbyOrdersProvider will refresh automatically when status changes
-    // due to its dependency on driverHomeProvider, but we don't need to invalidate it here
-    // to avoid circular dependencies
   }
 
   void _stopPolling() {
@@ -103,7 +95,6 @@ class DriverHome extends _$DriverHome {
   Future<void> acceptOrder(int orderId) async {
     try {
       await ref.read(apiServiceProvider).acceptOrder(orderId);
-      // Refresh active order and available orders
       ref.invalidate(activeOrderProvider);
       ref.invalidate(driverDashboardDataProvider);
       ref.invalidate(driverProfileProvider);
@@ -116,15 +107,12 @@ class DriverHome extends _$DriverHome {
   }
 
   Future<void> rejectOrder(int orderId) async {
-    // For now, just invalidate the list to refresh
-    // In a real app, we'd probably want to add it to a "ignored" list locally
     ref.invalidate(nearbyOrdersProvider);
   }
 }
 
 @riverpod
 Future<DailyStats> dailyStats(Ref ref) async {
-  // Get daily stats from driver profile to avoid extra API call
   final driverProfile = await ref.watch(driverProfileProvider.future);
   return DailyStats(
     earnings: (driverProfile.earnings?.today ?? 0).toDouble(),
@@ -135,30 +123,25 @@ Future<DailyStats> dailyStats(Ref ref) async {
 }
 
 @riverpod
-DriverStatus driverStatus(Ref ref) {
-  // Separate provider for driver status to avoid circular dependencies
-  return ref.watch(driverHomeProvider).status;
-}
+DriverStatus driverStatus(Ref ref) => ref.watch(driverHomeProvider).status;
 
 @riverpod
-Future<List<AvailableOrder>> nearbyOrders(Ref ref) async {
-  // Watch driver status from separate provider to avoid circular dependency
-  final driverStatus = ref.watch(driverStatusProvider);
-  if (driverStatus != DriverStatus.online) {
-    return []; // Return empty list when offline
+Future<List<AvailableOrderItem>> nearbyOrders(Ref ref) async {
+  final status = ref.watch(driverStatusProvider);
+  if (status != DriverStatus.online) {
+    return [];
   }
 
-  // Add small delay to prioritize other API calls
   await Future.delayed(const Duration(milliseconds: 500));
 
-  // Use current location once (stream can hang waiting for first emit)
   final locationService = ref.read(locationServiceProvider.notifier);
   try {
     final position = await locationService.getCurrentLocation();
-    final apiService = ref.read(apiServiceProvider);
-    return apiService.getAvailableOrders(latitude: position.latitude, longitude: position.longitude);
+    return ref.read(apiServiceProvider).getAvailableOrders(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
   } catch (e) {
-    // If location is unavailable, return empty list to avoid perpetual loading
     return [];
   }
 }
@@ -167,19 +150,18 @@ Future<List<AvailableOrder>> nearbyOrders(Ref ref) async {
 Future<DriverDashboardData> driverDashboardData(Ref ref) async {
   final apiService = ref.read(apiServiceProvider);
 
-  // Fetch both profile and assignments in parallel to reduce total API calls
   final results = await Future.wait([apiService.getDriverProfile(), apiService.getActiveOrder()]);
 
   final profile = results[0] as DriverProfile;
-  final activeOrder = results[1] as ActiveOrder?;
+  final activeAssignment = results[1] as ActiveAssignment?;
 
-  return DriverDashboardData(profile: profile, activeOrder: activeOrder);
+  return DriverDashboardData(profile: profile, activeAssignment: activeAssignment);
 }
 
 @riverpod
-Future<ActiveOrder?> activeOrder(Ref ref) async {
+Future<ActiveAssignment?> activeOrder(Ref ref) async {
   final dashboardData = await ref.watch(driverDashboardDataProvider.future);
-  return dashboardData.activeOrder;
+  return dashboardData.activeAssignment;
 }
 
 @riverpod

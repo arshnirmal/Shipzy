@@ -10,16 +10,15 @@ abstract class AppUser with _$AppUser {
   const factory AppUser({
     @JsonKey(name: 'userId') required int userId,
     @JsonKey(name: 'userUuid') required String userUuid,
-    @JsonKey(name: 'email') required String email,
     @JsonKey(name: 'fullName') required String fullName,
+    @JsonKey(name: 'role') @Default('courier') String role,
+    @JsonKey(name: 'email') String? email,
     @JsonKey(name: 'phoneNumber') String? phoneNumber,
-    @JsonKey(name: 'firebaseUid') String? firebaseUid,
     @JsonKey(name: 'profilePictureUrl') String? profilePictureUrl,
     @JsonKey(name: 'isVerified') @Default(false) bool isVerified,
-    @JsonKey(name: 'role') @Default('driver') String role,
-    @JsonKey(name: 'profileComplete') @Default(false) bool profileComplete,
-    @JsonKey(name: 'createdAt') DateTime? createdAt,
-    @JsonKey(name: 'updatedAt') DateTime? updatedAt,
+    @JsonKey(name: 'isActive') @Default(false) bool isActive,
+    @JsonKey(name: 'createdAt') String? createdAt,
+    @JsonKey(name: 'updatedAt') String? updatedAt,
   }) = _AppUser;
 
   factory AppUser.fromJson(Map<String, dynamic> json) => _$AppUserFromJson(json);
