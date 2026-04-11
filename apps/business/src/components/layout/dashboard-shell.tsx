@@ -1,0 +1,186 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import {
+  BanknoteArrowUp,
+  Building2,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { useAuth } from "@/providers/auth-provider";
+
+type DashboardShellProps = {
+  children: React.ReactNode;
+};
+
+const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/team", label: "Team", icon: Users },
+  { href: "/billing", label: "Billing", icon: BanknoteArrowUp },
+  { href: "/settings", label: "Settings", icon: Settings },
+];
+
+function initialsFromEmail(email: string) {
+  const [namePart] = email.split("@");
+  return namePart.slice(0, 2).toUpperCase();
+}
+
+export function DashboardShell({ children }: DashboardShellProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, signOut, user } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading business portal...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
+
+  return (
+    <SidebarProvider defaultOpen>
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarHeader className="p-4">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-3 rounded-md px-2 py-1"
+          >
+            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <Building2 className="size-4" />
+            </div>
+            <div className="group-data-[collapsible=icon]:hidden">
+              <p className="text-sm font-semibold">Shipzy Business</p>
+              <p className="text-xs text-muted-foreground">Merchant Portal</p>
+            </div>
+          </Link>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {navItems.map((item) => {
+                  const isActive =
+                    item.href === "/dashboard"
+                      ? pathname === "/dashboard"
+                      : pathname.startsWith(item.href);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.label}
+                        render={<Link href={item.href} />}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter className="p-4">
+          <div className="rounded-lg border bg-card p-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Business role routes are scaffolded and ready for backend
+            integration.
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:px-6">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="md:hidden" />
+            <SidebarTrigger className="hidden md:inline-flex" />
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                Business Portal
+              </p>
+              <p className="text-sm font-medium">
+                Manage deliveries and team workflows
+              </p>
+            </div>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <Avatar>
+                <AvatarFallback>
+                  {initialsFromEmail(user?.email ?? "sb@shipzy.com")}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <p className="text-sm">
+                  {user?.businessName ?? "Business account"}
+                </p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  signOut();
+                  router.push("/login");
+                }}
+              >
+                <LogOut className="mr-2 size-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
+
+        <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-background via-background to-secondary/30 p-4 md:p-6">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}

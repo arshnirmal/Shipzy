@@ -133,6 +133,7 @@ coverage/
 
 # Dependencies
 node_modules/
+apps/business/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -177,6 +178,7 @@ build/Release
 # Build outputs
 dist/
 build/
+apps/business/.next/
 *.apk
 *.aab
 *.ipa
