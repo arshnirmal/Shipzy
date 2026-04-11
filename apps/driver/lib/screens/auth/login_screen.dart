@@ -10,6 +10,13 @@ import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
 import 'widgets/auth_widgets.dart';
 
+const double _kHorizontalPadding = 24;
+const double _kTopSpacing = 56;
+const double _kSectionSpacing = 32;
+const double _kFieldSpacing = 16;
+const double _kBlockSpacing = 24;
+const double _kDividerSpacing = 20;
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -115,12 +122,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: 24),
+          padding: const EdgeInsets.symmetric(horizontal: _kHorizontalPadding).copyWith(bottom: _kBlockSpacing),
           child: Form(
             key: _formKey,
             child: Column(
               children: [
-                const SizedBox(height: 56),
+                const SizedBox(height: _kTopSpacing),
                 Text(
                   'Welcome Back',
                   style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w700),
@@ -128,7 +135,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text('Log in to your Shipzy account to continue.', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
-                const SizedBox(height: 32),
+                const SizedBox(height: _kSectionSpacing),
                 AuthTextField(
                   controller: _emailController,
                   label: 'Email Address',
@@ -139,7 +146,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   enabled: !_isLoading,
                   validator: AuthValidators.validateEmail,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _passwordController,
                   label: 'Password',
@@ -173,18 +180,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Log in'),
-                const SizedBox(height: 20),
+                const SizedBox(height: _kBlockSpacing),
+                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Sign in'),
+                const SizedBox(height: _kDividerSpacing),
                 const AuthDivider(text: 'or continue with'),
-                const SizedBox(height: 20),
+                const SizedBox(height: _kDividerSpacing),
                 SocialButton(
                   label: 'Continue with Google',
                   icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
                   onPressed: _signInWithGoogle,
                   isLoading: _isGoogleSigningIn,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: _kBlockSpacing),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -193,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: _isLoading ? null : () => context.push(AppRoutes.register),
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
                       child: Text(
-                        'Create Account',
+                        'Create account',
                         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
                       ),
                     ),

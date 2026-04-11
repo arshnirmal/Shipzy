@@ -10,6 +10,13 @@ import '../../utils/logger.dart';
 import '../../utils/snackbar_utils.dart';
 import 'widgets/auth_widgets.dart';
 
+const double _kHorizontalPadding = 24;
+const double _kTopSpacing = 56;
+const double _kSectionSpacing = 32;
+const double _kFieldSpacing = 16;
+const double _kBlockSpacing = 24;
+const double _kDividerSpacing = 20;
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -128,20 +135,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: 24),
+          padding: const EdgeInsets.symmetric(horizontal: _kHorizontalPadding).copyWith(bottom: _kBlockSpacing),
           child: Form(
             key: _formKey,
             child: Column(
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: _kTopSpacing),
                 Text(
                   'Create Account',
                   style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w700),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text('Sign up to get started with Shipzy.', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
-                const SizedBox(height: 32),
+                Text('Create your Shipzy account to start delivering.', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                const SizedBox(height: _kSectionSpacing),
                 AuthTextField(
                   controller: _fullNameController,
                   label: 'Full Name',
@@ -151,7 +158,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   enabled: !_isLoading,
                   validator: AuthValidators.validateFullName,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _emailController,
                   label: 'Email Address',
@@ -162,7 +169,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   enabled: !_isLoading,
                   validator: AuthValidators.validateEmail,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _phoneController,
                   label: 'Phone Number',
@@ -173,7 +180,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   enabled: !_isLoading,
                   validator: AuthValidators.validatePhoneNumber,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _passwordController,
                   label: 'Password',
@@ -189,18 +196,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   enabled: !_isLoading,
                   validator: (value) => AuthValidators.validatePassword(value, minLength: 8),
                 ),
-                const SizedBox(height: 24),
-                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Sign up'),
-                const SizedBox(height: 20),
+                const SizedBox(height: _kBlockSpacing),
+                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Create account'),
+                const SizedBox(height: _kDividerSpacing),
                 const AuthDivider(text: 'or continue with'),
-                const SizedBox(height: 20),
+                const SizedBox(height: _kDividerSpacing),
                 SocialButton(
                   label: 'Continue with Google',
                   icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
                   onPressed: _signInWithGoogle,
                   isLoading: _isGoogleSigningIn,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: _kBlockSpacing),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -209,7 +216,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       onPressed: _isLoading ? null : () => context.pop(),
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
                       child: Text(
-                        'Log in',
+                        'Sign in',
                         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
                       ),
                     ),

@@ -6,7 +6,7 @@ import '../../utils/app_routes.dart';
 
 const String _kHasSeenOnboarding = 'has_seen_onboarding';
 const String _kSkipLabel = 'Skip';
-const String _kNextLabel = 'Next';
+const String _kNextLabel = 'Continue';
 const String _kGetStartedLabel = 'Get Started';
 
 const double _kPageHorizontalPadding = 24;
