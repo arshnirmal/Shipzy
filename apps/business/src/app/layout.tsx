@@ -16,7 +16,7 @@ const headingFont = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Shipzy Business | The Next Era of Logistics",
+  title: "Shipzy | The Next Era of Logistics",
   description:
     "Streamline last-mile operations with intelligent route optimization and scalable fleet management.",
   metadataBase: new URL("https://business.shipzy.app"),
@@ -24,16 +24,16 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Shipzy Business | The Next Era of Logistics",
+    title: "Shipzy | The Next Era of Logistics",
     description:
       "Streamline last-mile operations with intelligent route optimization and scalable fleet management.",
     url: "/",
-    siteName: "Shipzy Business",
+    siteName: "Shipzy",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Shipzy Business | The Next Era of Logistics",
+    title: "Shipzy | The Next Era of Logistics",
     description:
       "Streamline last-mile operations with intelligent route optimization and scalable fleet management.",
   },

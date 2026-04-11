@@ -47,11 +47,11 @@ export function FeaturesSection() {
         <div className="max-w-2xl">
           <p className="label-md text-primary">What You Can Do</p>
           <h2 id="features-heading" className="display-md mt-4 text-on-surface">
-            Precision tools for modern operations teams
+            Everything your delivery team needs in one place
           </h2>
           <p className="body-lg mt-4 text-muted-foreground">
-            Built for teams that treat logistics as a strategic function, not a
-            back-office task.
+            Create orders, track performance, and coordinate your team without
+            switching tools.
           </p>
         </div>
 

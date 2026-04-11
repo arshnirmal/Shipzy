@@ -49,10 +49,7 @@ export function Navbar() {
               S
             </div>
             <div>
-              <p className="title-sm leading-tight">Shipzy Business</p>
-              <p className="text-xs text-muted-foreground">
-                Digital Curator Edition
-              </p>
+              <p className="title-sm leading-tight">Shipzy</p>
             </div>
           </Link>
 

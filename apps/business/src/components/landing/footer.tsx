@@ -41,10 +41,9 @@ export function Footer() {
       <div className="container-shell">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-3 lg:col-span-1">
-            <p className="title-md">Shipzy Business</p>
+            <p className="title-md">Shipzy</p>
             <p className="body-sm text-muted-foreground">
-              Editorial-grade operations platform for high-performance delivery
-              teams.
+              Manage orders, teams, and delivery performance in one place.
             </p>
           </div>
 

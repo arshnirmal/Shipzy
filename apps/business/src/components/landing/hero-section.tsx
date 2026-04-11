@@ -19,7 +19,7 @@ export function HeroSection() {
             className="label-md reveal reveal-visible text-primary"
             style={{ animationDelay: "0.08s" }}
           >
-            Premium Business Portal
+            Built for local commerce
           </p>
           <h1
             id="hero-heading"
@@ -32,9 +32,8 @@ export function HeroSection() {
             className="body-lg reveal reveal-visible mx-auto mt-7 max-w-2xl text-muted-foreground"
             style={{ animationDelay: "0.34s" }}
           >
-            Streamline your last-mile operations with intelligent route
-            optimization and scalable fleet management, built for modern urban
-            commerce.
+            Manage last-mile deliveries with smarter routes, clearer operations,
+            and a platform designed for teams that move fast.
           </p>
 
           <div
@@ -48,7 +47,7 @@ export function HeroSection() {
                 "gradient-brand h-11 px-6 text-primary-foreground shadow-[var(--shadow-ambient-md)]",
               )}
             >
-              Start Free Trial
+              Get Started
             </Link>
             <a
               href="#how-it-works"

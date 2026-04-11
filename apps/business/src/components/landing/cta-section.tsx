@@ -17,7 +17,7 @@ export function CtaSection() {
           <div className="absolute left-8 bottom-8 h-3 w-3 rounded-full bg-white/60" />
           <div className="absolute right-14 top-10 h-2 w-2 rounded-full bg-white/55" />
 
-          <p className="label-md text-white/80">Ready When You Are</p>
+          <p className="label-md text-white/80">Start today</p>
           <h2
             id="pricing-heading"
             className="display-sm mx-auto mt-4 max-w-2xl text-white"
@@ -25,7 +25,7 @@ export function CtaSection() {
             Ready to transform your logistics?
           </h2>
           <p className="body-md mx-auto mt-4 max-w-xl text-white/80">
-            Start free and scale with confidence as your order volume grows.
+            Create your account and launch deliveries in minutes.
           </p>
 
           <div className="mt-8">
@@ -36,7 +36,7 @@ export function CtaSection() {
                 "h-11 bg-white px-7 text-primary shadow-[var(--shadow-ambient-md)] hover:bg-white/92",
               )}
             >
-              Get Started - It&apos;s Free
+              Get Started
             </Link>
           </div>
         </div>

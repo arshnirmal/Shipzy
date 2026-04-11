@@ -38,7 +38,7 @@ export function HowItWorks() {
             id="how-it-works-heading"
             className="display-md mt-4 text-on-surface"
           >
-            Deploy your delivery stack in three steps
+            Get started in three quick steps
           </h2>
         </div>
 
