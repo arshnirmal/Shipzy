@@ -1,175 +1,411 @@
 import 'package:flutter/material.dart';
 
+// ==================== DRIVER STATUS ENUM ====================
+// Defined at library level so it can be used without a DriverAppTheme prefix.
+
+enum DriverStatus {
+  online, // Available, accepting trips
+  busy, // On active delivery
+  offline, // Not on duty
+  paused, // On break
+}
+
+// ==============================================================
+//  DriverAppTheme — "Urban Navigator" / "Night Navigator"
+//  Light and dark palettes follow the respective design system
+//  docs in apps/driver/docs/.
+//  Font: Plus Jakarta Sans (PlusJakartaSans family in pubspec).
+// ==============================================================
+
 class DriverAppTheme {
-  // ==================== APP COLOR PALETTE (MATCHING USER APP) ====================
+  DriverAppTheme._(); // pure static utility — not instantiable
 
-  // Primary - Classic Blue
-  static const Color _primaryLight = Color(0xFF0F4C81);
-  static const Color _primaryDark = Color(0xFF1E88E5);
+  // ==================== LIGHT PALETTE ====================
+  // Primary — Electric Indigo
+  static const Color _primaryLight = Color(0xFF4648D4);
+  static const Color _primaryContainerLight = Color(0xFF6063EE); // gradient end
+  static const Color _onPrimaryLight = Colors.white;
+  static const Color _onPrimaryContainerLight = Color(0xFF06008F);
 
-  // Secondary - Teal
-  static const Color _secondaryLight = Color(0xFF00897B);
-  static const Color _secondaryDark = Color(0xFF26A69A);
+  // Surface hierarchy (No-Line Rule — depth through tonal shift, no borders)
+  static const Color _surfaceLight = Color(0xFFFCF8FF);
+  static const Color _surfaceContainerLowestLight = Color(0xFFF8F5FF);
+  static const Color _surfaceContainerLowLight = Color(0xFFF5F2FE);
+  static const Color _surfaceContainerLight = Color(0xFFEFECF6);
+  static const Color _surfaceContainerHighLight = Color(0xFFE9E6F0);
+  static const Color _surfaceContainerHighestLight = Color(0xFFE4E1ED);
+  static const Color _onSurfaceLight = Color(0xFF1B1B23);
+  static const Color _onSurfaceVariantLight = Color(0xFF47464F);
+  static const Color _outlineVariantLight = Color(0xFFC9C5D0);
 
-  // Tertiary - Orange
-  static const Color _tertiaryLight = Color(0xFFFB8C00);
-  static const Color _tertiaryDark = Color(0xFFFFA726);
+  // Tertiary — "Online" state green (not a generic accent)
+  static const Color _tertiaryLight = Color(0xFF006C49);
+  static const Color _tertiaryContainerLight = Color(0xFF89F8C7);
+  static const Color _onTertiaryLight = Colors.white;
+  static const Color _onTertiaryContainerLight = Color(0xFF002115);
 
-  // Error - Red
-  static const Color _errorLight = Color(0xFFD32F2F);
-  static const Color _errorDark = Color(0xFFEF5350);
+  // Error
+  static const Color _errorLight = Color(0xFFBA1A1A);
+  static const Color _errorContainerLight = Color(0xFFFFDAD6);
+  static const Color _onErrorContainerLight = Color(0xFF410002);
 
-  // Light mode surfaces
-  static const Color _backgroundLight = Color(0xFFF8F9FA);
-  static const Color _surfaceLight = Color(0xFFFFFFFF);
-  static const Color _surfaceVariantLight = Color(0xFFE8EAED);
+  // ==================== DARK PALETTE ====================
+  // Primary — high-contrast Electric Indigo tonal for OLED
+  static const Color _primaryDark = Color(0xFFC0C1FF);
+  static const Color _primaryContainerDark = Color(0xFF8083FF); // gradient end
+  static const Color _onPrimaryDark = Color(0xFF0D0FAA);
+  static const Color _onPrimaryContainerDark = Color(0xFF1A1C82);
 
-  // Dark mode surfaces (Warmer tones from User App)
-  static const Color _backgroundDark = Color(0xFF1C1E21);
-  static const Color _surfaceDark = Color(0xFF282C34);
-  static const Color _surfaceVariantDark = Color(0xFF3A3F4B);
+  // Surface hierarchy — OLED-efficient deep charcoals
+  static const Color _surfaceDark = Color(0xFF131313);
+  static const Color _surfaceContainerLowestDark = Color(0xFF0E0E0E);
+  static const Color _surfaceContainerLowDark = Color(0xFF1C1B1B);
+  static const Color _surfaceContainerDark = Color(0xFF242422);
+  static const Color _surfaceContainerHighDark = Color(0xFF2E2D2C);
+  static const Color _surfaceContainerHighestDark = Color(0xFF353534);
+  static const Color _onSurfaceDark = Color(0xFFE5E2E1);
+  static const Color _onSurfaceVariantDark = Color(0xFFC9C6C4);
+  static const Color _outlineVariantDark = Color(0xFF47464E);
 
-  // ==================== DRIVER STATUS COLORS (KEPT FOR FUNCTIONALITY) ====================
+  // Tertiary — lighter online green for dark backgrounds
+  static const Color _tertiaryDark = Color(0xFF6DDBAB);
+  static const Color _tertiaryContainerDark = Color(0xFF005138);
+  static const Color _onTertiaryDark = Color(0xFF003825);
+  static const Color _onTertiaryContainerDark = Color(0xFF89F8C7);
 
-  // Online/Available status - Green (Distinct from Teal secondary)
-  static const Color onlineLight = Color(0xFF2E7D32);
-  static const Color onlineDark = Color(0xFF66BB6A);
+  // Error
+  static const Color _errorDark = Color(0xFFFFB4AB);
+  static const Color _errorContainerDark = Color(0xFF93000A);
+  static const Color _onErrorContainerDark = Color(0xFFFFDAD6);
 
-  // Busy/On Delivery status - Orange (Matches Tertiary)
-  static const Color busyLight = _tertiaryLight;
-  static const Color busyDark = _tertiaryDark;
+  // ==================== PUBLIC STATUS COLORS ====================
+  // Used by DriverThemeExtension and UI code directly.
 
-  // Offline status - Gray
-  static const Color offlineLight = Color(0xFF757575);
-  static const Color offlineDark = Color(0xFF9E9E9E);
+  static const Color onlineLight = _tertiaryLight;
+  static const Color onlineDark = _tertiaryDark;
+  static const Color onlineBgLight = _tertiaryContainerLight;
+  static const Color onlineBgDark = _tertiaryContainerDark;
 
-  // Break/Paused status - Yellow
-  static const Color pausedLight = Color(0xFFFBC02D);
-  static const Color pausedDark = Color(0xFFFFEB3B);
+  // Busy — deep orange; distinct from indigo primary and green tertiary
+  static const Color busyLight = Color(0xFFE65100);
+  static const Color busyDark = Color(0xFFFFB74D);
 
-  // ==================== ORDER & EARNINGS COLORS ====================
+  static const Color offlineLight = _onSurfaceVariantLight;
+  static const Color offlineDark = _onSurfaceVariantDark;
 
-  static const Color newOrderLight = Color(0xFF1565C0);
-  static const Color newOrderDark = Color(0xFF42A5F5);
+  // Paused — amber
+  static const Color pausedLight = Color(0xFFF57C00);
+  static const Color pausedDark = Color(0xFFFFCC02);
 
-  static const Color earningsPositiveLight = Color(0xFF2E7D32);
-  static const Color earningsPositiveDark = Color(0xFF66BB6A);
+  static const Color earningsPositiveLight = _tertiaryLight;
+  static const Color earningsPositiveDark = _tertiaryDark;
 
-  static const Color pendingPayoutLight = Color(0xFFF57C00);
+  static const Color pendingPayoutLight = Color(0xFFE65100);
   static const Color pendingPayoutDark = Color(0xFFFFB74D);
+
+  // ==================== GRADIENT SPECS ====================
+  // Primary CTA: linear from primary → primaryContainer at 135°.
+  // Flutter ElevatedButton cannot express gradients natively — use the
+  // GradientButton widget (lib/widgets/gradient_button.dart) for all
+  // primary CTAs ("Accept Trip", "Go Online", etc.).
+
+  static const LinearGradient primaryGradientLight = LinearGradient(
+    begin: Alignment.topRight,
+    end: Alignment.bottomLeft,
+    colors: [_primaryLight, _primaryContainerLight],
+  );
+
+  static const LinearGradient primaryGradientDark = LinearGradient(
+    begin: Alignment.topRight,
+    end: Alignment.bottomLeft,
+    colors: [_primaryDark, _primaryContainerDark],
+  );
+
+  // ==================== SHADOW SPECS ====================
+  // Light: primary-tinted ambient, 6% opacity, 16px blur.
+  // Dark: pure black occlusion shadow for floating sheets, 40% opacity.
+
+  static const BoxShadow ambientShadowLight = BoxShadow(
+    color: Color.fromRGBO(70, 72, 212, 0.06),
+    blurRadius: 16,
+    offset: Offset(0, 4),
+  );
+
+  static const BoxShadow ambientShadowDark = BoxShadow(
+    color: Color.fromRGBO(0, 0, 0, 0.40),
+    blurRadius: 48,
+    spreadRadius: -24,
+    offset: Offset(0, 24),
+  );
+
+  // ==================== GLASSMORPHISM SPECS ====================
+  // Light overlays: surface_container_lowest at 85%, 24px blur.
+  // Dark overlays: surface_variant at 60%, 20px blur.
+  // Applied manually to BackdropFilter widgets; not expressible in ThemeData.
+
+  static const double glassmorphismOpacityLight = 0.85;
+  static const double glassmorphismBlurLight = 24;
+
+  static const double glassmorphismOpacityDark = 0.60;
+  static const double glassmorphismBlurDark = 20;
+
+  /// Minimum safe margin between a map overlay and the screen edge.
+  static const double overlayBreathingMargin = 16;
 
   // ==================== LIGHT THEME ====================
 
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
+    fontFamily: 'PlusJakartaSans',
     colorScheme: const ColorScheme.light(
       primary: _primaryLight,
-      secondary: _secondaryLight,
+      primaryContainer: _primaryContainerLight,
+      onPrimaryContainer: _onPrimaryContainerLight,
       tertiary: _tertiaryLight,
+      tertiaryContainer: _tertiaryContainerLight,
+      onTertiary: _onTertiaryLight,
+      onTertiaryContainer: _onTertiaryContainerLight,
       error: _errorLight,
-      surfaceContainerHighest: _surfaceVariantLight,
-      onSecondary: Colors.white,
+      errorContainer: _errorContainerLight,
+      onErrorContainer: _onErrorContainerLight,
+      surface: _surfaceLight,
+      surfaceContainerLowest: _surfaceContainerLowestLight,
+      surfaceContainerLow: _surfaceContainerLowLight,
+      surfaceContainer: _surfaceContainerLight,
+      surfaceContainerHigh: _surfaceContainerHighLight,
+      surfaceContainerHighest: _surfaceContainerHighestLight,
+      onSurface: _onSurfaceLight,
+      onSurfaceVariant: _onSurfaceVariantLight,
+      outlineVariant: _outlineVariantLight,
     ),
-    fontFamily: 'Inter',
-    scaffoldBackgroundColor: _backgroundLight,
+    scaffoldBackgroundColor: _surfaceLight,
 
-    // AppBar theme - Flat design
+    // Flat; no elevation tint; containerLow acts as a visual step up from canvas
     appBarTheme: const AppBarTheme(
-      backgroundColor: _surfaceLight,
-      foregroundColor: Color(0xFF1C1E21),
+      backgroundColor: _surfaceContainerLowLight,
+      foregroundColor: _onSurfaceLight,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: true,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1C1E21), fontFamily: 'Inter'),
+      shadowColor: Colors.transparent,
+      titleTextStyle: TextStyle(
+        fontFamily: 'PlusJakartaSans',
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceLight,
+        letterSpacing: 0,
+      ),
     ),
 
-    // Card theme - Flat with border
-    cardTheme: CardThemeData(
+    // No-Line Rule: no border. Lift via tonal color only.
+    cardTheme: const CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: _surfaceVariantLight.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.all(Radius.circular(8)),
       ),
-      color: _surfaceLight,
+      color: _surfaceContainerHighestLight,
       margin: EdgeInsets.zero,
+      // For floating cards use ambientShadowLight via BoxDecoration in the widget.
     ),
 
-    // Elevated button - Primary actions
+    // ElevatedButton handles non-gradient cases. Primary CTAs use GradientButton.
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: _primaryLight,
-        foregroundColor: Colors.white,
+        foregroundColor: _onPrimaryLight,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        minimumSize: const Size.fromHeight(56),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
       ),
     ),
 
-    // Outlined button
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _primaryLight,
-        side: const BorderSide(color: _primaryLight),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        side: const BorderSide(color: _primaryLight, width: 1.5),
+        minimumSize: const Size.fromHeight(56),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
       ),
     ),
 
-    // Input decoration
-    inputDecorationTheme: InputDecorationTheme(
+    // Tertiary actions (low-priority: "View History") use TextButton defaults.
+
+    // Borderless fill; background shifts to containerHighest on focus;
+    // 2px primary bottom-only indicator replaces the full outline border.
+    inputDecorationTheme: const InputDecorationTheme(
       filled: true,
-      fillColor: _surfaceVariantLight,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _primaryLight, width: 2),
+      fillColor: _surfaceContainerHighLight,
+      border: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide.none,
       ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _errorLight, width: 2),
+      enabledBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      focusedBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(color: _primaryLight, width: 2),
+      ),
+      errorBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(color: _errorLight, width: 2),
+      ),
+      focusedErrorBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(color: _errorLight, width: 2),
+      ),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
 
-    // Bottom navigation bar
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: _surfaceLight,
+      backgroundColor: _surfaceContainerLowLight,
       selectedItemColor: _primaryLight,
-      unselectedItemColor: Color(0xFF757575),
+      unselectedItemColor: _onSurfaceVariantLight,
       type: BottomNavigationBarType.fixed,
-      elevation: 8,
+      elevation: 0,
       selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       unselectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
     ),
 
-    // Floating action button
+    // FAB glow is applied per-widget via ambientShadowLight; elevation stays 0.
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: _primaryLight,
-      foregroundColor: Colors.white,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+      foregroundColor: _onPrimaryLight,
+      elevation: 0,
+      focusElevation: 0,
+      hoverElevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
     ),
 
-    // Chip theme
-    chipTheme: ChipThemeData(
-      backgroundColor: _surfaceVariantLight,
-      selectedColor: _primaryLight.withValues(alpha: 0.1),
-      labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    chipTheme: const ChipThemeData(
+      backgroundColor: _surfaceContainerHighestLight,
+      // primary at 12% — expressed as a fixed RGBA to keep const
+      selectedColor: Color.fromRGBO(70, 72, 212, 0.12),
+      labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+      ),
+      side: BorderSide.none,
     ),
 
-    // Text theme
+    // Plus Jakarta Sans editorial scale.
+    // displaySmall → critical metrics (earnings, ETA). Feels like a magazine headline.
+    // headlineSmall → job card titles; legible at arm's length.
+    // labelMedium / labelSmall → metadata; apply uppercase + 0.7 tracking at the widget level.
     textTheme: const TextTheme(
-      displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF1C1E21), height: 1.2),
-      headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF1C1E21), height: 1.3),
-      titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1C1E21), height: 1.4),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFF1C1E21), height: 1.5),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: Color(0xFF4A5568), height: 1.5),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: Color(0xFF718096), height: 1.5),
+      displaySmall: TextStyle(
+        fontSize: 36,
+        fontWeight: FontWeight.w700,
+        color: _onSurfaceLight,
+        height: 1.1,
+        letterSpacing: -0.5,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        color: _onSurfaceLight,
+        height: 1.2,
+      ),
+      headlineSmall: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceLight,
+        height: 1.3,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceLight,
+        height: 1.4,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceLight,
+        height: 1.4,
+      ),
+      titleSmall: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceLight,
+        height: 1.4,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: _onSurfaceLight,
+        height: 1.5,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: _onSurfaceVariantLight,
+        height: 1.5,
+      ),
+      bodySmall: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: _onSurfaceVariantLight,
+        height: 1.5,
+      ),
+      // Metadata labels — callers apply TextStyle(letterSpacing: 0.7) and uppercase.
+      labelLarge: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceLight,
+        height: 1.3,
+        letterSpacing: 0.5,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceVariantLight,
+        height: 1.3,
+        letterSpacing: 0.7,
+      ),
+      labelSmall: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceVariantLight,
+        height: 1.3,
+        letterSpacing: 0.7,
+      ),
     ),
   );
 
@@ -177,123 +413,261 @@ class DriverAppTheme {
 
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
+    fontFamily: 'PlusJakartaSans',
     colorScheme: const ColorScheme.dark(
       primary: _primaryDark,
-      secondary: _secondaryDark,
+      onPrimary: _onPrimaryDark,
+      primaryContainer: _primaryContainerDark,
+      onPrimaryContainer: _onPrimaryContainerDark,
       tertiary: _tertiaryDark,
+      tertiaryContainer: _tertiaryContainerDark,
+      onTertiary: _onTertiaryDark,
+      onTertiaryContainer: _onTertiaryContainerDark,
       error: _errorDark,
+      errorContainer: _errorContainerDark,
+      onErrorContainer: _onErrorContainerDark,
       surface: _surfaceDark,
-      surfaceContainerHighest: _surfaceVariantDark,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
+      surfaceContainerLowest: _surfaceContainerLowestDark,
+      surfaceContainerLow: _surfaceContainerLowDark,
+      surfaceContainer: _surfaceContainerDark,
+      surfaceContainerHigh: _surfaceContainerHighDark,
+      surfaceContainerHighest: _surfaceContainerHighestDark,
+      onSurface: _onSurfaceDark,
+      onSurfaceVariant: _onSurfaceVariantDark,
+      outlineVariant: _outlineVariantDark,
     ),
-    fontFamily: 'Inter',
-    scaffoldBackgroundColor: _backgroundDark,
+    scaffoldBackgroundColor: _surfaceDark,
 
-    // AppBar theme
     appBarTheme: const AppBarTheme(
-      backgroundColor: _surfaceDark,
-      foregroundColor: Color(0xFFE8EAED),
+      backgroundColor: _surfaceContainerLowDark,
+      foregroundColor: _onSurfaceDark,
       elevation: 0,
+      scrolledUnderElevation: 0,
       centerTitle: true,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFE8EAED), fontFamily: 'Inter'),
+      shadowColor: Colors.transparent,
+      titleTextStyle: TextStyle(
+        fontFamily: 'PlusJakartaSans',
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceDark,
+        letterSpacing: 0,
+      ),
     ),
 
-    // Card theme
-    cardTheme: CardThemeData(
+    cardTheme: const CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: _surfaceVariantDark.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.all(Radius.circular(8)),
       ),
-      color: _surfaceDark,
+      color: _surfaceContainerHighestDark,
       margin: EdgeInsets.zero,
     ),
 
-    // Elevated button
+    // Dark system specifies 4px radius on primary buttons (precision instrument feel).
+    // Background: primaryContainer; text: onPrimaryContainer.
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: _primaryDark,
-        foregroundColor: Colors.white,
+        backgroundColor: _primaryContainerDark,
+        foregroundColor: _onPrimaryContainerDark,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        minimumSize: const Size.fromHeight(56),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
       ),
     ),
 
-    // Outlined button
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: _primaryDark,
-        side: const BorderSide(color: _primaryDark),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        side: const BorderSide(color: _primaryDark, width: 1.5),
+        minimumSize: const Size.fromHeight(56),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
       ),
     ),
 
-    // Input decoration
-    inputDecorationTheme: InputDecorationTheme(
+    // Minimalist input: containerHighest 2px bottom bar; glows primary on focus.
+    inputDecorationTheme: const InputDecorationTheme(
       filled: true,
-      fillColor: _surfaceVariantDark,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _primaryDark, width: 2),
+      fillColor: _surfaceContainerHighestDark,
+      border: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide.none,
       ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _errorDark, width: 2),
+      enabledBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(
+          color: _surfaceContainerHighestDark,
+          width: 2,
+        ),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      focusedBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(color: _primaryDark, width: 2),
+      ),
+      // Error text/icon uses error token; avoid red fill to keep Night Navigator calm.
+      errorBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(color: _errorDark, width: 2),
+      ),
+      focusedErrorBorder: UnderlineInputBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(8),
+        ),
+        borderSide: BorderSide(color: _errorDark, width: 2),
+      ),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
 
-    // Bottom navigation bar
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: _surfaceDark,
+      backgroundColor: _surfaceContainerLowDark,
       selectedItemColor: _primaryDark,
-      unselectedItemColor: Color(0xFF8E95A5),
+      unselectedItemColor: _onSurfaceVariantDark,
       type: BottomNavigationBarType.fixed,
-      elevation: 8,
+      elevation: 0,
       selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       unselectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
     ),
 
-    // Floating action button
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: _primaryDark,
-      foregroundColor: Colors.white,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+      backgroundColor: _primaryContainerDark,
+      foregroundColor: _onPrimaryContainerDark,
+      elevation: 0,
+      focusElevation: 0,
+      hoverElevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
     ),
 
-    // Chip theme
-    chipTheme: ChipThemeData(
-      backgroundColor: _surfaceVariantDark,
-      selectedColor: _primaryDark.withValues(alpha: 0.2),
-      labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFFE8EAED)),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    chipTheme: const ChipThemeData(
+      backgroundColor: _surfaceContainerHighestDark,
+      // primary at 20% — expressed as fixed RGBA
+      selectedColor: Color.fromRGBO(192, 193, 255, 0.20),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: _onSurfaceDark,
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+      ),
+      side: BorderSide.none,
     ),
 
-    // Text theme
+    // Same typographic scale as light; color tokens adjust automatically.
     textTheme: const TextTheme(
-      displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFFE8EAED), height: 1.2),
-      headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFFE8EAED), height: 1.3),
-      titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFFE8EAED), height: 1.4),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: Color(0xFFE8EAED), height: 1.5),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: Color(0xFFB8BCC8), height: 1.5),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: Color(0xFF8E95A5), height: 1.5),
+      displaySmall: TextStyle(
+        fontSize: 36,
+        fontWeight: FontWeight.w700,
+        color: _onSurfaceDark,
+        height: 1.1,
+        letterSpacing: -0.5,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        color: _onSurfaceDark,
+        height: 1.2,
+      ),
+      headlineSmall: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceDark,
+        height: 1.3,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceDark,
+        height: 1.4,
+      ),
+      titleMedium: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceDark,
+        height: 1.4,
+      ),
+      titleSmall: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceDark,
+        height: 1.4,
+      ),
+      bodyLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        color: _onSurfaceDark,
+        height: 1.5,
+      ),
+      bodyMedium: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: _onSurfaceVariantDark,
+        height: 1.5,
+      ),
+      bodySmall: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: _onSurfaceVariantDark,
+        height: 1.5,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceDark,
+        height: 1.3,
+        letterSpacing: 0.5,
+      ),
+      labelMedium: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceVariantDark,
+        height: 1.3,
+        letterSpacing: 0.7,
+      ),
+      labelSmall: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: _onSurfaceVariantDark,
+        height: 1.3,
+        letterSpacing: 0.7,
+      ),
     ),
   );
 
-  // ==================== CUSTOM EXTENSIONS ====================
+  // ==================== STATUS COLOR HELPERS ====================
 
-  // Helper method to get status color
-  static Color getStatusColor(DriverStatus status, bool isDark) {
+  static Color getStatusColor(DriverStatus status, {required bool isDark}) {
     switch (status) {
       case DriverStatus.online:
         return isDark ? onlineDark : onlineLight;
@@ -306,41 +680,61 @@ class DriverAppTheme {
     }
   }
 
-  // Helper method to get earnings color
-  static Color getEarningsColor(double amount, bool isDark) {
+  static Color getEarningsColor(double amount, {required bool isDark}) {
     if (amount > 0) {
       return isDark ? earningsPositiveDark : earningsPositiveLight;
-    } else if (amount == 0) {
-      return isDark ? offlineDark : offlineLight;
-    } else {
-      return isDark ? _errorDark : _errorLight;
     }
+    if (amount == 0) {
+      return isDark ? offlineDark : offlineLight;
+    }
+    return isDark ? _errorDark : _errorLight;
   }
 }
 
-// ==================== DRIVER STATUS ENUM ====================
-
-enum DriverStatus {
-  online, // Available for orders
-  busy, // On active delivery
-  offline, // Not available
-  paused, // On break
-}
-
-// ==================== THEME EXTENSION FOR DRIVER COLORS ====================
+// ==================== THEME EXTENSION ====================
+// Access design-system-specific tokens from any widget via
+//   Theme.of(context).onlineColor
+//   Theme.of(context).primaryGradient
+//   Theme.of(context).ambientShadow
+// etc.
 
 extension DriverThemeExtension on ThemeData {
-  Color get onlineColor => brightness == Brightness.light ? DriverAppTheme.onlineLight : DriverAppTheme.onlineDark;
+  bool get _isDark => brightness == Brightness.dark;
 
-  Color get busyColor => brightness == Brightness.light ? DriverAppTheme.busyLight : DriverAppTheme.busyDark;
+  Color get onlineColor =>
+      _isDark ? DriverAppTheme.onlineDark : DriverAppTheme.onlineLight;
 
-  Color get offlineColor => brightness == Brightness.light ? DriverAppTheme.offlineLight : DriverAppTheme.offlineDark;
+  Color get onlineBgColor =>
+      _isDark ? DriverAppTheme.onlineBgDark : DriverAppTheme.onlineBgLight;
 
-  Color get pausedColor => brightness == Brightness.light ? DriverAppTheme.pausedLight : DriverAppTheme.pausedDark;
+  Color get busyColor =>
+      _isDark ? DriverAppTheme.busyDark : DriverAppTheme.busyLight;
 
-  Color get newOrderColor => brightness == Brightness.light ? DriverAppTheme.newOrderLight : DriverAppTheme.newOrderDark;
+  Color get offlineColor =>
+      _isDark ? DriverAppTheme.offlineDark : DriverAppTheme.offlineLight;
 
-  Color get earningsColor => brightness == Brightness.light ? DriverAppTheme.earningsPositiveLight : DriverAppTheme.earningsPositiveDark;
+  Color get pausedColor =>
+      _isDark ? DriverAppTheme.pausedDark : DriverAppTheme.pausedLight;
 
-  Color get pendingPayoutColor => brightness == Brightness.light ? DriverAppTheme.pendingPayoutLight : DriverAppTheme.pendingPayoutDark;
+  Color get earningsColor =>
+      _isDark ? DriverAppTheme.earningsPositiveDark : DriverAppTheme.earningsPositiveLight;
+
+  Color get pendingPayoutColor =>
+      _isDark ? DriverAppTheme.pendingPayoutDark : DriverAppTheme.pendingPayoutLight;
+
+  LinearGradient get primaryGradient =>
+      _isDark ? DriverAppTheme.primaryGradientDark : DriverAppTheme.primaryGradientLight;
+
+  /// Primary-tinted ambient shadow (light) / pure-black occlusion shadow (dark).
+  /// Use in a BoxDecoration's boxShadow list on floating elements.
+  BoxShadow get ambientShadow =>
+      _isDark ? DriverAppTheme.ambientShadowDark : DriverAppTheme.ambientShadowLight;
+
+  double get glassmorphismOpacity => _isDark
+      ? DriverAppTheme.glassmorphismOpacityDark
+      : DriverAppTheme.glassmorphismOpacityLight;
+
+  double get glassmorphismBlur => _isDark
+      ? DriverAppTheme.glassmorphismBlurDark
+      : DriverAppTheme.glassmorphismBlurLight;
 }

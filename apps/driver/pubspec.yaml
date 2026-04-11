@@ -50,13 +50,13 @@ flutter:
     - assets/mapbox/
     - .env
   fonts:
-    - family: Inter
+    - family: PlusJakartaSans
       fonts:
-        - asset: assets/fonts/Inter/Inter-Regular.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Inter/Inter-Medium.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-Medium.ttf
           weight: 500
-        - asset: assets/fonts/Inter/Inter-SemiBold.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Inter/Inter-Bold.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-Bold.ttf
           weight: 700
