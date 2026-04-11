@@ -4,10 +4,15 @@ export type AuthTokens = {
 };
 
 export type AuthUser = {
-  id?: string;
+  userUuid: string;
   email: string;
+  fullName: string;
+  role: "client" | "courier" | "business" | "admin";
+  phoneNumber?: string;
+  profilePictureUrl?: string;
   businessName?: string;
-  role?: "client" | "courier" | "business";
+  isVerified: boolean;
+  isActive: boolean;
 };
 
 export type ApiSuccess<T> = {
@@ -23,14 +28,29 @@ export type LoginPayload = {
 };
 
 export type RegisterPayload = {
-  businessName: string;
+  fullName: string;
   email: string;
   password: string;
+  phone?: string;
+  businessName: string;
   gstNumber?: string;
+  monthlyVolume?: "0-100" | "100-500" | "500-2000" | "2000+";
 };
 
 export type AuthResponseData = {
-  accessToken: string;
-  refreshToken: string;
-  user: AuthUser;
+  actor: {
+    user: AuthUser;
+  };
+  auth: {
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      tokenType: "Bearer";
+    };
+    session: {
+      method: "email" | "google" | "refresh";
+      isNewUser?: boolean;
+    };
+  };
 };

@@ -56,43 +56,55 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {
         method: "POST",
         body: JSON.stringify({
-          ...payload,
-          role: "client",
+          credentials: {
+            email: payload.email,
+            password: payload.password,
+          },
         }),
       },
       { auth: false },
     );
 
+    const { tokens } = response.data.auth;
     setStoredTokens({
-      accessToken: response.data.accessToken,
-      refreshToken: response.data.refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     });
-    setStoredUser(response.data.user);
-    setUser(response.data.user);
+    setStoredUser(response.data.actor.user);
+    setUser(response.data.actor.user);
   }, []);
 
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const response = await apiRequest<ApiSuccess<AuthResponseData>>(
-      "/auth/register",
+      "/auth/register/business",
       {
         method: "POST",
         body: JSON.stringify({
-          name: payload.businessName,
-          email: payload.email,
-          password: payload.password,
-          gstNumber: payload.gstNumber,
-          role: "client",
+          identity: {
+            fullName: payload.fullName,
+            phoneNumber: payload.phone,
+          },
+          credentials: {
+            email: payload.email,
+            password: payload.password,
+          },
+          business: {
+            businessName: payload.businessName,
+            gstNumber: payload.gstNumber,
+            monthlyVolume: payload.monthlyVolume,
+          },
         }),
       },
       { auth: false },
     );
 
+    const { tokens } = response.data.auth;
     setStoredTokens({
-      accessToken: response.data.accessToken,
-      refreshToken: response.data.refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     });
-    setStoredUser(response.data.user);
-    setUser(response.data.user);
+    setStoredUser(response.data.actor.user);
+    setUser(response.data.actor.user);
   }, []);
 
   const signOut = useCallback(() => {
