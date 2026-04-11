@@ -56,7 +56,10 @@ export function Navbar() {
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-7 md:flex">
+          <nav
+            aria-label="Primary"
+            className="hidden items-center gap-7 md:flex"
+          >
             {navLinks.map((link) => (
               <a
                 key={link.label}
@@ -89,6 +92,8 @@ export function Navbar() {
           <button
             className="inline-flex size-9 items-center justify-center rounded-xl text-foreground transition hover:bg-surface-container-low md:hidden"
             aria-label="Open menu"
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-navigation"
             onClick={() => setIsMenuOpen(true)}
           >
             <Menu className="size-5" />
@@ -98,6 +103,7 @@ export function Navbar() {
 
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <SheetContent
+          id="mobile-navigation"
           side="right"
           className="w-[85%] border-none bg-surface-container-lowest p-0 sm:max-w-xs"
         >

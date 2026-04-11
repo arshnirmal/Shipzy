@@ -14,11 +14,18 @@ export function useIntersectionObserver<T extends Element>({
   once = true,
 }: UseIntersectionObserverOptions = {}) {
   const ref = useRef<T | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !("IntersectionObserver" in window);
+  });
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+
+    if (!("IntersectionObserver" in window)) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {

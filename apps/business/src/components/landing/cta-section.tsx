@@ -5,7 +5,11 @@ import { cn } from "@/lib/utils";
 
 export function CtaSection() {
   return (
-    <section id="pricing" className="pb-20 sm:pb-24">
+    <section
+      id="pricing"
+      aria-labelledby="pricing-heading"
+      className="pb-20 sm:pb-24"
+    >
       <div className="container-shell">
         <div className="gradient-brand relative overflow-hidden rounded-3xl px-6 py-14 text-center text-primary-foreground sm:px-10">
           <div className="absolute -top-10 left-1/3 h-40 w-40 rounded-full bg-white/16 blur-3xl" />
@@ -14,7 +18,10 @@ export function CtaSection() {
           <div className="absolute right-14 top-10 h-2 w-2 rounded-full bg-white/55" />
 
           <p className="label-md text-white/80">Ready When You Are</p>
-          <h2 className="display-sm mx-auto mt-4 max-w-2xl text-white">
+          <h2
+            id="pricing-heading"
+            className="display-sm mx-auto mt-4 max-w-2xl text-white"
+          >
             Ready to transform your logistics?
           </h2>
           <p className="body-md mx-auto mt-4 max-w-xl text-white/80">

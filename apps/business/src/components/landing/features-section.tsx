@@ -38,11 +38,15 @@ export function FeaturesSection() {
   });
 
   return (
-    <section id="features" className="bg-surface-container-low py-20 sm:py-24">
+    <section
+      id="features"
+      aria-labelledby="features-heading"
+      className="bg-surface-container-low py-20 sm:py-24"
+    >
       <div className="container-shell">
         <div className="max-w-2xl">
           <p className="label-md text-primary">What You Can Do</p>
-          <h2 className="display-md mt-4 text-on-surface">
+          <h2 id="features-heading" className="display-md mt-4 text-on-surface">
             Precision tools for modern operations teams
           </h2>
           <p className="body-lg mt-4 text-muted-foreground">

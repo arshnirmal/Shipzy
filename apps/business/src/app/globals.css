@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-plus-jakarta);
   --font-mono: var(--font-plus-jakarta);
-  --font-heading: var(--font-space-grotesk);
+  --font-heading: var(--font-sora);
   --color-primary-container: var(--primary-container);
   --color-surface: var(--surface);
   --color-surface-container-lowest: var(--surface-container-lowest);
@@ -196,7 +196,7 @@
   }
 
   .display-lg {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-sora);
     font-size: clamp(2.5rem, 6.2vw, 4.6rem);
     line-height: 1.02;
     letter-spacing: -0.04em;
@@ -204,7 +204,7 @@
   }
 
   .display-md {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-sora);
     font-size: clamp(2rem, 4.6vw, 3.2rem);
     line-height: 1.08;
     letter-spacing: -0.03em;
@@ -212,7 +212,7 @@
   }
 
   .display-sm {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-sora);
     font-size: clamp(1.6rem, 3.8vw, 2.4rem);
     line-height: 1.15;
     letter-spacing: -0.02em;
@@ -220,7 +220,7 @@
   }
 
   .headline-sm {
-    font-family: var(--font-space-grotesk);
+    font-family: var(--font-sora);
     font-size: clamp(1.2rem, 2.3vw, 1.55rem);
     line-height: 1.3;
     letter-spacing: -0.01em;
@@ -347,6 +347,27 @@
 
   .link-clean {
     @apply text-muted-foreground transition-colors hover:text-foreground;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .reveal,
+  .reveal-visible {
+    opacity: 1;
+    transform: none;
+    animation: none !important;
   }
 }
 

@@ -26,11 +26,18 @@ export function HowItWorks() {
   });
 
   return (
-    <section id="how-it-works" className="py-20 sm:py-24">
+    <section
+      id="how-it-works"
+      aria-labelledby="how-it-works-heading"
+      className="py-20 sm:py-24"
+    >
       <div className="container-shell">
         <div className="mx-auto max-w-2xl text-center">
           <p className="label-md text-primary">How It Works</p>
-          <h2 className="display-md mt-4 text-on-surface">
+          <h2
+            id="how-it-works-heading"
+            className="display-md mt-4 text-on-surface"
+          >
             Deploy your delivery stack in three steps
           </h2>
         </div>

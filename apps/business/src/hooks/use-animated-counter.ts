@@ -12,9 +12,12 @@ export function useAnimatedCounter(
   { duration = 1300, start = true }: UseAnimatedCounterOptions = {},
 ) {
   const [value, setValue] = useState(0);
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   useEffect(() => {
-    if (!start) {
+    if (!start || prefersReducedMotion) {
       return;
     }
 
@@ -36,7 +39,11 @@ export function useAnimatedCounter(
     frame = window.requestAnimationFrame(tick);
 
     return () => window.cancelAnimationFrame(frame);
-  }, [duration, start, target]);
+  }, [duration, prefersReducedMotion, start, target]);
+
+  if (prefersReducedMotion && start) {
+    return target;
+  }
 
   return value;
 }

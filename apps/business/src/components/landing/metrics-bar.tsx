@@ -34,12 +34,12 @@ function MetricCard({ metric, start }: { metric: MetricItem; start: boolean }) {
   );
 
   return (
-    <div className="space-y-1 text-center sm:text-left lg:px-4">
+    <li className="space-y-1 text-center sm:text-left lg:px-4">
       <p className="display-sm text-primary">
         {formatMetric(metric, animatedValue)}
       </p>
       <p className="body-sm text-muted-foreground">{metric.label}</p>
-    </div>
+    </li>
   );
 }
 
@@ -52,7 +52,7 @@ export function MetricsBar() {
     <section className="pb-8" aria-label="Business metrics">
       <div ref={ref} className="container-shell">
         <div className="surface-pane rounded-2xl px-6 py-6 shadow-[var(--shadow-ambient-sm)] md:px-10">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3">
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3">
             {metrics.map((metric) => (
               <MetricCard
                 key={metric.label}
@@ -60,7 +60,7 @@ export function MetricsBar() {
                 start={isVisible}
               />
             ))}
-          </div>
+          </ul>
         </div>
       </div>
     </section>

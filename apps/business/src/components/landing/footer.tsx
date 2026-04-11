@@ -3,25 +3,41 @@ import Link from "next/link";
 const footerColumns = [
   {
     title: "Product",
-    links: ["Dashboard", "Analytics", "Integrations"],
+    links: [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Analytics", href: "/dashboard" },
+      { label: "Integrations", href: "/settings" },
+    ],
   },
   {
     title: "Company",
-    links: ["About", "Careers", "Contact"],
+    links: [
+      { label: "About", href: "#" },
+      { label: "Careers", href: "#" },
+      { label: "Contact", href: "#" },
+    ],
   },
   {
     title: "Resources",
-    links: ["Guides", "API Docs", "Help Center"],
+    links: [
+      { label: "Guides", href: "#how-it-works" },
+      { label: "API Docs", href: "#" },
+      { label: "Help Center", href: "#" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Terms", "Privacy", "Security"],
+    links: [
+      { label: "Terms", href: "#" },
+      { label: "Privacy", href: "#" },
+      { label: "Security", href: "#" },
+    ],
   },
 ];
 
 export function Footer() {
   return (
-    <footer className="bg-surface-container-low py-16">
+    <footer className="bg-surface-container-low py-16" aria-label="Footer">
       <div className="container-shell">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-3 lg:col-span-1">
@@ -37,9 +53,9 @@ export function Footer() {
               <p className="title-sm text-on-surface">{column.title}</p>
               <ul className="space-y-2">
                 {column.links.map((link) => (
-                  <li key={link}>
-                    <Link href="#" className="body-sm link-clean">
-                      {link}
+                  <li key={link.label}>
+                    <Link href={link.href} className="body-sm link-clean">
+                      {link.label}
                     </Link>
                   </li>
                 ))}
