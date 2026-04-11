@@ -18,6 +18,7 @@ import {
 } from "../../utils/datetime.util.js";
 import authRepository from "./auth.repository.js";
 import type {
+  BusinessRegisterRequest,
   LoginRequest,
   RegisterRequest,
   AuthResponse,
@@ -32,7 +33,7 @@ class AuthService {
     return {
       userId: user.userId,
       userUuid: user.userUuid,
-      role: user.roleName as "client" | "courier",
+      role: user.roleName as "client" | "courier" | "business" | "admin",
       phoneNumber: user.phoneNumber ?? undefined,
       email: user.email ?? undefined,
       fullName: user.fullName,
@@ -359,6 +360,91 @@ class AuthService {
     } catch (error) {
       logger.error({
         msg: "Email registration failed",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Register new business user with email/password
+   * Role is hardcoded to "business" — not accepted from the client
+   */
+  async registerBusiness(
+    userData: BusinessRegisterRequest,
+    deviceInfo: DeviceInfo,
+  ): Promise<AuthResponse> {
+    try {
+      const {
+        identity: { fullName, phoneNumber },
+        credentials: { email, password },
+        business: { businessName, gstNumber, monthlyVolume },
+      } = userData;
+
+      const existingUser = await authRepository.findByEmail(email);
+      if (existingUser) {
+        throw new ValidationError("User with this email already exists");
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      const user = await authRepository.createBusinessUser(
+        { fullName, email, passwordHash, phoneNumber },
+        { businessName, gstNumber, monthlyVolume },
+      );
+
+      logger.info({
+        msg: "New business user registered",
+        userId: user.userId,
+        email,
+      });
+
+      const accessToken = generateAccessToken({
+        userId: user.userId,
+        userUuid: user.userUuid,
+        role: user.roleName,
+        email: user.email ?? undefined,
+      });
+
+      const refreshToken = generateRefreshToken({
+        userId: user.userId,
+        userUuid: user.userUuid,
+      });
+
+      const tokenHash = crypto
+        .createHash("sha256")
+        .update(accessToken)
+        .digest("hex");
+      const refreshTokenHashValue = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
+
+      await authRepository.storeJwtToken({
+        userId: user.userId,
+        email: user.email ?? undefined,
+        tokenHash,
+        refreshTokenHash: refreshTokenHashValue,
+        deviceId: deviceInfo?.deviceId,
+        deviceInfo,
+        ipAddress: deviceInfo?.ipAddress,
+        authMethod: "email",
+      });
+
+      return this.buildAuthResponse(
+        user,
+        {
+          accessToken,
+          refreshToken,
+          expiresIn: JWT_ACCESS_EXPIRES_IN,
+          tokenType: "Bearer",
+        },
+        "email",
+        true,
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Business registration failed",
         error: (error as Error).message,
       });
       throw error;

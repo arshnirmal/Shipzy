@@ -2,8 +2,11 @@
 import { eq, and, isNull, gt, sql, not } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
-import { userProfiles } from "../../database/schema/users.js";
-import { authSessions } from "../../database/schema/users.js";
+import {
+  userProfiles,
+  authSessions,
+  businessAccounts,
+} from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
 
 import type { AuthUser } from "../../types/user.js";
@@ -61,6 +64,19 @@ interface CreateEmailUserData {
   email: string;
   passwordHash: string;
   phoneNumber?: string | null;
+}
+
+interface CreateBusinessUserData {
+  fullName: string;
+  email: string;
+  passwordHash: string;
+  phoneNumber?: string | null;
+}
+
+interface CreateBusinessAccountData {
+  businessName: string;
+  gstNumber?: string;
+  monthlyVolume?: "0-100" | "100-500" | "500-2000" | "2000+";
 }
 
 interface StoreJwtTokenData {
@@ -306,6 +322,70 @@ class AuthRepository {
     } catch (error) {
       logger.error({
         msg: "Error creating email user",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Create business user and business account in a single transaction
+   */
+  async createBusinessUser(
+    userData: CreateBusinessUserData,
+    accountData: CreateBusinessAccountData,
+  ): Promise<User> {
+    try {
+      const user = await drizzleDb.transaction(async (tx) => {
+        const [createdUser] = await tx
+          .insert(userProfiles)
+          .values({
+            role: "business" as const,
+            fullName: userData.fullName,
+            email: userData.email,
+            passwordHash: userData.passwordHash,
+            phoneNumber: userData.phoneNumber || undefined,
+            isVerified: false,
+          })
+          .returning();
+
+        if (!createdUser) throw new Error("User insert returned no row");
+
+        await tx.insert(businessAccounts).values({
+          userId: createdUser.userId,
+          businessName: accountData.businessName,
+          gstNumber: accountData.gstNumber || undefined,
+          monthlyVolume: accountData.monthlyVolume,
+        });
+
+        const [fetched] = await tx
+          .select({
+            userId: userProfiles.userId,
+            userUuid: userProfiles.userUuid,
+            roleName: userProfiles.role,
+            firebaseUid: userProfiles.firebaseUid,
+            phoneNumber: userProfiles.phoneNumber,
+            email: userProfiles.email,
+            fullName: userProfiles.fullName,
+            profilePictureUrl: userProfiles.profilePictureUrl,
+            isVerified: userProfiles.isVerified,
+            isActive: userProfiles.isActive,
+            createdAt: userProfiles.createdAt,
+            updatedAt: userProfiles.updatedAt,
+          })
+          .from(userProfiles)
+          .where(eq(userProfiles.userId, createdUser.userId))
+          .limit(1);
+
+        if (!fetched) throw new Error("User not found after creation");
+
+        return mapProfileRowToUser(fetched);
+      });
+
+      return user;
+    } catch (error) {
+      logger.error({
+        msg: "Error creating business user",
         error: (error as Error).message,
       });
       throw error;

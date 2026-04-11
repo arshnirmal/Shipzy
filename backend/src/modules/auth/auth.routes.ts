@@ -2,6 +2,7 @@
 import { FastifyInstance } from "fastify";
 import authController from "./auth.controller.js";
 import {
+  businessRegisterSchema,
   refreshTokenSchema,
   verifyGoogleSchema,
   registerSchema,
@@ -50,6 +51,16 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
       config: { rateLimit: AUTH_RATE_LIMIT },
     },
     authController.login.bind(authController),
+  );
+
+  // POST /api/v1/auth/register/business
+  fastify.post(
+    "/register/business",
+    {
+      schema: businessRegisterSchema,
+      config: { rateLimit: AUTH_RATE_LIMIT },
+    },
+    authController.registerBusiness.bind(authController),
   );
 
   // POST /api/v1/auth/logout

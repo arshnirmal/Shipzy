@@ -121,7 +121,7 @@ export type FareBreakdown = z.infer<typeof FareBreakdownZ>;
 export const BaseUserZ = z.object({
   userId: z.number().int().positive(),
   userUuid: z.string().uuid(),
-  role: z.enum(["client", "courier"]),
+  role: z.enum(["client", "courier", "business", "admin"]),
   phoneNumber: z.string().nullable().optional(),
   email: z.string().email().nullable().optional(),
   fullName: z.string().min(2).max(100),

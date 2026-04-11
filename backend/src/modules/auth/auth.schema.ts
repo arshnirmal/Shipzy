@@ -2,6 +2,7 @@
 import { FastifySchema } from "fastify";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
+  BusinessRegisterRequestZ,
   GoogleAuthRequestZ,
   RefreshTokenRequestZ,
   RegisterRequestZ,
@@ -26,4 +27,10 @@ export const registerSchema: FastifySchema = {
 
 export const loginSchema: FastifySchema = {
   body: zodToJsonSchema(LoginRequestZ as unknown as ZodToJsonSchemaInput),
+};
+
+export const businessRegisterSchema: FastifySchema = {
+  body: zodToJsonSchema(
+    BusinessRegisterRequestZ as unknown as ZodToJsonSchemaInput,
+  ),
 };

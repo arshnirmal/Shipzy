@@ -85,6 +85,12 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "completed",
   "failed",
 ]);
+export const monthlyVolumeEnum = pgEnum("monthly_volume", [
+  "0-100",
+  "100-500",
+  "500-2000",
+  "2000+",
+]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "completed",

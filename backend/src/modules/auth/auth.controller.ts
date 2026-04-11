@@ -8,6 +8,7 @@ import authService from "./auth.service.js";
 import type { DeviceInfo } from "../../types/index.js";
 
 import type {
+  BusinessRegisterRequest,
   GoogleAuthRequest,
   RefreshTokenRequest,
   RegisterRequest,
@@ -162,6 +163,36 @@ class AuthController {
     } catch (error) {
       logger.error({
         msg: "Registration controller error",
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/register/business
+   * Register new business user
+   */
+  async registerBusiness(
+    request: FastifyRequest<{ Body: BusinessRegisterRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const deviceInfo = this._getDeviceInfo(request);
+      const result = await authService.registerBusiness(request.body, deviceInfo);
+
+      return successResponse(
+        reply,
+        result,
+        "Business account registered successfully",
+        201,
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Business registration controller error",
         error: (error as Error).message,
       });
       if (error instanceof AppError) {

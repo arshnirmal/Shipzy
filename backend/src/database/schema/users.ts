@@ -18,7 +18,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { userRoleEnum, authMethodEnum } from "./public.js";
+import { userRoleEnum, authMethodEnum, monthlyVolumeEnum } from "./public.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
 
 const usersSchema = pgSchema("users");
@@ -130,6 +130,7 @@ export const businessAccounts = usersSchema.table("business_accounts", {
   panNumber: varchar("pan_number", { length: 10 }),
   businessType: varchar("business_type", { length: 100 }),
   website: varchar("website", { length: 255 }),
+  monthlyVolume: monthlyVolumeEnum("monthly_volume"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

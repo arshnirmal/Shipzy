@@ -58,6 +58,34 @@ export const GoogleAuthRequestZ = z
   .strict();
 export type GoogleAuthRequest = z.infer<typeof GoogleAuthRequestZ>;
 
+// Business Register Request
+export const BusinessRegisterRequestZ = z
+  .object({
+    identity: z
+      .object({
+        fullName: z.string().min(2).max(100),
+        phoneNumber: z.string().min(10).max(20).optional(),
+      })
+      .strict(),
+    credentials: z
+      .object({
+        email: z.string().email().max(100),
+        password: z.string().min(8).max(72),
+      })
+      .strict(),
+    business: z
+      .object({
+        businessName: z.string().min(2).max(200),
+        gstNumber: z.string().max(15).optional(),
+        monthlyVolume: z
+          .enum(["0-100", "100-500", "500-2000", "2000+"])
+          .optional(),
+      })
+      .strict(),
+  })
+  .strict();
+export type BusinessRegisterRequest = z.infer<typeof BusinessRegisterRequestZ>;
+
 // Refresh Token Request
 export const RefreshTokenRequestZ = z
   .object({
