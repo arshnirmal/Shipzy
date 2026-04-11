@@ -310,183 +310,453 @@ class _OnboardingHeroIllustration extends StatelessWidget {
   }
 }
 
-class _ScheduleIllustration extends StatelessWidget {
+class _ScheduleIllustration extends StatefulWidget {
   const _ScheduleIllustration();
 
   @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 280,
-          height: 280,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: colorScheme.primary.withValues(alpha: 0.08)),
-        ),
-        Container(
-          width: 210,
-          height: 210,
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: colorScheme.onSurface.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 10))],
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.15), width: 2),
-          ),
-          child: Center(
-            child: Container(
-              width: 104,
-              height: 104,
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                borderRadius: BorderRadius.circular(26),
-                boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 8))],
-              ),
-              child: Icon(Icons.schedule_rounded, color: colorScheme.onPrimary, size: 52),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 72,
-          right: 54,
-          child: _FloatingTag(icon: Icons.work_outline_rounded, text: 'Flexible', color: colorScheme.secondary),
-        ),
-      ],
-    );
-  }
+  State<_ScheduleIllustration> createState() => _ScheduleIllustrationState();
 }
 
-class _NavigationIllustration extends StatelessWidget {
-  const _NavigationIllustration();
+class _ScheduleIllustrationState extends State<_ScheduleIllustration> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 280,
-          height: 280,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: colorScheme.primary.withValues(alpha: 0.08)),
-        ),
-        Container(
-          width: 224,
-          height: 224,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            color: colorScheme.surface,
-            boxShadow: [BoxShadow(color: colorScheme.onSurface.withValues(alpha: 0.08), blurRadius: 18, offset: const Offset(0, 8))],
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.16), width: 1.5),
-          ),
-          child: CustomPaint(painter: _RoutePainter(color: colorScheme.primary)),
-        ),
-        Positioned(
-          bottom: 54,
-          child: Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              color: colorScheme.primary,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 8))],
-            ),
-            child: Icon(Icons.navigation_rounded, color: colorScheme.onPrimary, size: 44),
-          ),
-        ),
-      ],
+    final toggleProgress = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0, 0.45, curve: Curves.easeOut),
     );
-  }
-}
-
-class _PayoutIllustration extends StatelessWidget {
-  const _PayoutIllustration();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 280,
-          height: 280,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: colorScheme.primary.withValues(alpha: 0.08)),
-        ),
-        Container(
-          width: 168,
-          height: 168,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: colorScheme.surface,
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.15), width: 2),
-            boxShadow: [BoxShadow(color: colorScheme.onSurface.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 10))],
-          ),
-          child: Center(
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 8))],
-              ),
-              child: Icon(Icons.payments_rounded, color: colorScheme.onPrimary, size: 50),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 70,
-          left: 58,
-          child: _FloatingTag(icon: Icons.bolt_rounded, text: 'Daily', color: colorScheme.tertiary),
-        ),
-      ],
+    final chipOpacity = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.18, 0.75, curve: Curves.easeOut),
     );
-  }
-}
-
-class _FloatingTag extends StatelessWidget {
-  const _FloatingTag({required this.icon, required this.text, required this.color});
-
-  final IconData icon;
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(99),
-        boxShadow: [BoxShadow(color: colorScheme.onSurface.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))],
+    final chipSlide = Tween<double>(begin: 10, end: 0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.18, 0.78, curve: Curves.easeOutCubic),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    );
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Stack(
+        alignment: Alignment.center,
         children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(text, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.3)),
+          CustomPaint(
+            size: const Size.square(300),
+            painter: _ConcentricBackgroundPainter(color: colorScheme.primary),
+          ),
+          Container(
+            width: 210,
+            height: 104,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: colorScheme.primary.withValues(alpha: 0.25), width: 1.4),
+              boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 24, offset: const Offset(0, 12))],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'OFFLINE   ON DUTY',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant, letterSpacing: 0.6, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 10),
+                Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    Container(
+                      height: 14,
+                      decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(999)),
+                    ),
+                    Align(
+                      alignment: Alignment.lerp(Alignment.centerLeft, Alignment.centerRight, toggleProgress.value)!,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.28), blurRadius: 12, offset: const Offset(0, 4))],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 26,
+            top: 36 - chipSlide.value,
+            child: Opacity(
+              opacity: chipOpacity.value,
+              child: _InfoChip(
+                icon: Icons.payments_rounded,
+                text: '\$4,280',
+                backgroundColor: colorScheme.tertiaryContainer,
+                foregroundColor: colorScheme.onTertiaryContainer,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            bottom: 40,
+            child: Opacity(
+              opacity: chipOpacity.value,
+              child: _InfoChip(
+                icon: Icons.schedule_rounded,
+                text: 'Flexible hours',
+                backgroundColor: colorScheme.surface,
+                foregroundColor: colorScheme.onSurface,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _RoutePainter extends CustomPainter {
-  const _RoutePainter({required this.color});
+class _NavigationIllustration extends StatefulWidget {
+  const _NavigationIllustration();
+
+  @override
+  State<_NavigationIllustration> createState() => _NavigationIllustrationState();
+}
+
+class _NavigationIllustrationState extends State<_NavigationIllustration> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 820))..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final pathProgress = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0, 0.65, curve: Curves.easeOut),
+    );
+    final etaSlide = Tween<double>(begin: -12, end: 0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.45, 0.92, curve: Curves.easeOutCubic),
+      ),
+    );
+    final etaOpacity = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.5, 0.96, curve: Curves.easeOut),
+    );
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size.square(300),
+            painter: _DottedBackdropPainter(color: colorScheme.onSurface),
+          ),
+          Container(
+            width: 238,
+            height: 212,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              color: colorScheme.surfaceContainerHigh,
+              border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.44)),
+              boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10))],
+            ),
+            child: CustomPaint(
+              painter: _RoutePainter(color: colorScheme.primary, progress: pathProgress.value),
+            ),
+          ),
+          Positioned(
+            left: 54,
+            top: 118,
+            child: _MapPin(color: colorScheme.primary, icon: Icons.inventory_2_rounded),
+          ),
+          Positioned(
+            right: 54,
+            top: 58,
+            child: _MapPin(color: colorScheme.tertiary, icon: Icons.home_rounded),
+          ),
+          Positioned(
+            top: 22 + etaSlide.value,
+            child: Opacity(
+              opacity: etaOpacity.value,
+              child: _InfoChip(
+                icon: Icons.route_rounded,
+                text: '2.4 km  8 min',
+                backgroundColor: colorScheme.surface,
+                foregroundColor: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PayoutIllustration extends StatefulWidget {
+  const _PayoutIllustration();
+
+  @override
+  State<_PayoutIllustration> createState() => _PayoutIllustrationState();
+}
+
+class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final countProgress = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0, 0.68, curve: Curves.easeOut),
+    );
+    final pulse =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.04).chain(CurveTween(curve: Curves.easeOut)), weight: 50),
+          TweenSequenceItem(tween: Tween<double>(begin: 1.04, end: 1).chain(CurveTween(curve: Curves.easeInOut)), weight: 50),
+        ]).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.64, 1, curve: Curves.easeInOut),
+          ),
+        );
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final amount = (4280 * countProgress.value).round();
+
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.bottomLeft,
+                  end: Alignment.topRight,
+                  colors: [colorScheme.primary.withValues(alpha: 0.12), colorScheme.primaryContainer.withValues(alpha: 0.06)],
+                ),
+              ),
+              child: const SizedBox(width: 280, height: 280),
+            ),
+            Container(
+              width: 230,
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                color: colorScheme.surfaceContainerHigh,
+                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 12))],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Today', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '\$${amount.toString()}',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('16 deliveries  8h online', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Transform.scale(
+                      scale: pulse.value,
+                      child: Container(
+                        width: 160,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          gradient: LinearGradient(colors: [colorScheme.primary, colorScheme.primaryContainer]),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'Withdraw',
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 36,
+              right: 30,
+              child: _InfoChip(
+                icon: Icons.bolt_rounded,
+                text: 'Daily',
+                backgroundColor: colorScheme.tertiaryContainer,
+                foregroundColor: colorScheme.onTertiaryContainer,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.text, required this.backgroundColor, required this.foregroundColor});
+
+  final IconData icon;
+  final String text;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(999),
+      boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))],
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: foregroundColor),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: foregroundColor, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+        ),
+      ],
+    ),
+  );
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin({required this.color, required this.icon});
+
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 30,
+    height: 30,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    child: Icon(icon, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+  );
+}
+
+class _ConcentricBackgroundPainter extends CustomPainter {
+  const _ConcentricBackgroundPainter({required this.color});
 
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(size.width * 0.2, size.height * 0.82)
-      ..cubicTo(size.width * 0.35, size.height * 0.22, size.width * 0.72, size.height * 0.9, size.width * 0.84, size.height * 0.28);
+    final center = Offset(size.width / 2, size.height / 2);
+    final radialPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.02)],
+      ).createShader(Rect.fromCircle(center: center, radius: size.width / 2));
 
-    final basePaint = Paint()
-      ..color = color.withValues(alpha: 0.2)
+    canvas.drawCircle(center, size.width / 2, radialPaint);
+
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color.withValues(alpha: 0.12);
+    canvas.drawCircle(center, size.width * 0.35, ringPaint);
+    canvas.drawCircle(center, size.width * 0.46, ringPaint..color = color.withValues(alpha: 0.08));
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConcentricBackgroundPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _DottedBackdropPainter extends CustomPainter {
+  const _DottedBackdropPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dotPaint = Paint()..color = color.withValues(alpha: 0.03);
+
+    for (double y = 22; y < size.height; y += 18) {
+      for (double x = 18; x < size.width; x += 18) {
+        canvas.drawCircle(Offset(x, y), 1.2, dotPaint);
+      }
+    }
+
+    final vignettePaint = Paint()
+      ..shader = RadialGradient(radius: 0.9, colors: [Colors.transparent, color.withValues(alpha: 0.06)]).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, vignettePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DottedBackdropPainter oldDelegate) => oldDelegate.color != color;
+}
+
+class _RoutePainter extends CustomPainter {
+  const _RoutePainter({required this.color, required this.progress});
+
+  final Color color;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width * 0.2, size.height * 0.78)
+      ..cubicTo(size.width * 0.38, size.height * 0.22, size.width * 0.64, size.height * 0.9, size.width * 0.82, size.height * 0.25);
+
+    final dashedPaint = Paint()
+      ..color = color.withValues(alpha: 0.34)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
@@ -497,18 +767,26 @@ class _RoutePainter extends CustomPainter {
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawPath(path, basePaint);
-
     for (final metric in path.computeMetrics()) {
-      final activeEnd = metric.length * 0.58;
-      canvas.drawPath(metric.extractPath(0, activeEnd), activePaint);
-      final endTangent = metric.getTangentForOffset(activeEnd);
-      if (endTangent != null) {
-        canvas.drawCircle(endTangent.position, 5, Paint()..color = color);
+      const dashLength = 8.0;
+      const gapLength = 8.0;
+      double distance = 0;
+
+      while (distance < metric.length) {
+        final next = (distance + dashLength).clamp(0, metric.length).toDouble();
+        canvas.drawPath(metric.extractPath(distance, next), dashedPaint);
+        distance += dashLength + gapLength;
+      }
+
+      final visibleLength = (metric.length * progress).clamp(0, metric.length).toDouble();
+      canvas.drawPath(metric.extractPath(0, visibleLength), activePaint);
+      final tangent = metric.getTangentForOffset(visibleLength);
+      if (tangent != null) {
+        canvas.drawCircle(tangent.position, 4.5, Paint()..color = color);
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _RoutePainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _RoutePainter oldDelegate) => oldDelegate.color != color || oldDelegate.progress != progress;
 }

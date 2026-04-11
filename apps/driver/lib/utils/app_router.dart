@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/storage_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
@@ -18,43 +19,66 @@ import 'app_routes.dart';
 
 part 'app_router.g.dart';
 
+const String _kHasSeenOnboardingKey = 'has_seen_onboarding';
+
+final FutureProvider<bool> onboardingSeenProvider = FutureProvider<bool>((Ref ref) async {
+  final sharedPreferences = await ref.watch(sharedPreferencesProvider.future);
+  return sharedPreferences.getBool(_kHasSeenOnboardingKey) ?? false;
+});
+
 @riverpod
 GoRouter router(Ref ref) {
   final authState = ref.watch(authProvider);
+  final onboardingSeenState = ref.watch(onboardingSeenProvider);
 
   return GoRouter(
     debugLogDiagnostics: true,
     initialLocation: AppRoutes.splash,
 
-    // Redirect logic based on auth state
     redirect: (context, state) {
-      final authStateValue = authState;
-      final isOnSplash = state.matchedLocation == AppRoutes.splash;
+      final location = state.matchedLocation;
 
-      // Handle splash screen redirects
-      if (isOnSplash) {
-        return authStateValue.maybeWhen(
-          data: (authData) => authData.maybeWhen(
-            authenticated: (user, {required isNewUser}) => AppRoutes.home,
-            unauthenticated: () => AppRoutes.login,
-            orElse: () => AppRoutes.login,
-          ),
-          orElse: () => null, // Stay on splash while loading
-        );
+      if (authState.valueOrNull == null || onboardingSeenState.valueOrNull == null) {
+        return location == AppRoutes.splash ? null : AppRoutes.splash;
       }
 
-      // If auth state is still loading, don't redirect
-      final authResult = authStateValue.maybeWhen(
-        data: (authData) => authData.maybeWhen(
-          authenticated: (user, {required isNewUser}) => isNewUser ? AppRoutes.setupProfile : 'authenticated',
-          unauthenticated: () => 'unauthenticated',
-          orElse: () => 'unknown',
-        ),
-        orElse: () => null, // Loading state
-      );
+      final hasSeenOnboarding = onboardingSeenState.value ?? false;
+      final isOnboardingRoute = location == AppRoutes.onboarding;
 
-      if (authResult == null) {
-        return null; // Stay on current route while loading
+      if (!hasSeenOnboarding) {
+        return isOnboardingRoute ? null : AppRoutes.onboarding;
+      }
+
+      final authData = authState.value!;
+      final isAuthenticated = authData is Authenticated;
+      final isNewUser = authData is Authenticated && authData.isNewUser;
+
+      final isOnSplash = location == AppRoutes.splash;
+      final isAuthRoute = location == AppRoutes.login || location == AppRoutes.register;
+      final isProfileOnboardingRoute = location == AppRoutes.setupProfile || location == AppRoutes.documentUpload;
+      final isMainRoute =
+          location == AppRoutes.home || location == AppRoutes.orders || location == AppRoutes.earnings || location == AppRoutes.profile;
+
+      if (isOnboardingRoute) {
+        if (!isAuthenticated) {
+          return AppRoutes.login;
+        }
+        return isNewUser ? AppRoutes.setupProfile : AppRoutes.home;
+      }
+
+      if (!isAuthenticated) {
+        if (isMainRoute || isProfileOnboardingRoute || isOnSplash) {
+          return AppRoutes.login;
+        }
+        return null;
+      }
+
+      if (isNewUser) {
+        return isProfileOnboardingRoute ? null : AppRoutes.setupProfile;
+      }
+
+      if (isAuthRoute || isOnSplash || isProfileOnboardingRoute) {
+        return AppRoutes.home;
       }
 
       return null;
