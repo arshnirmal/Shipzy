@@ -199,8 +199,46 @@ export const ListOrdersQueryZ = BaseQueryZ.extend({
   sortBy: z
     .enum(["createdAt", "totalPrice", "deliveredAt", "pickedUpAt"])
     .optional(),
+  search: z.string().max(200).optional(),
+  deliveryTypeId: z.coerce.number().int().positive().optional(),
+  minPrice: z.coerce.number().nonnegative().optional(),
+  maxPrice: z.coerce.number().nonnegative().optional(),
 }).strict();
 export type ListOrdersQuery = z.infer<typeof ListOrdersQueryZ>;
+
+export const BulkCancelRequestZ = z
+  .object({
+    orders: z
+      .object({
+        ids: z.array(z.number().int().positive()).min(1).max(100),
+        reason: z.string().min(5).max(500),
+      })
+      .strict(),
+  })
+  .strict();
+export type BulkCancelRequest = z.infer<typeof BulkCancelRequestZ>;
+
+export const BulkCancelResultZ = z
+  .object({
+    bulk: z
+      .object({
+        requested: z.number().int().nonnegative(),
+        cancelled: z.number().int().nonnegative(),
+        failed: z.number().int().nonnegative(),
+        results: z.array(
+          z
+            .object({
+              orderId: z.number().int().positive(),
+              success: z.boolean(),
+              error: z.string().optional(),
+            })
+            .strict(),
+        ),
+      })
+      .strict(),
+  })
+  .strict();
+export type BulkCancelResult = z.infer<typeof BulkCancelResultZ>;
 
 export const AvailableOrdersQueryZ = z
   .object({

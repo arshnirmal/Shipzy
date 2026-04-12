@@ -16,6 +16,7 @@ import type {
   OrderParams,
   ListOrdersQuery,
   AvailableOrdersQuery,
+  BulkCancelRequest,
 } from "./orders.zod.js";
 
 class OrdersController {
@@ -131,6 +132,10 @@ class OrdersController {
         dateTo,
         sortBy,
         sortOrder,
+        search,
+        deliveryTypeId,
+        minPrice,
+        maxPrice,
       } = request.query;
 
       const result = await ordersService.listOrders(
@@ -142,6 +147,10 @@ class OrdersController {
         dateTo,
         sortBy,
         sortOrder,
+        search,
+        deliveryTypeId,
+        minPrice,
+        maxPrice,
       );
 
       logger.info({
@@ -311,6 +320,39 @@ class OrdersController {
     }
   }
 
+  /**
+   * POST /api/v1/orders/bulk-cancel
+   * Bulk cancel multiple orders (clients and business users)
+   */
+  async bulkCancelOrders(
+    request: FastifyRequest<{ Body: BulkCancelRequest }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { userId } = request.user!;
+      const {
+        orders: { ids, reason },
+      } = request.body;
+
+      const result = await ordersService.bulkCancelOrders(userId, ids, reason);
+
+      logger.info({
+        msg: "POST /api/v1/orders/bulk-cancel",
+        statusCode: 200,
+        userId,
+        requested: result.bulk.requested,
+        cancelled: result.bulk.cancelled,
+        failed: result.bulk.failed,
+      });
+
+      return successResponse(reply, result, "Bulk cancel processed");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
 }
 
 export default new OrdersController();

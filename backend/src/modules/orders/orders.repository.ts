@@ -120,6 +120,10 @@ class OrdersRepository {
     dateTo?: string,
     sortBy?: string,
     sortOrder: "asc" | "desc" = "desc",
+    search?: string,
+    deliveryTypeId?: number,
+    minPrice?: number,
+    maxPrice?: number,
   ): Promise<{ orders: OrderListRow[]; total: number }> {
     try {
       const sortCol = SORT_COLUMN_WHITELIST[sortBy ?? ""] ?? "o.created_at";
@@ -135,21 +139,41 @@ class OrdersRepository {
         statusWhere = `AND o.status = 'cancelled'`;
       }
 
-      // Build date WHERE clauses with parameterized placeholders
+      // Build parameterized filter conditions
       const queryParams: Array<number | string> = [clientId];
-      const dateConditions: string[] = [];
+      const filterConditions: string[] = [];
 
       if (dateFrom) {
         queryParams.push(dateFrom);
-        dateConditions.push(`o.created_at >= $${queryParams.length}`);
+        filterConditions.push(`o.created_at >= $${queryParams.length}`);
       }
       if (dateTo) {
         queryParams.push(dateTo);
-        dateConditions.push(`o.created_at <= $${queryParams.length}`);
+        filterConditions.push(`o.created_at <= $${queryParams.length}`);
+      }
+      if (search) {
+        const pattern = `%${search}%`;
+        queryParams.push(pattern);
+        const idx = queryParams.length;
+        filterConditions.push(
+          `(o.order_number ILIKE $${idx} OR o.delivery_location->>'contactName' ILIKE $${idx} OR o.delivery_location->>'fullAddress' ILIKE $${idx})`,
+        );
+      }
+      if (deliveryTypeId != null) {
+        queryParams.push(deliveryTypeId);
+        filterConditions.push(`o.delivery_type_id = $${queryParams.length}`);
+      }
+      if (minPrice != null) {
+        queryParams.push(minPrice);
+        filterConditions.push(`o.total_price >= $${queryParams.length}`);
+      }
+      if (maxPrice != null) {
+        queryParams.push(maxPrice);
+        filterConditions.push(`o.total_price <= $${queryParams.length}`);
       }
 
-      const dateWhere = dateConditions.length
-        ? `AND ${dateConditions.join(" AND ")}`
+      const filterWhere = filterConditions.length
+        ? `AND ${filterConditions.join(" AND ")}`
         : "";
       const countParams = [...queryParams];
 
@@ -197,7 +221,7 @@ class OrdersRepository {
         WHERE o.client_id = $1
           AND o.deleted_at IS NULL
           ${statusWhere}
-          ${dateWhere}
+          ${filterWhere}
       `;
 
       const ordersQuery = `
@@ -435,6 +459,59 @@ class OrdersRepository {
       });
       throw error;
     }
+  }
+
+  /**
+   * Bulk cancel orders for a client/business user
+   */
+  async bulkCancelOrders(
+    orderIds: number[],
+    userId: number,
+    reason: string,
+  ): Promise<{
+    requested: number;
+    cancelled: number;
+    failed: number;
+    results: { orderId: number; success: boolean; error?: string }[];
+  }> {
+    const results: { orderId: number; success: boolean; error?: string }[] = [];
+
+    await Promise.all(
+      orderIds.map(async (orderId) => {
+        try {
+          const result = await drizzlePool.query(
+            ordersQueries.CALL_CANCEL_ORDER_WITH_REFUND,
+            [orderId, reason, userId],
+          );
+          const raw = result.rows[0]?.result as
+            | Record<string, unknown>
+            | undefined;
+          if (!raw?.success) {
+            results.push({
+              orderId,
+              success: false,
+              error: String(raw?.error ?? "Cannot cancel order"),
+            });
+          } else {
+            results.push({ orderId, success: true });
+          }
+        } catch (err) {
+          results.push({
+            orderId,
+            success: false,
+            error: (err as Error).message,
+          });
+        }
+      }),
+    );
+
+    const cancelled = results.filter((r) => r.success).length;
+    return {
+      requested: orderIds.length,
+      cancelled,
+      failed: orderIds.length - cancelled,
+      results,
+    };
   }
 }
 

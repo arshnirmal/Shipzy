@@ -4,6 +4,7 @@ import { authorize } from "../../middleware/auth.middleware.js";
 import ordersController from "./orders.controller.js";
 import {
   acceptOrderSchema,
+  bulkCancelSchema,
   calculateFareSchema,
   cancelOrderSchema,
   createOrderSchema,
@@ -34,12 +35,12 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     ordersController.createOrder.bind(ordersController) as any,
   );
 
-  // GET /api/v1/orders - List user's orders (clients only)
+  // GET /api/v1/orders - List user's orders (clients and business)
   fastify.get(
     "/",
     {
       schema: listOrdersSchema,
-      onRequest: [authorize("client")],
+      onRequest: [authorize("client", "business")],
     },
     ordersController.listOrders.bind(ordersController) as any,
   );
@@ -59,17 +60,27 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id",
     {
       schema: getOrderByIdSchema,
-      onRequest: [authorize("client", "courier")],
+      onRequest: [authorize("client", "courier", "business")],
     },
     ordersController.getOrderById.bind(ordersController) as any,
   );
 
-  // POST /api/v1/orders/:id/cancel - Cancel order (clients only)
+  // POST /api/v1/orders/bulk-cancel - Bulk cancel orders (clients and business)
+  fastify.post(
+    "/bulk-cancel",
+    {
+      schema: bulkCancelSchema,
+      onRequest: [authorize("client", "business")],
+    },
+    ordersController.bulkCancelOrders.bind(ordersController) as any,
+  );
+
+  // POST /api/v1/orders/:id/cancel - Cancel order (clients and business)
   fastify.post(
     "/:id/cancel",
     {
       schema: cancelOrderSchema,
-      onRequest: [authorize("client")],
+      onRequest: [authorize("client", "business")],
     },
     ordersController.cancelOrder.bind(ordersController) as any,
   );

@@ -291,6 +291,10 @@ class OrdersService {
     dateTo?: string,
     sortBy?: string,
     sortOrder?: string,
+    search?: string,
+    deliveryTypeId?: number,
+    minPrice?: number,
+    maxPrice?: number,
   ): Promise<{
     orders: OrderListItem[];
     pagination: {
@@ -311,6 +315,10 @@ class OrdersService {
       dateTo,
       sortBy,
       sortOrder as "asc" | "desc" | undefined,
+      search,
+      deliveryTypeId,
+      minPrice,
+      maxPrice,
     );
 
     return {
@@ -482,6 +490,26 @@ class OrdersService {
         timestamp: toIsoDateTime(timestamp),
       },
     };
+  }
+
+  async bulkCancelOrders(
+    userId: number,
+    orderIds: number[],
+    reason: string,
+  ): Promise<{
+    bulk: {
+      requested: number;
+      cancelled: number;
+      failed: number;
+      results: { orderId: number; success: boolean; error?: string }[];
+    };
+  }> {
+    const result = await ordersRepository.bulkCancelOrders(
+      orderIds,
+      userId,
+      reason,
+    );
+    return { bulk: result };
   }
 }
 
