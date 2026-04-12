@@ -1,5 +1,5 @@
 {
-  "id": "7e510508-9e23-4dc4-aaa7-765b9c8527c4",
+  "id": "a4ed4260-c973-4558-a7bb-1ee3a20c2c80",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -789,6 +789,13 @@
         "website": {
           "name": "website",
           "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "monthly_volume": {
+          "name": "monthly_volume",
+          "type": "monthly_volume",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -3152,6 +3159,16 @@
         "phone",
         "google",
         "firebase"
+      ]
+    },
+    "public.monthly_volume": {
+      "name": "monthly_volume",
+      "schema": "public",
+      "values": [
+        "0-100",
+        "100-500",
+        "500-2000",
+        "2000+"
       ]
     },
     "public.notification_channel": {

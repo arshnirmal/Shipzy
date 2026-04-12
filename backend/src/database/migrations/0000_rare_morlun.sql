@@ -1,5 +1,6 @@
 CREATE TYPE "public"."assignment_status" AS ENUM('assigned', 'accepted', 'rejected', 'picked_up', 'in_transit', 'delivered', 'cancelled', 'returned');--> statement-breakpoint
 CREATE TYPE "public"."auth_method" AS ENUM('email', 'phone', 'google', 'firebase');--> statement-breakpoint
+CREATE TYPE "public"."monthly_volume" AS ENUM('0-100', '100-500', '500-2000', '2000+');--> statement-breakpoint
 CREATE TYPE "public"."notification_channel" AS ENUM('push', 'sms', 'email', 'in_app');--> statement-breakpoint
 CREATE TYPE "public"."notification_priority" AS ENUM('low', 'normal', 'high', 'critical');--> statement-breakpoint
 CREATE TYPE "public"."notification_status" AS ENUM('pending', 'sent', 'delivered', 'read', 'failed');--> statement-breakpoint
@@ -117,6 +118,7 @@ CREATE TABLE "users"."business_accounts" (
 	"pan_number" varchar(10),
 	"business_type" varchar(100),
 	"website" varchar(255),
+	"monthly_volume" "monthly_volume",
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "business_accounts_gst_number_unique" UNIQUE("gst_number")
