@@ -34,7 +34,7 @@
     "db:reset": "./scripts/db-reset.sh",
     "db:backup": "./scripts/db-backup.sh",
     "db:restore": "./scripts/db-restore.sh",
-    "db:seed": "tsx scripts/seed-api.ts",
+    "db:seed": "tsx scripts/seed-interactive/index.ts",
     "db:seed:master": "tsx scripts/seed-master.ts",
     "dev:setup": "./scripts/startup.sh",
     "dev:reset": "FORCE_RESET=true ./scripts/db-reset.sh && pnpm run dev",
@@ -79,6 +79,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.3.0",
+    "@inquirer/prompts": "^7.10.1",
     "@types/bcrypt": "^5.0.2",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.10",

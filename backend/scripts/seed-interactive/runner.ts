@@ -2,200 +2,20 @@ import axios, { AxiosInstance, AxiosResponse, Method } from "axios";
 import { faker } from "@faker-js/faker";
 import fs from "node:fs/promises";
 import path from "node:path";
-
-type Role = "client" | "courier" | "business";
-type OrderFlow = "pending" | "mixed" | "delivered";
-type ModuleName =
-  | "static"
-  | "users"
-  | "drivers"
-  | "businesses"
-  | "orders"
-  | "ratings"
-  | "addresses"
-  | "health";
-type ScenarioName =
-  | "frontend-user"
-  | "frontend-driver"
-  | "frontend-business"
-  | "frontend-all"
-  | "api-smoke";
-
-type ActionStats = { success: number; failure: number };
-
-type TargetQuery = {
-  id?: number;
-  email?: string;
-  password?: string;
-};
-
-type ActorAuth = {
-  userId: number;
-  email: string;
-  fullName: string;
-  role: Role;
-  phoneNumber?: string;
-  accessToken: string;
-  password: string;
-  source: "created" | "existing-db";
-};
-
-type OrderRecord = {
-  orderId: number;
-  orderNumber?: string;
-  status: string;
-  clientUserId: number;
-  courierUserId?: number;
-};
-
-type RatingRecord = {
-  orderId: number;
-  driverId: number;
-  customerId: number;
-  rating: number;
-};
-
-type FailureEntry = {
-  action: string;
-  status?: number;
-  message: string;
-  details?: string;
-};
-
-type SeedConfig = {
-  apiUrl: string;
-  seed: number;
-  scenarios: ScenarioName[];
-  modules: Set<ModuleName>;
-  orderFlow: OrderFlow;
-  failFast: boolean;
-  dryRun: boolean;
-  dbTargetLookup: boolean;
-  requestDelayMs: number;
-  counts: {
-    users: number;
-    drivers: number;
-    businesses: number;
-    orders: number;
-    ratings: number;
-  };
-  targetClient: TargetQuery;
-  targetDriver: TargetQuery;
-  manifestFile: string;
-  tag: string;
-};
-
-type CreateOrderCatalog = {
-  deliveryTypes: any[];
-  packageTypes: any[];
-  paymentMethods: any[];
-};
-
-type DrizzleModule = {
-  drizzlePool: {
-    query: (queryText: string, values: unknown[]) => Promise<{ rows: any[] }>;
-    end: () => Promise<void>;
-  };
-};
-
-const DEFAULT_API_URL =
-  process.env.API_URL ||
-  `http://${process.env.BACKEND_HOST || "localhost"}:${process.env.BACKEND_PORT || "3000"}/api/v1`;
-
-const DEFAULT_COUNTS = {
-  users: 3,
-  drivers: 2,
-  businesses: 2,
-  orders: 6,
-  ratings: 3,
-};
-
-const HELP_TEXT = `
-Shipzy API Seeder
-
-Usage:
-  pnpm run db:seed -- [flags]
-
-Scenarios:
-  --scenarios frontend-all
-  --scenarios frontend-user,frontend-driver
-
-Modules (can be combined):
-  --modules static,users,drivers,businesses,orders,addresses
-  --modules ratings   # ratings are opt-in only
-
-Core Flags:
-  --api-url <url>                     API base URL (default from env)
-  --seed <number>                     Seed for deterministic faker data
-  --tag <string>                      Tag prefix for generated emails
-  --manifest-file <path>              Where to write output manifest JSON
-  --dry-run                           Print plan and exit
-  --fail-fast                         Stop immediately on first failure
-
-Counts:
-  --count-users <n>
-  --count-drivers <n>
-  --count-businesses <n>
-  --count-orders <n>
-  --count-ratings <n>
-
-Order Flow:
-  --order-flow pending|mixed|delivered
-
-Optional Modules:
-  --enable-ratings                    Adds ratings module
-  --enable-address-intelligence       Adds addresses module
-
-Targeting (for orders/driver actions):
-  --target-client-id <id>
-  --target-client-email <email>
-  --target-client-password <password>
-  --target-driver-id <id>
-  --target-driver-email <email>
-  --target-driver-password <password>
-  --db-target-lookup                  Allows DB lookup for target client/driver only
-
-Examples:
-  pnpm run db:seed -- --scenarios frontend-all
-  pnpm run db:seed -- --modules users,drivers,orders --order-flow mixed --count-orders 10
-  pnpm run db:seed -- --modules orders --target-client-email alice@shipzy.test --target-client-password Password123! --db-target-lookup
-  pnpm run db:seed -- --modules ratings --enable-ratings --count-ratings 5
-`.trim();
-
-const SCENARIO_MODULES: Record<ScenarioName, ModuleName[]> = {
-  "frontend-user": ["static", "users", "orders"],
-  "frontend-driver": ["static", "drivers", "orders"],
-  "frontend-business": ["static", "businesses"],
-  "frontend-all": [
-    "static",
-    "users",
-    "drivers",
-    "businesses",
-    "orders",
-    "addresses",
-    "health",
-  ],
-  "api-smoke": ["static", "addresses", "health"],
-};
-
-const VALID_MODULES: ModuleName[] = [
-  "static",
-  "users",
-  "drivers",
-  "businesses",
-  "orders",
-  "ratings",
-  "addresses",
-  "health",
-];
-
-const VALID_SCENARIOS: ScenarioName[] = [
-  "frontend-user",
-  "frontend-driver",
-  "frontend-business",
-  "frontend-all",
-  "api-smoke",
-];
+import {
+  ActorAuth,
+  ActionStats,
+  CreateOrderCatalog,
+  DrizzleModule,
+  FailureEntry,
+  OrderFlow,
+  OrderRecord,
+  RatingRecord,
+  Role,
+  SeedConfig,
+  SeedManifest,
+  TargetQuery,
+} from "./types.js";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -204,22 +24,6 @@ const normalizeEmail = (value?: string): string | undefined => {
   const normalized = value.trim().toLowerCase();
   return normalized.length > 0 ? normalized : undefined;
 };
-
-const formatNow = () => new Date().toISOString().replace(/[:.]/g, "-");
-
-const parseIntArg = (flag: string, value: string): number => {
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    throw new Error(`${flag} expects a positive integer.`);
-  }
-  return parsed;
-};
-
-const parseCsv = (value: string): string[] =>
-  value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
 
 const randomIndianPhone = () => `9${faker.string.numeric(9)}`.slice(0, 10);
 
@@ -231,247 +35,14 @@ const pickRandom = <T>(items: T[]): T => {
 const chance = (numerator: number, denominator = 1000): boolean =>
   faker.number.int({ min: 1, max: denominator }) <= numerator;
 
-const scenarioLabel = (scenarios: ScenarioName[]) =>
-  scenarios.length ? scenarios.join(",") : "none";
-
-const parseArgs = (argv: string[]): SeedConfig & { help: boolean } => {
-  const scenarios = new Set<ScenarioName>();
-  const modules = new Set<ModuleName>();
-
-  const config: SeedConfig & { help: boolean } = {
-    apiUrl: DEFAULT_API_URL,
-    seed: 42,
-    scenarios: [],
-    modules,
-    orderFlow: "mixed",
-    failFast: false,
-    dryRun: false,
-    dbTargetLookup: false,
-    requestDelayMs: 150,
-    counts: {
-      ...DEFAULT_COUNTS,
-    },
-    targetClient: {},
-    targetDriver: {},
-    manifestFile: path.resolve(
-      process.cwd(),
-      "scripts/output",
-      `seed-manifest-${formatNow()}.json`,
-    ),
-    tag: "seed",
-    help: false,
-  };
-
-  const requireNext = (index: number, flag: string): string => {
-    const next = argv[index + 1];
-    if (!next || next.startsWith("--")) {
-      throw new Error(`${flag} requires a value.`);
-    }
-    return next;
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-
-    switch (arg) {
-      case "--help":
-      case "-h":
-        config.help = true;
-        break;
-      case "--api-url":
-        config.apiUrl = requireNext(i, arg);
-        i += 1;
-        break;
-      case "--seed":
-        config.seed = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--tag":
-        config.tag = requireNext(i, arg).trim() || "seed";
-        i += 1;
-        break;
-      case "--manifest-file":
-        config.manifestFile = path.resolve(process.cwd(), requireNext(i, arg));
-        i += 1;
-        break;
-      case "--request-delay-ms":
-        config.requestDelayMs = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--count-users":
-        config.counts.users = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--count-drivers":
-        config.counts.drivers = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--count-businesses":
-        config.counts.businesses = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--count-orders":
-        config.counts.orders = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--count-ratings":
-        config.counts.ratings = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--order-flow": {
-        const flow = requireNext(i, arg) as OrderFlow;
-        if (!["pending", "mixed", "delivered"].includes(flow)) {
-          throw new Error(`${arg} must be one of pending|mixed|delivered.`);
-        }
-        config.orderFlow = flow;
-        i += 1;
-        break;
-      }
-      case "--scenarios": {
-        const values = parseCsv(requireNext(i, arg));
-        for (const item of values) {
-          if (!VALID_SCENARIOS.includes(item as ScenarioName)) {
-            throw new Error(
-              `Invalid scenario '${item}'. Valid values: ${VALID_SCENARIOS.join(", ")}`,
-            );
-          }
-          scenarios.add(item as ScenarioName);
-        }
-        i += 1;
-        break;
-      }
-      case "--modules": {
-        const values = parseCsv(requireNext(i, arg));
-        for (const item of values) {
-          if (!VALID_MODULES.includes(item as ModuleName)) {
-            throw new Error(
-              `Invalid module '${item}'. Valid values: ${VALID_MODULES.join(", ")}`,
-            );
-          }
-          modules.add(item as ModuleName);
-        }
-        i += 1;
-        break;
-      }
-      case "--enable-ratings":
-        modules.add("ratings");
-        break;
-      case "--enable-address-intelligence":
-        modules.add("addresses");
-        break;
-      case "--target-client-id":
-        config.targetClient.id = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--target-client-email":
-        config.targetClient.email = normalizeEmail(requireNext(i, arg));
-        i += 1;
-        break;
-      case "--target-client-password":
-        config.targetClient.password = requireNext(i, arg);
-        i += 1;
-        break;
-      case "--target-driver-id":
-        config.targetDriver.id = parseIntArg(arg, requireNext(i, arg));
-        i += 1;
-        break;
-      case "--target-driver-email":
-        config.targetDriver.email = normalizeEmail(requireNext(i, arg));
-        i += 1;
-        break;
-      case "--target-driver-password":
-        config.targetDriver.password = requireNext(i, arg);
-        i += 1;
-        break;
-      case "--db-target-lookup":
-        config.dbTargetLookup = true;
-        break;
-      case "--fail-fast":
-        config.failFast = true;
-        break;
-      case "--dry-run":
-        config.dryRun = true;
-        break;
-      default:
-        throw new Error(
-          `Unknown argument '${arg}'. Use --help to see available flags.`,
-        );
-    }
-  }
-
-  if (scenarios.size === 0 && modules.size === 0) {
-    scenarios.add("frontend-all");
-  }
-
-  for (const scenario of scenarios) {
-    for (const moduleName of SCENARIO_MODULES[scenario]) {
-      modules.add(moduleName);
-    }
-  }
-
-  if (modules.has("ratings") && !modules.has("orders")) {
-    modules.add("orders");
-  }
-
-  if (
-    (config.targetClient.id || config.targetClient.email) &&
-    !modules.has("orders")
-  ) {
-    throw new Error(
-      "Target client flags are only valid when 'orders' module is selected.",
-    );
-  }
-
-  if (
-    (config.targetDriver.id || config.targetDriver.email) &&
-    !modules.has("orders")
-  ) {
-    throw new Error(
-      "Target driver flags are only valid when 'orders' module is selected.",
-    );
-  }
-
-  if (
-    (config.targetClient.id ||
-      config.targetClient.email ||
-      config.targetDriver.id ||
-      config.targetDriver.email) &&
-    !config.dbTargetLookup
-  ) {
-    console.warn(
-      "⚠️ Target flags were provided without --db-target-lookup. Existing actor lookup is disabled.",
-    );
-  }
-
-  config.scenarios = [...scenarios];
-
-  return config;
-};
-
-class SeedRunner {
+export class SeedRunner {
   private readonly api: AxiosInstance;
 
   private readonly actionStats = new Map<string, ActionStats>();
 
   private readonly failures: FailureEntry[] = [];
 
-  private readonly manifest: {
-    run: Record<string, unknown>;
-    created: {
-      clients: Array<Record<string, unknown>>;
-      drivers: Array<Record<string, unknown>>;
-      businesses: Array<Record<string, unknown>>;
-      orders: Array<Record<string, unknown>>;
-      ratings: Array<Record<string, unknown>>;
-      addressesIntelligence: Array<Record<string, unknown>>;
-      targets: {
-        client?: Record<string, unknown>;
-        driver?: Record<string, unknown>;
-      };
-    };
-    failures: FailureEntry[];
-    stats: Record<string, ActionStats>;
-  };
+  private readonly manifest: SeedManifest;
 
   private staticCatalog: CreateOrderCatalog | null = null;
 
@@ -484,6 +55,8 @@ class SeedRunner {
   private readonly orders: OrderRecord[] = [];
 
   private readonly ratings: RatingRecord[] = [];
+
+  private readonly unavailableDriverIds = new Set<number>();
 
   private drizzlePoolRef: DrizzleModule["drizzlePool"] | null = null;
 
@@ -500,6 +73,7 @@ class SeedRunner {
       run: {
         startedAt: new Date().toISOString(),
         apiUrl: config.apiUrl,
+        scenarios: config.scenarios,
         seed: config.seed,
         modules: [...config.modules],
         orderFlow: config.orderFlow,
@@ -680,7 +254,7 @@ class SeedRunner {
   private async getDrizzlePool() {
     if (!this.drizzlePoolRef) {
       const module =
-        (await import("../src/database/drizzle.js")) as DrizzleModule;
+        (await import("../../src/database/drizzle.js")) as DrizzleModule;
       this.drizzlePoolRef = module.drizzlePool;
     }
     return this.drizzlePoolRef;
@@ -816,6 +390,9 @@ class SeedRunner {
 
     if (actor.role === "courier") {
       this.drivers.push(actor);
+      if (actor.source === "created") {
+        this.unavailableDriverIds.delete(actor.userId);
+      }
       this.manifest.created.drivers.push({
         userId: actor.userId,
         fullName: actor.fullName,
@@ -1103,6 +680,84 @@ class SeedRunner {
     return this.createDriverActor();
   }
 
+  private async pickDriverForAcceptance(): Promise<ActorAuth | null> {
+    if (this.config.targetDriver.id || this.config.targetDriver.email) {
+      const target = await this.ensureDriverForOrders();
+      if (!target) return null;
+      if (this.unavailableDriverIds.has(target.userId)) return null;
+      return target;
+    }
+
+    const availableDrivers = this.drivers.filter(
+      (driver) => !this.unavailableDriverIds.has(driver.userId),
+    );
+
+    if (availableDrivers.length === 0) return null;
+
+    const shuffled = [...availableDrivers].sort(() =>
+      faker.number.int({ min: -1, max: 1 }),
+    );
+
+    return shuffled[0] || null;
+  }
+
+  private async acceptOrderSmart(orderId: number): Promise<ActorAuth | null> {
+    const attempts =
+      this.config.targetDriver.id || this.config.targetDriver.email
+        ? 1
+        : this.drivers.length || 1;
+
+    for (let i = 0; i < attempts; i += 1) {
+      const driver = await this.pickDriverForAcceptance();
+      if (!driver) {
+        this.track("orders.accept.skipped.no_available_driver", true);
+        return null;
+      }
+
+      const response = await this.api.request({
+        method: "POST",
+        url: `/orders/${orderId}/accept`,
+        headers: this.authHeaders(driver.accessToken),
+        data: {},
+      });
+
+      if (this.responseSucceeded(response)) {
+        this.track("orders.accept", true);
+        this.unavailableDriverIds.add(driver.userId);
+        return driver;
+      }
+
+      const message = String(
+        response.data?.message || response.data?.error || "Order accept failed",
+      );
+
+      if (
+        response.status === 400 &&
+        message.toLowerCase().includes("courier not available")
+      ) {
+        this.unavailableDriverIds.add(driver.userId);
+        this.track("orders.accept.skipped.unavailable_driver", true);
+        continue;
+      }
+
+      this.track("orders.accept", false);
+      const failure = this.describeFailure(response);
+      failure.action = "orders.accept";
+      this.failures.push(failure);
+      console.error(
+        `❌ orders.accept failed [${response.status}]: ${failure.message}`,
+      );
+
+      if (this.config.failFast) {
+        throw new Error(`orders.accept failed with status ${response.status}`);
+      }
+      return null;
+    }
+
+    this.track("orders.accept.skipped.no_available_driver", true);
+    return null;
+  }
+
   private async seedUsers() {
     console.log(`\n🌱 Seeding users (${this.config.counts.users})`);
     for (let i = 0; i < this.config.counts.users; i += 1) {
@@ -1355,20 +1010,8 @@ class SeedRunner {
       return;
     }
 
-    const driver = await this.ensureDriverForOrders();
+    const driver = await this.acceptOrderSmart(order.orderId);
     if (!driver) return;
-
-    const acceptResponse = await this.call(
-      "orders.accept",
-      "POST",
-      `/orders/${order.orderId}/accept`,
-      {
-        headers: this.authHeaders(driver.accessToken),
-        data: {},
-      },
-    );
-
-    if (!acceptResponse) return;
 
     order.courierUserId = driver.userId;
     order.status = "accepted";
@@ -1631,16 +1274,6 @@ class SeedRunner {
     });
   }
 
-  private async runHealthChecks() {
-    console.log("\n🩺 Running health checks");
-    const base = this.config.apiUrl.endsWith("/api/v1")
-      ? this.config.apiUrl.slice(0, -"/api/v1".length)
-      : this.config.apiUrl;
-    await this.call("health.public", "GET", `${base}/health`);
-    await this.call("health.internal", "GET", `${base}/_internal/health`);
-    await this.call("health.api", "GET", "/");
-  }
-
   private async runStaticModule() {
     console.log("\n📚 Loading static catalog");
     await this.ensureStaticCatalog();
@@ -1697,27 +1330,6 @@ class SeedRunner {
   async run() {
     faker.seed(this.config.seed);
 
-    if (this.config.dryRun) {
-      console.log("\n🧪 Dry-run plan");
-      console.log(
-        JSON.stringify(
-          {
-            apiUrl: this.config.apiUrl,
-            modules: [...this.config.modules],
-            counts: this.config.counts,
-            orderFlow: this.config.orderFlow,
-            targetClient: this.config.targetClient,
-            targetDriver: this.config.targetDriver,
-            dbTargetLookup: this.config.dbTargetLookup,
-            manifestFile: this.config.manifestFile,
-          },
-          null,
-          2,
-        ),
-      );
-      return;
-    }
-
     if (this.config.modules.has("static")) {
       await this.runStaticModule();
     }
@@ -1746,10 +1358,6 @@ class SeedRunner {
       await this.runAddressIntelligence();
     }
 
-    if (this.config.modules.has("health")) {
-      await this.runHealthChecks();
-    }
-
     await this.writeManifest();
     this.printSummary(this.config.manifestFile);
   }
@@ -1761,36 +1369,3 @@ class SeedRunner {
     }
   }
 }
-
-async function main() {
-  try {
-    const args = process.argv.slice(2);
-    const config = parseArgs(args);
-
-    if (config.help) {
-      console.log(HELP_TEXT);
-      return;
-    }
-
-    console.log("🚀 Shipzy API seeding started");
-    console.log(`   API URL: ${config.apiUrl}`);
-    console.log(`   Scenarios: ${scenarioLabel(config.scenarios)}`);
-    console.log(`   Modules: ${[...config.modules].join(", ")}`);
-    console.log(`   Seed: ${config.seed}`);
-
-    const runner = new SeedRunner(config);
-    try {
-      await runner.run();
-      console.log("\n✨ Seed execution completed.");
-    } finally {
-      await runner.cleanup();
-    }
-  } catch (error: any) {
-    console.error(
-      `\n💥 Seed script failed: ${error.message || "Unknown error"}`,
-    );
-    process.exitCode = 1;
-  }
-}
-
-await main();

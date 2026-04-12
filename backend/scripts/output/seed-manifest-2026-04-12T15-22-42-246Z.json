@@ -1,0 +1,253 @@
+{
+  "run": {
+    "startedAt": "2026-04-12T15:22:42.247Z",
+    "apiUrl": "http://localhost:3000/api/v1",
+    "seed": 42,
+    "modules": [
+      "static",
+      "users",
+      "drivers",
+      "businesses",
+      "orders",
+      "addresses",
+      "health"
+    ],
+    "orderFlow": "mixed",
+    "counts": {
+      "users": 3,
+      "drivers": 2,
+      "businesses": 2,
+      "orders": 6,
+      "ratings": 3
+    },
+    "tag": "seed",
+    "completedAt": "2026-04-12T15:22:50.721Z"
+  },
+  "created": {
+    "clients": [
+      {
+        "userId": 1,
+        "fullName": "Luz Greenholt",
+        "email": "seed.client.1776007362317.nwjb993r@shipzy.test",
+        "password": "Shipzy!BH1YPdbbiw",
+        "source": "created"
+      },
+      {
+        "userId": 2,
+        "fullName": "Erwin Hahn",
+        "email": "seed.client.1776007362757.pmhx8n4z@shipzy.test",
+        "password": "Shipzy!Lc0OHJL4m7",
+        "source": "created"
+      },
+      {
+        "userId": 3,
+        "fullName": "Eunice Bashirian",
+        "email": "seed.client.1776007363152.6eqor0vp@shipzy.test",
+        "password": "Shipzy!d7kWkwHmYX",
+        "source": "created"
+      }
+    ],
+    "drivers": [
+      {
+        "userId": 4,
+        "fullName": "Lenna Bradtke",
+        "email": "seed.courier.1776007363549.feoywe5t@shipzy.test",
+        "password": "Shipzy!TDllJTSMD5",
+        "source": "created"
+      },
+      {
+        "userId": 5,
+        "fullName": "Vincenzo Grimes",
+        "email": "seed.courier.1776007363982.tdnvzuci@shipzy.test",
+        "password": "Shipzy!h1EaWXUm0V",
+        "source": "created"
+      }
+    ],
+    "businesses": [
+      {
+        "userId": 6,
+        "fullName": "Alton Hessel",
+        "email": "seed.business.1776007364390.oruvvneh@shipzy.test",
+        "password": "Shipzy!NTkn5z2sxh",
+        "source": "created"
+      },
+      {
+        "userId": 7,
+        "fullName": "Lynda Bayer",
+        "email": "seed.business.1776007364761.jybqfmk0@shipzy.test",
+        "password": "Shipzy!722RHt6uta",
+        "source": "created"
+      }
+    ],
+    "orders": [
+      {
+        "orderId": 1,
+        "orderNumber": "ORD-20260412-000001",
+        "status": "picked_up",
+        "clientUserId": 1,
+        "courierUserId": 5
+      },
+      {
+        "orderId": 2,
+        "orderNumber": "ORD-20260412-000002",
+        "status": "pending",
+        "clientUserId": 1,
+        "courierUserId": null
+      },
+      {
+        "orderId": 3,
+        "orderNumber": "ORD-20260412-000003",
+        "status": "pending",
+        "clientUserId": 3,
+        "courierUserId": null
+      },
+      {
+        "orderId": 4,
+        "orderNumber": "ORD-20260412-000004",
+        "status": "pending",
+        "clientUserId": 3,
+        "courierUserId": null
+      },
+      {
+        "orderId": 5,
+        "orderNumber": "ORD-20260412-000005",
+        "status": "cancelled",
+        "clientUserId": 3,
+        "courierUserId": null
+      },
+      {
+        "orderId": 6,
+        "orderNumber": "ORD-20260412-000006",
+        "status": "delivered",
+        "clientUserId": 2,
+        "courierUserId": 4
+      }
+    ],
+    "ratings": [],
+    "addressesIntelligence": [
+      {
+        "actorUserId": 1,
+        "actorRole": "client",
+        "executedAt": "2026-04-12T15:22:50.708Z",
+        "searchSuggestions": 5
+      }
+    ],
+    "targets": {}
+  },
+  "failures": [
+    {
+      "action": "orders.accept",
+      "status": 400,
+      "message": "Courier not available"
+    },
+    {
+      "action": "orders.accept",
+      "status": 400,
+      "message": "Courier not available"
+    },
+    {
+      "action": "orders.accept",
+      "status": 400,
+      "message": "Courier not available"
+    },
+    {
+      "action": "health.api",
+      "status": 404,
+      "message": "Route not found"
+    }
+  ],
+  "stats": {
+    "static.create-order-data": {
+      "success": 1,
+      "failure": 0
+    },
+    "auth.register.client": {
+      "success": 3,
+      "failure": 0
+    },
+    "users.address.create": {
+      "success": 3,
+      "failure": 0
+    },
+    "auth.register.courier": {
+      "success": 2,
+      "failure": 0
+    },
+    "drivers.profile.update": {
+      "success": 2,
+      "failure": 0
+    },
+    "drivers.location.update": {
+      "success": 2,
+      "failure": 0
+    },
+    "drivers.availability.update": {
+      "success": 2,
+      "failure": 0
+    },
+    "auth.register.business": {
+      "success": 2,
+      "failure": 0
+    },
+    "orders.calculate-fare": {
+      "success": 6,
+      "failure": 0
+    },
+    "orders.create": {
+      "success": 6,
+      "failure": 0
+    },
+    "orders.accept": {
+      "success": 2,
+      "failure": 3
+    },
+    "orders.status.picked_up": {
+      "success": 2,
+      "failure": 0
+    },
+    "orders.cancel": {
+      "success": 1,
+      "failure": 0
+    },
+    "orders.status.in_transit": {
+      "success": 1,
+      "failure": 0
+    },
+    "orders.status.delivered": {
+      "success": 1,
+      "failure": 0
+    },
+    "addresses.search": {
+      "success": 1,
+      "failure": 0
+    },
+    "addresses.retrieve": {
+      "success": 1,
+      "failure": 0
+    },
+    "addresses.reverse-geocode": {
+      "success": 1,
+      "failure": 0
+    },
+    "addresses.directions": {
+      "success": 1,
+      "failure": 0
+    },
+    "addresses.distance": {
+      "success": 1,
+      "failure": 0
+    },
+    "health.public": {
+      "success": 1,
+      "failure": 0
+    },
+    "health.internal": {
+      "success": 1,
+      "failure": 0
+    },
+    "health.api": {
+      "success": 0,
+      "failure": 1
+    }
+  }
+}
