@@ -19,6 +19,10 @@ const headingFont = Sora({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: "/app_logo.svg",
+    apple: "/app_logo.png",
+  },
   title: "Shipzy | The Next Era of Logistics",
   description:
     "Streamline last-mile operations with intelligent route optimization and scalable fleet management.",

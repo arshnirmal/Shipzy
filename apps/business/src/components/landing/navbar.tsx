@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
@@ -44,13 +45,15 @@ export function Navbar() {
               : "bg-transparent ring-1 ring-transparent",
           )}
         >
-          <Link href="/" className="flex items-center gap-3">
-            <div className="gradient-brand flex size-9 items-center justify-center rounded-xl text-sm font-bold text-primary-foreground">
-              S
-            </div>
-            <div>
-              <p className="title-sm leading-tight">Shipzy</p>
-            </div>
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image
+              src="/app_logo.svg"
+              alt="Shipzy"
+              width={36}
+              height={36}
+              className="shrink-0"
+            />
+            <p className="title-sm leading-tight">Shipzy</p>
           </Link>
 
           <nav

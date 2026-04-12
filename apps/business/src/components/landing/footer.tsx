@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const footerColumns = [
   {
@@ -41,7 +42,10 @@ export function Footer() {
       <div className="container-shell">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-3 lg:col-span-1">
-            <p className="title-md">Shipzy</p>
+            <div className="flex items-center gap-2">
+              <Image src="/app_logo.svg" alt="Shipzy" width={28} height={28} />
+              <p className="title-md">Shipzy</p>
+            </div>
             <p className="body-sm text-muted-foreground">
               Manage orders, teams, and delivery performance in one place.
             </p>

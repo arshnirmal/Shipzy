@@ -10,7 +10,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "./login-form";
 import { RegisterForm } from "./register-form";
-import { Building2 } from "lucide-react";
+import Image from "next/image";
 
 export function AuthModal() {
   const router = useRouter();
@@ -39,9 +39,13 @@ export function AuthModal() {
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeDialog()}>
       <DialogContent className="sm:max-w-[440px] overflow-hidden p-0 bg-surface-container-lowest border border-outline-variant/20 shadow-[0_12px_32px_rgba(13,28,46,0.06)]">
         <div className="flex flex-col items-center justify-center p-8 pb-4 text-center">
-          <div className="gradient-brand flex h-14 w-14 items-center justify-center rounded-lg mb-4 shadow-[var(--shadow-ambient-sm)]">
-            <Building2 className="h-7 w-7 text-primary-foreground" />
-          </div>
+          <Image
+            src="/app_logo.svg"
+            alt="Shipzy"
+            width={56}
+            height={56}
+            className="mb-4"
+          />
           <DialogTitle className="text-2xl font-bold tracking-tight">
             Shipzy for Business
           </DialogTitle>

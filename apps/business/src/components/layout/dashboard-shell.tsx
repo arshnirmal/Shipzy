@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Image from "next/image";
 import {
   BanknoteArrowUp,
   BarChart2,
-  Building2,
   LayoutDashboard,
   LogOut,
   PlusCircle,
@@ -123,9 +123,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             href="/dashboard"
             className="flex items-center gap-3 rounded-md px-2 py-1"
           >
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Building2 className="size-4" />
-            </div>
+            <Image src="/app_logo.svg" alt="Shipzy" width={32} height={32} className="shrink-0" />
             <div className="group-data-[collapsible=icon]:hidden">
               <p className="text-sm font-semibold">Shipzy Business</p>
               <p className="text-xs text-muted-foreground">Merchant Portal</p>
