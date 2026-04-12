@@ -70,17 +70,19 @@ export function Navbar() {
 
           <div className="hidden items-center gap-2 md:flex">
             <Link
-              href="/login"
+              href="?auth=login"
               className={cn(buttonVariants({ variant: "ghost", size: "lg" }))}
+              scroll={false}
             >
               Sign in
             </Link>
             <Link
-              href="/register"
+              href="?auth=register"
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-sm)]",
               )}
+              scroll={false}
             >
               Get Started
             </Link>
@@ -130,22 +132,24 @@ export function Navbar() {
 
           <div className="grid gap-2 px-5 pb-7">
             <Link
-              href="/login"
+              href="?auth=login"
               className={cn(
                 buttonVariants({ variant: "outline", size: "lg" }),
                 "border-outline-variant/40",
               )}
               onClick={() => setIsMenuOpen(false)}
+              scroll={false}
             >
               Sign in
             </Link>
             <Link
-              href="/register"
+              href="?auth=register"
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-sm)]",
               )}
               onClick={() => setIsMenuOpen(false)}
+              scroll={false}
             >
               Get Started
             </Link>

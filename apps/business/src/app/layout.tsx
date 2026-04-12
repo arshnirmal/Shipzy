@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 
+import { Suspense } from "react";
+
 import { AppProviders } from "@/providers/app-providers";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 import "./globals.css";
 
@@ -50,7 +53,12 @@ export default function RootLayout({
       className={`${bodyFont.variable} ${headingFont.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <Suspense fallback={null}>
+            <AuthModal />
+          </Suspense>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );
