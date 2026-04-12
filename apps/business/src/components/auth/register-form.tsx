@@ -32,7 +32,7 @@ export function RegisterForm({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<BusinessRegisterValues>({
-    resolver: zodResolver(businessRegisterSchema) as any,
+    resolver: zodResolver(businessRegisterSchema as any),
     defaultValues: {
       fullName: "",
       email: "",

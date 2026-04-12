@@ -27,7 +27,7 @@ export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema) as any,
+    resolver: zodResolver(loginSchema as any),
     defaultValues: {
       email: "",
       password: "",
