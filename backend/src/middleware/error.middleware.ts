@@ -97,6 +97,19 @@ export const errorHandler = (
     });
   }
 
+  // Rate limit errors (from @fastify/rate-limit)
+  if (
+    error.statusCode === 429 ||
+    (error as any).code === "FST_ERR_RATE_LIMIT"
+  ) {
+    return reply.status(429).send({
+      success: false,
+      message: "Rate limit exceeded",
+      retryAfter: (error as any).after ?? (error as any).retryAfter ?? null,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   // Generic 500 error
   return reply.status(500).send({
     success: false,

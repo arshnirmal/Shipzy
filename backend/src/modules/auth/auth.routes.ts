@@ -9,8 +9,10 @@ import {
   loginSchema,
 } from "./auth.schema.js";
 
-// Stricter rate limit applied per-route for all auth endpoints
-const AUTH_RATE_LIMIT = { max: 10, timeWindow: "15 minutes" };
+// Keep login-sensitive endpoints strict.
+const AUTH_STRICT_RATE_LIMIT = { max: 10, timeWindow: "15 minutes" };
+// Registration is intentionally higher to support onboarding and seed flows.
+const AUTH_REGISTER_RATE_LIMIT = { max: 30, timeWindow: "15 minutes" };
 
 async function authRoutes(fastify: FastifyInstance, _options: unknown) {
   // POST /api/v1/auth/google/verify
@@ -18,7 +20,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/google/verify",
     {
       schema: verifyGoogleSchema,
-      config: { rateLimit: AUTH_RATE_LIMIT },
+      config: { rateLimit: AUTH_STRICT_RATE_LIMIT },
     },
     authController.verifyGoogle.bind(authController),
   );
@@ -28,7 +30,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/refresh",
     {
       schema: refreshTokenSchema,
-      config: { rateLimit: AUTH_RATE_LIMIT },
+      config: { rateLimit: AUTH_STRICT_RATE_LIMIT },
     },
     authController.refreshToken.bind(authController),
   );
@@ -38,7 +40,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/register",
     {
       schema: registerSchema,
-      config: { rateLimit: AUTH_RATE_LIMIT },
+      config: { rateLimit: AUTH_REGISTER_RATE_LIMIT },
     },
     authController.register.bind(authController),
   );
@@ -48,7 +50,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/login",
     {
       schema: loginSchema,
-      config: { rateLimit: AUTH_RATE_LIMIT },
+      config: { rateLimit: AUTH_STRICT_RATE_LIMIT },
     },
     authController.login.bind(authController),
   );
@@ -58,7 +60,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/register/business",
     {
       schema: businessRegisterSchema,
-      config: { rateLimit: AUTH_RATE_LIMIT },
+      config: { rateLimit: AUTH_REGISTER_RATE_LIMIT },
     },
     authController.registerBusiness.bind(authController),
   );
