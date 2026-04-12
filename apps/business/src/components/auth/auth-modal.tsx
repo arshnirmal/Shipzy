@@ -1,7 +1,12 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "./login-form";
 import { RegisterForm } from "./register-form";
@@ -45,21 +50,34 @@ export function AuthModal() {
           </DialogDescription>
         </div>
 
-        <Tabs 
-          value={authParam || "login"} 
+        <Tabs
+          value={authParam || "login"}
           onValueChange={handleTabChange}
           className="w-full px-8 pb-8"
         >
           <TabsList className="grid w-full grid-cols-2 mb-8 h-12 rounded-lg bg-surface-container-low p-1">
-            <TabsTrigger value="login" className="rounded-lg h-full label-md">Sign In</TabsTrigger>
-            <TabsTrigger value="register" className="rounded-lg h-full label-md">Create Account</TabsTrigger>
+            <TabsTrigger value="login" className="rounded-lg h-full label-md">
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger
+              value="register"
+              className="rounded-lg h-full label-md"
+            >
+              Create Account
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="login" className="mt-0 animate-in fade-in-50 slide-in-from-left-2 duration-300">
+
+          <TabsContent
+            value="login"
+            className="mt-0 animate-in fade-in-50 slide-in-from-left-2 duration-300"
+          >
             <LoginForm onSuccess={closeDialog} />
           </TabsContent>
-          
-          <TabsContent value="register" className="mt-0 animate-in fade-in-50 slide-in-from-right-2 duration-300">
+
+          <TabsContent
+            value="register"
+            className="mt-0 animate-in fade-in-50 slide-in-from-right-2 duration-300"
+          >
             <RegisterForm onSuccess={closeDialog} />
           </TabsContent>
         </Tabs>

@@ -3,6 +3,12 @@ import { faker } from "@faker-js/faker";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
+  DEFAULT_SEED_PASSWORD,
+  REALISTIC_BUSINESS_NAMES,
+  REALISTIC_FIRST_NAMES,
+  REALISTIC_LAST_NAMES,
+} from "./constants.js";
+import {
   ActorAuth,
   ActionStats,
   CreateOrderCatalog,
@@ -59,6 +65,14 @@ export class SeedRunner {
   private readonly unavailableDriverIds = new Set<number>();
 
   private drizzlePoolRef: DrizzleModule["drizzlePool"] | null = null;
+
+  private clientOrdinal = 0;
+
+  private courierOrdinal = 0;
+
+  private businessOrdinal = 0;
+
+  private recipientOrdinal = 0;
 
   constructor(private readonly config: SeedConfig) {
     this.api = axios.create({
@@ -202,13 +216,45 @@ export class SeedRunner {
     return headers;
   }
 
-  private buildEmail(prefix: string): string {
-    const token = faker.string.alphanumeric(8).toLowerCase();
-    return `${this.config.tag}.${prefix}.${Date.now()}.${token}@shipzy.test`;
+  private slugifyEmailToken(value: string): string {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.+/, "")
+      .replace(/\.+$/, "")
+      .replace(/\.{2,}/g, ".");
+  }
+
+  private nextOrdinal(scope: "client" | "courier" | "business" | "recipient") {
+    if (scope === "client") return (this.clientOrdinal += 1);
+    if (scope === "courier") return (this.courierOrdinal += 1);
+    if (scope === "business") return (this.businessOrdinal += 1);
+    return (this.recipientOrdinal += 1);
+  }
+
+  private buildRealisticFullName(ordinal: number): string {
+    const first =
+      REALISTIC_FIRST_NAMES[
+        (ordinal + this.config.seed) % REALISTIC_FIRST_NAMES.length
+      ] || "Aarav";
+    const last =
+      REALISTIC_LAST_NAMES[
+        (ordinal * 7 + this.config.seed) % REALISTIC_LAST_NAMES.length
+      ] || "Sharma";
+    return `${first} ${last}`;
+  }
+
+  private buildEmail(role: Role, fullName: string, ordinal: number): string {
+    const tag = this.slugifyEmailToken(this.config.tag || "seed");
+    const name = this.slugifyEmailToken(fullName);
+    const roleToken = this.slugifyEmailToken(role);
+    // Keep emails readable and unique across reruns with the same DB.
+    return `${tag}.${this.config.seed}.${roleToken}.${name}.${ordinal}@shipzy.test`;
   }
 
   private buildPassword(): string {
-    return `Shipzy!${faker.string.alphanumeric(10)}`;
+    return DEFAULT_SEED_PASSWORD;
   }
 
   private mumbaiCoordinates() {
@@ -304,7 +350,7 @@ export class SeedRunner {
       return null;
     }
 
-    const password = target.password || "Password123!";
+    const password = target.password || DEFAULT_SEED_PASSWORD;
     const loginResponse = await this.call(
       "auth.login.target",
       "POST",
@@ -414,9 +460,10 @@ export class SeedRunner {
   }
 
   private async createClientActor(): Promise<ActorAuth | null> {
-    const email = this.buildEmail("client");
+    const ordinal = this.nextOrdinal("client");
+    const fullName = this.buildRealisticFullName(ordinal);
+    const email = this.buildEmail("client", fullName, ordinal);
     const password = this.buildPassword();
-    const fullName = faker.person.fullName();
     const deviceId = `${this.config.tag}-client-${faker.string.alphanumeric(6)}`;
 
     const response = await this.call(
@@ -481,9 +528,10 @@ export class SeedRunner {
   }
 
   private async createDriverActor(): Promise<ActorAuth | null> {
-    const email = this.buildEmail("courier");
+    const ordinal = this.nextOrdinal("courier");
+    const fullName = this.buildRealisticFullName(ordinal);
+    const email = this.buildEmail("courier", fullName, ordinal);
     const password = this.buildPassword();
-    const fullName = faker.person.fullName();
     const deviceId = `${this.config.tag}-courier-${faker.string.alphanumeric(6)}`;
 
     const response = await this.call(
@@ -571,11 +619,17 @@ export class SeedRunner {
   }
 
   private async createBusinessActor(): Promise<ActorAuth | null> {
-    const email = this.buildEmail("business");
+    const ordinal = this.nextOrdinal("business");
+    const fullName = this.buildRealisticFullName(ordinal);
+    const email = this.buildEmail("business", fullName, ordinal);
     const password = this.buildPassword();
-    const fullName = faker.person.fullName();
     const deviceId = `${this.config.tag}-business-${faker.string.alphanumeric(6)}`;
     const monthlyVolumes = ["0-100", "100-500", "500-2000", "2000+"];
+
+    const businessName =
+      REALISTIC_BUSINESS_NAMES[
+        (ordinal + this.config.seed) % REALISTIC_BUSINESS_NAMES.length
+      ] || "Mehta Grocery";
 
     const response = await this.call(
       "auth.register.business",
@@ -593,7 +647,7 @@ export class SeedRunner {
             password,
           },
           business: {
-            businessName: faker.company.name(),
+            businessName,
             gstNumber: `${faker.string.alpha({ length: 5, casing: "upper" })}${faker.string.numeric(6)}`,
             monthlyVolume: pickRandom(monthlyVolumes),
           },
@@ -908,7 +962,9 @@ export class SeedRunner {
             postalCode: "400058",
             latitude: coordinates.delivery.latitude,
             longitude: coordinates.delivery.longitude,
-            contactName: faker.person.fullName(),
+            contactName: this.buildRealisticFullName(
+              this.nextOrdinal("recipient"),
+            ),
             contactPhone: randomIndianPhone(),
             building: faker.location.buildingNumber(),
             floor: faker.number.int({ min: 1, max: 25 }).toString(),

@@ -25,7 +25,9 @@ import { apiRequest } from "@/lib/api";
 import { setStoredTokens, setStoredUser } from "@/lib/auth";
 import type { AuthResponseData } from "@/types/auth";
 
-export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
+export function RegisterForm({
+  onSuccess,
+}: Readonly<{ onSuccess?: () => void }>) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -84,9 +86,7 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
       }
     } catch (error) {
       const err = error as Error;
-      toast.error(
-        err.message || "Failed to create account. Please try again.",
-      );
+      toast.error(err.message || "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }

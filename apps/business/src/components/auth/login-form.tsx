@@ -22,7 +22,7 @@ import { apiRequest } from "@/lib/api";
 import { setStoredTokens, setStoredUser } from "@/lib/auth";
 import type { AuthResponseData } from "@/types/auth";
 
-export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
+export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,10 +41,14 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
         success: boolean;
         message: string;
         data: AuthResponseData;
-      }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ credentials: data }),
-      }, { auth: false });
+      }>(
+        "/auth/login",
+        {
+          method: "POST",
+          body: JSON.stringify({ credentials: data }),
+        },
+        { auth: false },
+      );
 
       if (response.success && response.data) {
         setStoredTokens({
@@ -109,7 +113,11 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full h-11 rounded-lg gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-sm)] font-medium text-base mt-2" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full h-11 rounded-lg gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-sm)] font-medium text-base mt-2"
+            disabled={isLoading}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign In
           </Button>
