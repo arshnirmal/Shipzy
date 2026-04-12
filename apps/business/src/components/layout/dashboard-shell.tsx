@@ -5,13 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   BanknoteArrowUp,
+  BarChart2,
   Building2,
   LayoutDashboard,
   LogOut,
+  PlusCircle,
   Settings,
   ShoppingBag,
   Users,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -28,6 +31,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -42,12 +46,41 @@ type DashboardShellProps = {
   children: React.ReactNode;
 };
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/team", label: "Team", icon: Users },
-  { href: "/billing", label: "Billing", icon: BanknoteArrowUp },
-  { href: "/settings", label: "Settings", icon: Settings },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
+
+type NavGroup = {
+  label: string;
+  items: NavItem[];
+};
+
+const navGroups: NavGroup[] = [
+  {
+    label: "Core",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/orders", label: "Orders", icon: ShoppingBag },
+      { href: "/orders/new", label: "New Order", icon: PlusCircle, exact: true },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { href: "/accounting", label: "Accounting", icon: BanknoteArrowUp },
+      { href: "/analytics", label: "Analytics", icon: BarChart2 },
+    ],
+  },
+  {
+    label: "Manage",
+    items: [
+      { href: "/team", label: "Team", icon: Users },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 function initialsFromEmail(email: string) {
@@ -55,10 +88,16 @@ function initialsFromEmail(email: string) {
   return namePart.slice(0, 2).toUpperCase();
 }
 
+const allNavItems = navGroups.flatMap((g) => g.items);
+
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, isLoading, signOut, user } = useAuth();
+
+  const activeItem = allNavItems.find((item) =>
+    item.exact ? pathname === item.href : pathname.startsWith(item.href),
+  );
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -95,39 +134,36 @@ export function DashboardShell({ children }: DashboardShellProps) {
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {navItems.map((item) => {
-                  const isActive =
-                    item.href === "/dashboard"
-                      ? pathname === "/dashboard"
+          {navGroups.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const isActive = item.exact
+                      ? pathname === item.href
                       : pathname.startsWith(item.href);
 
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.label}
-                        render={<Link href={item.href} />}
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          tooltip={item.label}
+                          render={<Link href={item.href} />}
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
 
-        <SidebarFooter className="p-4">
-          <div className="rounded-lg border bg-card p-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-            Business role routes are scaffolded and ready for backend
-            integration.
-          </div>
-        </SidebarFooter>
+        <SidebarFooter />
       </Sidebar>
 
       <SidebarInset>
@@ -140,7 +176,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 Business Portal
               </p>
               <p className="text-sm font-medium">
-                Manage deliveries and team workflows
+                {activeItem?.label ?? "Dashboard"}
               </p>
             </div>
           </div>
