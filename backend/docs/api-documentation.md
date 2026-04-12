@@ -52,6 +52,8 @@ Some endpoints require a role:
 
 - `client` (customer)
 - `courier` (driver)
+- `business` (merchant / business account)
+- `admin` (internal/admin account)
 
 ---
 
@@ -89,7 +91,7 @@ type FareBreakdown = {
 type BaseUser = {
   userId: number;
   userUuid: UUID;
-  role: "client" | "courier";
+  role: "client" | "courier" | "business" | "admin";
   phoneNumber?: string | null;
   email?: string | null;
   fullName: string;
@@ -148,8 +150,11 @@ type Pagination = {
 
 type PaginatedResponse<T> = {
   success: true;
+  message: string;
   data: T[];
-  pagination: Pagination;
+  meta: {
+    pagination: Pagination;
+  };
   timestamp: ISODateTime;
 };
 ```
@@ -203,6 +208,36 @@ type AuthResponseData = {
   };
 };
 
+type Response = SuccessResponse<AuthResponseData>;
+```
+
+### POST /api/v1/auth/register/business
+
+Auth: Public
+
+Request body:
+
+```ts
+type BusinessRegisterRequest = {
+  identity: {
+    fullName: string; // 2..100
+    phoneNumber?: string; // 10..20
+  };
+  credentials: {
+    email: string; // email, <= 100
+    password: string; // 8..72
+  };
+  business: {
+    businessName: string; // 2..200
+    gstNumber?: string; // <= 15
+    monthlyVolume?: "0-100" | "100-500" | "500-2000" | "2000+";
+  };
+};
+```
+
+Response (201):
+
+```ts
 type Response = SuccessResponse<AuthResponseData>;
 ```
 
@@ -319,7 +354,7 @@ type Response = SuccessResponse<{
 }>;
 ```
 
-### PUT /api/v1/users/me
+### PATCH /api/v1/users/me
 
 Auth: Bearer token required
 
@@ -482,7 +517,7 @@ type DriverProfileData = {
 type Response = SuccessResponse<DriverProfileData>;
 ```
 
-### PUT /api/v1/drivers/me
+### PATCH /api/v1/drivers/me
 
 Request body:
 
@@ -507,7 +542,7 @@ type UpdatedDriverProfileData = {
 type Response = SuccessResponse<UpdatedDriverProfileData>;
 ```
 
-### PUT /api/v1/drivers/me/availability
+### PATCH /api/v1/drivers/me/availability
 
 Request body:
 
@@ -541,7 +576,7 @@ type AvailabilityData = {
 type Response = SuccessResponse<AvailabilityData>;
 ```
 
-### PUT /api/v1/drivers/me/location
+### PATCH /api/v1/drivers/me/location
 
 Request body:
 
@@ -921,7 +956,7 @@ Query params:
 type ListOrdersQuery = {
   page?: number; // default 1
   limit?: number; // default 20
-  sortBy?: string;
+  sortBy?: "createdAt" | "totalPrice" | "deliveredAt" | "pickedUpAt";
   sortOrder?: "asc" | "desc"; // default "desc"
   status?: "active" | "completed" | "cancelled";
   dateFrom?: ISODateTime;
@@ -1089,7 +1124,7 @@ type AcceptOrderData = {
 type Response = SuccessResponse<AcceptOrderData>;
 ```
 
-### PUT /api/v1/orders/:id/status
+### PATCH /api/v1/orders/:id/status
 
 Auth: Bearer token required + role `courier`
 
@@ -1123,44 +1158,7 @@ type UpdateOrderStatusData = {
 type Response = SuccessResponse<UpdateOrderStatusData>;
 ```
 
-### POST /api/v1/orders/:id/rate
-
-Auth: Bearer token required + role `client`
-
-Path params:
-
-```ts
-type Params = { id: number };
-```
-
-Request body:
-
-```ts
-type RateOrderRequest = {
-  feedback: {
-    rating: number; // 1..5
-    comment?: string | null; // <= 500
-    anonymous?: boolean;
-  };
-};
-```
-
-Response (200):
-
-```ts
-type RatingResponse = {
-  ratingId: number;
-  orderId: number;
-  driverId: number;
-  customerId: number;
-  rating: number;
-  isAnonymous?: boolean;
-  comment?: string | null;
-  createdAt: ISODateTime;
-};
-
-type Response = SuccessResponse<RatingResponse>;
-```
+Note: Order rating is not exposed under `/orders/*`. Use `POST /api/v1/ratings/orders/:orderId`.
 
 ---
 
@@ -1611,8 +1609,29 @@ Response (200):
 type HealthOk = {
   status: "ok";
   timestamp: ISODateTime;
+};
+```
+
+Response (503):
+
+```ts
+type HealthError = {
+  status: "error";
+  timestamp: ISODateTime;
+};
+```
+
+### GET /\_internal/health
+
+Auth: Public (but should be protected at the infrastructure level; intended for internal probes)
+
+Response (200):
+
+```ts
+type InternalHealthOk = {
+  status: "ok";
+  timestamp: ISODateTime;
   uptime: number;
-  environment: string;
   database: {
     connected: boolean;
     pool: {
@@ -1624,7 +1643,6 @@ type HealthOk = {
   memory: {
     used: number; // MB
     total: number; // MB
-    external: number; // MB
   };
 };
 ```
@@ -1632,11 +1650,9 @@ type HealthOk = {
 Response (503):
 
 ```ts
-type HealthError = {
+type InternalHealthError = {
   status: "error";
   timestamp: ISODateTime;
-  error: string;
-  database: { connected: false };
 };
 ```
 
