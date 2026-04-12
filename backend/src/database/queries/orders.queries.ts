@@ -36,6 +36,13 @@ export default {
     SELECT orders.assign_order_to_courier($1, $2) AS result
   `,
 
+  /**
+   * Call stored function: Deliver order and release courier atomically
+   */
+  CALL_DELIVER_ORDER: `
+    SELECT orders.deliver_order($1, $2) AS result
+  `,
+
   // ============ ORDER RETRIEVAL ============
 
   /**

@@ -501,6 +501,7 @@ DECLARE
     v_payment_transaction_id INT;
     v_client_id             INT;
     v_order_total           NUMERIC;
+    v_courier_id            INT;
     v_cancelled_at_iso      TEXT;
 
     result JSON;
@@ -537,12 +538,28 @@ BEGIN
     INSERT INTO orders.status_history (order_id, status, previous_status, changed_by, notes)
     VALUES (p_order_id, 'cancelled', v_order_status, p_cancelled_by_user_id, p_cancellation_reason);
 
+    -- Capture active courier before cancelling assignment
+    SELECT courier_id INTO v_courier_id
+    FROM orders.courier_assignments
+    WHERE order_id = p_order_id
+      AND status NOT IN ('cancelled', 'rejected')
+    LIMIT 1;
+
     -- Cancel courier assignment if exists
     UPDATE orders.courier_assignments
     SET status     = 'cancelled',
         updated_at = NOW()
     WHERE order_id = p_order_id
       AND status NOT IN ('cancelled', 'rejected');
+
+    -- Release courier on cancellation
+    IF v_courier_id IS NOT NULL THEN
+        UPDATE logistics.courier_status
+        SET current_assignment_id = NULL,
+            is_available          = is_online,
+            updated_at            = NOW()
+        WHERE courier_id = v_courier_id;
+    END IF;
 
     -- Check for completed payment
     SELECT transaction_id INTO v_payment_transaction_id
@@ -708,3 +725,84 @@ END;
 $$;
 
 COMMENT ON FUNCTION orders.assign_order_to_courier IS 'Atomically assign an order to a courier with row-level locking to avoid race conditions';
+
+
+-- ========================================
+-- Function: deliver_order
+-- Description: Mark order as delivered and atomically release courier assignment
+-- Returns: JSON with operation result
+-- ========================================
+CREATE OR REPLACE FUNCTION orders.deliver_order(
+    p_order_id   INT,
+    p_courier_id INT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_order_status     order_status;
+    v_delivered_at_iso TEXT;
+BEGIN
+    SELECT status INTO v_order_status
+    FROM orders.requests
+    WHERE order_id = p_order_id AND deleted_at IS NULL;
+
+    IF NOT FOUND THEN
+        RETURN json_build_object('success', FALSE, 'error', 'Order not found');
+    END IF;
+
+    IF v_order_status != 'in_transit' THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', format('Order must be in_transit to deliver, current: %s', v_order_status)
+        );
+    END IF;
+
+    -- Update order status
+    UPDATE orders.requests
+    SET status       = 'delivered',
+        delivered_at = NOW(),
+        updated_at   = NOW()
+    WHERE order_id = p_order_id;
+
+    v_delivered_at_iso := to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+
+    -- Record status history
+    INSERT INTO orders.status_history (order_id, status, previous_status, changed_by)
+    VALUES (p_order_id, 'delivered', 'in_transit', p_courier_id);
+
+    -- Mark assignment delivered
+    UPDATE orders.courier_assignments
+    SET status       = 'delivered',
+        completed_at = NOW(),
+        updated_at   = NOW()
+    WHERE order_id   = p_order_id
+      AND courier_id = p_courier_id
+      AND status NOT IN ('cancelled', 'rejected', 'delivered');
+
+    -- Release courier: clear assignment, restore availability based on is_online
+    UPDATE logistics.courier_status
+    SET current_assignment_id = NULL,
+        is_available          = is_online,
+        updated_at            = NOW()
+    WHERE courier_id = p_courier_id;
+
+    RETURN json_build_object(
+        'success', TRUE,
+        'order', json_build_object(
+            'orderId',     p_order_id,
+            'status',      'delivered',
+            'deliveredAt', v_delivered_at_iso
+        )
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success',    FALSE,
+        'error',      SQLERRM,
+        'error_code', 'DELIVERY_FAILED'
+    );
+END;
+$$;
+
+COMMENT ON FUNCTION orders.deliver_order IS 'Mark order as delivered and atomically release courier assignment';

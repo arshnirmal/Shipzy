@@ -11,7 +11,7 @@ import {
   FareCalculationResultZ,
   OrderCreateResultZ,
 } from "./orders.zod.js";
-import { NotFoundError, ValidationError } from "../../utils/error.util.js";
+import { AppError, NotFoundError, ValidationError } from "../../utils/error.util.js";
 import type { FareCalculationResult, OrderCreateResult } from "./orders.zod.js";
 import type {
   AcceptOrderResult,
@@ -400,6 +400,38 @@ class OrdersRepository {
         error: (error as Error).message,
         orderId,
         status,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically deliver order and release courier via stored function
+   */
+  async deliverOrder(
+    orderId: number,
+    courierId: number,
+  ): Promise<{ orderId: number; status: string; deliveredAt: string }> {
+    try {
+      const result = await drizzlePool.query(ordersQueries.CALL_DELIVER_ORDER, [
+        orderId,
+        courierId,
+      ]);
+      const json = result.rows[0]?.result as {
+        success: boolean;
+        error?: string;
+        order?: { orderId: number; status: string; deliveredAt: string };
+      };
+      if (!json?.success) {
+        throw new AppError(json?.error ?? "Delivery failed", 500);
+      }
+      return json.order!;
+    } catch (error) {
+      logger.error({
+        msg: "Error delivering order",
+        error: (error as Error).message,
+        orderId,
+        courierId,
       });
       throw error;
     }

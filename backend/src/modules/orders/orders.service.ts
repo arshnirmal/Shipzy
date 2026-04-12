@@ -441,6 +441,17 @@ class OrdersService {
       );
     }
 
+    if (status === "delivered") {
+      const delivered = await ordersRepository.deliverOrder(orderId, courierId);
+      return {
+        order: {
+          orderId: delivered.orderId,
+          status: "delivered" as const,
+          timestamp: delivered.deliveredAt,
+        },
+      };
+    }
+
     const updated = await ordersRepository.updateOrderStatus(orderId, status);
     if (!updated) {
       throw new NotFoundError("Order not found or update failed");
@@ -458,9 +469,7 @@ class OrdersService {
         ? updated.pickedUpAt
         : status === "in_transit"
           ? updated.inTransitAt
-          : status === "delivered"
-            ? updated.deliveredAt
-            : updated.updatedAt;
+          : updated.updatedAt;
 
     if (!timestamp) {
       throw new AppError("Status timestamp missing after update", 500);
@@ -469,7 +478,7 @@ class OrdersService {
     return {
       order: {
         orderId: updated.orderId,
-        status: status as "picked_up" | "in_transit" | "delivered",
+        status: status as "picked_up" | "in_transit",
         timestamp: toIsoDateTime(timestamp),
       },
     };

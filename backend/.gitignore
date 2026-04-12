@@ -19,6 +19,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Seeder output
+scripts/output/seed-manifest-*.json
+
 # System
 .DS_Store
 thumbs.db
