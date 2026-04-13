@@ -343,10 +343,17 @@ export class SeedRunner {
     const row = result.rows[0];
 
     if (!row) {
+      const targetLabel =
+        typeof target.id === "number"
+          ? `userId=${target.id}`
+          : target.email
+            ? `email=${normalizeEmail(target.email)}`
+            : "(no filter)";
       this.failures.push({
         action: "db.lookup.actor",
-        message: `No ${role} found for provided target filter.`,
+        message: `No ${role} found for provided target filter (${targetLabel}).`,
       });
+      console.error(`❌ db.lookup.actor: No ${role} found (${targetLabel}).`);
       return null;
     }
 
@@ -1135,8 +1142,31 @@ export class SeedRunner {
     );
     await this.ensureStaticCatalog();
 
+    const hasExplicitClientTarget = Boolean(
+      this.config.targetClient.id || this.config.targetClient.email,
+    );
+
+    const fixedClient = hasExplicitClientTarget
+      ? await this.ensureClientForOrders()
+      : null;
+
+    if (hasExplicitClientTarget && !fixedClient) {
+      this.failures.push({
+        action: "orders.prepare.client",
+        message:
+          "Unable to resolve the requested target client. Re-run and provide a valid client userId/email (or disable DB target lookup).",
+      });
+      console.error(
+        "❌ orders.prepare.client: Could not resolve target client; skipping orders module.",
+      );
+      if (this.config.failFast) {
+        throw new Error("No client available for order seeding.");
+      }
+      return;
+    }
+
     for (let i = 0; i < this.config.counts.orders; i += 1) {
-      const targetClient = await this.ensureClientForOrders();
+      const targetClient = fixedClient || (await this.ensureClientForOrders());
       if (!targetClient) {
         this.failures.push({
           action: "orders.prepare.client",
@@ -1364,6 +1394,25 @@ export class SeedRunner {
     console.log(`   Orders created: ${this.orders.length}`);
     console.log(`   Ratings created: ${this.ratings.length}`);
     console.log(`   Failures captured: ${totalFailures}`);
+
+    if (totalFailures > 0) {
+      const failureCounts = new Map<string, number>();
+      for (const failure of this.failures) {
+        failureCounts.set(
+          failure.action,
+          (failureCounts.get(failure.action) || 0) + 1,
+        );
+      }
+
+      const topFailures = [...failureCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 5);
+
+      console.log("   Top failure categories:");
+      for (const [action, count] of topFailures) {
+        console.log(`     - ${action}: ${count}`);
+      }
+    }
     console.log(`   Manifest: ${manifestPath}`);
   }
 
