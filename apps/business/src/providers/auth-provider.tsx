@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -42,13 +43,15 @@ type AuthProviderProps = {
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(() => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
     const tokens = getStoredTokens();
     const storedUser = getStoredUser();
-
-    return tokens && storedUser ? storedUser : null;
-  });
-  const [isLoading] = useState(false);
+    setUser(tokens && storedUser ? storedUser : null);
+    setIsLoading(false);
+  }, []);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
     const response = await apiRequest<ApiSuccess<AuthResponseData>>(

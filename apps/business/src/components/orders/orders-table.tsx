@@ -246,7 +246,7 @@ export function OrdersTable({
     <div className="space-y-3">
       {/* Table toolbar */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {pagination ? (
             <>
               {pagination.total.toLocaleString()} order
@@ -255,7 +255,7 @@ export function OrdersTable({
           ) : (
             <Skeleton className="h-4 w-24" />
           )}
-        </p>
+        </span>
         <Button
           variant="outline"
           size="sm"
