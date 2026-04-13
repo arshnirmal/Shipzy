@@ -399,6 +399,58 @@ class BusinessService {
       offset += limit;
     }
   }
+
+  // =========================================================================
+  // ANALYTICS
+  // =========================================================================
+
+  async getAnalytics(clientId: number, queryParams: any) {
+    const fromDate = new Date(queryParams.dateFrom);
+    const toDate = new Date(queryParams.dateTo);
+    
+    const daysDiff = (toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24);
+    if (daysDiff > 366) {
+      throw new AppError("Analytics date range cannot exceed 366 days", 400);
+    }
+    
+    const row = await businessRepository.getBusinessAnalytics(clientId, fromDate, toDate);
+    
+    const total = parseInt(row.total || "0", 10);
+    const delivered = parseInt(row.delivered || "0", 10);
+    const cancelled = parseInt(row.cancelled || "0", 10);
+    const active = parseInt(row.active || "0", 10);
+    
+    const denom = delivered + cancelled;
+    const successRate = denom > 0 ? (delivered / denom) * 100 : 0;
+    
+    const spendTotal = parseFloat(row.spend_total || "0");
+    const spendAverage = parseFloat(row.spend_average || "0");
+    const avgDuration = parseFloat(row.avg_duration || "0");
+
+    return {
+      analytics: {
+        period: {
+          from: fromDate.toISOString(),
+          to: toDate.toISOString()
+        },
+        orders: {
+          total,
+          delivered,
+          cancelled,
+          active,
+          successRate: Number(successRate.toFixed(1))
+        },
+        spend: {
+          total: Number(spendTotal.toFixed(2)),
+          average: Number(spendAverage.toFixed(2)),
+          currency: "INR"
+        },
+        delivery: {
+          avgDurationMins: Math.round(avgDuration)
+        }
+      }
+    };
+  }
 }
 
 export default new BusinessService();

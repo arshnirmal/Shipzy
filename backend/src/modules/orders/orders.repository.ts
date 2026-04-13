@@ -429,6 +429,56 @@ class OrdersRepository {
     }
   }
 
+  async getVolumeDiscount(clientId: number): Promise<{discountPct?: number}> {
+    try {
+      const userRes = await drizzlePool.query(`SELECT role FROM users.profiles WHERE user_id = $1 LIMIT 1`, [clientId]);
+      if (userRes.rows[0]?.role !== "business") return {};
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const countRes = await drizzlePool.query(`
+        SELECT COUNT(*) as cnt FROM orders.requests 
+        WHERE client_id = $1 
+        AND created_at >= $2 
+        AND deleted_at IS NULL
+        AND status IN ('pending', 'scheduled', 'accepted', 'picked_up', 'in_transit', 'delivered')
+      `, [clientId, thirtyDaysAgo]);
+      
+      const count = parseInt(countRes.rows[0].cnt, 10);
+      
+      const tierRes = await drizzlePool.query(`
+        SELECT discount_pct FROM public.business_discount_tiers
+        WHERE min_orders <= $1 
+        AND (max_orders >= $1 OR max_orders IS NULL)
+        AND is_active = true
+        LIMIT 1
+      `, [count]);
+      
+      if (tierRes.rows.length === 0) return {};
+      return { discountPct: parseFloat(tierRes.rows[0].discount_pct) };
+    } catch (err) {
+      logger.error({ msg: "Error fetching volume discount", error: (err as Error).message });
+      return {};
+    }
+  }
+
+  async markOrderAsScheduled(orderId: number) {
+    await drizzlePool.query(`UPDATE orders.requests SET status = 'scheduled', updated_at = NOW() WHERE order_id = $1`, [orderId]);
+  }
+
+  async releaseScheduledOrders(): Promise<number[]> {
+    const result = await drizzlePool.query(`
+      UPDATE orders.requests
+      SET status = 'pending', updated_at = NOW()
+      WHERE status = 'scheduled'
+      AND (schedule->>'pickupAt')::timestamptz <= NOW() + interval '30 minutes'
+      AND deleted_at IS NULL
+      RETURNING order_id;
+    `);
+    return result.rows.map(r => r.order_id);
+  }
+
   /**
    * Atomically deliver order and release courier via stored function
    */

@@ -159,6 +159,9 @@ export const orderRequests = ordersSchema.table(
     index("idx_orders_requests_status_created_active")
       .on(table.status, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
+    index("idx_orders_scheduled_pickup")
+      .on(table.status, sql`(schedule->>'pickupAt')::timestamptz`)
+      .where(sql`status = 'scheduled' AND deleted_at IS NULL`),
   ],
 );
 

@@ -178,6 +178,24 @@ class BusinessController {
 
     return reply;
   }
+
+  // =========================================================================
+  // ANALYTICS
+  // =========================================================================
+
+  async getAnalytics(request: FastifyRequest, reply: FastifyReply) {
+    const userId = request.user!.userId;
+    const query = request.query as any;
+
+    const data = await businessService.getAnalytics(userId, query);
+
+    return {
+      success: true,
+      message: "Analytics retrieved",
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
 }
 
 export default new BusinessController();

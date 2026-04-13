@@ -200,6 +200,25 @@ class OrdersService {
       throw new ValidationError("Pricing mismatch - please recalculate fare");
     }
 
+    const schedule = orderData.schedule || {};
+    let isScheduled = false;
+    if (schedule.pickupAt) {
+      const pickupDate = new Date(schedule.pickupAt);
+      if (pickupDate.getTime() > Date.now() + 30 * 60 * 1000) {
+        isScheduled = true;
+      } else if (pickupDate.getTime() < Date.now()) {
+        throw new ValidationError("Scheduled pickup time must be in the future");
+      }
+    }
+
+    const discountInfo = await ordersRepository.getVolumeDiscount(clientId);
+    if (discountInfo.discountPct !== undefined && orderData.pricing) {
+        const discountAmount = Number(((orderData.pricing.totalPrice * discountInfo.discountPct) / 100).toFixed(2));
+        orderData.pricing.discountPct = discountInfo.discountPct;
+        orderData.pricing.discountAmount = discountAmount;
+        orderData.pricing.totalPrice = Math.max(0, orderData.pricing.totalPrice - discountAmount);
+    }
+
     const result = await ordersRepository.createOrder({
       clientId,
       ...orderData,
@@ -216,9 +235,28 @@ class OrdersService {
       );
     }
 
+    if (isScheduled && result.order.identifiers.orderId) {
+       await ordersRepository.markOrderAsScheduled(result.order.identifiers.orderId);
+       result.order.status = "scheduled";
+       await ordersRepository.recordStatusHistory(result.order.identifiers.orderId, "scheduled", null, clientId, "Order scheduled at creation");
+    }
+
     return {
       order: result.order,
     };
+  }
+
+  async releaseScheduledOrders() {
+    const releasedOrders = await ordersRepository.releaseScheduledOrders();
+    for (const orderId of releasedOrders) {
+      await ordersRepository.recordStatusHistory(
+        orderId,
+        "pending",
+        "scheduled",
+        null,
+        "Auto-released by scheduler"
+      );
+    }
   }
 
   async getOrderById(

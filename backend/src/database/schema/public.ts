@@ -28,6 +28,7 @@ export const userRoleEnum = pgEnum("user_role", [
 ]);
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
+  "scheduled",
   "accepted",
   "picked_up",
   "in_transit",
@@ -276,4 +277,25 @@ export const vehicleCategories = pgTable(
       sql`${table.maxWeightKg} >= 0`,
     ),
   ],
+);
+
+// Business Discount Tiers
+export const businessDiscountTiers = pgTable(
+  "business_discount_tiers",
+  {
+    tierId: serial("tier_id").primaryKey(),
+    label: varchar("label", { length: 100 }).notNull(),
+    minOrders: integer("min_orders").notNull(),
+    maxOrders: integer("max_orders"),
+    discountPct: numeric("discount_pct", { precision: 5, scale: 2, mode: "number" }).notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check("discount_pct_range_chk", sql`${table.discountPct} BETWEEN 0 AND 100`),
+    check("min_orders_non_negative_chk", sql`${table.minOrders} >= 0`),
+    check("max_orders_valid_chk", sql`${table.maxOrders} > ${table.minOrders} OR ${table.maxOrders} IS NULL`),
+  ]
 );

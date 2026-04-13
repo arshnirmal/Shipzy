@@ -44,6 +44,8 @@ export const OrderPricingJSONBZ = z.object({
   gstAmount: z.number().nonnegative(),
   totalPrice: z.number().nonnegative(),
   currency: z.string().optional(),
+  discountPct: z.number().nonnegative().optional(),
+  discountAmount: z.number().nonnegative().optional(),
 });
 export type OrderPricingJSONB = z.infer<typeof OrderPricingJSONBZ>;
 

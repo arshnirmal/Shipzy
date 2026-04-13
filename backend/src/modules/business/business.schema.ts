@@ -12,6 +12,8 @@ import {
   BulkOrderCreateRequestZ,
   BulkOrderResultZ,
   ExportOrdersQueryZ,
+  AnalyticsQueryZ,
+  AnalyticsResponseZ,
 } from "./business.zod.js";
 import { CreateOrderResponseZ } from "../orders/orders.zod.js";
 
@@ -116,4 +118,11 @@ export const bulkCreateOrdersSchema = {
 // No JSON schema for export (since it's text/csv response)
 export const exportOrdersSchema = {
   querystring: toJsonSchema(ExportOrdersQueryZ),
+};
+
+export const getAnalyticsSchema = {
+  querystring: toJsonSchema(AnalyticsQueryZ),
+  response: {
+    200: toJsonSchema(AnalyticsResponseZ),
+  },
 };

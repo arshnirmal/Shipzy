@@ -1,5 +1,5 @@
 import { eq, and, isNull, desc } from "drizzle-orm";
-import drizzleDb from "../../database/drizzle.js";
+import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import { orderDrafts, orderTemplates } from "../../database/schema/orders.js";
 
 class BusinessRepository {
@@ -170,6 +170,30 @@ class BusinessRepository {
       .update(orderTemplates)
       .set({ useCount: currentCount + 1 })
       .where(eq(orderTemplates.templateId, templateId));
+  }
+
+  // =========================================================================
+  // ANALYTICS
+  // =========================================================================
+
+  async getBusinessAnalytics(clientId: number, dateFrom: Date, dateTo: Date) {
+    const query = `
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'delivered') as delivered,
+        COUNT(*) FILTER (WHERE status IN ('cancelled', 'undeliverable', 'returned')) as cancelled,
+        COUNT(*) FILTER (WHERE status IN ('scheduled', 'pending', 'accepted', 'picked_up', 'in_transit')) as active,
+        SUM(total_price) as spend_total,
+        AVG(total_price) as spend_average,
+        AVG(actual_duration_mins) FILTER (WHERE status = 'delivered') as avg_duration
+      FROM orders.requests
+      WHERE client_id = $1
+        AND created_at >= $2
+        AND created_at <= $3
+        AND deleted_at IS NULL
+    `;
+    const result = await drizzlePool.query(query, [clientId, dateFrom, dateTo]);
+    return result.rows[0] || {};
   }
 }
 

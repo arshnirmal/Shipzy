@@ -144,3 +144,38 @@ export const ExportOrdersQueryZ = z.object({
   format: z.literal("csv").optional().default("csv"),
 }).strict();
 export type ExportOrdersQuery = z.infer<typeof ExportOrdersQueryZ>;
+
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
+export const AnalyticsQueryZ = z.object({
+  dateFrom: z.string().datetime(),
+  dateTo: z.string().datetime(),
+}).strict();
+export type AnalyticsQuery = z.infer<typeof AnalyticsQueryZ>;
+
+export const AnalyticsResponseZ = z.object({
+  analytics: z.object({
+    period: z.object({
+      from: z.string(),
+      to: z.string()
+    }),
+    orders: z.object({
+      total: z.number().int().nonnegative(),
+      delivered: z.number().int().nonnegative(),
+      cancelled: z.number().int().nonnegative(),
+      active: z.number().int().nonnegative(),
+      successRate: z.number().nonnegative()
+    }),
+    spend: z.object({
+      total: z.number().nonnegative(),
+      average: z.number().nonnegative(),
+      currency: z.string()
+    }),
+    delivery: z.object({
+      avgDurationMins: z.number().nonnegative()
+    })
+  }).strict()
+}).strict();
+export type AnalyticsResponse = z.infer<typeof AnalyticsResponseZ>;

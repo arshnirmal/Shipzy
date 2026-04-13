@@ -13,6 +13,7 @@ import {
   draftFromTemplateSchema,
   bulkCreateOrdersSchema,
   exportOrdersSchema,
+  getAnalyticsSchema,
 } from "./business.schema.js";
 
 export default async function businessRoutes(app: FastifyInstance) {
@@ -115,5 +116,15 @@ export default async function businessRoutes(app: FastifyInstance) {
     "/orders/export",
     { schema: exportOrdersSchema },
     businessController.exportOrders
+  );
+
+  // =========================================================================
+  // ANALYTICS
+  // =========================================================================
+
+  app.get(
+    "/analytics",
+    { schema: getAnalyticsSchema },
+    businessController.getAnalytics
   );
 }

@@ -12,6 +12,7 @@ import {
   notFoundHandler,
 } from "./middleware/error.middleware.js";
 import { rateLimitConfig } from "./middleware/ratelimit.middleware.js";
+import { startScheduler } from "./utils/scheduler.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -176,7 +177,10 @@ export const buildApp = async (
         },
       };
     } catch (error) {
-      logger.error({ msg: "Health check failed", error: (error as Error).message });
+      logger.error({
+        msg: "Health check failed",
+        error: (error as Error).message,
+      });
       return reply.status(503).send({
         status: "error",
         timestamp: new Date().toISOString(),
@@ -211,6 +215,11 @@ export const buildApp = async (
 
   // Global error handler
   app.setErrorHandler(errorHandler as any);
+
+  app.ready((err) => {
+    if (err) throw err;
+    startScheduler(app);
+  });
 
   return app;
 };

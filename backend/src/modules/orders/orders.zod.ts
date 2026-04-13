@@ -22,6 +22,7 @@ import {
 
 export const OrderLifecycleStatusZ = z.enum([
   "pending",
+  "scheduled",
   "accepted",
   "picked_up",
   "in_transit",
@@ -94,7 +95,7 @@ export const BaseOrderCoreZ = z
     locations: OrderLocationsZ,
     package: OrderPackageJSONBZ.default({ notifyRecipientSms: false }),
     schedule: OrderScheduleJSONBZ.default({}),
-    pricing: FareBreakdownZ,
+    pricing: OrderPricingJSONBZ,
     couponCode: z.string().max(50).nullable().optional(),
     items: z.array(OrderItemJSONBZ).optional().default([]),
   })
