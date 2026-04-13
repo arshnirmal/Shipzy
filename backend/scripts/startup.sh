@@ -109,18 +109,6 @@ deploy_migrations() {
     fi
 }
 
-# Function to seed development data (optional)
-seed_development_data() {
-    if [ "$NODE_ENV" = "development" ] && [ "$SKIP_SEEDING" != "true" ]; then
-        print_status "Seeding via interactive API tool (seed-interactive)..."
-        if pnpm run db:seed; then
-            print_success "Development data seeded successfully!"
-        else
-            print_warning "Failed to seed development data (non-critical)"
-        fi
-    fi
-}
-
 # Function to start the application
 start_application() {
     print_status "Starting Shipzy backend application..."
@@ -154,10 +142,7 @@ main() {
         exit 1
     fi
 
-    # Step 3: Seed development data (optional)
-    seed_development_data
-
-    # Step 4: Start application
+    # Step 3: Start application
     print_success "Startup sequence completed successfully!"
     start_application
 }

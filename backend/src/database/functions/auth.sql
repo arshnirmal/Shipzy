@@ -139,7 +139,7 @@ DECLARE
     v_user_id INT;
     v_user_uuid UUID;
     v_is_new_user BOOLEAN := false;
-    v_role user_role;
+    v_role public.user_role;
     result JSON;
 BEGIN
     -- Verify OTP
@@ -182,7 +182,7 @@ BEGIN
         v_is_new_user := true;
         
         BEGIN
-            v_role := p_role_name::user_role;
+            v_role := p_role_name::public.user_role;
         EXCEPTION WHEN invalid_text_representation THEN
             RETURN json_build_object(
                 'success', false,
