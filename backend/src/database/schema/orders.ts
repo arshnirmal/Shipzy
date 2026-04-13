@@ -15,6 +15,7 @@ import {
   numeric,
   timestamp,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { userProfiles } from "./users.js";
@@ -246,3 +247,77 @@ export const proofOfDelivery = ordersSchema.table("proof_of_delivery", {
     .defaultNow()
     .notNull(),
 });
+
+// Templates
+export const orderTemplates = ordersSchema.table(
+  "templates",
+  {
+    templateId: serial("template_id").primaryKey(),
+    templateUuid: uuid("template_uuid").defaultRandom().notNull().unique(),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => userProfiles.userId, { onDelete: "cascade" }),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    fulfillment: jsonb("fulfillment"),
+    pickupLocation: jsonb("pickup_location").$type<OrderLocationJSONB>(),
+    deliveryLocation: jsonb("delivery_location").$type<OrderLocationJSONB>(),
+    items: jsonb("items").$type<OrderItemJSONB[]>().default([]).notNull(),
+    package: jsonb("package").$type<OrderPackageJSONB>(),
+    useCount: integer("use_count").default(0).notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("idx_templates_client_active")
+      .on(table.clientId)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.isActive} = true`),
+  ],
+);
+
+// Drafts
+export const orderDrafts = ordersSchema.table(
+  "drafts",
+  {
+    draftId: serial("draft_id").primaryKey(),
+    draftUuid: uuid("draft_uuid").defaultRandom().notNull().unique(),
+    clientId: integer("client_id")
+      .notNull()
+      .references(() => userProfiles.userId, { onDelete: "cascade" }),
+    name: varchar("name", { length: 200 }),
+    fulfillment: jsonb("fulfillment"),
+    pickupLocation: jsonb("pickup_location").$type<OrderLocationJSONB>(),
+    deliveryLocation: jsonb("delivery_location").$type<OrderLocationJSONB>(),
+    items: jsonb("items").$type<OrderItemJSONB[]>().default([]).notNull(),
+    package: jsonb("package").$type<OrderPackageJSONB>(),
+    pricing: jsonb("pricing").$type<OrderPricingJSONB>(),
+    couponCode: varchar("coupon_code", { length: 50 }),
+    notes: text("notes"),
+    templateId: integer("template_id").references(() => orderTemplates.templateId, { onDelete: "set null" }),
+    submittedOrderId: integer("submitted_order_id").references(() => orderRequests.orderId, { onDelete: "set null" }),
+
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("idx_drafts_client_created")
+      .on(table.clientId, table.createdAt)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("idx_drafts_client_submitted")
+      .on(table.clientId, table.submittedAt)
+      .where(sql`${table.deletedAt} IS NULL`),
+  ],
+);

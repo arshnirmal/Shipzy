@@ -22,6 +22,7 @@ declare module "fastify" {
 // Import routes
 import addressesRoutes from "./modules/addresses/addresses.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
+import businessRoutes from "./modules/business/business.routes.js";
 import driversRoutes from "./modules/drivers/drivers.routes.js";
 import ordersRoutes from "./modules/orders/orders.routes.js";
 import ratingsRoutes from "./modules/ratings/ratings.routes.js";
@@ -194,6 +195,7 @@ export const buildApp = async (
 
   // Register module routes
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
+  await app.register(businessRoutes, { prefix: "/api/v1/business" });
 
   await app.register(addressesRoutes, { prefix: "/api/v1/addresses" });
   await app.register(usersRoutes, { prefix: "/api/v1/users" });
