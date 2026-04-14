@@ -4,12 +4,18 @@ import { authorize } from "../../middleware/auth.middleware.js";
 import ordersController from "./orders.controller.js";
 import {
   acceptOrderSchema,
+  arriveSchema,
   calculateFareSchema,
   cancelOrderSchema,
   createOrderSchema,
   getAvailableOrdersSchema,
   getOrderByIdSchema,
   listOrdersSchema,
+  proofOfDeliverySchema,
+  returnSchema,
+  returnedSchema,
+  trackingSchema,
+  undeliverableSchema,
   updateOrderStatusSchema,
 } from "./orders.schema.js";
 
@@ -92,6 +98,68 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       onRequest: [authorize("courier")],
     },
     ordersController.updateOrderStatus.bind(ordersController) as any,
+  );
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  // POST /api/v1/orders/:id/arrive - Record arrival at delivery (couriers only)
+  fastify.post(
+    "/:id/arrive",
+    {
+      schema: arriveSchema,
+      onRequest: [authorize("courier")],
+    },
+    ordersController.arriveAtDelivery.bind(ordersController) as any,
+  );
+
+  // POST /api/v1/orders/:id/undeliverable - Mark order undeliverable (couriers only)
+  fastify.post(
+    "/:id/undeliverable",
+    {
+      schema: undeliverableSchema,
+      onRequest: [authorize("courier")],
+    },
+    ordersController.markUndeliverable.bind(ordersController) as any,
+  );
+
+  // POST /api/v1/orders/:id/return - Start RTO return (couriers only)
+  fastify.post(
+    "/:id/return",
+    {
+      schema: returnSchema,
+      onRequest: [authorize("courier")],
+    },
+    ordersController.startReturn.bind(ordersController) as any,
+  );
+
+  // POST /api/v1/orders/:id/returned - Confirm order returned (couriers only)
+  fastify.post(
+    "/:id/returned",
+    {
+      schema: returnedSchema,
+      onRequest: [authorize("courier")],
+    },
+    ordersController.confirmReturned.bind(ordersController) as any,
+  );
+
+  // POST /api/v1/orders/:id/proof-of-delivery - Submit POD (couriers only)
+  fastify.post(
+    "/:id/proof-of-delivery",
+    {
+      schema: proofOfDeliverySchema,
+      onRequest: [authorize("courier")],
+    },
+    ordersController.submitProofOfDelivery.bind(ordersController) as any,
+  );
+
+  // GET /api/v1/orders/:id/tracking - Get live tracking (clients, couriers, admins)
+  fastify.get(
+    "/:id/tracking",
+    {
+      schema: trackingSchema,
+      onRequest: [authorize("client", "courier", "admin")],
+    },
+    ordersController.getOrderTracking.bind(ordersController) as any,
   );
 
   // Rating endpoint removed — use POST /api/v1/ratings/orders/:orderId (canonical path)

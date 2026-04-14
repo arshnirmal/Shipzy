@@ -70,6 +70,14 @@ export const UpdateLocationRequestZ = z
         current: CoordinatesZ,
       })
       .strict(),
+    locationMeta: z
+      .object({
+        speed: z.number().nullable().optional(),
+        bearing: z.number().nullable().optional(),
+        accuracy: z.number().nullable().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type UpdateLocationRequest = z.infer<typeof UpdateLocationRequestZ>;

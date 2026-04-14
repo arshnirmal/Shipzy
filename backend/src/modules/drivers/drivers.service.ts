@@ -247,6 +247,7 @@ class DriversService {
   async updateLocation(
     userId: number,
     locationData: LocationData,
+    locationMeta?: { speed?: number | null; bearing?: number | null; accuracy?: number | null } | null,
   ): Promise<DriverLocationResponse> {
     try {
       const { latitude, longitude } = locationData;
@@ -263,6 +264,7 @@ class DriversService {
         userId,
         latitude,
         longitude,
+        locationMeta,
       );
 
       return {
@@ -329,8 +331,10 @@ class DriversService {
               delivery: assignment.delivery ?? null,
               estimatedDistanceKm,
               actualDistanceKm,
-              estimatedDeliveryMinutes: Math.ceil(
-                ((estimatedDistanceKm ?? 10) / 25) * 60,
+          estimatedDeliveryMinutes: Math.ceil(
+                ((estimatedDistanceKm ?? 10) /
+                  (pricingConfig.get("average_courier_speed_kmph") ?? 25)) *
+                  60,
               ),
             },
             snapshot: {
@@ -434,8 +438,9 @@ class DriversService {
       // TODO: calculate from actual delivery timing against requested schedule.
       const onTimeBonus = 0;
 
-      // Quality bonus
-      const qualityBonus = qualityBonusAmount;
+      // Quality bonus - only awarded when conditions met (not unconditional)
+      // TODO: calculate from actual completion quality metrics
+      const qualityBonus = 0;
 
       // Calculate gross earning
       const grossEarning =

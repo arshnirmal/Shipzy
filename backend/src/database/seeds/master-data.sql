@@ -211,7 +211,9 @@ VALUES
   ('peak_hour_bonus_rate', 0.15, 'Peak hour bonus as percentage of base payout'),
   ('urgency_bonus_amount', 15.00, 'Fixed bonus for urgent deliveries'),
   ('on_time_bonus_rate', 0.05, 'On-time delivery bonus rate'),
-  ('quality_bonus_amount', 5.00, 'Quality bonus for good ratings')
+  ('quality_bonus_amount', 5.00, 'Quality bonus for good ratings'),
+  ('undeliverable_wait_minutes', 5, 'Minutes driver must wait at delivery before marking undeliverable'),
+  ('average_courier_speed_kmph', 25, 'Used for estimated delivery minutes calculation')
 ON CONFLICT (config_key) DO UPDATE SET
   config_value = EXCLUDED.config_value,
   description = EXCLUDED.description,

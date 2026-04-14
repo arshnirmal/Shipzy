@@ -80,11 +80,11 @@ export default {
           COUNT(DISTINCT CASE WHEN o.created_at::date = CURRENT_DATE THEN o.order_id END) AS "todayDeliveries",
           COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.order_id END) AS "weekDeliveries",
           COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.order_id END) AS "monthDeliveries",
-          COALESCE(SUM(o.total_price), 0) AS "totalEarnings",
-          COALESCE(SUM(CASE WHEN o.created_at::date = CURRENT_DATE THEN o.total_price END), 0) AS "todayEarnings",
-          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.total_price END), 0) AS "weekEarnings",
-          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.total_price END), 0) AS "monthEarnings",
-          COALESCE(ROUND(AVG(o.total_price), 2), 0) AS "avgOrderValue",
+          COALESCE(SUM(COALESCE(ca.net_earnings, o.total_price * 0.7)), 0) AS "totalEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at::date = CURRENT_DATE THEN COALESCE(ca.net_earnings, o.total_price * 0.7) END), 0) AS "todayEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN COALESCE(ca.net_earnings, o.total_price * 0.7) END), 0) AS "weekEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(ca.net_earnings, o.total_price * 0.7) END), 0) AS "monthEarnings",
+          COALESCE(ROUND(AVG(COALESCE(ca.net_earnings, o.total_price * 0.7)), 2), 0) AS "avgOrderValue",
           COALESCE(ROUND(SUM(o.actual_distance_km), 2), 0) AS "totalDistanceKm"
       FROM orders.requests o
       JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
@@ -120,6 +120,7 @@ export default {
       UPDATE logistics.courier_status
       SET
           current_location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+          location_meta = CASE WHEN $4::jsonb IS NOT NULL THEN $4::jsonb ELSE location_meta END,
           last_location_update = NOW(),
           updated_at = NOW()
       WHERE courier_id = $1
@@ -167,7 +168,7 @@ export default {
     FROM orders.courier_assignments ca
     JOIN orders.requests o ON ca.order_id = o.order_id
     WHERE ca.courier_id = $1
-      AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
+      AND ca.status NOT IN ('delivered', 'cancelled', 'rejected', 'returned')
     ORDER BY ca.assigned_at DESC
   `,
 

@@ -16,6 +16,9 @@ import type {
   OrderParams,
   ListOrdersQuery,
   AvailableOrdersQuery,
+  ArriveRequest,
+  UndeliverableRequest,
+  ProofOfDeliveryRequest,
 } from "./orders.zod.js";
 
 class OrdersController {
@@ -316,6 +319,153 @@ class OrdersController {
         result,
         "Order status updated successfully",
       );
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * POST /api/v1/orders/:id/arrive
+   */
+  async arriveAtDelivery(
+    request: FastifyRequest<{ Params: OrderParams; Body: ArriveRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.arriveAtDelivery(
+        orderId,
+        userId,
+        request.body,
+      );
+      return successResponse(reply, result.data, "Arrived at delivery location");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/undeliverable
+   */
+  async markUndeliverable(
+    request: FastifyRequest<{ Params: OrderParams; Body: UndeliverableRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.markUndeliverable(
+        orderId,
+        userId,
+        request.body,
+      );
+      return successResponse(reply, result.data, "Order marked undeliverable");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/return
+   */
+  async startReturn(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.startReturn(orderId, userId);
+      return successResponse(reply, result.data, "Return initiated");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/returned
+   */
+  async confirmReturned(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.confirmReturned(orderId, userId);
+      return successResponse(reply, result.data, "Order returned successfully");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/proof-of-delivery
+   */
+  async submitProofOfDelivery(
+    request: FastifyRequest<{
+      Params: OrderParams;
+      Body: ProofOfDeliveryRequest;
+    }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.submitProofOfDelivery(
+        orderId,
+        userId,
+        request.body,
+      );
+      return successResponse(
+        reply,
+        result.data,
+        "Proof of delivery submitted",
+        201,
+      );
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * GET /api/v1/orders/:id/tracking
+   */
+  async getOrderTracking(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const userRole = request.user!.role;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.getOrderTracking(
+        orderId,
+        userId,
+        userRole,
+      );
+      return successResponse(reply, result.data, "Order tracking data");
     } catch (error) {
       if (error instanceof AppError) {
         return errorResponse(reply, error.message, error.statusCode);

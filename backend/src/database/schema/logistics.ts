@@ -14,12 +14,14 @@ import {
   date,
   bigserial,
   timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { userProfiles } from "./users.js";
 import { vehicleCategories } from "./public.js";
 import { courierAssignments } from "./orders.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
+import type { LocationMetaJSONB } from "./types.js";
 
 const logisticsSchema = pgSchema("logistics");
 
@@ -69,6 +71,7 @@ export const courierStatus = logisticsSchema.table(
     isAvailable: boolean("is_available").default(false).notNull(),
     isOnline: boolean("is_online").default(false).notNull(),
     currentLocation: geography("current_location"),
+    locationMeta: jsonb("location_meta").$type<LocationMetaJSONB>(),
     lastLocationUpdate: timestamp("last_location_update", { withTimezone: true }),
     currentAssignmentId: integer("current_assignment_id").references(
       () => courierAssignments.assignmentId,

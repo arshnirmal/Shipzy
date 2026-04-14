@@ -139,17 +139,26 @@ class DriversRepository {
   }
 
   /**
-   * Update courier location
+   * Update courier location with optional location meta (speed, bearing, accuracy)
    */
   async updateLocation(
     courierId: number,
     latitude: number,
     longitude: number,
+    locationMeta?: { speed?: number | null; bearing?: number | null; accuracy?: number | null } | null,
   ): Promise<CourierLocationResult> {
     try {
+      const metaJson = locationMeta
+        ? JSON.stringify({
+            speed: locationMeta.speed ?? null,
+            bearing: locationMeta.bearing ?? null,
+            accuracy: locationMeta.accuracy ?? null,
+          })
+        : null;
+
       const result = await drizzlePool.query(
         driversQueries.UPDATE_COURIER_LOCATION,
-        [courierId, longitude, latitude],
+        [courierId, longitude, latitude, metaJson],
       );
 
       return parseDbRow(CourierLocationDbZ, result.rows[0], "courier location");

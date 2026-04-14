@@ -121,6 +121,7 @@ class DriversController {
       const result = await driversService.updateLocation(
         userId,
         request.body.location.current,
+        request.body.locationMeta,
       );
 
       return successResponse(reply, result, "Location updated successfully");

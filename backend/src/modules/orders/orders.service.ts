@@ -10,6 +10,8 @@ import ordersRepository from "./orders.repository.js";
 import type {
   AcceptOrderResult,
   AssignmentStatus,
+  ArriveRequest,
+  ArriveResponse,
   AvailableOrderItem,
   AvailableOrderRow,
   BaseOrder,
@@ -22,8 +24,16 @@ import type {
   OrderListItem,
   OrderListRow,
   OrderRow,
+  ProofOfDeliveryRequest,
+  ProofOfDeliveryResponse,
+  ReturnedResponse,
+  ReturnResponse,
+  TrackingResponse,
+  UndeliverableRequest,
+  UndeliverableResponse,
   UpdateOrderStatusResponse,
 } from "./orders.zod.js";
+import logger from "../../config/logger.js";
 
 class OrdersService {
   private toNumber(value: unknown, fallback = 0): number {
@@ -561,6 +571,373 @@ class OrdersService {
       reason,
     );
     return { bulk: result };
+  }
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * Driver arrives at delivery location.
+   * Guard: order must be in_transit, courier must match.
+   */
+  async arriveAtDelivery(
+    orderId: number,
+    courierId: number,
+    body: ArriveRequest,
+  ): Promise<ArriveResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "in_transit") {
+      throw new ValidationError(
+        `Order must be in_transit to arrive, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    // Read configurable wait minutes
+    const pricingRepo = await import("../pricing/pricing.repository.js").then(
+      (m) => m.default,
+    );
+    const pricingConfig = await pricingRepo.getAllPricingConfig();
+    const waitMinutes = pricingConfig.get("undeliverable_wait_minutes") ?? 5;
+
+    const arrivedAt = new Date();
+    const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
+
+    // Patch delivery_attempt
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      arrivedAt: arrivedAt.toISOString(),
+      gps: body.gps,
+    });
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "driver_arrived",
+        eventDescription: "Driver arrived at delivery location",
+        latitude: body.gps.latitude,
+        longitude: body.gps.longitude,
+      });
+    }
+
+    return {
+      data: {
+        arrivedAt: arrivedAt.toISOString(),
+        waitUntil: waitUntil.toISOString(),
+        waitMinutes,
+      },
+    };
+  }
+
+  /**
+   * Mark order as undeliverable.
+   * Guard: order must be in_transit, arrivedAt must exist, wait must have elapsed.
+   */
+  async markUndeliverable(
+    orderId: number,
+    courierId: number,
+    body: UndeliverableRequest,
+  ): Promise<UndeliverableResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "in_transit") {
+      throw new ValidationError(
+        `Order must be in_transit to mark undeliverable, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    // Check that driver has arrived
+    const attempt = await ordersRepository.getDeliveryAttempt(orderId);
+    if (!attempt?.arrivedAt) {
+      throw new ValidationError(
+        "Must arrive at delivery location first (POST /:id/arrive)",
+      );
+    }
+
+    // Check wait time has elapsed
+    const pricingRepo = await import("../pricing/pricing.repository.js").then(
+      (m) => m.default,
+    );
+    const pricingConfig = await pricingRepo.getAllPricingConfig();
+    const waitMinutes = pricingConfig.get("undeliverable_wait_minutes") ?? 5;
+    const arrivedAt = new Date(attempt.arrivedAt as string);
+    const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
+
+    if (new Date() < waitUntil) {
+      const remainingMs = waitUntil.getTime() - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      throw new ValidationError(
+        `Must wait ${remainingMin} more minute(s) before marking undeliverable`,
+      );
+    }
+
+    const undeliverableAt = new Date();
+
+    // Patch delivery_attempt with note + photo
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      undeliverableAt: undeliverableAt.toISOString(),
+      driverNote: body.driverNote,
+      ...(body.photoUrl ? { photoUrl: body.photoUrl } : {}),
+    });
+
+    // Update order status
+    await ordersRepository.markUndeliverable(orderId);
+
+    // Record status history
+    await ordersRepository.recordStatusHistory(
+      orderId,
+      "undeliverable",
+      "in_transit",
+      courierId,
+      body.driverNote,
+    );
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "undeliverable",
+        eventDescription: `Undeliverable: ${body.driverNote}`,
+        latitude: (attempt.gps as { latitude?: number })?.latitude ?? null,
+        longitude: (attempt.gps as { longitude?: number })?.longitude ?? null,
+      });
+    }
+
+    return {
+      data: {
+        order: {
+          orderId,
+          status: "undeliverable",
+          undeliverableAt: undeliverableAt.toISOString(),
+        },
+      },
+    };
+  }
+
+  /**
+   * Start RTO return.
+   * Guard: order must be undeliverable, courier must match.
+   */
+  async startReturn(
+    orderId: number,
+    courierId: number,
+  ): Promise<ReturnResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "undeliverable") {
+      throw new ValidationError(
+        `Order must be undeliverable to start return, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    const returnStartedAt = new Date();
+
+    // Patch delivery_attempt
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      returnStartedAt: returnStartedAt.toISOString(),
+    });
+
+    // Mark order + assignment as returning
+    await ordersRepository.markReturning(orderId, courierId);
+
+    // Record status history
+    await ordersRepository.recordStatusHistory(
+      orderId,
+      "returning",
+      "undeliverable",
+      courierId,
+      "Driver initiated RTO return",
+    );
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "return_started",
+        eventDescription: "Driver started return to pickup",
+      });
+    }
+
+    return {
+      data: {
+        order: {
+          orderId,
+          status: "returning",
+          returnStartedAt: returnStartedAt.toISOString(),
+        },
+      },
+    };
+  }
+
+  /**
+   * Confirm order returned to pickup (RTO terminal state).
+   * Guard: order must be returning, courier must match.
+   */
+  async confirmReturned(
+    orderId: number,
+    courierId: number,
+  ): Promise<ReturnedResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "returning") {
+      throw new ValidationError(
+        `Order must be returning to confirm returned, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    // Patch delivery_attempt
+    const returnedAt = new Date();
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      returnedAt: returnedAt.toISOString(),
+    });
+
+    // Call stored function: atomically mark returned + release courier
+    const result = await ordersRepository.returnOrder(orderId, courierId);
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "returned",
+        eventDescription: "Order returned to pickup location",
+      });
+    }
+
+    return {
+      data: {
+        order: {
+          orderId,
+          status: "returned",
+          returnedAt: result.returnedAt,
+        },
+      },
+    };
+  }
+
+  /**
+   * Submit proof of delivery after order is delivered.
+   * Guard: order must be delivered, courier must match.
+   */
+  async submitProofOfDelivery(
+    orderId: number,
+    courierId: number,
+    body: ProofOfDeliveryRequest,
+  ): Promise<ProofOfDeliveryResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "delivered") {
+      throw new ValidationError(
+        `Order must be delivered to submit proof, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+    if (!order.assignmentId) {
+      throw new AppError("No assignment found for this order", 500);
+    }
+
+    const proof = await ordersRepository.insertProofOfDelivery({
+      orderId,
+      assignmentId: order.assignmentId,
+      recipientName: body.recipientName,
+      photoUrl: body.photoUrl,
+      recipientSignatureUrl: body.recipientSignatureUrl,
+      deliveryNotes: body.deliveryNotes,
+    });
+
+    return {
+      data: {
+        proof: {
+          proofId: proof.proofId,
+          orderId: proof.orderId,
+          deliveredAt: toIsoDateTime(proof.deliveredAt),
+        },
+      },
+    };
+  }
+
+  /**
+   * Get order tracking: live location + milestones + delivery attempt.
+   * Guard: client owns order, courier is assigned, or admin.
+   */
+  async getOrderTracking(
+    orderId: number,
+    userId: number,
+    userRole: string,
+  ): Promise<TrackingResponse> {
+    const { tracking, milestones } =
+      await ordersRepository.getOrderTracking(orderId);
+
+    if (!tracking) throw new NotFoundError("Order not found");
+
+    // Auth check
+    const row = tracking as Record<string, unknown>;
+    if (userRole === "client" && row.clientId !== userId) {
+      throw new AuthorizationError("Access denied");
+    }
+    if (userRole === "courier" && row.courierId !== userId) {
+      throw new AuthorizationError("Access denied");
+    }
+
+    const hasDriverLocation =
+      row.driverLatitude != null && row.driverLongitude != null;
+    const locationMeta = (row.locationMeta as Record<string, unknown>) ?? {};
+
+    return {
+      data: {
+        order: {
+          orderId: row.orderId as number,
+          status: row.status as string as TrackingResponse["data"]["order"]["status"],
+        },
+        driver: hasDriverLocation
+          ? {
+              location: {
+                latitude: Number(row.driverLatitude),
+                longitude: Number(row.driverLongitude),
+              },
+              locationMeta: {
+                speed: (locationMeta.speed as number) ?? null,
+                bearing: (locationMeta.bearing as number) ?? null,
+                accuracy: (locationMeta.accuracy as number) ?? null,
+              },
+              lastUpdatedAt: toIsoDateTime(
+                row.lastLocationUpdate as Date,
+              ),
+            }
+          : null,
+        milestones: (milestones as Record<string, unknown>[]).map((m) => ({
+          eventType: m.eventType as string,
+          description: (m.description as string) ?? null,
+          location:
+            m.lat != null && m.lng != null
+              ? { lat: Number(m.lat), lng: Number(m.lng) }
+              : null,
+          timestamp: toIsoDateTime(m.timestamp as Date),
+        })),
+        attempt:
+          (row.deliveryAttempt as TrackingResponse["data"]["attempt"]) ?? null,
+      },
+    };
   }
 }
 

@@ -35,6 +35,7 @@ export const orderStatusEnum = pgEnum("order_status", [
   "delivered",
   "cancelled",
   "undeliverable",
+  "returning",
   "returned",
 ]);
 export const assignmentStatusEnum = pgEnum("assignment_status", [
@@ -43,6 +44,7 @@ export const assignmentStatusEnum = pgEnum("assignment_status", [
   "rejected",
   "picked_up",
   "in_transit",
+  "returning",
   "delivered",
   "cancelled",
   "returned",

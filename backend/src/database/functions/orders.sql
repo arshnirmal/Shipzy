@@ -746,9 +746,12 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_order_status     order_status;
+    v_order_total      NUMERIC;
+    v_commission_rate  NUMERIC;
+    v_net_earnings     NUMERIC;
     v_delivered_at_iso TEXT;
 BEGIN
-    SELECT status INTO v_order_status
+    SELECT status, total_price INTO v_order_status, v_order_total
     FROM orders.requests
     WHERE order_id = p_order_id AND deleted_at IS NULL;
 
@@ -763,6 +766,14 @@ BEGIN
         );
     END IF;
 
+    -- Read driver commission rate from pricing_config
+    SELECT config_value INTO v_commission_rate
+    FROM public.pricing_config
+    WHERE config_key = 'driver_commission_rate' AND is_active = TRUE;
+
+    v_commission_rate := COALESCE(v_commission_rate, 0.7);
+    v_net_earnings := ROUND(v_order_total * v_commission_rate, 2);
+
     -- Update order status
     UPDATE orders.requests
     SET status       = 'delivered',
@@ -776,20 +787,22 @@ BEGIN
     INSERT INTO orders.status_history (order_id, status, previous_status, changed_by)
     VALUES (p_order_id, 'delivered', 'in_transit', p_courier_id);
 
-    -- Mark assignment delivered
+    -- Mark assignment delivered with net earnings
     UPDATE orders.courier_assignments
     SET status       = 'delivered',
         completed_at = NOW(),
+        net_earnings = v_net_earnings,
         updated_at   = NOW()
     WHERE order_id   = p_order_id
       AND courier_id = p_courier_id
       AND status NOT IN ('cancelled', 'rejected', 'delivered');
 
-    -- Release courier: clear assignment, restore availability based on is_online
+    -- Release courier: clear assignment, restore availability, increment deliveries
     UPDATE logistics.courier_status
-    SET current_assignment_id = NULL,
-        is_available          = is_online,
-        updated_at            = NOW()
+    SET current_assignment_id  = NULL,
+        is_available           = is_online,
+        total_deliveries_today = total_deliveries_today + 1,
+        updated_at             = NOW()
     WHERE courier_id = p_courier_id;
 
     RETURN json_build_object(
@@ -810,4 +823,86 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
-COMMENT ON FUNCTION orders.deliver_order IS 'Mark order as delivered and atomically release courier assignment';
+COMMENT ON FUNCTION orders.deliver_order IS 'Mark order as delivered and atomically release courier assignment with net earnings';
+
+
+-- ========================================
+-- Function: return_order
+-- Description: Mark order as returned (RTO terminal state) and atomically release courier
+-- Returns: JSON with operation result
+-- ========================================
+CREATE OR REPLACE FUNCTION orders.return_order(
+    p_order_id   INT,
+    p_courier_id INT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_order_status     order_status;
+    v_returned_at_iso  TEXT;
+BEGIN
+    SELECT status INTO v_order_status
+    FROM orders.requests
+    WHERE order_id = p_order_id AND deleted_at IS NULL;
+
+    IF NOT FOUND THEN
+        RETURN json_build_object('success', FALSE, 'error', 'Order not found');
+    END IF;
+
+    IF v_order_status != 'returning' THEN
+        RETURN json_build_object(
+            'success', FALSE,
+            'error', format('Order must be returning to mark returned, current: %s', v_order_status)
+        );
+    END IF;
+
+    -- Update order status
+    UPDATE orders.requests
+    SET status     = 'returned',
+        updated_at = NOW()
+    WHERE order_id = p_order_id;
+
+    v_returned_at_iso := to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+
+    -- Record status history
+    INSERT INTO orders.status_history (order_id, status, previous_status, changed_by)
+    VALUES (p_order_id, 'returned', 'returning', p_courier_id);
+
+    -- Mark assignment returned with zero earnings (RTO earns nothing for MVP)
+    UPDATE orders.courier_assignments
+    SET status       = 'returned',
+        completed_at = NOW(),
+        net_earnings = 0,
+        updated_at   = NOW()
+    WHERE order_id   = p_order_id
+      AND courier_id = p_courier_id
+      AND status NOT IN ('cancelled', 'rejected', 'delivered', 'returned');
+
+    -- Release courier: clear assignment, restore availability
+    -- No increment of total_deliveries_today for RTO
+    UPDATE logistics.courier_status
+    SET current_assignment_id = NULL,
+        is_available          = is_online,
+        updated_at            = NOW()
+    WHERE courier_id = p_courier_id;
+
+    RETURN json_build_object(
+        'success', TRUE,
+        'order', json_build_object(
+            'orderId',    p_order_id,
+            'status',     'returned',
+            'returnedAt', v_returned_at_iso
+        )
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object(
+        'success',    FALSE,
+        'error',      SQLERRM,
+        'error_code', 'RETURN_FAILED'
+    );
+END;
+$$;
+
+COMMENT ON FUNCTION orders.return_order IS 'Mark order as returned (RTO) and atomically release courier assignment';

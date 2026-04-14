@@ -2,7 +2,7 @@
 // TypeScript types for JSONB structures used in Drizzle schemas
 
 import { z } from "zod";
-import { OrderAddressZ } from "../../schemas/common.zod.js";
+import { CoordinatesZ, OrderAddressZ } from "../../schemas/common.zod.js";
 
 // ── Location ─────────────────────────────────────────────────────────────────
 
@@ -118,3 +118,25 @@ export const AssignmentTimelineJSONBZ = z.object({
   rejectedAt: z.iso.datetime().nullable().optional(),
 });
 export type AssignmentTimelineJSONB = z.infer<typeof AssignmentTimelineJSONBZ>;
+
+// ── Delivery attempt (RTO flow) ───────────────────────────────────────────────
+
+export const DeliveryAttemptJSONBZ = z.object({
+  arrivedAt: z.iso.datetime(),
+  undeliverableAt: z.iso.datetime().optional(),
+  returnStartedAt: z.iso.datetime().optional(),
+  returnedAt: z.iso.datetime().optional(),
+  driverNote: z.string().min(1).optional(),
+  photoUrl: z.string().url().optional(),
+  gps: CoordinatesZ.optional(),
+});
+export type DeliveryAttemptJSONB = z.infer<typeof DeliveryAttemptJSONBZ>;
+
+// ── Location meta (speed, bearing, accuracy for dead reckoning) ───────────────
+
+export const LocationMetaJSONBZ = z.object({
+  speed: z.number().nonnegative().nullable(),
+  bearing: z.number().min(0).max(360).nullable(),
+  accuracy: z.number().nonnegative().nullable(),
+});
+export type LocationMetaJSONB = z.infer<typeof LocationMetaJSONBZ>;

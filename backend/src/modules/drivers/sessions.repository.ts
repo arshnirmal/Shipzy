@@ -26,10 +26,37 @@ interface EndSessionData {
 
 class SessionsRepository {
   /**
-   * Create a new driver session
+   * Create a new driver session.
+   * Resets total_deliveries_today if the last session was before today.
    */
   async createSession(sessionData: CreateSessionData): Promise<DriverSession> {
     try {
+      // Reset daily counter if no session started today
+      const lastSession = await this.findActiveSession(sessionData.driverId);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // If no active session and we need to check the last ended one
+      if (!lastSession) {
+        // Reset total_deliveries_today on new day (non-blocking)
+        await drizzlePool.query(
+          `UPDATE logistics.courier_status
+           SET total_deliveries_today = 0, updated_at = NOW()
+           WHERE courier_id = $1
+             AND NOT EXISTS (
+               SELECT 1 FROM logistics.driver_sessions
+               WHERE driver_id = $1 AND started_at::date = CURRENT_DATE
+             )`,
+          [sessionData.driverId],
+        ).catch((err) => {
+          logger.warn({
+            msg: "Failed to reset daily deliveries counter",
+            error: (err as Error).message,
+            driverId: sessionData.driverId,
+          });
+        });
+      }
+
       const result = await drizzlePool.query(sessionsQueries.CREATE_SESSION, [
         sessionData.driverId,
         sessionData.startedAt,

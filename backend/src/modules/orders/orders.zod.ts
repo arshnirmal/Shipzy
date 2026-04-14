@@ -7,6 +7,7 @@ import {
 } from "../../schemas/common.zod.js";
 import {
   AssignmentTimelineJSONBZ,
+  DeliveryAttemptJSONBZ,
   OrderActualJSONBZ,
   OrderItemJSONBZ,
   OrderLocationJSONBZ,
@@ -29,6 +30,7 @@ export const OrderLifecycleStatusZ = z.enum([
   "delivered",
   "cancelled",
   "undeliverable",
+  "returning",
   "returned",
 ]);
 
@@ -38,6 +40,7 @@ export const AssignmentStatusZ = z.enum([
   "rejected",
   "picked_up",
   "in_transit",
+  "returning",
   "delivered",
   "cancelled",
   "returned",
@@ -188,6 +191,33 @@ export const RateOrderRequestZ = z
   })
   .strict();
 export type RateOrderRequest = z.infer<typeof RateOrderRequestZ>;
+
+// ── Driver order action request schemas ────────────────────────────────────────
+
+export const ArriveRequestZ = z
+  .object({
+    gps: CoordinatesZ,
+  })
+  .strict();
+export type ArriveRequest = z.infer<typeof ArriveRequestZ>;
+
+export const UndeliverableRequestZ = z
+  .object({
+    driverNote: z.string().min(1).max(1000),
+    photoUrl: z.string().url().optional(),
+  })
+  .strict();
+export type UndeliverableRequest = z.infer<typeof UndeliverableRequestZ>;
+
+export const ProofOfDeliveryRequestZ = z
+  .object({
+    recipientName: z.string().max(100).optional(),
+    photoUrl: z.string().url().optional(),
+    recipientSignatureUrl: z.string().url().optional(),
+    deliveryNotes: z.string().max(500).optional(),
+  })
+  .strict();
+export type ProofOfDeliveryRequest = z.infer<typeof ProofOfDeliveryRequestZ>;
 
 // ============================================================================
 // QUERY SCHEMAS
@@ -407,6 +437,139 @@ export type UpdateOrderStatusResponse = z.infer<
   typeof UpdateOrderStatusResponseZ
 >;
 
+// ── Driver order action response schemas ──────────────────────────────────────
+
+export const ArriveResponseZ = z
+  .object({
+    data: z
+      .object({
+        arrivedAt: z.iso.datetime(),
+        waitUntil: z.iso.datetime(),
+        waitMinutes: z.number(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ArriveResponse = z.infer<typeof ArriveResponseZ>;
+
+export const UndeliverableResponseZ = z
+  .object({
+    data: z
+      .object({
+        order: z
+          .object({
+            orderId: z.number().int().positive(),
+            status: z.literal("undeliverable"),
+            undeliverableAt: z.iso.datetime(),
+          })
+          .strict(),
+      })
+      .strict(),
+  })
+  .strict();
+export type UndeliverableResponse = z.infer<typeof UndeliverableResponseZ>;
+
+export const ReturnResponseZ = z
+  .object({
+    data: z
+      .object({
+        order: z
+          .object({
+            orderId: z.number().int().positive(),
+            status: z.literal("returning"),
+            returnStartedAt: z.iso.datetime(),
+          })
+          .strict(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ReturnResponse = z.infer<typeof ReturnResponseZ>;
+
+export const ReturnedResponseZ = z
+  .object({
+    data: z
+      .object({
+        order: z
+          .object({
+            orderId: z.number().int().positive(),
+            status: z.literal("returned"),
+            returnedAt: z.iso.datetime(),
+          })
+          .strict(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ReturnedResponse = z.infer<typeof ReturnedResponseZ>;
+
+export const ProofOfDeliveryResponseZ = z
+  .object({
+    data: z
+      .object({
+        proof: z
+          .object({
+            proofId: z.number().int().positive(),
+            orderId: z.number().int().positive(),
+            deliveredAt: z.iso.datetime(),
+          })
+          .strict(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ProofOfDeliveryResponse = z.infer<typeof ProofOfDeliveryResponseZ>;
+
+export const TrackingMilestoneZ = z
+  .object({
+    eventType: z.string(),
+    description: z.string().nullable().optional(),
+    location: z
+      .object({
+        lat: z.number(),
+        lng: z.number(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    timestamp: z.iso.datetime(),
+  })
+  .strict();
+
+export const LocationMetaResponseZ = z
+  .object({
+    speed: z.number().nullable().optional(),
+    bearing: z.number().nullable().optional(),
+    accuracy: z.number().nullable().optional(),
+  })
+  .strict();
+
+export const TrackingResponseZ = z
+  .object({
+    data: z
+      .object({
+        order: z
+          .object({
+            orderId: z.number().int().positive(),
+            status: OrderLifecycleStatusZ,
+          })
+          .strict(),
+        driver: z
+          .object({
+            location: CoordinatesZ,
+            locationMeta: LocationMetaResponseZ,
+            lastUpdatedAt: z.iso.datetime(),
+          })
+          .strict()
+          .nullable(),
+        milestones: z.array(TrackingMilestoneZ),
+        attempt: DeliveryAttemptJSONBZ.nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+export type TrackingResponse = z.infer<typeof TrackingResponseZ>;
+
 // Stored function result contracts
 export const FareCalculationResultZ = z
   .object({
@@ -478,6 +641,7 @@ export type OrderRow = {
   assignmentStatus?: string | null;
   assignedAt?: string | Date | null;
   assignmentTimeline?: AssignmentTimelineJSONB | null;
+  deliveryAttempt?: import("../../database/schema/types.js").DeliveryAttemptJSONB | null;
 };
 
 export type OrderListRow = {

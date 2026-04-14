@@ -99,7 +99,8 @@ export default {
       cu.profile_picture_url AS "courierPhoto",
       ca.status              AS "assignmentStatus",
       ca.assigned_at         AS "assignedAt",
-      ca.timeline            AS "assignmentTimeline"
+      ca.timeline            AS "assignmentTimeline",
+      o.delivery_attempt     AS "deliveryAttempt"
 
     FROM orders.requests o
     JOIN users.profiles u ON o.client_id = u.user_id
@@ -242,5 +243,108 @@ export default {
     WHERE assignment_id = $1
       AND courier_id    = $2
     RETURNING assignment_id, timeline
+  `,
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * Call stored function: Return order and release courier atomically
+   */
+  CALL_RETURN_ORDER: `
+    SELECT orders.return_order($1, $2) AS result
+  `,
+
+  /**
+   * Patch delivery_attempt JSONB (merge into existing)
+   * $1 = orderId, $2 = JSONB patch object
+   */
+  UPDATE_DELIVERY_ATTEMPT: `
+    UPDATE orders.requests
+    SET delivery_attempt = COALESCE(delivery_attempt, '{}'::jsonb) || $2::jsonb,
+        updated_at = NOW()
+    WHERE order_id = $1 AND deleted_at IS NULL
+    RETURNING delivery_attempt AS "deliveryAttempt"
+  `,
+
+  /**
+   * Read delivery_attempt JSONB for an order
+   */
+  GET_DELIVERY_ATTEMPT: `
+    SELECT delivery_attempt AS "deliveryAttempt"
+    FROM orders.requests
+    WHERE order_id = $1 AND deleted_at IS NULL
+  `,
+
+  /**
+   * Insert proof of delivery record
+   */
+  INSERT_PROOF_OF_DELIVERY: `
+    INSERT INTO orders.proof_of_delivery (
+      order_id, assignment_id, recipient_name,
+      photo_url, recipient_signature_url, delivery_notes
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING
+      proof_id      AS "proofId",
+      order_id      AS "orderId",
+      delivered_at   AS "deliveredAt"
+  `,
+
+  /**
+   * Get order tracking data: live courier location + milestones + delivery attempt
+   */
+  GET_ORDER_TRACKING: `
+    SELECT
+      o.order_id                             AS "orderId",
+      o.status                               AS "status",
+      o.delivery_attempt                     AS "deliveryAttempt",
+      ST_Y(cs.current_location::geometry)    AS "driverLatitude",
+      ST_X(cs.current_location::geometry)    AS "driverLongitude",
+      cs.location_meta                       AS "locationMeta",
+      cs.last_location_update                AS "lastLocationUpdate",
+      ca.courier_id                          AS "courierId",
+      ca.assignment_id                       AS "assignmentId",
+      o.client_id                            AS "clientId"
+    FROM orders.requests o
+    LEFT JOIN orders.courier_assignments ca
+      ON o.order_id = ca.order_id
+      AND ca.status NOT IN ('rejected', 'cancelled')
+    LEFT JOIN logistics.courier_status cs
+      ON ca.courier_id = cs.courier_id
+    WHERE o.order_id = $1
+      AND o.deleted_at IS NULL
+  `,
+
+  /**
+   * Get milestone events for an order (ordered chronologically)
+   */
+  GET_ORDER_MILESTONES: `
+    SELECT
+      te.event_type                         AS "eventType",
+      te.event_description                  AS "description",
+      ST_Y(te.location::geometry)           AS "lat",
+      ST_X(te.location::geometry)           AS "lng",
+      te.timestamp                          AS "timestamp"
+    FROM tracking.events te
+    WHERE te.order_id = $1
+    ORDER BY te.timestamp ASC
+  `,
+
+  /**
+   * Insert a milestone tracking event
+   */
+  INSERT_MILESTONE_EVENT: `
+    INSERT INTO tracking.events (
+      assignment_id, order_id, courier_id,
+      event_type, event_description, location
+    )
+    VALUES (
+      $1, $2, $3, $4, $5,
+      CASE WHEN $6::numeric IS NOT NULL AND $7::numeric IS NOT NULL
+        THEN ST_SetSRID(ST_MakePoint($7, $6), 4326)::geography
+        ELSE NULL
+      END
+    )
+    RETURNING event_id AS "eventId", timestamp AS "timestamp"
   `,
 };

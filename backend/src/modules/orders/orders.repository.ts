@@ -559,6 +559,247 @@ class OrdersRepository {
       results,
     };
   }
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * Patch delivery_attempt JSONB on orders.requests (merge semantics)
+   */
+  async updateDeliveryAttempt(
+    orderId: number,
+    patch: Record<string, unknown>,
+  ): Promise<unknown> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.UPDATE_DELIVERY_ATTEMPT,
+        [orderId, JSON.stringify(patch)],
+      );
+      return result.rows[0]?.deliveryAttempt ?? null;
+    } catch (error) {
+      logger.error({
+        msg: "Error updating delivery attempt",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Read delivery_attempt JSONB for an order
+   */
+  async getDeliveryAttempt(
+    orderId: number,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.GET_DELIVERY_ATTEMPT,
+        [orderId],
+      );
+      return (result.rows[0]?.deliveryAttempt as Record<string, unknown>) ?? null;
+    } catch (error) {
+      logger.error({
+        msg: "Error getting delivery attempt",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update order status to undeliverable
+   */
+  async markUndeliverable(orderId: number) {
+    try {
+      const result = await drizzleDb
+        .update(orderRequests)
+        .set({
+          status: "undeliverable",
+          updatedAt: new Date(),
+        })
+        .where(eq(orderRequests.orderId, orderId))
+        .returning();
+
+      if (!result || result.length === 0) {
+        throw new NotFoundError(`Order not found: ${orderId}`);
+      }
+      return result[0];
+    } catch (error) {
+      logger.error({
+        msg: "Error marking order undeliverable",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark order as returning and assignment as returning (RTO start)
+   */
+  async markReturning(orderId: number, courierId: number) {
+    try {
+      // Update order status
+      await drizzleDb
+        .update(orderRequests)
+        .set({
+          status: "returning",
+          updatedAt: new Date(),
+        })
+        .where(eq(orderRequests.orderId, orderId));
+
+      // Update assignment status
+      await drizzlePool.query(
+        `UPDATE orders.courier_assignments
+         SET status = 'returning', updated_at = NOW()
+         WHERE order_id = $1 AND courier_id = $2
+           AND status NOT IN ('cancelled', 'rejected', 'delivered', 'returned')`,
+        [orderId, courierId],
+      );
+
+      return { orderId, status: "returning" as const };
+    } catch (error) {
+      logger.error({
+        msg: "Error marking order returning",
+        error: (error as Error).message,
+        orderId,
+        courierId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically return order and release courier via stored function
+   */
+  async returnOrder(
+    orderId: number,
+    courierId: number,
+  ): Promise<{ orderId: number; status: string; returnedAt: string }> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.CALL_RETURN_ORDER,
+        [orderId, courierId],
+      );
+      const json = result.rows[0]?.result as {
+        success: boolean;
+        error?: string;
+        order?: { orderId: number; status: string; returnedAt: string };
+      };
+      if (!json?.success) {
+        throw new AppError(json?.error ?? "Return failed", 500);
+      }
+      return json.order!;
+    } catch (error) {
+      logger.error({
+        msg: "Error returning order",
+        error: (error as Error).message,
+        orderId,
+        courierId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Insert proof of delivery record
+   */
+  async insertProofOfDelivery(data: {
+    orderId: number;
+    assignmentId: number;
+    recipientName?: string;
+    photoUrl?: string;
+    recipientSignatureUrl?: string;
+    deliveryNotes?: string;
+  }): Promise<{ proofId: number; orderId: number; deliveredAt: Date }> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.INSERT_PROOF_OF_DELIVERY,
+        [
+          data.orderId,
+          data.assignmentId,
+          data.recipientName ?? null,
+          data.photoUrl ?? null,
+          data.recipientSignatureUrl ?? null,
+          data.deliveryNotes ?? null,
+        ],
+      );
+      return result.rows[0] as {
+        proofId: number;
+        orderId: number;
+        deliveredAt: Date;
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error inserting proof of delivery",
+        error: (error as Error).message,
+        orderId: data.orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get order tracking data (live location + milestones + delivery attempt)
+   */
+  async getOrderTracking(orderId: number) {
+    try {
+      const [trackingResult, milestonesResult] = await Promise.all([
+        drizzlePool.query(ordersQueries.GET_ORDER_TRACKING, [orderId]),
+        drizzlePool.query(ordersQueries.GET_ORDER_MILESTONES, [orderId]),
+      ]);
+
+      return {
+        tracking: trackingResult.rows[0] ?? null,
+        milestones: milestonesResult.rows,
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error getting order tracking",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Insert a milestone tracking event
+   */
+  async insertMilestoneEvent(data: {
+    assignmentId: number;
+    orderId: number;
+    courierId: number;
+    eventType: string;
+    eventDescription: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  }): Promise<{ eventId: number; timestamp: Date }> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.INSERT_MILESTONE_EVENT,
+        [
+          data.assignmentId,
+          data.orderId,
+          data.courierId,
+          data.eventType,
+          data.eventDescription,
+          data.latitude ?? null,
+          data.longitude ?? null,
+        ],
+      );
+      return result.rows[0] as { eventId: number; timestamp: Date };
+    } catch (error) {
+      logger.error({
+        msg: "Error inserting milestone event",
+        error: (error as Error).message,
+        orderId: data.orderId,
+      });
+      throw error;
+    }
+  }
 }
 
 export default new OrdersRepository();
+

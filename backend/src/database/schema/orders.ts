@@ -37,6 +37,7 @@ import type {
   OrderPackageJSONB,
   OrderSnapshotJSONB,
   AssignmentTimelineJSONB,
+  DeliveryAttemptJSONB,
 } from "./types.js";
 
 const ordersSchema = pgSchema("orders");
@@ -134,6 +135,9 @@ export const orderRequests = ordersSchema.table(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancellationReason: text("cancellation_reason"),
 
+    // ── Delivery attempt (RTO flow) ─────────────────────────────────────────
+    deliveryAttempt: jsonb("delivery_attempt").$type<DeliveryAttemptJSONB>(),
+
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -189,6 +193,9 @@ export const courierAssignments = ordersSchema.table(
       .$type<AssignmentTimelineJSONB>()
       .default({})
       .notNull(),
+
+    // ── Driver net payout (written atomically in deliver_order/return_order) ─
+    netEarnings: numeric("net_earnings", { precision: 10, scale: 2, mode: "number" }),
 
     rejectionReason: text("rejection_reason"),
     courierNotes: text("courier_notes"),

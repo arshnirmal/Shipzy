@@ -10,6 +10,9 @@ import {
   OrderParamsZ,
   ListOrdersQueryZ,
   AvailableOrdersQueryZ,
+  ArriveRequestZ,
+  UndeliverableRequestZ,
+  ProofOfDeliveryRequestZ,
 } from "./orders.zod.js";
 
 type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
@@ -52,3 +55,26 @@ export const rateOrderSchema: FastifySchema = {
   params: paramsJson,
   body: zodToJsonSchema(RateOrderRequestZ as unknown as ZodToJsonSchemaInput),
 };
+
+// ── Driver order action schemas ─────────────────────────────────────────────
+
+export const arriveSchema: FastifySchema = {
+  params: paramsJson,
+  body: zodToJsonSchema(ArriveRequestZ as unknown as ZodToJsonSchemaInput),
+};
+export const undeliverableSchema: FastifySchema = {
+  params: paramsJson,
+  body: zodToJsonSchema(
+    UndeliverableRequestZ as unknown as ZodToJsonSchemaInput,
+  ),
+};
+export const returnSchema: FastifySchema = { params: paramsJson };
+export const returnedSchema: FastifySchema = { params: paramsJson };
+export const proofOfDeliverySchema: FastifySchema = {
+  params: paramsJson,
+  body: zodToJsonSchema(
+    ProofOfDeliveryRequestZ as unknown as ZodToJsonSchemaInput,
+  ),
+};
+export const trackingSchema: FastifySchema = { params: paramsJson };
+
