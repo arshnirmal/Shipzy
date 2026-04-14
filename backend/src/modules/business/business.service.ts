@@ -1,13 +1,15 @@
 import businessRepository from "./business.repository.js";
 import ordersService from "../orders/orders.service.js";
 import ordersRepository from "../orders/orders.repository.js";
-import { CreateOrderRequestZ } from "../orders/orders.zod.js";
+import { CreateOrderRequestZ, OrderCreateResultZ } from "../orders/orders.zod.js";
 import {
   AppError,
   NotFoundError,
   ValidationError,
   AuthorizationError,
 } from "../../utils/error.util.js";
+import { rawTransaction } from "../../database/transaction.js";
+import ordersQueries from "../../database/queries/orders.queries.js";
 import type {
   DraftCreateRequest,
   DraftUpdateRequest,
@@ -44,6 +46,7 @@ class BusinessService {
       deliveryLocation: draft.deliveryLocation,
       items: draft.items || [],
       package: draft.package,
+      schedule: draft.schedule ?? null,
       pricing: draft.pricing,
       couponCode: draft.couponCode,
       notes: draft.notes,
@@ -96,25 +99,40 @@ class BusinessService {
     stateFilter?: string,
   ) {
     const offset = (page - 1) * limit;
-    const { drafts, total } = await businessRepository.getDraftsByClient(
-      clientId,
-      limit,
-      offset,
-    );
 
-    let parsedDrafts = drafts.map((d) => this.toDraftResponse(d));
-    if (stateFilter) {
-      parsedDrafts = parsedDrafts.filter((d) => d.state === stateFilter);
+    if (stateFilter === "submitted") {
+      // DB-level filter — accurate pagination
+      const { drafts, total } = await businessRepository.getDraftsByClient(
+        clientId, limit, offset, true,
+      );
+      return {
+        drafts: drafts.map((d) => this.toDraftResponse(d)),
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
     }
 
+    if (stateFilter === "incomplete" || stateFilter === "ready") {
+      // Fetch all non-submitted drafts, compute state in memory, then slice
+      const { drafts } = await businessRepository.getDraftsByClient(
+        clientId, 0, 0, false, true,
+      );
+      const filtered = drafts
+        .map((d) => this.toDraftResponse(d))
+        .filter((d) => d.state === stateFilter);
+      const total = filtered.length;
+      return {
+        drafts: filtered.slice(offset, offset + limit),
+        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+    }
+
+    // No filter — standard DB pagination
+    const { drafts, total } = await businessRepository.getDraftsByClient(
+      clientId, limit, offset,
+    );
     return {
-      drafts: parsedDrafts,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      drafts: drafts.map((d) => this.toDraftResponse(d)),
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -173,7 +191,7 @@ class BusinessService {
       pricing: draft.pricing as any,
       couponCode: draft.couponCode || null,
       items: draft.items as any,
-      schedule: {},
+      schedule: (draft.schedule as any) ?? {},
     };
 
     const parsedOrder = CreateOrderRequestZ.safeParse(orderPayload);
@@ -183,14 +201,28 @@ class BusinessService {
       );
     }
 
-    const result = await ordersService.createOrder(clientId, parsedOrder.data);
+    // Atomic: create order + mark draft submitted in a single transaction.
+    // If the draft update fails the order is rolled back, preventing duplicate orders on retry.
+    return rawTransaction(async (client) => {
+      const orderResult = await client.query(ordersQueries.CALL_CREATE_ORDER, [
+        JSON.stringify({ clientId, ...parsedOrder.data }),
+      ]);
+      const raw = orderResult.rows[0]?.result;
+      const parsed = OrderCreateResultZ.parse(raw);
+      if (!parsed.success || !parsed.order) {
+        throw new AppError(parsed.error || "Order creation failed", 400);
+      }
+      const orderId = parsed.order.identifiers.orderId;
 
-    await businessRepository.updateDraft(draftId, {
-      submittedOrderId: result.order.identifiers.orderId,
-      submittedAt: new Date(),
+      await client.query(
+        `UPDATE orders.drafts
+            SET submitted_order_id = $1, submitted_at = NOW(), updated_at = NOW()
+          WHERE draft_id = $2`,
+        [orderId, draftId],
+      );
+
+      return { order: parsed.order };
     });
-
-    return result;
   }
 
   // =========================================================================
@@ -319,23 +351,24 @@ class BusinessService {
   // EXPORTS
   // =========================================================================
 
-  async getExportCount(clientId: number, queryParams: any) {
-    const result = await ordersRepository.findByClient(
-      clientId,
-      1,
-      0,
-      queryParams.status,
-      queryParams.dateFrom,
-      queryParams.dateTo,
-    );
-    return result.total;
-  }
-
   async exportOrdersToCsvStream(
     clientId: number,
     queryParams: any,
     stream: any,
   ) {
+    const { total: totalCount } = await ordersRepository.findByClient(
+      clientId, 1, 0,
+      queryParams.status,
+      queryParams.dateFrom,
+      queryParams.dateTo,
+    );
+    if (totalCount > PAGE_LIMIT) {
+      throw new AppError(
+        `Export exceeds ${PAGE_LIMIT.toLocaleString()} rows. Please narrow your date range.`,
+        400,
+      );
+    }
+
     const limit = 1000;
     let offset = 0;
     let totalExported = 0;
@@ -408,6 +441,9 @@ class BusinessService {
     const fromDate = new Date(queryParams.dateFrom);
     const toDate = new Date(queryParams.dateTo);
     
+    if (fromDate >= toDate) {
+      throw new AppError("dateFrom must be before dateTo", 400);
+    }
     const daysDiff = (toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24);
     if (daysDiff > 366) {
       throw new AppError("Analytics date range cannot exceed 366 days", 400);

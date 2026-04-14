@@ -463,10 +463,6 @@ class OrdersRepository {
     }
   }
 
-  async markOrderAsScheduled(orderId: number) {
-    await drizzlePool.query(`UPDATE orders.requests SET status = 'scheduled', updated_at = NOW() WHERE order_id = $1`, [orderId]);
-  }
-
   async releaseScheduledOrders(): Promise<number[]> {
     const result = await drizzlePool.query(`
       UPDATE orders.requests

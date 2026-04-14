@@ -212,16 +212,24 @@ class OrdersService {
     }
 
     const discountInfo = await ordersRepository.getVolumeDiscount(clientId);
-    if (discountInfo.discountPct !== undefined && orderData.pricing) {
-        const discountAmount = Number(((orderData.pricing.totalPrice * discountInfo.discountPct) / 100).toFixed(2));
-        orderData.pricing.discountPct = discountInfo.discountPct;
-        orderData.pricing.discountAmount = discountAmount;
-        orderData.pricing.totalPrice = Math.max(0, orderData.pricing.totalPrice - discountAmount);
+    let pricing = orderData.pricing;
+    if (discountInfo.discountPct !== undefined) {
+      const discountAmount = Number(
+        ((pricing.totalPrice * discountInfo.discountPct) / 100).toFixed(2),
+      );
+      pricing = {
+        ...pricing,
+        discountPct: discountInfo.discountPct,
+        discountAmount,
+        totalPrice: Math.max(0, pricing.totalPrice - discountAmount),
+      };
     }
 
     const result = await ordersRepository.createOrder({
       clientId,
       ...orderData,
+      pricing,
+      ...(isScheduled ? { initialStatus: "scheduled" } : {}),
     });
 
     if (!result.success) {
@@ -235,10 +243,15 @@ class OrdersService {
       );
     }
 
-    if (isScheduled && result.order.identifiers.orderId) {
-       await ordersRepository.markOrderAsScheduled(result.order.identifiers.orderId);
-       result.order.status = "scheduled";
-       await ordersRepository.recordStatusHistory(result.order.identifiers.orderId, "scheduled", null, clientId, "Order scheduled at creation");
+    if (isScheduled) {
+      result.order.status = "scheduled";
+      await ordersRepository.recordStatusHistory(
+        result.order.identifiers.orderId,
+        "scheduled",
+        null,
+        clientId,
+        "Order scheduled at creation",
+      );
     }
 
     return {

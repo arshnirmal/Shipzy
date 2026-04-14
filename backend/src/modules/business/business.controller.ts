@@ -1,6 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import businessService from "./business.service.js";
-import { AppError } from "../../utils/error.util.js";
 
 class BusinessController {
   // =========================================================================
@@ -143,11 +142,6 @@ class BusinessController {
   async bulkCreateOrders(request: FastifyRequest, reply: FastifyReply) {
     const userId = request.user!.userId;
     const body = request.body as any;
-
-    if (!Array.isArray(body.orders) || body.orders.length > 50) {
-      throw new AppError("Bulk create max limit is 50 orders", 400);
-    }
-
     const result = await businessService.bulkCreateOrders(userId, body);
     return reply.status(201).send(result);
   }
@@ -155,11 +149,6 @@ class BusinessController {
   async exportOrders(request: FastifyRequest, reply: FastifyReply) {
     const userId = request.user!.userId;
     const query = request.query as any;
-
-    const totalCount = await businessService.getExportCount(userId, query);
-    if (totalCount > 10000) {
-      throw new AppError("Export exceeds 10,000 rows. Please narrow your date range.", 400);
-    }
 
     reply.header("Content-Type", "text/csv");
     const dateStr = new Date().toISOString().split("T")[0];

@@ -4,6 +4,7 @@ import {
   OrderPackageJSONBZ,
   OrderItemJSONBZ,
   OrderPricingJSONBZ,
+  OrderScheduleJSONBZ,
 } from "../../database/schema/types.js";
 import { BaseQueryZ } from "../../schemas/common.zod.js";
 
@@ -33,6 +34,7 @@ export const DraftResponseZ = z.object({
   deliveryLocation: OrderLocationJSONBZ.nullable().optional(),
   items: z.array(OrderItemJSONBZ),
   package: OrderPackageJSONBZ.nullable().optional(),
+  schedule: OrderScheduleJSONBZ.nullable().optional(),
   pricing: OrderPricingJSONBZ.nullable().optional(),
   couponCode: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -50,6 +52,7 @@ export const DraftCreateRequestZ = z.object({
   deliveryLocation: OrderLocationJSONBZ.optional(),
   items: z.array(OrderItemJSONBZ).optional(),
   package: OrderPackageJSONBZ.optional(),
+  schedule: OrderScheduleJSONBZ.optional(),
   pricing: OrderPricingJSONBZ.optional(),
   couponCode: z.string().max(50).optional(),
   notes: z.string().optional(),

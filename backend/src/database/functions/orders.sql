@@ -222,6 +222,11 @@ DECLARE
     result JSON;
 
 BEGIN
+    -- Allow caller to override initial status (e.g. 'scheduled'); defaults to 'pending'
+    IF p_order_data ->> 'initialStatus' IS NOT NULL THEN
+        v_status := (p_order_data ->> 'initialStatus')::order_status;
+    END IF;
+
     -- Extract IDs
     v_client_id           := (p_order_data ->> 'clientId')::INT;
     v_delivery_type_id    := (p_order_data -> 'fulfillment' ->> 'deliveryTypeId')::INT;

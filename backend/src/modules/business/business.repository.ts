@@ -1,4 +1,4 @@
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, desc, sql } from "drizzle-orm";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import { orderDrafts, orderTemplates } from "../../database/schema/orders.js";
 
@@ -36,25 +36,35 @@ class BusinessRepository {
     clientId: number,
     limit: number,
     offset: number,
-    state?: string,
+    submitted?: boolean, // true = submitted only, false = non-submitted only, undefined = all
+    fetchAll?: boolean,  // true = ignore limit/offset (for in-memory state filtering)
   ) {
-    let query = drizzleDb
+    const conditions = [
+      eq(orderDrafts.clientId, clientId),
+      isNull(orderDrafts.deletedAt),
+    ];
+
+    if (submitted === true) {
+      conditions.push(isNotNull(orderDrafts.submittedAt));
+    } else if (submitted === false) {
+      conditions.push(isNull(orderDrafts.submittedAt));
+    }
+
+    const where = and(...conditions);
+    const baseQuery = drizzleDb
       .select()
       .from(orderDrafts)
-      .where(
-        and(eq(orderDrafts.clientId, clientId), isNull(orderDrafts.deletedAt)),
-      );
+      .where(where)
+      .orderBy(desc(orderDrafts.createdAt));
 
-    const rows = await query
-      .orderBy(desc(orderDrafts.createdAt))
-      .limit(limit)
-      .offset(offset);
-    const countResult = await drizzleDb.$count(
-      orderDrafts,
-      and(eq(orderDrafts.clientId, clientId), isNull(orderDrafts.deletedAt)),
-    );
+    if (fetchAll) {
+      const rows = await baseQuery;
+      return { drafts: rows, total: rows.length };
+    }
 
-    return { drafts: rows, total: countResult };
+    const rows = await baseQuery.limit(limit).offset(offset);
+    const total = await drizzleDb.$count(orderDrafts, where);
+    return { drafts: rows, total };
   }
 
   async updateDraft(draftId: number, data: any) {
@@ -158,17 +168,9 @@ class BusinessRepository {
   }
 
   async incrementTemplateUseCount(templateId: number) {
-    const template = await drizzleDb
-      .select({ useCount: orderTemplates.useCount })
-      .from(orderTemplates)
-      .where(eq(orderTemplates.templateId, templateId))
-      .limit(1);
-
-    const currentCount = template[0]?.useCount ?? 0;
-
     await drizzleDb
       .update(orderTemplates)
-      .set({ useCount: currentCount + 1 })
+      .set({ useCount: sql`${orderTemplates.useCount} + 1`, updatedAt: new Date() })
       .where(eq(orderTemplates.templateId, templateId));
   }
 

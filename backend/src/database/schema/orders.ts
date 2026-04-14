@@ -301,6 +301,7 @@ export const orderDrafts = ordersSchema.table(
     items: jsonb("items").$type<OrderItemJSONB[]>().default([]).notNull(),
     package: jsonb("package").$type<OrderPackageJSONB>(),
     pricing: jsonb("pricing").$type<OrderPricingJSONB>(),
+    schedule: jsonb("schedule").$type<OrderScheduleJSONB>().default({}).notNull(),
     couponCode: varchar("coupon_code", { length: 50 }),
     notes: text("notes"),
     templateId: integer("template_id").references(() => orderTemplates.templateId, { onDelete: "set null" }),
