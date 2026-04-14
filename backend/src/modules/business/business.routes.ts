@@ -12,6 +12,7 @@ import {
   updateTemplateSchema,
   draftFromTemplateSchema,
   bulkCreateOrdersSchema,
+  bulkCancelOrdersSchema,
   exportOrdersSchema,
   getAnalyticsSchema,
 } from "./business.schema.js";
@@ -27,40 +28,37 @@ export default async function businessRoutes(app: FastifyInstance) {
   // =========================================================================
   // DRAFTS
   // =========================================================================
-  
+
   app.post(
     "/drafts",
     { schema: createDraftSchema },
-    businessController.createDraft
+    businessController.createDraft,
   );
 
   app.get(
     "/drafts",
     { schema: listDraftsSchema },
-    businessController.listDrafts
+    businessController.listDrafts,
   );
 
   app.get(
     "/drafts/:id",
     { schema: getDraftSchema },
-    businessController.getDraft
+    businessController.getDraft,
   );
 
   app.patch(
     "/drafts/:id",
     { schema: updateDraftSchema },
-    businessController.updateDraft
+    businessController.updateDraft,
   );
 
-  app.delete(
-    "/drafts/:id",
-    businessController.deleteDraft
-  );
+  app.delete("/drafts/:id", businessController.deleteDraft);
 
   app.post(
     "/drafts/:id/submit",
     { schema: submitDraftSchema },
-    businessController.submitDraft
+    businessController.submitDraft,
   );
 
   // =========================================================================
@@ -70,36 +68,33 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.post(
     "/templates",
     { schema: createTemplateSchema },
-    businessController.createTemplate
+    businessController.createTemplate,
   );
 
   app.get(
     "/templates",
     { schema: listTemplatesSchema },
-    businessController.listTemplates
+    businessController.listTemplates,
   );
 
   app.get(
     "/templates/:id",
     { schema: getTemplateSchema },
-    businessController.getTemplate
+    businessController.getTemplate,
   );
 
   app.patch(
     "/templates/:id",
     { schema: updateTemplateSchema },
-    businessController.updateTemplate
+    businessController.updateTemplate,
   );
 
-  app.delete(
-    "/templates/:id",
-    businessController.deleteTemplate
-  );
+  app.delete("/templates/:id", businessController.deleteTemplate);
 
   app.post(
     "/templates/:id/draft",
     { schema: draftFromTemplateSchema },
-    businessController.createDraftFromTemplate
+    businessController.createDraftFromTemplate,
   );
 
   // =========================================================================
@@ -109,13 +104,19 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.post(
     "/orders/bulk",
     { schema: bulkCreateOrdersSchema },
-    businessController.bulkCreateOrders
+    businessController.bulkCreateOrders,
+  );
+
+  app.post(
+    "/orders/bulk-cancel",
+    { schema: bulkCancelOrdersSchema },
+    (businessController as any).bulkCancelOrders,
   );
 
   app.get(
     "/orders/export",
     { schema: exportOrdersSchema },
-    businessController.exportOrders
+    businessController.exportOrders,
   );
 
   // =========================================================================
@@ -125,6 +126,6 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.get(
     "/analytics",
     { schema: getAnalyticsSchema },
-    businessController.getAnalytics
+    businessController.getAnalytics,
   );
 }

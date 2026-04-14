@@ -164,10 +164,11 @@ export class SeedRunner {
       data?: unknown;
     },
   ): Promise<AxiosResponse<any> | null> {
+    const normalizedUrl = url.startsWith("/") ? url.slice(1) : url;
     try {
       const response = await this.api.request({
         method,
-        url,
+        url: normalizedUrl,
         headers: options?.headers,
         data: options?.data,
       });

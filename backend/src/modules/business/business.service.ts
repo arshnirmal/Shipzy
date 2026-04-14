@@ -1,7 +1,10 @@
 import businessRepository from "./business.repository.js";
 import ordersService from "../orders/orders.service.js";
 import ordersRepository from "../orders/orders.repository.js";
-import { CreateOrderRequestZ, OrderCreateResultZ } from "../orders/orders.zod.js";
+import {
+  CreateOrderRequestZ,
+  OrderCreateResultZ,
+} from "../orders/orders.zod.js";
 import {
   AppError,
   NotFoundError,
@@ -33,6 +36,10 @@ class BusinessService {
       return "ready";
     }
     return "incomplete";
+  }
+
+  async bulkCancelOrders(clientId: number, orderIds: number[], reason: string) {
+    return ordersService.bulkCancelOrders(clientId, orderIds, reason);
   }
 
   private toDraftResponse(draft: any) {
@@ -88,7 +95,8 @@ class BusinessService {
   async getDraft(clientId: number, draftId: number) {
     const draft = await businessRepository.getDraftById(draftId);
     if (!draft) throw new NotFoundError("Draft not found");
-    if (draft.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (draft.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
     return this.toDraftResponse(draft);
   }
 
@@ -103,18 +111,30 @@ class BusinessService {
     if (stateFilter === "submitted") {
       // DB-level filter — accurate pagination
       const { drafts, total } = await businessRepository.getDraftsByClient(
-        clientId, limit, offset, true,
+        clientId,
+        limit,
+        offset,
+        true,
       );
       return {
         drafts: drafts.map((d) => this.toDraftResponse(d)),
-        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
       };
     }
 
     if (stateFilter === "incomplete" || stateFilter === "ready") {
       // Fetch all non-submitted drafts, compute state in memory, then slice
       const { drafts } = await businessRepository.getDraftsByClient(
-        clientId, 0, 0, false, true,
+        clientId,
+        0,
+        0,
+        false,
+        true,
       );
       const filtered = drafts
         .map((d) => this.toDraftResponse(d))
@@ -122,13 +142,20 @@ class BusinessService {
       const total = filtered.length;
       return {
         drafts: filtered.slice(offset, offset + limit),
-        pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
       };
     }
 
     // No filter — standard DB pagination
     const { drafts, total } = await businessRepository.getDraftsByClient(
-      clientId, limit, offset,
+      clientId,
+      limit,
+      offset,
     );
     return {
       drafts: drafts.map((d) => this.toDraftResponse(d)),
@@ -143,7 +170,8 @@ class BusinessService {
   ) {
     const draft = await businessRepository.getDraftById(draftId);
     if (!draft) throw new NotFoundError("Draft not found");
-    if (draft.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (draft.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
     if (draft.submittedAt)
       throw new AppError("Cannot update a submitted draft", 409);
 
@@ -154,7 +182,8 @@ class BusinessService {
   async deleteDraft(clientId: number, draftId: number) {
     const draft = await businessRepository.getDraftById(draftId);
     if (!draft) throw new NotFoundError("Draft not found");
-    if (draft.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (draft.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
     if (draft.submittedAt)
       throw new AppError("Cannot delete a submitted draft", 409);
 
@@ -165,7 +194,8 @@ class BusinessService {
   async submitDraft(clientId: number, draftId: number) {
     const draft = await businessRepository.getDraftById(draftId);
     if (!draft) throw new NotFoundError("Draft not found");
-    if (draft.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (draft.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
     if (draft.submittedAt)
       throw new AppError("Draft is already submitted", 409);
 
@@ -237,7 +267,8 @@ class BusinessService {
   async getTemplate(clientId: number, templateId: number) {
     const template = await businessRepository.getTemplateById(templateId);
     if (!template) throw new NotFoundError("Template not found");
-    if (template.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (template.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
     return this.toTemplateResponse(template);
   }
 
@@ -272,7 +303,8 @@ class BusinessService {
   ) {
     const template = await businessRepository.getTemplateById(templateId);
     if (!template) throw new NotFoundError("Template not found");
-    if (template.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (template.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
 
     const updated = await businessRepository.updateTemplate(templateId, data);
     return this.toTemplateResponse(updated);
@@ -281,7 +313,8 @@ class BusinessService {
   async deleteTemplate(clientId: number, templateId: number) {
     const template = await businessRepository.getTemplateById(templateId);
     if (!template) throw new NotFoundError("Template not found");
-    if (template.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (template.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
 
     await businessRepository.softDeleteTemplate(templateId);
     return { success: true };
@@ -290,7 +323,8 @@ class BusinessService {
   async createDraftFromTemplate(clientId: number, templateId: number) {
     const template = await businessRepository.getTemplateById(templateId);
     if (!template) throw new NotFoundError("Template not found");
-    if (template.clientId !== clientId) throw new AuthorizationError("Access denied");
+    if (template.clientId !== clientId)
+      throw new AuthorizationError("Access denied");
 
     const draftData = {
       name: `Copy of ${template.name}`,
@@ -357,7 +391,9 @@ class BusinessService {
     stream: any,
   ) {
     const { total: totalCount } = await ordersRepository.findByClient(
-      clientId, 1, 0,
+      clientId,
+      1,
+      0,
       queryParams.status,
       queryParams.dateFrom,
       queryParams.dateTo,
@@ -419,8 +455,12 @@ class BusinessService {
           order.status,
           order.pickup?.fullAddress || "",
           order.delivery?.fullAddress || "",
-          (order as any).snapshot?.vehicleCategory?.name || order.vehicleCategoryId || "",
-          (order as any).snapshot?.packageType?.name || order.packageTypeId || "N/A",
+          (order as any).snapshot?.vehicleCategory?.name ||
+            order.vehicleCategoryId ||
+            "",
+          (order as any).snapshot?.packageType?.name ||
+            order.packageTypeId ||
+            "N/A",
           order.totalPrice || 0,
           order.createdAt.toISOString(),
           order.deliveredAt ? order.deliveredAt.toISOString() : "",
@@ -440,25 +480,30 @@ class BusinessService {
   async getAnalytics(clientId: number, queryParams: any) {
     const fromDate = new Date(queryParams.dateFrom);
     const toDate = new Date(queryParams.dateTo);
-    
+
     if (fromDate >= toDate) {
       throw new AppError("dateFrom must be before dateTo", 400);
     }
-    const daysDiff = (toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24);
+    const daysDiff =
+      (toDate.getTime() - fromDate.getTime()) / (1000 * 3600 * 24);
     if (daysDiff > 366) {
       throw new AppError("Analytics date range cannot exceed 366 days", 400);
     }
-    
-    const row = await businessRepository.getBusinessAnalytics(clientId, fromDate, toDate);
-    
+
+    const row = await businessRepository.getBusinessAnalytics(
+      clientId,
+      fromDate,
+      toDate,
+    );
+
     const total = parseInt(row.total || "0", 10);
     const delivered = parseInt(row.delivered || "0", 10);
     const cancelled = parseInt(row.cancelled || "0", 10);
     const active = parseInt(row.active || "0", 10);
-    
+
     const denom = delivered + cancelled;
     const successRate = denom > 0 ? (delivered / denom) * 100 : 0;
-    
+
     const spendTotal = parseFloat(row.spend_total || "0");
     const spendAverage = parseFloat(row.spend_average || "0");
     const avgDuration = parseFloat(row.avg_duration || "0");
@@ -467,24 +512,24 @@ class BusinessService {
       analytics: {
         period: {
           from: fromDate.toISOString(),
-          to: toDate.toISOString()
+          to: toDate.toISOString(),
         },
         orders: {
           total,
           delivered,
           cancelled,
           active,
-          successRate: Number(successRate.toFixed(1))
+          successRate: Number(successRate.toFixed(1)),
         },
         spend: {
           total: Number(spendTotal.toFixed(2)),
           average: Number(spendAverage.toFixed(2)),
-          currency: "INR"
+          currency: "INR",
         },
         delivery: {
-          avgDurationMins: Math.round(avgDuration)
-        }
-      }
+          avgDurationMins: Math.round(avgDuration),
+        },
+      },
     };
   }
 }

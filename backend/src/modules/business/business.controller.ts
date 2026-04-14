@@ -1,5 +1,9 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
+import { errorResponse, successResponse } from "../../utils/response.util.js";
 import businessService from "./business.service.js";
+import type { BulkCancelRequest } from "../orders/orders.zod.js";
 
 class BusinessController {
   // =========================================================================
@@ -166,6 +170,40 @@ class BusinessController {
     }
 
     return reply;
+  }
+
+  async bulkCancelOrders(
+    request: FastifyRequest<{ Body: BulkCancelRequest }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { userId } = request.user!;
+      const {
+        orders: { ids, reason },
+      } = request.body;
+
+      const result = await businessService.bulkCancelOrders(
+        userId,
+        ids,
+        reason,
+      );
+
+      logger.info({
+        msg: "POST /api/v1/business/orders/bulk-cancel",
+        statusCode: 200,
+        userId,
+        requested: result.bulk.requested,
+        cancelled: result.bulk.cancelled,
+        failed: result.bulk.failed,
+      });
+
+      return successResponse(reply, result, "Bulk cancel processed");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
   }
 
   // =========================================================================

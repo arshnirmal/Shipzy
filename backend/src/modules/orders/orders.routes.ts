@@ -4,7 +4,6 @@ import { authorize } from "../../middleware/auth.middleware.js";
 import ordersController from "./orders.controller.js";
 import {
   acceptOrderSchema,
-  bulkCancelSchema,
   calculateFareSchema,
   cancelOrderSchema,
   createOrderSchema,
@@ -63,16 +62,6 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       onRequest: [authorize("client", "courier", "business")],
     },
     ordersController.getOrderById.bind(ordersController) as any,
-  );
-
-  // POST /api/v1/orders/bulk-cancel - Bulk cancel orders (clients and business)
-  fastify.post(
-    "/bulk-cancel",
-    {
-      schema: bulkCancelSchema,
-      onRequest: [authorize("client", "business")],
-    },
-    ordersController.bulkCancelOrders.bind(ordersController) as any,
   );
 
   // POST /api/v1/orders/:id/cancel - Cancel order (clients and business)

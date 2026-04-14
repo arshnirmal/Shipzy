@@ -15,7 +15,10 @@ import {
   AnalyticsQueryZ,
   AnalyticsResponseZ,
 } from "./business.zod.js";
-import { CreateOrderResponseZ } from "../orders/orders.zod.js";
+import {
+  BulkCancelRequestZ,
+  CreateOrderResponseZ,
+} from "../orders/orders.zod.js";
 
 type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
 function toJsonSchema(schema: any) {
@@ -113,6 +116,10 @@ export const bulkCreateOrdersSchema = {
   response: {
     201: toJsonSchema(BulkOrderResultZ),
   },
+};
+
+export const bulkCancelOrdersSchema = {
+  body: toJsonSchema(BulkCancelRequestZ),
 };
 
 // No JSON schema for export (since it's text/csv response)

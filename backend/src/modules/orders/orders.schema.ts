@@ -2,7 +2,6 @@
 import { FastifySchema } from "fastify";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import {
-  BulkCancelRequestZ,
   CalculateFareRequestZ,
   CreateOrderRequestZ,
   RateOrderRequestZ,
@@ -52,7 +51,4 @@ export const updateOrderStatusSchema: FastifySchema = {
 export const rateOrderSchema: FastifySchema = {
   params: paramsJson,
   body: zodToJsonSchema(RateOrderRequestZ as unknown as ZodToJsonSchemaInput),
-};
-export const bulkCancelSchema: FastifySchema = {
-  body: zodToJsonSchema(BulkCancelRequestZ as unknown as ZodToJsonSchemaInput),
 };
