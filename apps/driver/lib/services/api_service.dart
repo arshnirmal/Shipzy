@@ -1,17 +1,31 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/active_order.dart';
+import '../models/arrive_result.dart';
 import '../models/available_order.dart';
+import '../models/delivery_attempt.dart';
 import '../models/driver_profile.dart';
 import '../models/driver_rating.dart';
 import '../models/earnings_summary.dart';
+import '../models/location_meta.dart';
+import '../models/proof_of_delivery_result.dart';
 import '../providers/dio_provider.dart';
 
 part 'api_service.g.dart';
 
 @riverpod
-ApiService apiService(ApiServiceRef ref) => ApiService(ref.read(dioProvider));
+ApiService apiService(Ref ref) => ApiService(ref.read(dioProvider));
+
+class RetryAfterException implements Exception {
+  const RetryAfterException(this.retryAfter);
+
+  final DateTime retryAfter;
+
+  @override
+  String toString() => 'RetryAfterException(retryAfter: $retryAfter)';
+}
 
 class ApiService {
   ApiService(this._dio);
@@ -23,6 +37,21 @@ class ApiService {
       final message = payload is Map<String, dynamic> ? payload['message'] as String? : null;
       throw Exception(message ?? fallbackMessage);
     }
+  }
+
+  Map<String, dynamic> _extractDataMap(Response<dynamic> response, String fallbackMessage) {
+    _ensureSuccess(response, fallbackMessage);
+    final payload = response.data;
+    if (payload is! Map<String, dynamic>) {
+      throw Exception(fallbackMessage);
+    }
+
+    final data = payload['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+
+    throw Exception(fallbackMessage);
   }
 
   Future<void> updateDriverAvailability({required bool isAvailable, bool? isOnline, Map<String, double>? location}) async {
@@ -39,13 +68,14 @@ class ApiService {
     _ensureSuccess(response, 'Failed to update availability');
   }
 
-  Future<void> updateDriverLocation({required double latitude, required double longitude}) async {
+  Future<void> updateDriverLocation({required double latitude, required double longitude, LocationMeta? locationMeta}) async {
     final response = await _dio.patch(
       '/drivers/me/location',
       data: {
         'location': {
           'current': {'latitude': latitude, 'longitude': longitude},
         },
+        if (locationMeta != null) 'locationMeta': locationMeta.toJson(),
       },
     );
     _ensureSuccess(response, 'Failed to update location');
@@ -87,6 +117,94 @@ class ApiService {
       },
     );
     _ensureSuccess(response, 'Failed to update order status');
+  }
+
+  Future<ArriveResult> arriveAtDelivery(int orderId, {required double lat, required double lng}) async {
+    final response = await _dio.post(
+      '/orders/$orderId/arrive',
+      data: {
+        'gps': {'latitude': lat, 'longitude': lng},
+      },
+    );
+
+    final data = _extractDataMap(response, 'Failed to mark arrival at delivery');
+    final payload = data['arrive'];
+    if (payload is Map<String, dynamic>) {
+      return ArriveResult.fromJson(payload);
+    }
+
+    return ArriveResult.fromJson(data);
+  }
+
+  Future<void> markUndeliverable(int orderId, {required String driverNote, String? photoUrl}) async {
+    try {
+      final response = await _dio.post(
+        '/orders/$orderId/undeliverable',
+        data: {'driverNote': driverNote, if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl},
+      );
+      _ensureSuccess(response, 'Failed to mark order undeliverable');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final retryAfterRaw = data is Map<String, dynamic> ? data['retryAfter'] : null;
+      if (e.response?.statusCode == 400 && retryAfterRaw is String) {
+        final retryAfter = DateTime.tryParse(retryAfterRaw);
+        if (retryAfter != null) {
+          throw RetryAfterException(retryAfter);
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> startReturn(int orderId) async {
+    final response = await _dio.post('/orders/$orderId/return');
+    _ensureSuccess(response, 'Failed to start return');
+  }
+
+  Future<void> confirmReturned(int orderId) async {
+    final response = await _dio.post('/orders/$orderId/returned');
+    _ensureSuccess(response, 'Failed to confirm returned order');
+  }
+
+  Future<ProofOfDeliveryResult> submitProofOfDelivery(
+    int orderId, {
+    String? recipientName,
+    String? photoUrl,
+    String? recipientSignatureUrl,
+    String? deliveryNotes,
+  }) async {
+    final response = await _dio.post(
+      '/orders/$orderId/proof-of-delivery',
+      data: {
+        if (recipientName != null && recipientName.isNotEmpty) 'recipientName': recipientName,
+        if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
+        if (recipientSignatureUrl != null && recipientSignatureUrl.isNotEmpty) 'recipientSignatureUrl': recipientSignatureUrl,
+        if (deliveryNotes != null && deliveryNotes.isNotEmpty) 'deliveryNotes': deliveryNotes,
+      },
+    );
+
+    final data = _extractDataMap(response, 'Failed to submit proof of delivery');
+    final proof = data['proof'];
+    if (proof is Map<String, dynamic>) {
+      return ProofOfDeliveryResult.fromJson(proof);
+    }
+
+    return ProofOfDeliveryResult.fromJson(data);
+  }
+
+  Future<DeliveryAttempt?> getDeliveryAttempt(int orderId) async {
+    final response = await _dio.get('/orders/$orderId/tracking');
+    final data = _extractDataMap(response, 'Failed to fetch delivery tracking');
+    final attempt = data['attempt'];
+    if (attempt == null) {
+      return null;
+    }
+
+    if (attempt is Map<String, dynamic>) {
+      return DeliveryAttempt.fromJson(attempt);
+    }
+
+    throw Exception('Invalid delivery attempt payload');
   }
 
   Future<DriverRatingStats> getDriverRatingStats() async {

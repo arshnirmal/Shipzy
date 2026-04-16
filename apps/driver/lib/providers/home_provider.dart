@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/active_order.dart';
@@ -9,6 +10,7 @@ import '../models/daily_stats.dart';
 import '../models/driver_dashboard_data.dart';
 import '../models/driver_home_state.dart';
 import '../models/driver_profile.dart';
+import '../models/location_meta.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
 
@@ -61,19 +63,26 @@ class DriverHome extends _$DriverHome {
       final isGoingOnline = newStatus == DriverStatus.online;
 
       // Fetch current location when going online/offline
+      Position? currentPosition;
       Map<String, double>? location;
       try {
-        final position = await ref.read(locationServiceProvider.future);
-        location = {'latitude': position.latitude, 'longitude': position.longitude};
+        currentPosition = await ref.read(locationServiceProvider.notifier).getCurrentLocation();
+        location = {'latitude': currentPosition.latitude, 'longitude': currentPosition.longitude};
       } catch (e) {
         // If location fails, continue without it (graceful degradation)
       }
 
-      await ref.read(apiServiceProvider).updateDriverAvailability(
-            isAvailable: isGoingOnline,
-            isOnline: isGoingOnline,
-            location: location,
-          );
+      await ref.read(apiServiceProvider).updateDriverAvailability(isAvailable: isGoingOnline, isOnline: isGoingOnline, location: location);
+
+      if (currentPosition != null) {
+        await ref
+            .read(apiServiceProvider)
+            .updateDriverLocation(
+              latitude: currentPosition.latitude,
+              longitude: currentPosition.longitude,
+              locationMeta: LocationMeta(speed: currentPosition.speed, bearing: currentPosition.heading, accuracy: currentPosition.accuracy),
+            );
+      }
 
       state = state.copyWith(status: newStatus, isLoading: false, error: null);
 
@@ -137,10 +146,7 @@ Future<List<AvailableOrderItem>> nearbyOrders(Ref ref) async {
   final locationService = ref.read(locationServiceProvider.notifier);
   try {
     final position = await locationService.getCurrentLocation();
-    return ref.read(apiServiceProvider).getAvailableOrders(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
+    return ref.read(apiServiceProvider).getAvailableOrders(latitude: position.latitude, longitude: position.longitude);
   } catch (e) {
     return [];
   }

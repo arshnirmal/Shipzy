@@ -39,4 +39,9 @@ class AppRoutes {
 
   /// Route for the profile screen.
   static const String profile = '/profile';
+
+  /// Route for an active delivery flow.
+  static const String activeDelivery = '/active-delivery/:orderId';
+
+  static String activeDeliveryPath(String orderId) => '/active-delivery/$orderId';
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/order_provider.dart';
+import '../../utils/app_routes.dart';
 import '../../widgets/map_widget.dart';
 
 class OrderDetailsScreen extends ConsumerStatefulWidget {
@@ -21,7 +22,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
     try {
       await ref.read(orderProvider.notifier).acceptOrder(widget.orderId);
       if (mounted) {
-        context.go('/active-delivery/${widget.orderId}');
+        context.go(AppRoutes.activeDeliveryPath(widget.orderId));
       }
     } catch (e) {
       if (mounted) {
@@ -46,7 +47,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, -5))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

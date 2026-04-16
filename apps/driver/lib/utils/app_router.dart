@@ -7,6 +7,7 @@ import '../providers/storage_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/delivery/active_delivery_screen.dart';
 import '../screens/earnings/earnings_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
@@ -93,6 +94,11 @@ GoRouter router(Ref ref) {
       GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: AppRoutes.setupProfile, name: 'setupProfile', builder: (context, state) => const SetupProfileScreen()),
       GoRoute(path: AppRoutes.documentUpload, name: 'documentUpload', builder: (context, state) => const DocumentUploadScreen()),
+      GoRoute(
+        path: AppRoutes.activeDelivery,
+        name: 'activeDelivery',
+        builder: (context, state) => ActiveDeliveryScreen(orderId: state.pathParameters['orderId']!),
+      ),
       // ============ MAIN APP (Shell Route for Bottom Nav) ============
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => DashboardScreen(navigationShell: navigationShell),
