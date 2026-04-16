@@ -7,11 +7,14 @@ import Image from "next/image";
 import {
   BanknoteArrowUp,
   BarChart2,
+  FileEdit,
   LayoutDashboard,
+  LayoutList,
   LogOut,
   PlusCircle,
   Settings,
   ShoppingBag,
+  Upload,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -63,8 +66,11 @@ const navGroups: NavGroup[] = [
     label: "Core",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
-      { href: "/orders", label: "Orders", icon: ShoppingBag },
+      { href: "/orders", label: "Orders", icon: ShoppingBag, exact: true },
       { href: "/orders/new", label: "New Order", icon: PlusCircle, exact: true },
+      { href: "/drafts", label: "Drafts", icon: FileEdit },
+      { href: "/templates", label: "Templates", icon: LayoutList },
+      { href: "/orders/bulk", label: "Bulk Create", icon: Upload, exact: true },
     ],
   },
   {

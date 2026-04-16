@@ -17,7 +17,8 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import { downloadOrdersCsv } from "@/hooks/use-orders";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -220,23 +221,13 @@ export function OrdersTable({
     .getSelectedRowModel()
     .rows.map((r) => r.original.order.identifiers.orderId);
 
-  function handleExport() {
-    const rows = data.map(({ order, courier }) => ({
-      "Order #": order.identifiers.orderNumber ?? order.identifiers.orderId,
-      Status: order.status,
-      "Pickup Address": order.locations.pickup.fullAddress,
-      "Delivery Address": order.locations.delivery.fullAddress,
-      Recipient: order.locations.delivery.contactName,
-      "Recipient Phone": order.locations.delivery.contactPhone,
-      "Amount (₹)": order.pricing.totalPrice,
-      Courier: courier?.name ?? "-",
-      "Created At": formatDate(order.timeline.createdAt),
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Orders");
-    XLSX.writeFile(wb, `shipzy-orders-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  async function handleExport() {
+    try {
+      await downloadOrdersCsv(filters);
+      toast.success("Export downloaded successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to export orders");
+    }
   }
 
   const totalPages = pagination?.totalPages ?? 1;

@@ -1,4 +1,5 @@
 export type OrderStatus =
+  | "scheduled"
   | "pending"
   | "accepted"
   | "picked_up"
@@ -6,6 +7,7 @@ export type OrderStatus =
   | "delivered"
   | "cancelled"
   | "undeliverable"
+  | "returning"
   | "returned";
 
 export type OrderLocation = {
@@ -36,6 +38,9 @@ export type FareBreakdown = {
   specialHandlingFee?: number;
   totalPrice: number;
   currency?: string;
+  /** Volume discount fields — present on business orders that qualify for a tier */
+  discountPct?: number;
+  discountAmount?: number;
 };
 
 export type BaseOrder = {

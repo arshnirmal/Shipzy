@@ -1,0 +1,180 @@
+import { useOrder } from "@/hooks/use-order";
+import { OrderTimeline } from "./order-timeline";
+import { OrderStatusBadge } from "./order-status-badge";
+import { PricingTable } from "./pricing-table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MapPin, Phone, User, Package, CalendarClock, Ban } from "lucide-react";
+import { format } from "date-fns";
+
+export function OrderDetailView({ id }: { id: string }) {
+  const { data, isLoading, error } = useOrder(id);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-4 border-primary/30 border-r-primary" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+       <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-8 text-center text-destructive">
+         <h3 className="font-semibold text-lg">Order not found</h3>
+         <p className="opacity-80">Could not load details for order #{id}</p>
+       </div>
+    );
+  }
+
+  const { order, actors } = data.data;
+
+  return (
+    <div className="space-y-6">
+      {/* Header Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+             <h2 className="text-2xl font-bold tracking-tight">
+               Order {order.identifiers.orderNumber ?? `#${order.identifiers.orderId}`}
+             </h2>
+             <OrderStatusBadge status={order.status} />
+          </div>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            <CalendarClock className="size-3.5" /> 
+            Created {format(new Date(order.timeline.createdAt), "PPp")}
+          </p>
+        </div>
+        
+        {/* Render cancellation info if cancelled */}
+        {order.status === "cancelled" && order.cancellation?.reason && (
+           <div className="flex max-w-sm items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+             <Ban className="size-4 shrink-0" />
+             <span className="line-clamp-2">Cancelled: {order.cancellation.reason}</span>
+           </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <Card>
+        <CardContent className="p-6">
+          <OrderTimeline status={order.status} />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left Col: Route & Package */}
+        <div className="lg:col-span-2 space-y-6">
+           <Card>
+             <CardHeader className="border-b bg-muted/30 pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="size-4 text-muted-foreground" /> Route Details
+                </CardTitle>
+             </CardHeader>
+             <CardContent className="p-0">
+               <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x">
+                 <div className="p-6 space-y-4">
+                   <div className="flex items-center gap-2">
+                     <div className="size-3 rounded-full bg-blue-500" />
+                     <h3 className="font-semibold">Pickup</h3>
+                   </div>
+                   <div>
+                     <p className="text-sm font-medium">{order.locations.pickup.contactName}</p>
+                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                       <Phone className="size-3" /> {order.locations.pickup.contactPhone}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground line-clamp-3">{order.locations.pickup.fullAddress}</p>
+                   </div>
+                 </div>
+
+                 <div className="p-6 space-y-4">
+                   <div className="flex items-center gap-2">
+                     <div className="size-3 rounded-full bg-green-500" />
+                     <h3 className="font-semibold">Delivery</h3>
+                   </div>
+                   <div>
+                     <p className="text-sm font-medium">{order.locations.delivery.contactName}</p>
+                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                       <Phone className="size-3" /> {order.locations.delivery.contactPhone}
+                     </p>
+                   </div>
+                   <div>
+                     <p className="text-sm text-muted-foreground line-clamp-3">{order.locations.delivery.fullAddress}</p>
+                   </div>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+
+           <Card>
+             <CardHeader className="border-b bg-muted/30 pb-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Package className="size-4 text-muted-foreground" /> Package Information
+                </CardTitle>
+             </CardHeader>
+             <CardContent className="p-6">
+                <div className="space-y-4">
+                  {order.package.description && (
+                     <div>
+                       <p className="text-sm font-medium">Description</p>
+                       <p className="text-sm text-muted-foreground mt-1">{order.package.description}</p>
+                     </div>
+                  )}
+                  {order.package.specialInstructions && (
+                     <div>
+                       <p className="text-sm font-medium text-amber-700 dark:text-amber-500">Special Instructions</p>
+                       <p className="text-sm text-muted-foreground mt-1">{order.package.specialInstructions}</p>
+                     </div>
+                  )}
+                  {order.package.declaredValue && (
+                     <div>
+                       <p className="text-sm font-medium">Declared Value</p>
+                       <p className="text-sm text-muted-foreground mt-1">₹{order.package.declaredValue}</p>
+                     </div>
+                  )}
+                </div>
+             </CardContent>
+           </Card>
+        </div>
+
+        {/* Right Col: Courier & Pricing */}
+        <div className="space-y-6">
+           {/* Courier Profile */}
+           <Card>
+             <CardHeader className="pb-4">
+                <CardTitle className="text-base">Assigned Courier</CardTitle>
+             </CardHeader>
+             <CardContent>
+               {actors.courier ? (
+                 <div className="flex items-center gap-4">
+                   <Avatar className="size-12 border">
+                     <AvatarImage src={actors.courier.profilePictureUrl ?? ""} />
+                     <AvatarFallback><User className="size-5 text-muted-foreground" /></AvatarFallback>
+                   </Avatar>
+                   <div>
+                     <p className="font-medium text-sm">{actors.courier.name}</p>
+                     <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                       <Phone className="size-3" /> {actors.courier.phone}
+                     </p>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="flex flex-col items-center justify-center py-4 text-center text-muted-foreground">
+                   <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-muted">
+                     <User className="size-5" />
+                   </div>
+                   <p className="text-sm">Looking for nearby drivers...</p>
+                 </div>
+               )}
+             </CardContent>
+           </Card>
+
+           <PricingTable pricing={order.pricing} />
+        </div>
+      </div>
+    </div>
+  );
+}

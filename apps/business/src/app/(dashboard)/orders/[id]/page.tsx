@@ -1,18 +1,10 @@
-import { PagePlaceholder } from "@/components/shared/page-placeholder";
+import { OrderDetailView } from "@/components/orders/order-detail-view";
 
-type OrderDetailPageProps = {
+type OrderPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function OrderDetailPage({
-  params,
-}: OrderDetailPageProps) {
+export default async function OrderPage({ params }: OrderPageProps) {
   const { id } = await params;
-
-  return (
-    <PagePlaceholder
-      title={`Order #${id}`}
-      description="Review live order status, courier assignment, and timeline details."
-    />
-  );
+  return <OrderDetailView id={id} />;
 }

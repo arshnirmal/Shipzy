@@ -10,6 +10,11 @@ const STATUS_CONFIG: Record<
     className:
       "bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/10",
   },
+  scheduled: {
+    label: "Scheduled",
+    className:
+      "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/10",
+  },
   accepted: {
     label: "Accepted",
     className:
@@ -44,6 +49,11 @@ const STATUS_CONFIG: Record<
     label: "Returned",
     className:
       "bg-slate-500/10 text-slate-600 border-slate-500/20 hover:bg-slate-500/10",
+  },
+  returning: {
+    label: "Returning",
+    className:
+      "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/10",
   },
 };
 
