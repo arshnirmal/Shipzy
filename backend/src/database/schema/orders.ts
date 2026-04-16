@@ -60,7 +60,9 @@ export const orderRequests = ordersSchema.table(
     vehicleCategoryId: integer("vehicle_category_id")
       .notNull()
       .references(() => vehicleCategories.categoryId),
-    weightTierId: integer("weight_tier_id").references(() => weightTiers.tierId),
+    weightTierId: integer("weight_tier_id").references(
+      () => weightTiers.tierId,
+    ),
     packageTypeId: integer("package_type_id").references(
       () => packageTypes.packageTypeId,
     ),
@@ -91,7 +93,11 @@ export const orderRequests = ordersSchema.table(
     // ── Pricing JSONB — full fare breakdown (written once, never filtered) ──────
     // total_price kept as column for SUM/AVG in earnings queries
     pricing: jsonb("pricing").$type<OrderPricingJSONB>().notNull(),
-    totalPrice: numeric("total_price", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    totalPrice: numeric("total_price", {
+      precision: 10,
+      scale: 2,
+      mode: "number",
+    }).notNull(),
 
     // ── Scheduling JSONB — requested pickup/delivery windows ───────────────────
     schedule: jsonb("schedule")
@@ -156,7 +162,10 @@ export const orderRequests = ordersSchema.table(
       "orders_requests_actual_duration_non_negative_chk",
       sql`${table.actualDurationMins} IS NULL OR ${table.actualDurationMins} >= 0`,
     ),
-    check("orders_requests_total_price_non_negative_chk", sql`${table.totalPrice} >= 0`),
+    check(
+      "orders_requests_total_price_non_negative_chk",
+      sql`${table.totalPrice} >= 0`,
+    ),
     index("idx_orders_requests_client_created_active")
       .on(table.clientId, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
@@ -164,7 +173,7 @@ export const orderRequests = ordersSchema.table(
       .on(table.status, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
     index("idx_orders_scheduled_pickup")
-      .on(table.status, sql`(schedule->>'pickupAt')::timestamptz`)
+      .on(table.status, sql`(schedule->>'pickupAt')`)
       .where(sql`status = 'scheduled' AND deleted_at IS NULL`),
   ],
 );
@@ -195,7 +204,11 @@ export const courierAssignments = ordersSchema.table(
       .notNull(),
 
     // ── Driver net payout (written atomically in deliver_order/return_order) ─
-    netEarnings: numeric("net_earnings", { precision: 10, scale: 2, mode: "number" }),
+    netEarnings: numeric("net_earnings", {
+      precision: 10,
+      scale: 2,
+      mode: "number",
+    }),
 
     rejectionReason: text("rejection_reason"),
     courierNotes: text("courier_notes"),
@@ -308,11 +321,20 @@ export const orderDrafts = ordersSchema.table(
     items: jsonb("items").$type<OrderItemJSONB[]>().default([]).notNull(),
     package: jsonb("package").$type<OrderPackageJSONB>(),
     pricing: jsonb("pricing").$type<OrderPricingJSONB>(),
-    schedule: jsonb("schedule").$type<OrderScheduleJSONB>().default({}).notNull(),
+    schedule: jsonb("schedule")
+      .$type<OrderScheduleJSONB>()
+      .default({})
+      .notNull(),
     couponCode: varchar("coupon_code", { length: 50 }),
     notes: text("notes"),
-    templateId: integer("template_id").references(() => orderTemplates.templateId, { onDelete: "set null" }),
-    submittedOrderId: integer("submitted_order_id").references(() => orderRequests.orderId, { onDelete: "set null" }),
+    templateId: integer("template_id").references(
+      () => orderTemplates.templateId,
+      { onDelete: "set null" },
+    ),
+    submittedOrderId: integer("submitted_order_id").references(
+      () => orderRequests.orderId,
+      { onDelete: "set null" },
+    ),
 
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
