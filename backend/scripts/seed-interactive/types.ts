@@ -88,6 +88,7 @@ export type SeedConfig = {
   counts: SeedCounts;
   targetClient: TargetQuery;
   targetDriver: TargetQuery;
+  targetBusiness: TargetQuery;
   manifestFile: string;
   tag: string;
 };
@@ -111,6 +112,7 @@ export type SeedManifest = {
     targets: {
       client?: Record<string, unknown>;
       driver?: Record<string, unknown>;
+      business?: Record<string, unknown>;
     };
   };
   failures: FailureEntry[];

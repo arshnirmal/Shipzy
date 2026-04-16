@@ -685,10 +685,108 @@ export class SeedRunner {
   }
 
   private async ensureBusinessActor(): Promise<ActorAuth | null> {
+    const targetMemory = this.findActorInMemory(
+      "business",
+      this.config.targetBusiness,
+    );
+    if (targetMemory) return targetMemory;
+
+    if (this.config.targetBusiness.id || this.config.targetBusiness.email) {
+      const target = await this.resolveExistingActor(
+        "business",
+        this.config.targetBusiness,
+      );
+      if (target) {
+        this.registerActor(target);
+        this.manifest.created.targets.business = {
+          userId: target.userId,
+          email: target.email,
+          source: target.source,
+        };
+        return target;
+      }
+      return null;
+    }
+
     if (this.businesses.length > 0) {
       return pickRandom(this.businesses);
     }
     return this.createBusinessActor();
+  }
+
+  private shouldSeedOrdersViaBusiness(): boolean {
+    return (
+      this.config.modules.has("business") && !this.config.modules.has("users")
+    );
+  }
+
+  private async seedBusinessOrders(count: number) {
+    if (count <= 0) return;
+
+    const businessActor = await this.ensureBusinessActor();
+    if (!businessActor) {
+      this.failures.push({
+        action: "business.orders.prepare.actor",
+        message: "Unable to resolve business actor for order seeding.",
+      });
+      if (this.config.failFast) {
+        throw new Error(
+          "No business actor available for business order seeding.",
+        );
+      }
+      return;
+    }
+
+    console.log(`\n📦 Seeding business orders (${count})`);
+
+    for (let i = 0; i < count; i += 1) {
+      const orderSeedPayload =
+        await this.buildBusinessOrderPayload(businessActor);
+      if (!orderSeedPayload) {
+        if (this.config.failFast) {
+          throw new Error("Unable to build business order payload.");
+        }
+        continue;
+      }
+
+      const response = await this.call(
+        "business.orders.bulk-create",
+        "POST",
+        "/business/orders/bulk",
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+          data: {
+            orders: [this.toCreateOrderRequestPayload(orderSeedPayload)],
+          },
+        },
+      );
+
+      if (response) {
+        const data = this.getResponseData<any>(response);
+        const results = Array.isArray(data?.bulk?.results)
+          ? data.bulk.results
+          : [];
+        for (const result of results) {
+          if (result?.success && result?.orderId) {
+            this.orders.push({
+              orderId: Number(result.orderId),
+              status: "pending",
+              clientUserId: businessActor.userId,
+            });
+            this.manifest.created.orders.push({
+              orderId: Number(result.orderId),
+              orderNumber: null,
+              status: "pending",
+              clientUserId: businessActor.userId,
+              courierUserId: null,
+              source: "business.bulk",
+            });
+          }
+        }
+      }
+
+      await this.maybeDelay();
+    }
   }
 
   private buildOrderLocation(contactName: string, postalCode: string) {
@@ -912,6 +1010,7 @@ export class SeedRunner {
         `/business/templates/${templateId}/draft`,
         {
           headers: this.authHeaders(businessActor.accessToken),
+          data: {},
         },
       );
     }
@@ -972,6 +1071,7 @@ export class SeedRunner {
         `/business/drafts/${draftId}/submit`,
         {
           headers: this.authHeaders(businessActor.accessToken),
+          data: {},
         },
       );
     }
@@ -1000,43 +1100,47 @@ export class SeedRunner {
       },
     );
 
-    const bulkCreateResponse = await this.call(
-      "business.orders.bulk-create",
-      "POST",
-      "/business/orders/bulk",
-      {
-        headers: this.authHeaders(businessActor.accessToken),
-        data: {
-          orders: [this.toCreateOrderRequestPayload(orderSeedPayload)],
-        },
-      },
-    );
-
-    const bulkPayload = bulkCreateResponse
-      ? this.getResponseData<any>(bulkCreateResponse)
-      : null;
-    const createdOrderIds = Array.isArray(bulkPayload?.bulk?.results)
-      ? bulkPayload.bulk.results
-          .filter((result: any) => result?.success && result?.orderId)
-          .map((result: any) => Number(result.orderId))
-          .filter((id: number) => Number.isFinite(id) && id > 0)
-      : [];
-
-    if (createdOrderIds.length > 0) {
-      await this.call(
-        "business.orders.bulk-cancel",
+    // Keep business module smoke realistic without polluting datasets when orders
+    // are seeded through the dedicated business order path.
+    if (!this.config.modules.has("orders")) {
+      const bulkCreateResponse = await this.call(
+        "business.orders.bulk-create",
         "POST",
-        "/business/orders/bulk-cancel",
+        "/business/orders/bulk",
         {
           headers: this.authHeaders(businessActor.accessToken),
           data: {
-            orders: {
-              ids: createdOrderIds,
-              reason: "Seed cleanup cancellation",
-            },
+            orders: [this.toCreateOrderRequestPayload(orderSeedPayload)],
           },
         },
       );
+
+      const bulkPayload = bulkCreateResponse
+        ? this.getResponseData<any>(bulkCreateResponse)
+        : null;
+      const createdOrderIds = Array.isArray(bulkPayload?.bulk?.results)
+        ? bulkPayload.bulk.results
+            .filter((result: any) => result?.success && result?.orderId)
+            .map((result: any) => Number(result.orderId))
+            .filter((id: number) => Number.isFinite(id) && id > 0)
+        : [];
+
+      if (createdOrderIds.length > 0) {
+        await this.call(
+          "business.orders.bulk-cancel",
+          "POST",
+          "/business/orders/bulk-cancel",
+          {
+            headers: this.authHeaders(businessActor.accessToken),
+            data: {
+              orders: {
+                ids: createdOrderIds,
+                reason: "Seed cleanup cancellation",
+              },
+            },
+          },
+        );
+      }
     }
   }
 
@@ -1810,7 +1914,11 @@ export class SeedRunner {
     }
 
     if (this.config.modules.has("orders")) {
-      await this.seedOrders();
+      if (this.shouldSeedOrdersViaBusiness()) {
+        await this.seedBusinessOrders(this.config.counts.orders);
+      } else {
+        await this.seedOrders();
+      }
     }
 
     if (this.config.modules.has("ratings")) {

@@ -114,7 +114,7 @@ const askCounts = async (modules: Set<ModuleName>) => {
   const counts = { ...DEFAULT_COUNTS };
 
   if (modules.has("users")) {
-    counts.users = toPositiveInt(
+    counts.users = toNonNegativeInt(
       await number({
         message: "How many client users should be created?",
         default: DEFAULT_COUNTS.users,
@@ -124,7 +124,7 @@ const askCounts = async (modules: Set<ModuleName>) => {
   }
 
   if (modules.has("drivers")) {
-    counts.drivers = toPositiveInt(
+    counts.drivers = toNonNegativeInt(
       await number({
         message: "How many drivers should be created?",
         default: DEFAULT_COUNTS.drivers,
@@ -134,7 +134,7 @@ const askCounts = async (modules: Set<ModuleName>) => {
   }
 
   if (modules.has("business")) {
-    counts.businesses = toPositiveInt(
+    counts.businesses = toNonNegativeInt(
       await number({
         message: "How many business accounts should be created?",
         default: DEFAULT_COUNTS.businesses,
@@ -144,7 +144,7 @@ const askCounts = async (modules: Set<ModuleName>) => {
   }
 
   if (modules.has("orders")) {
-    counts.orders = toPositiveInt(
+    counts.orders = toNonNegativeInt(
       await number({
         message: "How many orders should be created?",
         default: DEFAULT_COUNTS.orders,
@@ -154,7 +154,7 @@ const askCounts = async (modules: Set<ModuleName>) => {
   }
 
   if (modules.has("ratings")) {
-    counts.ratings = toPositiveInt(
+    counts.ratings = toNonNegativeInt(
       await number({
         message: "How many ratings should be created?",
         default: DEFAULT_COUNTS.ratings,
@@ -271,6 +271,11 @@ export const collectSeedConfig = async (): Promise<SeedConfig> => {
       ? await askTargetQuery("driver")
       : {};
 
+  const targetBusiness =
+    modules.has("business") && dbTargetLookup
+      ? await askTargetQuery("business")
+      : {};
+
   const seed = toPositiveInt(
     await number({
       message: "Deterministic seed number:",
@@ -318,6 +323,7 @@ export const collectSeedConfig = async (): Promise<SeedConfig> => {
     counts,
     targetClient,
     targetDriver,
+    targetBusiness,
     manifestFile: manifestFile.trim(),
     tag: tag.trim(),
   };
