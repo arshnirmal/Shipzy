@@ -80,7 +80,7 @@ class DriverHome extends _$DriverHome {
             .updateDriverLocation(
               latitude: currentPosition.latitude,
               longitude: currentPosition.longitude,
-              locationMeta: LocationMeta(speed: currentPosition.speed, bearing: currentPosition.heading, accuracy: currentPosition.accuracy),
+              locationMeta: _buildLocationMeta(currentPosition),
             );
       }
 
@@ -174,4 +174,16 @@ Future<ActiveAssignment?> activeOrder(Ref ref) async {
 Future<DriverProfile> driverProfile(Ref ref) async {
   final dashboardData = await ref.watch(driverDashboardDataProvider.future);
   return dashboardData.profile;
+}
+
+LocationMeta _buildLocationMeta(Position position) {
+  final speed = position.speed;
+  final heading = position.heading;
+  final accuracy = position.accuracy;
+
+  final speedKmph = speed.isFinite && speed >= 0 ? speed * 3.6 : null;
+  final bearing = heading.isFinite && heading >= 0 && heading <= 360 ? heading : null;
+  final safeAccuracy = accuracy.isFinite && accuracy >= 0 ? accuracy : null;
+
+  return LocationMeta(speed: speedKmph, bearing: bearing, accuracy: safeAccuracy);
 }

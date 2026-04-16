@@ -205,16 +205,24 @@ class Order extends _$Order {
 
       await ref
           .read(apiServiceProvider)
-          .updateDriverLocation(
-            latitude: position.latitude,
-            longitude: position.longitude,
-            locationMeta: LocationMeta(speed: position.speed, bearing: position.heading, accuracy: position.accuracy),
-          );
+          .updateDriverLocation(latitude: position.latitude, longitude: position.longitude, locationMeta: _buildLocationMeta(position));
     } catch (_) {
       // Keep location timer resilient; next tick retries automatically.
     } finally {
       _isLocationSyncInFlight = false;
     }
+  }
+
+  LocationMeta _buildLocationMeta(Position position) {
+    final speed = position.speed;
+    final heading = position.heading;
+    final accuracy = position.accuracy;
+
+    final speedKmph = speed.isFinite && speed >= 0 ? speed * 3.6 : null;
+    final bearing = heading.isFinite && heading >= 0 && heading <= 360 ? heading : null;
+    final safeAccuracy = accuracy.isFinite && accuracy >= 0 ? accuracy : null;
+
+    return LocationMeta(speed: speedKmph, bearing: bearing, accuracy: safeAccuracy);
   }
 
   void _stopLocationTimer() {
