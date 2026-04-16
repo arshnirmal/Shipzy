@@ -6,7 +6,7 @@ export type ModuleName =
   | "static"
   | "users"
   | "drivers"
-  | "businesses"
+  | "business"
   | "orders"
   | "ratings"
   | "addresses";

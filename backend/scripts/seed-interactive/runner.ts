@@ -684,6 +684,362 @@ export class SeedRunner {
     return actor;
   }
 
+  private async ensureBusinessActor(): Promise<ActorAuth | null> {
+    if (this.businesses.length > 0) {
+      return pickRandom(this.businesses);
+    }
+    return this.createBusinessActor();
+  }
+
+  private buildOrderLocation(contactName: string, postalCode: string) {
+    const location = this.mumbaiCoordinates();
+    return {
+      fullAddress: `${faker.location.streetAddress({ useFullAddress: true })}, Mumbai`,
+      city: "Mumbai",
+      state: "Maharashtra",
+      postalCode,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      contactName,
+      contactPhone: randomIndianPhone(),
+      building: faker.location.buildingNumber(),
+      floor: faker.number.int({ min: 1, max: 25 }).toString(),
+      flatNumber: faker.number.int({ min: 1, max: 999 }).toString(),
+      landmark: faker.location.street(),
+    };
+  }
+
+  private async buildBusinessOrderPayload(
+    actor: ActorAuth,
+  ): Promise<any | null> {
+    const catalog = await this.ensureStaticCatalog();
+    const deliveryType = pickRandom(catalog.deliveryTypes);
+    const supportedVehicles = Array.isArray(deliveryType.supportedVehicles)
+      ? deliveryType.supportedVehicles
+      : [];
+
+    if (supportedVehicles.length === 0) {
+      this.failures.push({
+        action: "business.orders.select-vehicle",
+        message: "No supported vehicles configured for selected delivery type.",
+      });
+      return null;
+    }
+
+    const vehicle = pickRandom(supportedVehicles);
+    const weightTiers = Array.isArray(vehicle.weightTiers)
+      ? vehicle.weightTiers
+      : [];
+
+    if (weightTiers.length === 0) {
+      this.failures.push({
+        action: "business.orders.select-weight-tier",
+        message: "No weight tiers configured for selected vehicle category.",
+      });
+      return null;
+    }
+
+    const weightTier = pickRandom(weightTiers);
+    const packageType =
+      catalog.packageTypes.length > 0 ? pickRandom(catalog.packageTypes) : null;
+    const activePaymentMethods = catalog.paymentMethods.filter(
+      (method: any) => method?.isActive !== false,
+    );
+    const paymentMethod =
+      activePaymentMethods.length > 0
+        ? pickRandom(activePaymentMethods)
+        : catalog.paymentMethods[0];
+
+    const pickupLocation = this.buildOrderLocation(actor.fullName, "400001");
+    const deliveryLocation = this.buildOrderLocation(
+      this.buildRealisticFullName(this.nextOrdinal("recipient")),
+      "400058",
+    );
+
+    const pricing = await this.calculateFare(
+      actor,
+      {
+        deliveryTypeId: Number(deliveryType.deliveryTypeId),
+        vehicleCategoryId: Number(vehicle.categoryId),
+        weightTierId: Number(weightTier.tierId),
+        packageTypeId: packageType
+          ? Number(packageType.packageTypeId)
+          : undefined,
+      },
+      {
+        latitude: pickupLocation.latitude,
+        longitude: pickupLocation.longitude,
+      },
+      {
+        latitude: deliveryLocation.latitude,
+        longitude: deliveryLocation.longitude,
+      },
+    );
+
+    if (!pricing) return null;
+
+    return {
+      fulfillment: {
+        deliveryTypeId: Number(deliveryType.deliveryTypeId),
+        vehicleCategoryId: Number(vehicle.categoryId),
+        weightTierId: Number(weightTier.tierId),
+        packageTypeId: packageType ? Number(packageType.packageTypeId) : null,
+        paymentMethodId: Number(paymentMethod.methodId),
+      },
+      pickupLocation,
+      deliveryLocation,
+      package: {
+        description: faker.commerce.productDescription(),
+        specialInstructions: faker.helpers.arrayElement([
+          "Call on arrival",
+          "Ring once",
+          "Leave at reception",
+        ]),
+        declaredValue: faker.number.int({ min: 100, max: 5000 }),
+        notifyRecipientSms: chance(500),
+      },
+      schedule: {
+        pickupAt: null,
+        deliveryAt: null,
+      },
+      pricing,
+      couponCode: null,
+      items: [
+        {
+          itemName: faker.commerce.productName(),
+          quantity: faker.number.int({ min: 1, max: 3 }),
+          weightKg: faker.number.float({
+            min: 0.2,
+            max: 4.5,
+            fractionDigits: 1,
+          }),
+        },
+      ],
+    };
+  }
+
+  private toCreateOrderRequestPayload(source: any) {
+    return {
+      fulfillment: source.fulfillment,
+      locations: {
+        pickup: source.pickupLocation,
+        delivery: source.deliveryLocation,
+      },
+      package: source.package,
+      schedule: source.schedule,
+      pricing: source.pricing,
+      couponCode: source.couponCode,
+      items: source.items,
+    };
+  }
+
+  private async runBusinessModule() {
+    console.log("\n🏬 Running business module workflows");
+    await this.ensureStaticCatalog();
+
+    const businessActor = await this.ensureBusinessActor();
+    if (!businessActor) {
+      this.failures.push({
+        action: "business.prepare.actor",
+        message: "Unable to resolve actor for business module.",
+      });
+      return;
+    }
+
+    await this.call(
+      "business.templates.list",
+      "GET",
+      "/business/templates?page=1&limit=10&isActive=true",
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+      },
+    );
+
+    const orderSeedPayload =
+      await this.buildBusinessOrderPayload(businessActor);
+    if (!orderSeedPayload) return;
+
+    const templateResponse = await this.call(
+      "business.templates.create",
+      "POST",
+      "/business/templates",
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+        data: {
+          name: `Seed Template ${faker.string.alphanumeric(6)}`,
+          description: "Interactive seeder template",
+          fulfillment: orderSeedPayload.fulfillment,
+          pickupLocation: orderSeedPayload.pickupLocation,
+          deliveryLocation: orderSeedPayload.deliveryLocation,
+          items: orderSeedPayload.items,
+          package: orderSeedPayload.package,
+        },
+      },
+    );
+
+    const templateData = templateResponse
+      ? this.getResponseData<any>(templateResponse)
+      : null;
+    const templateId = Number(
+      templateData?.templateId ?? templateData?.template?.templateId,
+    );
+
+    if (Number.isFinite(templateId) && templateId > 0) {
+      await this.call(
+        "business.templates.get",
+        "GET",
+        `/business/templates/${templateId}`,
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+        },
+      );
+
+      await this.call(
+        "business.templates.update",
+        "PATCH",
+        `/business/templates/${templateId}`,
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+          data: {
+            description: "Updated by interactive seeder",
+          },
+        },
+      );
+
+      await this.call(
+        "business.templates.create-draft",
+        "POST",
+        `/business/templates/${templateId}/draft`,
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+        },
+      );
+    }
+
+    const draftResponse = await this.call(
+      "business.drafts.create",
+      "POST",
+      "/business/drafts",
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+        data: {
+          ...orderSeedPayload,
+          name: `Seed Draft ${faker.string.alphanumeric(6)}`,
+          notes: "Generated by interactive seeder",
+        },
+      },
+    );
+
+    const draftData = draftResponse
+      ? this.getResponseData<any>(draftResponse)
+      : null;
+    const draftId = Number(draftData?.draftId ?? draftData?.draft?.draftId);
+
+    await this.call(
+      "business.drafts.list",
+      "GET",
+      "/business/drafts?page=1&limit=10",
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+      },
+    );
+
+    if (Number.isFinite(draftId) && draftId > 0) {
+      await this.call(
+        "business.drafts.get",
+        "GET",
+        `/business/drafts/${draftId}`,
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+        },
+      );
+
+      await this.call(
+        "business.drafts.update",
+        "PATCH",
+        `/business/drafts/${draftId}`,
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+          data: {
+            notes: "Draft updated by interactive seeder",
+          },
+        },
+      );
+
+      await this.call(
+        "business.drafts.submit",
+        "POST",
+        `/business/drafts/${draftId}/submit`,
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+        },
+      );
+    }
+
+    const now = new Date();
+    const from = new Date(now);
+    from.setDate(now.getDate() - 30);
+
+    const query = `dateFrom=${encodeURIComponent(from.toISOString())}&dateTo=${encodeURIComponent(now.toISOString())}`;
+
+    await this.call(
+      "business.analytics.get",
+      "GET",
+      `/business/analytics?${query}`,
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+      },
+    );
+
+    await this.call(
+      "business.orders.export",
+      "GET",
+      "/business/orders/export?status=active&format=csv",
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+      },
+    );
+
+    const bulkCreateResponse = await this.call(
+      "business.orders.bulk-create",
+      "POST",
+      "/business/orders/bulk",
+      {
+        headers: this.authHeaders(businessActor.accessToken),
+        data: {
+          orders: [this.toCreateOrderRequestPayload(orderSeedPayload)],
+        },
+      },
+    );
+
+    const bulkPayload = bulkCreateResponse
+      ? this.getResponseData<any>(bulkCreateResponse)
+      : null;
+    const createdOrderIds = Array.isArray(bulkPayload?.bulk?.results)
+      ? bulkPayload.bulk.results
+          .filter((result: any) => result?.success && result?.orderId)
+          .map((result: any) => Number(result.orderId))
+          .filter((id: number) => Number.isFinite(id) && id > 0)
+      : [];
+
+    if (createdOrderIds.length > 0) {
+      await this.call(
+        "business.orders.bulk-cancel",
+        "POST",
+        "/business/orders/bulk-cancel",
+        {
+          headers: this.authHeaders(businessActor.accessToken),
+          data: {
+            orders: {
+              ids: createdOrderIds,
+              reason: "Seed cleanup cancellation",
+            },
+          },
+        },
+      );
+    }
+  }
+
   private async ensureClientForOrders(): Promise<ActorAuth | null> {
     const targetMemory = this.findActorInMemory(
       "client",
@@ -1448,8 +1804,9 @@ export class SeedRunner {
       await this.seedDrivers();
     }
 
-    if (this.config.modules.has("businesses")) {
+    if (this.config.modules.has("business")) {
       await this.seedBusinesses();
+      await this.runBusinessModule();
     }
 
     if (this.config.modules.has("orders")) {

@@ -133,7 +133,7 @@ const askCounts = async (modules: Set<ModuleName>) => {
     );
   }
 
-  if (modules.has("businesses")) {
+  if (modules.has("business")) {
     counts.businesses = toPositiveInt(
       await number({
         message: "How many business accounts should be created?",
