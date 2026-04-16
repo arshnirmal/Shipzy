@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../theme/driver_app_theme.dart';
 import '../../utils/app_routes.dart';
 
 const String _kHasSeenOnboarding = 'has_seen_onboarding';
@@ -9,7 +10,7 @@ const String _kSkipLabel = 'Skip';
 const String _kNextLabel = 'Continue';
 const String _kGetStartedLabel = 'Get Started';
 
-const double _kPageHorizontalPadding = 24;
+const double _kPageHorizontalPadding = DriverAppTheme.overlayBreathingMargin;
 const double _kPrimaryButtonHeight = 56;
 
 enum _OnboardingIllustrationType { schedule, navigation, payouts }
@@ -253,14 +254,14 @@ class _OnboardingPrimaryCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final gradient = isDark ? DriverAppTheme.primaryGradientDark : DriverAppTheme.primaryGradientLight;
+    final ctaShadow = isDark ? DriverAppTheme.ambientShadowDark : DriverAppTheme.ambientShadowLight;
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [colorScheme.primary, colorScheme.secondary]),
-        boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.22), blurRadius: 14, offset: const Offset(0, 8))],
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), gradient: gradient, boxShadow: [ctaShadow]),
       child: SizedBox(
         width: double.infinity,
         height: _kPrimaryButtonHeight,
@@ -271,7 +272,7 @@ class _OnboardingPrimaryCta extends StatelessWidget {
             label: label,
             child: InkWell(
               onTap: onPressed,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
               child: Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -366,7 +367,6 @@ class _ScheduleIllustrationState extends State<_ScheduleIllustration> with Singl
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: colorScheme.primary.withValues(alpha: 0.25), width: 1.4),
               boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 24, offset: const Offset(0, 12))],
             ),
             child: Column(
@@ -492,7 +492,6 @@ class _NavigationIllustrationState extends State<_NavigationIllustration> with S
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(28),
               color: colorScheme.surfaceContainerHigh,
-              border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.44)),
               boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10))],
             ),
             child: CustomPaint(
@@ -592,7 +591,6 @@ class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTic
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 color: colorScheme.surfaceContainerHigh,
-                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 12))],
               ),
               child: Column(
