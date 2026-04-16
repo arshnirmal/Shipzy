@@ -1,6 +1,5 @@
 // services/backend/src/modules/addresses/addresses.schema.ts
 import { FastifySchema } from "fastify";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   DirectionsResponseZ,
   DirectionsZ,
@@ -13,79 +12,56 @@ import {
   SearchAddressesResponseZ,
   SearchAddressesZ,
 } from "./addresses.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
+const SearchAddressesJson = toJsonSchema(SearchAddressesZ);
+const ReverseGeocodeJson = toJsonSchema(ReverseGeocodeZ);
+const RetrievePlaceJson = toJsonSchema(RetrievePlaceZ);
+const DirectionsJson = toJsonSchema(DirectionsZ);
+const DistanceJson = toJsonSchema(DistanceZ);
 
-const SearchAddressesJson = zodToJsonSchema(
-  SearchAddressesZ as unknown as ZodToJsonSchemaInput,
-);
-const ReverseGeocodeJson = zodToJsonSchema(
-  ReverseGeocodeZ as unknown as ZodToJsonSchemaInput,
-);
-const RetrievePlaceJson = zodToJsonSchema(
-  RetrievePlaceZ as unknown as ZodToJsonSchemaInput,
-);
-const DirectionsJson = zodToJsonSchema(
-  DirectionsZ as unknown as ZodToJsonSchemaInput,
-);
-const DistanceJson = zodToJsonSchema(
-  DistanceZ as unknown as ZodToJsonSchemaInput,
-);
-
-const SearchAddressesResponseJson = zodToJsonSchema(
-  SearchAddressesResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const RetrievePlaceResponseJson = zodToJsonSchema(
-  RetrievePlaceResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const ReverseGeocodeResponseJson = zodToJsonSchema(
-  ReverseGeocodeResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const DirectionsResponseJson = zodToJsonSchema(
-  DirectionsResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const DistanceResponseJson = zodToJsonSchema(
-  DistanceResponseZ as unknown as ZodToJsonSchemaInput,
-);
-
-const successEnvelope = (data: unknown) => ({
-  type: "object",
-  properties: {
-    success: { type: "boolean" },
-    message: { type: "string" },
-    data,
-    timestamp: { type: "string" },
-  },
-  required: ["success", "message", "data", "timestamp"],
-});
+const SearchAddressesResponseJson = toJsonSchema(SearchAddressesResponseZ);
+const RetrievePlaceResponseJson = toJsonSchema(RetrievePlaceResponseZ);
+const ReverseGeocodeResponseJson = toJsonSchema(ReverseGeocodeResponseZ);
+const DirectionsResponseJson = toJsonSchema(DirectionsResponseZ);
+const DistanceResponseJson = toJsonSchema(DistanceResponseZ);
 
 export const searchAddressesSchema: FastifySchema = {
   body: SearchAddressesJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(SearchAddressesResponseJson),
   },
 };
 export const reverseGeocodeSchema: FastifySchema = {
   body: ReverseGeocodeJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(ReverseGeocodeResponseJson),
   },
 };
 export const retrievePlaceSchema: FastifySchema = {
   body: RetrievePlaceJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(RetrievePlaceResponseJson),
   },
 };
 export const getDirectionsSchema: FastifySchema = {
   body: DirectionsJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(DirectionsResponseJson),
   },
 };
 export const calculateDistanceSchema: FastifySchema = {
   body: DistanceJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(DistanceResponseJson),
   },
 };

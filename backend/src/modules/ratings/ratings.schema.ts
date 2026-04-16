@@ -1,5 +1,4 @@
 import { FastifySchema } from "fastify";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   CreateRatingParamsZ,
   CreateRatingRequestZ,
@@ -7,41 +6,24 @@ import {
   DriverRatingParamsZ,
   DriverRatingStatsResponseZ,
 } from "./ratings.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
+const CreateRatingParamsJson = toJsonSchema(CreateRatingParamsZ);
+const CreateRatingRequestJson = toJsonSchema(CreateRatingRequestZ);
+const CreateRatingResponseJson = toJsonSchema(CreateRatingResponseZ);
 
-const CreateRatingParamsJson = zodToJsonSchema(
-  CreateRatingParamsZ as unknown as ZodToJsonSchemaInput,
-);
-const CreateRatingRequestJson = zodToJsonSchema(
-  CreateRatingRequestZ as unknown as ZodToJsonSchemaInput,
-);
-const CreateRatingResponseJson = zodToJsonSchema(
-  CreateRatingResponseZ as unknown as ZodToJsonSchemaInput,
-);
-
-const DriverRatingParamsJson = zodToJsonSchema(
-  DriverRatingParamsZ as unknown as ZodToJsonSchemaInput,
-);
-const DriverRatingStatsResponseJson = zodToJsonSchema(
-  DriverRatingStatsResponseZ as unknown as ZodToJsonSchemaInput,
-);
-
-const successEnvelope = (data: unknown) => ({
-  type: "object",
-  properties: {
-    success: { type: "boolean" },
-    message: { type: "string" },
-    data,
-    timestamp: { type: "string" },
-  },
-  required: ["success", "message", "data", "timestamp"],
-});
+const DriverRatingParamsJson = toJsonSchema(DriverRatingParamsZ);
+const DriverRatingStatsResponseJson = toJsonSchema(DriverRatingStatsResponseZ);
 
 export const createRatingSchema: FastifySchema = {
   params: CreateRatingParamsJson,
   body: CreateRatingRequestJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     201: successEnvelope(CreateRatingResponseJson),
   },
 };
@@ -49,6 +31,7 @@ export const createRatingSchema: FastifySchema = {
 export const getDriverRatingStatsSchema: FastifySchema = {
   params: DriverRatingParamsJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(DriverRatingStatsResponseJson),
   },
 };

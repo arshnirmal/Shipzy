@@ -1,5 +1,5 @@
 // services/backend/src/modules/orders/orders.routes.ts
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, RouteHandlerMethod } from "fastify";
 import { authorize } from "../../middleware/auth.middleware.js";
 import ordersController from "./orders.controller.js";
 import {
@@ -20,10 +20,14 @@ import {
 } from "./orders.schema.js";
 
 async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
+  const asRouteHandler = (handler: unknown): RouteHandlerMethod => {
+    return handler as RouteHandlerMethod;
+  };
+
   // All routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 
-  // POST /api/v1/orders/calculate-fare - Calculate fare (public)
+  // POST /api/v1/orders/calculate-fare - Calculate fare (authenticated)
   fastify.post(
     "/calculate-fare",
     { schema: calculateFareSchema },
@@ -37,7 +41,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: createOrderSchema,
       onRequest: [authorize("client")],
     },
-    ordersController.createOrder.bind(ordersController) as any,
+    asRouteHandler(ordersController.createOrder.bind(ordersController)),
   );
 
   // GET /api/v1/orders - List user's orders (clients and business)
@@ -47,7 +51,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: listOrdersSchema,
       onRequest: [authorize("client", "business")],
     },
-    ordersController.listOrders.bind(ordersController) as any,
+    asRouteHandler(ordersController.listOrders.bind(ordersController)),
   );
 
   // GET /api/v1/orders/available - Get available orders (couriers only)
@@ -57,7 +61,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: getAvailableOrdersSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.getAvailableOrders.bind(ordersController) as any,
+    asRouteHandler(ordersController.getAvailableOrders.bind(ordersController)),
   );
 
   // GET /api/v1/orders/:id - Get order details
@@ -67,7 +71,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: getOrderByIdSchema,
       onRequest: [authorize("client", "courier", "business")],
     },
-    ordersController.getOrderById.bind(ordersController) as any,
+    asRouteHandler(ordersController.getOrderById.bind(ordersController)),
   );
 
   // POST /api/v1/orders/:id/cancel - Cancel order (clients and business)
@@ -77,7 +81,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: cancelOrderSchema,
       onRequest: [authorize("client", "business")],
     },
-    ordersController.cancelOrder.bind(ordersController) as any,
+    asRouteHandler(ordersController.cancelOrder.bind(ordersController)),
   );
 
   // POST /api/v1/orders/:id/accept - Accept order (couriers only)
@@ -87,7 +91,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: acceptOrderSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.acceptOrder.bind(ordersController) as any,
+    asRouteHandler(ordersController.acceptOrder.bind(ordersController)),
   );
 
   // PATCH /api/v1/orders/:id/status - Update order status (couriers only)
@@ -97,7 +101,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: updateOrderStatusSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.updateOrderStatus.bind(ordersController) as any,
+    asRouteHandler(ordersController.updateOrderStatus.bind(ordersController)),
   );
 
   // ============ DRIVER ORDER ACTIONS ============
@@ -109,7 +113,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: arriveSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.arriveAtDelivery.bind(ordersController) as any,
+    asRouteHandler(ordersController.arriveAtDelivery.bind(ordersController)),
   );
 
   // POST /api/v1/orders/:id/undeliverable - Mark order undeliverable (couriers only)
@@ -119,7 +123,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: undeliverableSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.markUndeliverable.bind(ordersController) as any,
+    asRouteHandler(ordersController.markUndeliverable.bind(ordersController)),
   );
 
   // POST /api/v1/orders/:id/return - Start RTO return (couriers only)
@@ -129,7 +133,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: returnSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.startReturn.bind(ordersController) as any,
+    asRouteHandler(ordersController.startReturn.bind(ordersController)),
   );
 
   // POST /api/v1/orders/:id/returned - Confirm order returned (couriers only)
@@ -139,7 +143,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: returnedSchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.confirmReturned.bind(ordersController) as any,
+    asRouteHandler(ordersController.confirmReturned.bind(ordersController)),
   );
 
   // POST /api/v1/orders/:id/proof-of-delivery - Submit POD (couriers only)
@@ -149,7 +153,9 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: proofOfDeliverySchema,
       onRequest: [authorize("courier")],
     },
-    ordersController.submitProofOfDelivery.bind(ordersController) as any,
+    asRouteHandler(
+      ordersController.submitProofOfDelivery.bind(ordersController),
+    ),
   );
 
   // GET /api/v1/orders/:id/tracking - Get live tracking (clients, couriers, admins)
@@ -159,7 +165,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: trackingSchema,
       onRequest: [authorize("client", "courier", "admin")],
     },
-    ordersController.getOrderTracking.bind(ordersController) as any,
+    asRouteHandler(ordersController.getOrderTracking.bind(ordersController)),
   );
 
   // Rating endpoint removed — use POST /api/v1/ratings/orders/:orderId (canonical path)

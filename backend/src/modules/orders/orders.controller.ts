@@ -1,7 +1,7 @@
 // services/backend/src/modules/orders/orders.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
-import { AppError } from "../../utils/error.util.js";
+import { AppError, RetryAfterError } from "../../utils/error.util.js";
 import {
   errorResponse,
   paginatedResponse,
@@ -370,6 +370,9 @@ class OrdersController {
       );
       return successResponse(reply, result.data, "Order marked undeliverable");
     } catch (error) {
+      if (error instanceof RetryAfterError) {
+        return errorResponse(reply, error.message, 400, { retryAfter: error.retryAfter });
+      }
       if (error instanceof AppError) {
         return errorResponse(reply, error.message, error.statusCode);
       }

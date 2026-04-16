@@ -48,3 +48,12 @@ export class ConflictError extends AppError {
     super(message, 409);
   }
 }
+
+export class RetryAfterError extends AppError {
+  public retryAfter: string;
+
+  constructor(message: string, retryAfter: string) {
+    super(message, 400);
+    this.retryAfter = retryAfter;
+  }
+}

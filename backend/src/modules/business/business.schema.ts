@@ -1,4 +1,3 @@
-import { zodToJsonSchema } from "zod-to-json-schema";
 import { z } from "zod";
 import {
   DraftResponseZ,
@@ -15,121 +14,177 @@ import {
   AnalyticsQueryZ,
   AnalyticsResponseZ,
 } from "./business.zod.js";
+import { IdParamZ } from "../../schemas/common.zod.js";
 import {
   BulkCancelRequestZ,
+  BulkCancelResultZ,
   CreateOrderResponseZ,
 } from "../orders/orders.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
-function toJsonSchema(schema: any) {
-  return zodToJsonSchema(schema as unknown as ZodToJsonSchemaInput);
-}
+const idParamsSchema = toJsonSchema(IdParamZ);
+const deleteResponseSchema = toJsonSchema(
+  z
+    .object({
+      deletion: z.object({ success: z.boolean() }).strict(),
+    })
+    .strict(),
+);
 
 export const createDraftSchema = {
   body: toJsonSchema(DraftCreateRequestZ),
   response: {
-    201: toJsonSchema(DraftResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(toJsonSchema(DraftResponseZ)),
   },
 };
 
 export const listDraftsSchema = {
   querystring: toJsonSchema(ListDraftsQueryZ),
   response: {
-    200: toJsonSchema(
-      z.object({
-        drafts: z.array(DraftResponseZ),
-        pagination: z.object({
-          total: z.number(),
-          page: z.number(),
-          limit: z.number(),
-          totalPages: z.number(),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(
+      toJsonSchema(
+        z.object({
+          drafts: z.array(DraftResponseZ),
+          pagination: z.object({
+            total: z.number(),
+            page: z.number(),
+            limit: z.number(),
+            totalPages: z.number(),
+          }),
         }),
-      }),
+      ),
     ),
   },
 };
 
 export const getDraftSchema = {
+  params: idParamsSchema,
   response: {
-    200: toJsonSchema(DraftResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(DraftResponseZ)),
   },
 };
 
 export const updateDraftSchema = {
+  params: idParamsSchema,
   body: toJsonSchema(DraftUpdateRequestZ),
   response: {
-    200: toJsonSchema(DraftResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(DraftResponseZ)),
   },
 };
 
 export const submitDraftSchema = {
+  params: idParamsSchema,
   response: {
-    201: toJsonSchema(CreateOrderResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(toJsonSchema(CreateOrderResponseZ)),
+  },
+};
+
+export const deleteDraftSchema = {
+  params: idParamsSchema,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(deleteResponseSchema),
   },
 };
 
 export const createTemplateSchema = {
   body: toJsonSchema(TemplateCreateRequestZ),
   response: {
-    201: toJsonSchema(TemplateResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(toJsonSchema(TemplateResponseZ)),
   },
 };
 
 export const listTemplatesSchema = {
   querystring: toJsonSchema(ListTemplatesQueryZ),
   response: {
-    200: toJsonSchema(
-      z.object({
-        templates: z.array(TemplateResponseZ),
-        pagination: z.object({
-          total: z.number(),
-          page: z.number(),
-          limit: z.number(),
-          totalPages: z.number(),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(
+      toJsonSchema(
+        z.object({
+          templates: z.array(TemplateResponseZ),
+          pagination: z.object({
+            total: z.number(),
+            page: z.number(),
+            limit: z.number(),
+            totalPages: z.number(),
+          }),
         }),
-      }),
+      ),
     ),
   },
 };
 
 export const getTemplateSchema = {
+  params: idParamsSchema,
   response: {
-    200: toJsonSchema(TemplateResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(TemplateResponseZ)),
   },
 };
 
 export const updateTemplateSchema = {
+  params: idParamsSchema,
   body: toJsonSchema(TemplateUpdateRequestZ),
   response: {
-    200: toJsonSchema(TemplateResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(TemplateResponseZ)),
+  },
+};
+
+export const deleteTemplateSchema = {
+  params: idParamsSchema,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(deleteResponseSchema),
   },
 };
 
 export const draftFromTemplateSchema = {
+  params: idParamsSchema,
   response: {
-    201: toJsonSchema(DraftResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(toJsonSchema(DraftResponseZ)),
   },
 };
 
 export const bulkCreateOrdersSchema = {
   body: toJsonSchema(BulkOrderCreateRequestZ),
   response: {
-    201: toJsonSchema(BulkOrderResultZ),
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(toJsonSchema(BulkOrderResultZ)),
   },
 };
 
 export const bulkCancelOrdersSchema = {
   body: toJsonSchema(BulkCancelRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(BulkCancelResultZ)),
+  },
 };
 
 // No JSON schema for export (since it's text/csv response)
 export const exportOrdersSchema = {
   querystring: toJsonSchema(ExportOrdersQueryZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+  },
 };
 
 export const getAnalyticsSchema = {
   querystring: toJsonSchema(AnalyticsQueryZ),
   response: {
-    200: toJsonSchema(AnalyticsResponseZ),
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(AnalyticsResponseZ)),
   },
 };

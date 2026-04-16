@@ -7,6 +7,7 @@ import {
   verifyGoogleSchema,
   registerSchema,
   loginSchema,
+  logoutSchema,
 } from "./auth.schema.js";
 
 // Keep login-sensitive endpoints strict.
@@ -69,6 +70,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
   fastify.post(
     "/logout",
     {
+      schema: logoutSchema,
       onRequest: [fastify.authenticate], // Requires authentication
     },
     authController.logout.bind(authController),

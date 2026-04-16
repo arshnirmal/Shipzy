@@ -1,6 +1,9 @@
 import { FastifyInstance } from "fastify";
+import { authorize } from "../../middleware/auth.middleware.js";
 import businessController from "./business.controller.js";
 import {
+  deleteDraftSchema,
+  deleteTemplateSchema,
   createDraftSchema,
   listDraftsSchema,
   getDraftSchema,
@@ -22,7 +25,6 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.addHook("onRequest", app.authenticate);
 
   // Require "business" role for all routes in this plugin
-  const { authorize } = await import("../../middleware/auth.middleware.js");
   app.addHook("onRequest", authorize("business"));
 
   // =========================================================================
@@ -32,33 +34,37 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.post(
     "/drafts",
     { schema: createDraftSchema },
-    businessController.createDraft,
+    businessController.createDraft.bind(businessController),
   );
 
   app.get(
     "/drafts",
     { schema: listDraftsSchema },
-    businessController.listDrafts,
+    businessController.listDrafts.bind(businessController),
   );
 
   app.get(
     "/drafts/:id",
     { schema: getDraftSchema },
-    businessController.getDraft,
+    businessController.getDraft.bind(businessController),
   );
 
   app.patch(
     "/drafts/:id",
     { schema: updateDraftSchema },
-    businessController.updateDraft,
+    businessController.updateDraft.bind(businessController),
   );
 
-  app.delete("/drafts/:id", businessController.deleteDraft);
+  app.delete(
+    "/drafts/:id",
+    { schema: deleteDraftSchema },
+    businessController.deleteDraft.bind(businessController),
+  );
 
   app.post(
     "/drafts/:id/submit",
     { schema: submitDraftSchema },
-    businessController.submitDraft,
+    businessController.submitDraft.bind(businessController),
   );
 
   // =========================================================================
@@ -68,33 +74,37 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.post(
     "/templates",
     { schema: createTemplateSchema },
-    businessController.createTemplate,
+    businessController.createTemplate.bind(businessController),
   );
 
   app.get(
     "/templates",
     { schema: listTemplatesSchema },
-    businessController.listTemplates,
+    businessController.listTemplates.bind(businessController),
   );
 
   app.get(
     "/templates/:id",
     { schema: getTemplateSchema },
-    businessController.getTemplate,
+    businessController.getTemplate.bind(businessController),
   );
 
   app.patch(
     "/templates/:id",
     { schema: updateTemplateSchema },
-    businessController.updateTemplate,
+    businessController.updateTemplate.bind(businessController),
   );
 
-  app.delete("/templates/:id", businessController.deleteTemplate);
+  app.delete(
+    "/templates/:id",
+    { schema: deleteTemplateSchema },
+    businessController.deleteTemplate.bind(businessController),
+  );
 
   app.post(
     "/templates/:id/draft",
     { schema: draftFromTemplateSchema },
-    businessController.createDraftFromTemplate,
+    businessController.createDraftFromTemplate.bind(businessController),
   );
 
   // =========================================================================
@@ -104,19 +114,19 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.post(
     "/orders/bulk",
     { schema: bulkCreateOrdersSchema },
-    businessController.bulkCreateOrders,
+    businessController.bulkCreateOrders.bind(businessController),
   );
 
   app.post(
     "/orders/bulk-cancel",
     { schema: bulkCancelOrdersSchema },
-    (businessController as any).bulkCancelOrders,
+    businessController.bulkCancelOrders.bind(businessController),
   );
 
   app.get(
     "/orders/export",
     { schema: exportOrdersSchema },
-    businessController.exportOrders,
+    businessController.exportOrders.bind(businessController),
   );
 
   // =========================================================================
@@ -126,6 +136,6 @@ export default async function businessRoutes(app: FastifyInstance) {
   app.get(
     "/analytics",
     { schema: getAnalyticsSchema },
-    businessController.getAnalytics,
+    businessController.getAnalytics.bind(businessController),
   );
 }

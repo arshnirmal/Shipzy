@@ -2,6 +2,7 @@ import {
   AppError,
   AuthorizationError,
   NotFoundError,
+  RetryAfterError,
   ValidationError,
 } from "../../utils/error.util.js";
 import { toIsoDateTime } from "../../utils/datetime.util.js";
@@ -602,6 +603,19 @@ class OrdersService {
     const pricingConfig = await pricingRepo.getAllPricingConfig();
     const waitMinutes = pricingConfig.get("undeliverable_wait_minutes") ?? 5;
 
+    // Idempotency — if arrivedAt already set, return existing window (no re-write, no duplicate event)
+    if (order.deliveryAttempt?.arrivedAt) {
+      const arrivedAt = new Date(order.deliveryAttempt.arrivedAt as string);
+      const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
+      return {
+        data: {
+          arrivedAt: arrivedAt.toISOString(),
+          waitUntil: waitUntil.toISOString(),
+          waitMinutes,
+        },
+      };
+    }
+
     const arrivedAt = new Date();
     const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
 
@@ -617,7 +631,7 @@ class OrdersService {
         assignmentId: order.assignmentId,
         orderId,
         courierId,
-        eventType: "driver_arrived",
+        eventType: "checkpoint",
         eventDescription: "Driver arrived at delivery location",
         latitude: body.gps.latitude,
         longitude: body.gps.longitude,
@@ -671,11 +685,7 @@ class OrdersService {
     const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
 
     if (new Date() < waitUntil) {
-      const remainingMs = waitUntil.getTime() - Date.now();
-      const remainingMin = Math.ceil(remainingMs / 60000);
-      throw new ValidationError(
-        `Must wait ${remainingMin} more minute(s) before marking undeliverable`,
-      );
+      throw new RetryAfterError("Wait period not elapsed", waitUntil.toISOString());
     }
 
     const undeliverableAt = new Date();
@@ -705,7 +715,7 @@ class OrdersService {
         assignmentId: order.assignmentId,
         orderId,
         courierId,
-        eventType: "undeliverable",
+        eventType: "status_change",
         eventDescription: `Undeliverable: ${body.driverNote}`,
         latitude: (attempt.gps as { latitude?: number })?.latitude ?? null,
         longitude: (attempt.gps as { longitude?: number })?.longitude ?? null,
@@ -767,7 +777,7 @@ class OrdersService {
         assignmentId: order.assignmentId,
         orderId,
         courierId,
-        eventType: "return_started",
+        eventType: "status_change",
         eventDescription: "Driver started return to pickup",
       });
     }
@@ -817,7 +827,7 @@ class OrdersService {
         assignmentId: order.assignmentId,
         orderId,
         courierId,
-        eventType: "returned",
+        eventType: "delivery",
         eventDescription: "Order returned to pickup location",
       });
     }

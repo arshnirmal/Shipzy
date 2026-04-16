@@ -1,6 +1,5 @@
 // services/backend/src/modules/users/users.schema.ts
 import { FastifySchema } from "fastify";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   UpdateProfileRequestZ,
   SaveAddressRequestZ,
@@ -10,45 +9,24 @@ import {
   DeleteAddressResponseZ,
   UserAddressesResponseZ,
 } from "./users.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
-
-const UpdateProfileJson = zodToJsonSchema(
-  UpdateProfileRequestZ as unknown as ZodToJsonSchemaInput,
-);
-const SaveAddressJson = zodToJsonSchema(
-  SaveAddressRequestZ as unknown as ZodToJsonSchemaInput,
-);
-const DeleteAddressParamsJson = zodToJsonSchema(
-  DeleteAddressParamsZ as unknown as ZodToJsonSchemaInput,
-);
-const UserResponseJson = zodToJsonSchema(
-  UserProfileResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const SaveAddressResponseJson = zodToJsonSchema(
-  SaveAddressResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const DeleteAddressResponseJson = zodToJsonSchema(
-  DeleteAddressResponseZ as unknown as ZodToJsonSchemaInput,
-);
-const UserAddressesResponseJson = zodToJsonSchema(
-  UserAddressesResponseZ as unknown as ZodToJsonSchemaInput,
-);
-
-const successEnvelope = (data: unknown) => ({
-  type: "object",
-  properties: {
-    success: { type: "boolean" },
-    message: { type: "string" },
-    data,
-    timestamp: { type: "string" },
-  },
-  required: ["success", "message", "data", "timestamp"],
-});
+const UpdateProfileJson = toJsonSchema(UpdateProfileRequestZ);
+const SaveAddressJson = toJsonSchema(SaveAddressRequestZ);
+const DeleteAddressParamsJson = toJsonSchema(DeleteAddressParamsZ);
+const UserResponseJson = toJsonSchema(UserProfileResponseZ);
+const SaveAddressResponseJson = toJsonSchema(SaveAddressResponseZ);
+const DeleteAddressResponseJson = toJsonSchema(DeleteAddressResponseZ);
+const UserAddressesResponseJson = toJsonSchema(UserAddressesResponseZ);
 
 export const updateProfileSchema: FastifySchema = {
   body: UpdateProfileJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(UserResponseJson),
   },
 };
@@ -56,6 +34,7 @@ export const updateProfileSchema: FastifySchema = {
 export const saveAddressSchema: FastifySchema = {
   body: SaveAddressJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     201: successEnvelope(SaveAddressResponseJson),
   },
 };
@@ -63,18 +42,21 @@ export const saveAddressSchema: FastifySchema = {
 export const deleteAddressSchema: FastifySchema = {
   params: DeleteAddressParamsJson,
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(DeleteAddressResponseJson),
   },
 };
 
 export const getAddressesSchema: FastifySchema = {
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(UserAddressesResponseJson),
   },
 };
 
 export const getCurrentUserSchema: FastifySchema = {
   response: {
+    ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(UserResponseJson),
   },
 };

@@ -1,36 +1,70 @@
 // services/backend/src/modules/auth/auth.schema.ts
 import { FastifySchema } from "fastify";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 import {
   BusinessRegisterRequestZ,
   GoogleAuthRequestZ,
   RefreshTokenRequestZ,
   RegisterRequestZ,
   LoginRequestZ,
+  AuthResponseZ,
 } from "./auth.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-type ZodToJsonSchemaInput = Parameters<typeof zodToJsonSchema>[0];
+const authResponseJson = toJsonSchema(AuthResponseZ);
+
+const logoutResponseJson = toJsonSchema(
+  z.object({ message: z.string() }).strict(),
+);
 
 export const verifyGoogleSchema: FastifySchema = {
-  body: zodToJsonSchema(GoogleAuthRequestZ as unknown as ZodToJsonSchemaInput),
+  body: toJsonSchema(GoogleAuthRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(authResponseJson),
+    201: successEnvelope(authResponseJson),
+  },
 };
 
 export const refreshTokenSchema: FastifySchema = {
-  body: zodToJsonSchema(
-    RefreshTokenRequestZ as unknown as ZodToJsonSchemaInput,
-  ),
+  body: toJsonSchema(RefreshTokenRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(authResponseJson),
+  },
 };
 
 export const registerSchema: FastifySchema = {
-  body: zodToJsonSchema(RegisterRequestZ as unknown as ZodToJsonSchemaInput),
+  body: toJsonSchema(RegisterRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(authResponseJson),
+  },
 };
 
 export const loginSchema: FastifySchema = {
-  body: zodToJsonSchema(LoginRequestZ as unknown as ZodToJsonSchemaInput),
+  body: toJsonSchema(LoginRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(authResponseJson),
+  },
 };
 
 export const businessRegisterSchema: FastifySchema = {
-  body: zodToJsonSchema(
-    BusinessRegisterRequestZ as unknown as ZodToJsonSchemaInput,
-  ),
+  body: toJsonSchema(BusinessRegisterRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(authResponseJson),
+  },
+};
+
+export const logoutSchema: FastifySchema = {
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(logoutResponseJson),
+  },
 };

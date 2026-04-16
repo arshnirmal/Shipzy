@@ -1,4 +1,4 @@
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, RouteHandlerMethod } from "fastify";
 import { authorize } from "../../middleware/auth.middleware.js";
 import ratingsController from "./ratings.controller.js";
 import {
@@ -7,6 +7,10 @@ import {
 } from "./ratings.schema.js";
 
 async function ratingsRoutes(fastify: FastifyInstance, _options: unknown) {
+  const asRouteHandler = (handler: unknown): RouteHandlerMethod => {
+    return handler as RouteHandlerMethod;
+  };
+
   // All ratings routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 
@@ -17,7 +21,7 @@ async function ratingsRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: createRatingSchema,
       onRequest: [authorize("client")],
     },
-    ratingsController.createRating.bind(ratingsController) as any,
+    asRouteHandler(ratingsController.createRating.bind(ratingsController)),
   );
 
   // GET /api/v1/ratings/drivers/:driverId - Driver rating statistics
@@ -27,7 +31,9 @@ async function ratingsRoutes(fastify: FastifyInstance, _options: unknown) {
       schema: getDriverRatingStatsSchema,
       onRequest: [authorize("client", "courier", "admin", "business")],
     },
-    ratingsController.getDriverRatingStats.bind(ratingsController) as any,
+    asRouteHandler(
+      ratingsController.getDriverRatingStats.bind(ratingsController),
+    ),
   );
 }
 

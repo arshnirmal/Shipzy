@@ -439,83 +439,98 @@ export type UpdateOrderStatusResponse = z.infer<
 
 // ── Driver order action response schemas ──────────────────────────────────────
 
+export const ArrivePayloadZ = z
+  .object({
+    arrivedAt: z.iso.datetime(),
+    waitUntil: z.iso.datetime(),
+    waitMinutes: z.number(),
+  })
+  .strict();
+export type ArrivePayload = z.infer<typeof ArrivePayloadZ>;
+
 export const ArriveResponseZ = z
   .object({
-    data: z
-      .object({
-        arrivedAt: z.iso.datetime(),
-        waitUntil: z.iso.datetime(),
-        waitMinutes: z.number(),
-      })
-      .strict(),
+    data: ArrivePayloadZ,
   })
   .strict();
 export type ArriveResponse = z.infer<typeof ArriveResponseZ>;
 
-export const UndeliverableResponseZ = z
+export const UndeliverablePayloadZ = z
   .object({
-    data: z
+    order: z
       .object({
-        order: z
-          .object({
-            orderId: z.number().int().positive(),
-            status: z.literal("undeliverable"),
-            undeliverableAt: z.iso.datetime(),
-          })
-          .strict(),
+        orderId: z.number().int().positive(),
+        status: z.literal("undeliverable"),
+        undeliverableAt: z.iso.datetime(),
       })
       .strict(),
+  })
+  .strict();
+export type UndeliverablePayload = z.infer<typeof UndeliverablePayloadZ>;
+
+export const UndeliverableResponseZ = z
+  .object({
+    data: UndeliverablePayloadZ,
   })
   .strict();
 export type UndeliverableResponse = z.infer<typeof UndeliverableResponseZ>;
 
-export const ReturnResponseZ = z
+export const ReturnPayloadZ = z
   .object({
-    data: z
+    order: z
       .object({
-        order: z
-          .object({
-            orderId: z.number().int().positive(),
-            status: z.literal("returning"),
-            returnStartedAt: z.iso.datetime(),
-          })
-          .strict(),
+        orderId: z.number().int().positive(),
+        status: z.literal("returning"),
+        returnStartedAt: z.iso.datetime(),
       })
       .strict(),
+  })
+  .strict();
+export type ReturnPayload = z.infer<typeof ReturnPayloadZ>;
+
+export const ReturnResponseZ = z
+  .object({
+    data: ReturnPayloadZ,
   })
   .strict();
 export type ReturnResponse = z.infer<typeof ReturnResponseZ>;
 
-export const ReturnedResponseZ = z
+export const ReturnedPayloadZ = z
   .object({
-    data: z
+    order: z
       .object({
-        order: z
-          .object({
-            orderId: z.number().int().positive(),
-            status: z.literal("returned"),
-            returnedAt: z.iso.datetime(),
-          })
-          .strict(),
+        orderId: z.number().int().positive(),
+        status: z.literal("returned"),
+        returnedAt: z.iso.datetime(),
       })
       .strict(),
   })
   .strict();
+export type ReturnedPayload = z.infer<typeof ReturnedPayloadZ>;
+
+export const ReturnedResponseZ = z
+  .object({
+    data: ReturnedPayloadZ,
+  })
+  .strict();
 export type ReturnedResponse = z.infer<typeof ReturnedResponseZ>;
+
+export const ProofOfDeliveryPayloadZ = z
+  .object({
+    proof: z
+      .object({
+        proofId: z.number().int().positive(),
+        orderId: z.number().int().positive(),
+        deliveredAt: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ProofOfDeliveryPayload = z.infer<typeof ProofOfDeliveryPayloadZ>;
 
 export const ProofOfDeliveryResponseZ = z
   .object({
-    data: z
-      .object({
-        proof: z
-          .object({
-            proofId: z.number().int().positive(),
-            orderId: z.number().int().positive(),
-            deliveredAt: z.iso.datetime(),
-          })
-          .strict(),
-      })
-      .strict(),
+    data: ProofOfDeliveryPayloadZ,
   })
   .strict();
 export type ProofOfDeliveryResponse = z.infer<typeof ProofOfDeliveryResponseZ>;
@@ -544,28 +559,31 @@ export const LocationMetaResponseZ = z
   })
   .strict();
 
-export const TrackingResponseZ = z
+export const TrackingPayloadZ = z
   .object({
-    data: z
+    order: z
       .object({
-        order: z
-          .object({
-            orderId: z.number().int().positive(),
-            status: OrderLifecycleStatusZ,
-          })
-          .strict(),
-        driver: z
-          .object({
-            location: CoordinatesZ,
-            locationMeta: LocationMetaResponseZ,
-            lastUpdatedAt: z.iso.datetime(),
-          })
-          .strict()
-          .nullable(),
-        milestones: z.array(TrackingMilestoneZ),
-        attempt: DeliveryAttemptJSONBZ.nullable(),
+        orderId: z.number().int().positive(),
+        status: OrderLifecycleStatusZ,
       })
       .strict(),
+    driver: z
+      .object({
+        location: CoordinatesZ,
+        locationMeta: LocationMetaResponseZ,
+        lastUpdatedAt: z.iso.datetime(),
+      })
+      .strict()
+      .nullable(),
+    milestones: z.array(TrackingMilestoneZ),
+    attempt: DeliveryAttemptJSONBZ.nullable(),
+  })
+  .strict();
+export type TrackingPayload = z.infer<typeof TrackingPayloadZ>;
+
+export const TrackingResponseZ = z
+  .object({
+    data: TrackingPayloadZ,
   })
   .strict();
 export type TrackingResponse = z.infer<typeof TrackingResponseZ>;
@@ -641,7 +659,9 @@ export type OrderRow = {
   assignmentStatus?: string | null;
   assignedAt?: string | Date | null;
   assignmentTimeline?: AssignmentTimelineJSONB | null;
-  deliveryAttempt?: import("../../database/schema/types.js").DeliveryAttemptJSONB | null;
+  deliveryAttempt?:
+    | import("../../database/schema/types.js").DeliveryAttemptJSONB
+    | null;
 };
 
 export type OrderListRow = {
