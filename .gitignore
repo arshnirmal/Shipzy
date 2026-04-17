@@ -302,3 +302,5 @@ backend/scripts/*.log
 .claude/settings.local.json
 .claude/settings.json
 .claude/CLAUDE.local.md
+
+graphify-out/
