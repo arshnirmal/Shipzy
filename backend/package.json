@@ -60,7 +60,7 @@
     "@fastify/swagger-ui": "^5.2.5",
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
-    "axios": "^1.13.6",
+    "axios": "^1.15.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.6.1",
     "drizzle-kit": "^0.31.10",
