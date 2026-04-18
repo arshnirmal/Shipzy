@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -12,14 +13,23 @@ import '../models/driver_home_state.dart';
 import '../models/driver_profile.dart';
 import '../models/location_meta.dart';
 import '../services/api_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 
 part 'home_provider.g.dart';
 
+// Exposes current battery level (0–100). Updated every 2 minutes while app is active.
+final batteryLevelProvider = StateProvider<int>((ref) => 100);
+
 @riverpod
 class DriverHome extends _$DriverHome {
   Timer? _pollingTimer;
+  Timer? _idleTimer;
+  Timer? _batteryTimer;
+  bool _lowBatteryWarningShown = false;
+  bool _criticalBatteryHandled = false;
+  final Battery _battery = Battery();
 
   @override
   DriverHomeState build() {
@@ -53,6 +63,14 @@ class DriverHome extends _$DriverHome {
         initialStatus = DriverStatus.onDelivery;
       }
     }
+
+    _startBatteryMonitor();
+
+    ref.onDispose(() {
+      _idleTimer?.cancel();
+      _batteryTimer?.cancel();
+      _pollingTimer?.cancel();
+    });
 
     return DriverHomeState(status: initialStatus, error: initialError);
   }
@@ -88,8 +106,11 @@ class DriverHome extends _$DriverHome {
       state = state.copyWith(status: newStatus, isLoading: false, error: null);
 
       if (isGoingOnline) {
+        _startIdleTimer();
         ref.invalidate(nearbyOrdersProvider);
       } else {
+        _idleTimer?.cancel();
+        _idleTimer = null;
         _stopPolling();
       }
     } catch (e) {
@@ -102,6 +123,66 @@ class DriverHome extends _$DriverHome {
     _pollingTimer = null;
   }
 
+  // Plan §6: starts 30-min idle countdown while driver is online with no active delivery.
+  void _startIdleTimer() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(const Duration(minutes: 30), () {
+      unawaited(ref.read(localNotificationServiceProvider).showIdleDutyPrompt());
+    });
+  }
+
+  // Resets idle timer on any order interaction (accept, reject).
+  void _resetIdleTimer() {
+    if (state.status == DriverStatus.online) {
+      _startIdleTimer();
+    } else {
+      _idleTimer?.cancel();
+      _idleTimer = null;
+    }
+  }
+
+  // Polls battery every 2 minutes. Idempotent — safe to call from build().
+  void _startBatteryMonitor() {
+    if (_batteryTimer != null) {
+      return;
+    }
+    _batteryTimer = Timer.periodic(const Duration(minutes: 2), (_) => unawaited(_checkBattery()));
+    unawaited(_checkBattery());
+  }
+
+  // Plan §6: <15% → warning notification; <5% → auto-offline + notification.
+  Future<void> _checkBattery() async {
+    try {
+      final level = await _battery.batteryLevel;
+      final batteryState = await _battery.batteryState;
+
+      // Skip warnings when plugged in
+      if (batteryState == BatteryState.charging || batteryState == BatteryState.full) {
+        _lowBatteryWarningShown = false;
+        _criticalBatteryHandled = false;
+        return;
+      }
+
+      ref.read(batteryLevelProvider.notifier).state = level;
+
+      if (level < 5 && !_criticalBatteryHandled) {
+        _criticalBatteryHandled = true;
+        if (state.status != DriverStatus.offline) {
+          await toggleStatus();
+        }
+        await ref.read(localNotificationServiceProvider).showLowBatteryWarning(level);
+      } else if (level < 15 && !_lowBatteryWarningShown) {
+        _lowBatteryWarningShown = true;
+        await ref.read(localNotificationServiceProvider).showLowBatteryWarning(level);
+      } else if (level >= 15) {
+        _lowBatteryWarningShown = false;
+        _criticalBatteryHandled = false;
+      }
+    } catch (_) {
+      // Battery check failed — skip tick
+    }
+  }
+
   Future<void> acceptOrder(int orderId) async {
     try {
       await ref.read(apiServiceProvider).acceptOrder(orderId);
@@ -110,6 +191,8 @@ class DriverHome extends _$DriverHome {
       ref.invalidate(driverProfileProvider);
       ref.invalidate(nearbyOrdersProvider);
 
+      _idleTimer?.cancel();
+      _idleTimer = null;
       state = state.copyWith(status: DriverStatus.onDelivery);
     } catch (e) {
       state = state.copyWith(error: 'Failed to accept order: $e');
@@ -117,6 +200,7 @@ class DriverHome extends _$DriverHome {
   }
 
   Future<void> rejectOrder(int orderId) async {
+    _resetIdleTimer();
     ref.invalidate(nearbyOrdersProvider);
   }
 }

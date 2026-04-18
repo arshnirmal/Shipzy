@@ -91,12 +91,25 @@ deploy_migrations() {
         cd "$(dirname "$0")/.."
     fi
 
-    # Check if there are any migration files
-    if [ ! -d "src/database/migrations" ] || [ -z "$(ls -A src/database/migrations/*.sql 2>/dev/null)" ]; then
-        print_warning "No migration files found, generating from schema..."
-        if ! pnpm run db:generate; then
-            print_error "Failed to generate migrations"
-            return 1
+d    # Check if there are any migration files using find (more robust than shell glob checks)
+    has_migrations="false"
+    if [ -d "src/database/migrations" ] && [ -n "$(find src/database/migrations -maxdepth 1 -type f -name '*.sql' -print -quit 2>/dev/null)" ]; then
+        has_migrations="true"
+    fi
+
+    if [ "$has_migrations" != "true" ]; then
+        # In Docker dev we mount /app as read-only to prevent in-container code changes,
+        # so migration generation must be done on the host beforehand.
+        if [ -f "/.dockerenv" ] || [ -f "/app/package.json" ]; then
+            print_warning "No migration files found in src/database/migrations"
+            print_warning "Container is configured for read-only source. Generate and commit migrations on host if needed: pnpm run db:generate"
+            print_warning "Continuing startup; db:deploy will still run setup/functions/master-data"
+        else
+            print_warning "No migration files found, generating from schema..."
+            if ! pnpm run db:generate; then
+                print_error "Failed to generate migrations"
+                return 1
+            fi
         fi
     fi
 

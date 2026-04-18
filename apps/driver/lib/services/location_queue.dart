@@ -62,6 +62,12 @@ class LocationQueue {
     );
   }
 
+  // Removes entries older than 15 minutes — plan §9 offline queue bounds.
+  Future<void> _evictStale() async {
+    final cutoff = DateTime.now().subtract(const Duration(minutes: 15));
+    await _db?.delete('location_queue', where: 'timestamp < ?', whereArgs: [cutoff.toIso8601String()]);
+  }
+
   Future<void> enqueue({
     required double latitude,
     required double longitude,
@@ -70,6 +76,7 @@ class LocationQueue {
     double? accuracy,
   }) async {
     try {
+      await _evictStale();
       await _db?.insert('location_queue', {
         'latitude': latitude,
         'longitude': longitude,
@@ -87,6 +94,17 @@ class LocationQueue {
     final rows = await _db?.query(
           'location_queue',
           orderBy: 'id ASC',
+          limit: limit,
+        ) ??
+        [];
+    return rows.map(_fromRow).toList();
+  }
+
+  // Returns the most-recent entries (newest first) — used for flush-one-on-reconnect drain.
+  Future<List<LocationQueueEntry>> peekLatest(int limit) async {
+    final rows = await _db?.query(
+          'location_queue',
+          orderBy: 'id DESC',
           limit: limit,
         ) ??
         [];

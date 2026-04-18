@@ -9,6 +9,7 @@ import '../models/location_meta.dart';
 import '../models/order_types.dart';
 import '../services/api_service.dart';
 import '../services/foreground_task_service.dart';
+import '../services/local_notification_service.dart';
 import '../services/location_queue.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
@@ -151,6 +152,7 @@ class Order extends _$Order {
 
     if (DateTime.now().isAfter(waitUntil)) {
       _setState(state.copyWith(waitElapsed: true));
+      unawaited(ref.read(localNotificationServiceProvider).showWaitTimerElapsed());
       return;
     }
 
@@ -164,6 +166,7 @@ class Order extends _$Order {
       if (DateTime.now().isAfter(currentWaitUntil)) {
         timer.cancel();
         _setState(state.copyWith(waitElapsed: true));
+        unawaited(ref.read(localNotificationServiceProvider).showWaitTimerElapsed());
       }
     });
   }
@@ -236,24 +239,25 @@ class Order extends _$Order {
     }
   }
 
+  // Plan §9: on reconnect, flush the single most-recent queued position only.
+  // All queued entries become stale once the latest is sent.
   Future<void> _drainQueue(ApiService apiService) async {
     try {
       final queue = await ref.read(locationQueueProvider.future);
-      final entries = await queue.peek(5);
-      for (final entry in entries) {
-        if (_isDisposed) {
-          return;
-        }
-        try {
-          await apiService.updateDriverLocation(
-            latitude: entry.latitude,
-            longitude: entry.longitude,
-            locationMeta: LocationMeta(speed: entry.speed, bearing: entry.bearing, accuracy: entry.accuracy),
-          );
-          await queue.dequeue(entry.id);
-        } catch (_) {
-          break; // Still offline — stop draining
-        }
+      final entries = await queue.peekLatest(1);
+      if (entries.isEmpty || _isDisposed) {
+        return;
+      }
+      try {
+        final entry = entries.first;
+        await apiService.updateDriverLocation(
+          latitude: entry.latitude,
+          longitude: entry.longitude,
+          locationMeta: LocationMeta(speed: entry.speed, bearing: entry.bearing, accuracy: entry.accuracy),
+        );
+        await queue.clear();
+      } catch (_) {
+        // Still offline — queue remains for next tick
       }
     } catch (_) {
       // Queue unavailable — skip drain
