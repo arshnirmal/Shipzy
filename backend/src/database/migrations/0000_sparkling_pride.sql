@@ -511,5 +511,6 @@ CREATE INDEX "idx_courier_status_assignment" ON "logistics"."courier_status" USI
 CREATE UNIQUE INDEX "uq_courier_vehicles_primary_per_courier" ON "logistics"."courier_vehicles" USING btree ("courier_id") WHERE "logistics"."courier_vehicles"."is_primary" = true AND "logistics"."courier_vehicles"."is_active" = true;--> statement-breakpoint
 CREATE INDEX "idx_tracking_assignment_time" ON "tracking"."events" USING btree ("assignment_id","timestamp");--> statement-breakpoint
 CREATE INDEX "idx_ratings_driver" ON "logistics"."driver_ratings" USING btree ("driver_id","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_fcm_tokens_user" ON "notifications"."fcm_tokens" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_fcm_tokens_user_active" ON "notifications"."fcm_tokens" USING btree ("user_id") WHERE "notifications"."fcm_tokens"."is_active" = true;--> statement-breakpoint
 CREATE INDEX "idx_notifications_user_unread" ON "notifications"."queue" USING btree ("user_id","status") WHERE "notifications"."queue"."status" NOT IN ('read', 'failed');

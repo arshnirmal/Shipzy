@@ -59,7 +59,7 @@ services:
     working_dir: /app
     restart: unless-stopped
     volumes:
-      - .:/app
+      - .:/app:ro
       - /app/node_modules
     environment:
       NODE_ENV: development
@@ -69,7 +69,7 @@ services:
 
       # Database
       DB_HOST: postgres
-      DB_PORT: 5432  # Internal Docker port, not host port
+      DB_PORT: 5432 # Internal Docker port, not host port
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
