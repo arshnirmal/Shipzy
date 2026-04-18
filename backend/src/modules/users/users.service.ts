@@ -12,6 +12,7 @@ import type {
   SavedAddressResponse,
   UpdateProfileRequest as UpdateProfileData,
   SaveAddressRequest as AddressData,
+  RegisterDeviceTokenRequest,
 } from "./users.zod.js";
 
 class UsersService {
@@ -161,6 +162,30 @@ class UsersService {
     } catch (error) {
       logger.error({
         msg: "Error saving address",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Register (upsert) FCM device token for the authenticated user
+   */
+  async registerDeviceToken(
+    userId: number,
+    payload: RegisterDeviceTokenRequest,
+  ): Promise<{ tokenId: number; registered: true }> {
+    try {
+      const saved = await usersRepository.saveFcmToken({
+        userId,
+        deviceToken: payload.deviceToken,
+        deviceType: payload.deviceType,
+        deviceInfo: payload.deviceInfo ?? null,
+      });
+      return { tokenId: saved.tokenId, registered: true };
+    } catch (error) {
+      logger.error({
+        msg: "Error registering device token",
         error: (error as Error).message,
       });
       throw error;

@@ -3,9 +3,14 @@ import { eq, and, isNull } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import usersQueries from "../../database/queries/users.queries.js";
+import notificationsQueries from "../../database/queries/notifications.queries.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { userAddresses } from "../../database/schema/users.js";
-import { UserAddressDbZ, UserProfileDbZ } from "../../schemas/db.zod.js";
+import {
+  SaveFcmTokenResultDbZ,
+  UserAddressDbZ,
+  UserProfileDbZ,
+} from "../../schemas/db.zod.js";
 import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
 import { AppError } from "../../utils/error.util.js";
 
@@ -227,6 +232,39 @@ class UsersRepository {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  /**
+   * Register (upsert) the user's single active FCM device token
+   */
+  async saveFcmToken(params: {
+    userId: number;
+    deviceToken: string;
+    deviceType: string;
+    deviceInfo?: Record<string, unknown> | null;
+  }): Promise<{ tokenId: number; deviceToken: string }> {
+    try {
+      const result = await drizzlePool.query(
+        notificationsQueries.SAVE_FCM_TOKEN,
+        [
+          params.userId,
+          params.deviceToken,
+          params.deviceType,
+          params.deviceInfo ? JSON.stringify(params.deviceInfo) : null,
+        ],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new AppError("Failed to register device token", 500);
+      }
+      return parseDbRow(SaveFcmTokenResultDbZ, row, "save fcm token");
+    } catch (error) {
+      logger.error({
+        msg: "Error saving FCM token",
+        error: (error as Error).message,
+      });
+      throw error;
     }
   }
 

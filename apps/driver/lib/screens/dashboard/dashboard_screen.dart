@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 class DashboardScreen extends StatefulWidget {
 
-  const DashboardScreen({super.key, required this.navigationShell});
+  const DashboardScreen({required this.navigationShell, super.key});
   final StatefulNavigationShell navigationShell;
 
   @override

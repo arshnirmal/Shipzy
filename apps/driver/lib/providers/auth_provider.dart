@@ -28,6 +28,11 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final user = await authService.getCurrentUser(accessToken);
 
+      if (user.role != 'courier') {
+        await _clearTokens();
+        return const AuthState.unauthenticated();
+      }
+
       return AuthState.authenticated(user);
     } catch (e) {
       AppLogger.e('Auth status check failed: $e');
@@ -61,6 +66,11 @@ class Auth extends _$Auth {
 
       final isNewUser = response.data.authSection.session.isNewUser;
       final user = response.data.actor.user;
+
+      if (user.role != 'courier') {
+        await _clearTokens();
+        return const AuthResult.error('This app is for Shipzy couriers only. Please use the Shipzy customer app.');
+      }
 
       state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
 
@@ -116,6 +126,11 @@ class Auth extends _$Auth {
       );
 
       final user = response.data.actor.user;
+
+      if (user.role != 'courier') {
+        await _clearTokens();
+        return const AuthResult.error('This app is for Shipzy couriers only. Please use the Shipzy customer app.');
+      }
 
       state = AsyncData(AuthState.authenticated(user));
 

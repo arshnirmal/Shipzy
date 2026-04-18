@@ -10,7 +10,7 @@ class RecentActivitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // TODO: Get weekly target from settings/config
+    // TODO(shipzy): Get weekly target from settings/config.
     const weeklyTarget = 50;
 
     return Column(

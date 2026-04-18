@@ -151,6 +151,9 @@ export default {
     FROM orders.requests o
     WHERE o.status = 'pending'
       AND o.deleted_at IS NULL
+      -- Freshness guard: only surface pending orders created within the last 30 minutes.
+      -- Prevents drivers from seeing stale orders in the absence of a TTL worker (B6).
+      AND o.created_at > NOW() - INTERVAL '30 minutes'
       AND NOT EXISTS (
           SELECT 1 FROM orders.courier_assignments ca
           WHERE ca.order_id = o.order_id

@@ -91,11 +91,14 @@ export default {
           device_info
       )
       VALUES ($1, $2, $3, $4)
-      ON CONFLICT (user_id, device_token)
+      ON CONFLICT (user_id)
       DO UPDATE SET
-          is_active = true,
+          device_token = EXCLUDED.device_token,
+          device_type  = EXCLUDED.device_type,
+          device_info  = EXCLUDED.device_info,
+          is_active    = true,
           last_used_at = NOW(),
-          updated_at = NOW()
+          updated_at   = NOW()
       RETURNING token_id AS "tokenId", device_token AS "deviceToken"
   `,
 

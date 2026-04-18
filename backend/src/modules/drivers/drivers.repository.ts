@@ -16,6 +16,7 @@ import {
   CourierDbZ,
   CourierLocationDbZ,
   EarningsSummaryDbZ,
+  TripHistoryRowDbZ,
 } from "../../types/drivers.js";
 import type {
   DbCourier,
@@ -23,6 +24,7 @@ import type {
   CourierLocationResult,
   EarningsSummaryRow,
   CourierAssignmentRow,
+  TripHistoryRow,
 } from "../../types/drivers.js";
 
 type Courier = DbCourier;
@@ -265,6 +267,58 @@ class DriversRepository {
    */
   async getSessionsInRange(driverId: number, startDate: Date, endDate: Date) {
     return sessionsRepository.getSessionsInRange(driverId, startDate, endDate);
+  }
+
+  /**
+   * Mark courier offline if last_location_update is stale (fire-and-forget safe).
+   * Returns true if the row was updated (courier was online and went stale).
+   */
+  async markOfflineIfStale(
+    courierId: number,
+    staleThresholdMinutes = 10,
+  ): Promise<boolean> {
+    try {
+      const result = await drizzlePool.query(
+        driversQueries.MARK_COURIER_OFFLINE_IF_STALE,
+        [courierId, staleThresholdMinutes],
+      );
+      return result.rowCount != null && result.rowCount > 0;
+    } catch (error) {
+      logger.error({
+        msg: "Error in markOfflineIfStale",
+        courierId,
+        error: (error as Error).message,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Get paginated trip history for a courier
+   */
+  async getTripHistory(
+    courierId: number,
+    limit: number,
+    offset: number,
+    dateFrom?: string,
+    dateTo?: string,
+  ): Promise<{ rows: TripHistoryRow[]; total: number }> {
+    try {
+      const result = await drizzlePool.query(
+        driversQueries.GET_COURIER_TRIP_HISTORY,
+        [courierId, limit, offset, dateFrom ?? null, dateTo ?? null],
+      );
+
+      const rows = parseDbRows(TripHistoryRowDbZ, result.rows, "trip history");
+      const total = rows.length > 0 ? Number(rows[0]?.totalCount ?? 0) : 0;
+      return { rows, total };
+    } catch (error) {
+      logger.error({
+        msg: "Error getting courier trip history",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
   }
 }
 

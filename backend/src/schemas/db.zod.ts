@@ -144,6 +144,26 @@ export const CourierAssignmentDbZ = z
   .passthrough();
 export type CourierAssignmentDb = z.infer<typeof CourierAssignmentDbZ>;
 
+export const TripHistoryRowDbZ = z.object({
+  assignmentId: z.number().int().positive(),
+  orderId: z.number().int().positive(),
+  orderUuid: z.string().uuid().nullable().optional(),
+  orderNumber: z.string().nullable().optional(),
+  orderStatus: z.string(),
+  assignmentStatus: z.string(),
+  pickup: OrderLocationJSONBZ.nullable().optional(),
+  delivery: OrderLocationJSONBZ.nullable().optional(),
+  actualDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
+  totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
+  netEarning: z.union([z.number(), z.string()]),
+  snapshot: OrderSnapshotJSONBZ.nullable().optional(),
+  assignedAt: z.date().nullable().optional(),
+  deliveredAt: z.date().nullable().optional(),
+  cancelledAt: z.date().nullable().optional(),
+  totalCount: z.union([z.number(), z.string()]),
+});
+export type TripHistoryRowDb = z.infer<typeof TripHistoryRowDbZ>;
+
 // ============================================================================
 // TRACKING
 // ============================================================================

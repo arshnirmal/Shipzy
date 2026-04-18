@@ -7,6 +7,7 @@ import {
   getActiveAssignmentsSchema,
   getDriverProfileSchema,
   getDriverRatingSchema,
+  getTripHistorySchema,
   updateAvailabilitySchema,
   updateDriverProfileSchema,
   updateLocationSchema,
@@ -66,6 +67,13 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
     "/me/rating",
     { schema: getDriverRatingSchema },
     driversController.getRating.bind(driversController),
+  );
+
+  // GET /api/v1/drivers/me/trips - Get paginated trip history
+  fastify.get(
+    "/me/trips",
+    { schema: getTripHistorySchema },
+    driversController.getTripHistory.bind(driversController),
   );
 }
 

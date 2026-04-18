@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../models/order_address.dart';
+import '../../providers/home_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
@@ -36,6 +39,9 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   Widget build(BuildContext context) {
     final orderState = ref.watch(orderProvider);
     final notifier = ref.read(orderProvider.notifier);
+    final assignment = ref.watch(activeOrderProvider).valueOrNull;
+
+    final contactAddress = _isPrePickupPhase(orderState.status) ? assignment?.routing.pickup : assignment?.routing.delivery;
 
     ref.listen<OrderState>(orderProvider, (previous, next) {
       _syncCountdownTicker(next);
@@ -58,7 +64,6 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {
-            // Prevent accidental exit during active delivery
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
@@ -103,12 +108,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: const Text('Customer Name'),
-                  subtitle: const Text('+1 234 567 8900'),
-                  trailing: IconButton(icon: const Icon(Icons.call), onPressed: () {}),
-                ),
+                _buildContactTile(contactAddress),
                 const SizedBox(height: 24),
                 _buildActions(context, orderState, notifier, remaining),
               ],
@@ -117,6 +117,42 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildContactTile(OrderAddress? address) {
+    final name = address?.contactName;
+    final phone = address?.contactPhone;
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const CircleAvatar(child: Icon(Icons.person)),
+      title: Text(name ?? 'Loading...'),
+      subtitle: phone != null ? Text(phone) : null,
+      trailing: phone != null
+          ? IconButton(
+              icon: const Icon(Icons.call),
+              onPressed: () => _launchPhone(phone),
+            )
+          : null,
+    );
+  }
+
+  bool _isPrePickupPhase(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.accepted:
+      case OrderStatus.navigatingToPickup:
+      case OrderStatus.arrivedAtPickup:
+        return true;
+      case OrderStatus.idle:
+      case OrderStatus.pickedUp:
+      case OrderStatus.navigatingToDropoff:
+      case OrderStatus.arrivedAtDropoff:
+      case OrderStatus.delivered:
+      case OrderStatus.undeliverable:
+      case OrderStatus.returning:
+      case OrderStatus.returned:
+        return false;
+    }
   }
 
   String _getStatusText(OrderStatus status) {
@@ -264,11 +300,19 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   }
 
   Future<void> _handlePrimaryAction(OrderStatus status, Order notifier) async {
+    final assignment = ref.read(activeOrderProvider).valueOrNull;
+
     switch (status) {
       case OrderStatus.idle:
         return;
       case OrderStatus.accepted:
-        await _runAction(() => notifier.startNavigation(widget.orderId));
+        final pickup = assignment?.routing.pickup;
+        await _runAction(() async {
+          await notifier.startNavigation(widget.orderId);
+          if (pickup != null) {
+            await _launchNavigation(pickup.latitude, pickup.longitude);
+          }
+        });
         return;
       case OrderStatus.navigatingToPickup:
         await _runAction(() => notifier.arriveAtPickup(widget.orderId));
@@ -277,7 +321,13 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         await _runAction(() => notifier.confirmPickup(widget.orderId));
         return;
       case OrderStatus.pickedUp:
-        await _runAction(() => notifier.startDropoffNavigation(widget.orderId));
+        final delivery = assignment?.routing.delivery;
+        await _runAction(() async {
+          await notifier.startDropoffNavigation(widget.orderId);
+          if (delivery != null) {
+            await _launchNavigation(delivery.latitude, delivery.longitude);
+          }
+        });
         return;
       case OrderStatus.navigatingToDropoff:
         await _runAction(() => notifier.arriveAtDelivery(widget.orderId));
@@ -308,6 +358,25 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       if (mounted) {
         setState(() => _isActionInProgress = false);
       }
+    }
+  }
+
+  Future<void> _launchPhone(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _launchNavigation(double lat, double lng) async {
+    final geoUri = Uri(scheme: 'geo', path: '$lat,$lng', queryParameters: {'q': '$lat,$lng'});
+    if (await canLaunchUrl(geoUri)) {
+      await launchUrl(geoUri);
+      return;
+    }
+    final mapsUri = Uri.parse('https://maps.google.com/?daddr=$lat,$lng');
+    if (await canLaunchUrl(mapsUri)) {
+      await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
     }
   }
 

@@ -172,6 +172,63 @@ export default {
     ORDER BY ca.assigned_at DESC
   `,
 
+  // ============ AVAILABILITY / STALE DETECTION ============
+
+  /**
+   * Mark a courier offline if their last location update is older than $2 minutes.
+   * No-op if already offline or location is fresh. Returns updated row or nothing.
+   * $1=courierId $2=staleThresholdMinutes
+   */
+  MARK_COURIER_OFFLINE_IF_STALE: `
+    UPDATE logistics.courier_status
+    SET
+      is_online    = false,
+      is_available = false,
+      updated_at   = NOW()
+    WHERE courier_id = $1
+      AND is_online  = true
+      AND (
+        last_location_update IS NULL
+        OR last_location_update < NOW() - ($2 || ' minutes')::interval
+      )
+    RETURNING courier_id AS "courierId"
+  `,
+
+  // ============ TRIP HISTORY ============
+
+  /**
+   * Paginated completed/returned/cancelled assignments for a courier
+   * $1=courierId $2=limit $3=offset $4=dateFrom(nullable) $5=dateTo(nullable)
+   */
+  GET_COURIER_TRIP_HISTORY: `
+    SELECT
+      ca.assignment_id                                        AS "assignmentId",
+      ca.order_id                                             AS "orderId",
+      o.order_uuid                                            AS "orderUuid",
+      o.order_number                                          AS "orderNumber",
+      o.status                                                AS "orderStatus",
+      ca.status                                               AS "assignmentStatus",
+      o.pickup_location                                       AS "pickup",
+      o.delivery_location                                     AS "delivery",
+      o.actual_distance_km                                    AS "actualDistanceKm",
+      o.total_price                                           AS "totalPrice",
+      COALESCE(ca.net_earnings, o.total_price * 0.7)         AS "netEarning",
+      o.snapshot                                              AS "snapshot",
+      ca.assigned_at                                          AS "assignedAt",
+      o.delivered_at                                          AS "deliveredAt",
+      o.cancelled_at                                          AS "cancelledAt",
+      COUNT(*) OVER ()                                        AS "totalCount"
+    FROM orders.courier_assignments ca
+    JOIN orders.requests o ON ca.order_id = o.order_id
+    WHERE ca.courier_id = $1
+      AND o.status IN ('delivered', 'returned', 'cancelled')
+      AND o.deleted_at IS NULL
+      AND ($4::timestamptz IS NULL OR o.created_at >= $4)
+      AND ($5::timestamptz IS NULL OR o.created_at <= $5)
+    ORDER BY ca.assigned_at DESC
+    LIMIT $2 OFFSET $3
+  `,
+
   // ============ FUNCTION CALLS ============
 
   /**

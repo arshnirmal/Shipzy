@@ -218,4 +218,39 @@ class ApiService {
     _ensureSuccess(response, 'Failed to fetch earnings');
     return EarningsSummary.fromJson(response.data['data']['earnings'] as Map<String, dynamic>);
   }
+
+  Future<void> registerDeviceToken({
+    required String deviceToken,
+    String deviceType = 'android',
+    Map<String, dynamic>? deviceInfo,
+  }) async {
+    final response = await _dio.post(
+      '/users/me/device-token',
+      data: {
+        'deviceToken': deviceToken,
+        'deviceType': deviceType,
+        if (deviceInfo != null) 'deviceInfo': deviceInfo,
+      },
+    );
+    _ensureSuccess(response, 'Failed to register device token');
+  }
+
+  Future<Map<String, dynamic>> getTripHistory({
+    int page = 1,
+    int limit = 20,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    final response = await _dio.get(
+      '/drivers/me/trips',
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (dateFrom != null) 'dateFrom': dateFrom,
+        if (dateTo != null) 'dateTo': dateTo,
+      },
+    );
+    _ensureSuccess(response, 'Failed to fetch trip history');
+    return response.data['data'] as Map<String, dynamic>;
+  }
 }

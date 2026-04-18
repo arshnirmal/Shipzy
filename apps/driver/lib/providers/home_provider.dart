@@ -13,6 +13,7 @@ import '../models/driver_profile.dart';
 import '../models/location_meta.dart';
 import '../services/api_service.dart';
 import '../services/location_service.dart';
+import '../services/notification_service.dart';
 
 part 'home_provider.g.dart';
 
@@ -141,6 +142,9 @@ Future<List<AvailableOrderItem>> nearbyOrders(Ref ref) async {
     return [];
   }
 
+  // Re-fetch when FCM signals a new available order
+  ref.watch(availableOrdersRefreshSignalProvider);
+
   await Future.delayed(const Duration(milliseconds: 500));
 
   final locationService = ref.read(locationServiceProvider.notifier);
@@ -175,6 +179,15 @@ Future<DriverProfile> driverProfile(Ref ref) async {
   final dashboardData = await ref.watch(driverDashboardDataProvider.future);
   return dashboardData.profile;
 }
+
+final tripHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  final data = await ref.read(apiServiceProvider).getTripHistory();
+  final trips = data['trips'];
+  if (trips is List) {
+    return trips.cast<Map<String, dynamic>>();
+  }
+  return [];
+});
 
 LocationMeta _buildLocationMeta(Position position) {
   final speed = position.speed;

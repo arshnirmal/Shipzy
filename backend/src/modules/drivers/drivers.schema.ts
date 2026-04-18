@@ -12,6 +12,8 @@ import {
   UpdateDriverProfileRequestZ,
   UpdateAvailabilityRequestZ,
   UpdateLocationRequestZ,
+  TripHistoryQueryZ,
+  TripHistoryResponseZ,
 } from "./drivers.zod.js";
 import {
   COMMON_ERROR_RESPONSES,
@@ -36,6 +38,8 @@ const DriverEarningsSummaryResponseJson = toJsonSchema(
 );
 const DriverRatingResponseJson = toJsonSchema(DriverRatingResponseZ);
 const EarningsPeriodQueryJson = toJsonSchema(EarningsPeriodQueryZ);
+const TripHistoryQueryJson = toJsonSchema(TripHistoryQueryZ);
+const TripHistoryResponseJson = toJsonSchema(TripHistoryResponseZ);
 
 export const getDriverProfileSchema: FastifySchema = {
   response: {
@@ -87,5 +91,13 @@ export const getDriverRatingSchema: FastifySchema = {
   response: {
     ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(DriverRatingResponseJson),
+  },
+};
+
+export const getTripHistorySchema: FastifySchema = {
+  querystring: TripHistoryQueryJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(TripHistoryResponseJson),
   },
 };

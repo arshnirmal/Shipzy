@@ -8,6 +8,8 @@ import {
   SaveAddressResponseZ,
   DeleteAddressResponseZ,
   UserAddressesResponseZ,
+  RegisterDeviceTokenRequestZ,
+  RegisterDeviceTokenResponseZ,
 } from "./users.zod.js";
 import {
   COMMON_ERROR_RESPONSES,
@@ -22,6 +24,10 @@ const UserResponseJson = toJsonSchema(UserProfileResponseZ);
 const SaveAddressResponseJson = toJsonSchema(SaveAddressResponseZ);
 const DeleteAddressResponseJson = toJsonSchema(DeleteAddressResponseZ);
 const UserAddressesResponseJson = toJsonSchema(UserAddressesResponseZ);
+const RegisterDeviceTokenJson = toJsonSchema(RegisterDeviceTokenRequestZ);
+const RegisterDeviceTokenResponseJson = toJsonSchema(
+  RegisterDeviceTokenResponseZ,
+);
 
 export const updateProfileSchema: FastifySchema = {
   body: UpdateProfileJson,
@@ -58,5 +64,13 @@ export const getCurrentUserSchema: FastifySchema = {
   response: {
     ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(UserResponseJson),
+  },
+};
+
+export const registerDeviceTokenSchema: FastifySchema = {
+  body: RegisterDeviceTokenJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(RegisterDeviceTokenResponseJson),
   },
 };

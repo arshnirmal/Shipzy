@@ -8,7 +8,10 @@ import '../models/delivery_attempt.dart';
 import '../models/location_meta.dart';
 import '../models/order_types.dart';
 import '../services/api_service.dart';
+import '../services/foreground_task_service.dart';
+import '../services/location_queue.dart';
 import '../services/location_service.dart';
+import '../services/notification_service.dart';
 
 part 'order_provider.g.dart';
 
@@ -19,6 +22,8 @@ class Order extends _$Order {
   bool _isLocationSyncInFlight = false;
   var _isDisposed = false;
 
+  ForegroundTaskService get _foregroundTask => ref.read(foregroundTaskServiceProvider);
+
   @override
   OrderState build() {
     _isDisposed = false;
@@ -27,6 +32,16 @@ class Order extends _$Order {
       _isDisposed = true;
       _waitTimer?.cancel();
       _stopLocationTimer();
+    });
+
+    // When FCM signals an order cancellation, clear the active flow.
+    ref.listen(orderCancelledSignalProvider, (_, __) {
+      if (state.activeOrderId != null) {
+        _waitTimer?.cancel();
+        _stopLocationTimer();
+        unawaited(_foregroundTask.stop());
+        state = const OrderState();
+      }
     });
 
     unawaited(_restoreActiveOrderState());
@@ -174,8 +189,10 @@ class Order extends _$Order {
   void _syncLocationTimer() {
     if (_shouldTrackLocation(state.status)) {
       _startLocationTimer();
+      unawaited(_foregroundTask.start());
     } else {
       _stopLocationTimer();
+      unawaited(_foregroundTask.stop());
     }
   }
 
@@ -203,13 +220,52 @@ class Order extends _$Order {
         return;
       }
 
-      await ref
-          .read(apiServiceProvider)
-          .updateDriverLocation(latitude: position.latitude, longitude: position.longitude, locationMeta: _buildLocationMeta(position));
+      final meta = _buildLocationMeta(position);
+      final apiService = ref.read(apiServiceProvider);
+
+      try {
+        await apiService.updateDriverLocation(latitude: position.latitude, longitude: position.longitude, locationMeta: meta);
+        await _drainQueue(apiService);
+      } catch (_) {
+        await _enqueuePosition(position.latitude, position.longitude, meta);
+      }
     } catch (_) {
-      // Keep location timer resilient; next tick retries automatically.
+      // GPS failure — next tick retries automatically.
     } finally {
       _isLocationSyncInFlight = false;
+    }
+  }
+
+  Future<void> _drainQueue(ApiService apiService) async {
+    try {
+      final queue = await ref.read(locationQueueProvider.future);
+      final entries = await queue.peek(5);
+      for (final entry in entries) {
+        if (_isDisposed) {
+          return;
+        }
+        try {
+          await apiService.updateDriverLocation(
+            latitude: entry.latitude,
+            longitude: entry.longitude,
+            locationMeta: LocationMeta(speed: entry.speed, bearing: entry.bearing, accuracy: entry.accuracy),
+          );
+          await queue.dequeue(entry.id);
+        } catch (_) {
+          break; // Still offline — stop draining
+        }
+      }
+    } catch (_) {
+      // Queue unavailable — skip drain
+    }
+  }
+
+  Future<void> _enqueuePosition(double latitude, double longitude, LocationMeta meta) async {
+    try {
+      final queue = await ref.read(locationQueueProvider.future);
+      await queue.enqueue(latitude: latitude, longitude: longitude, speed: meta.speed, bearing: meta.bearing, accuracy: meta.accuracy);
+    } catch (_) {
+      // Queue unavailable — skip enqueue
     }
   }
 

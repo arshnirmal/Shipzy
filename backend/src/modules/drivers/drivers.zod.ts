@@ -322,3 +322,46 @@ export const EarningsPeriodQueryZ = z
   })
   .strict();
 export type EarningsPeriodQuery = z.infer<typeof EarningsPeriodQueryZ>;
+
+export const TripHistoryQueryZ = z
+  .object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().positive().max(50).default(20),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+  })
+  .strict();
+export type TripHistoryQuery = z.infer<typeof TripHistoryQueryZ>;
+
+export const TripItemZ = z
+  .object({
+    assignmentId: z.number().int().positive(),
+    orderId: z.number().int().positive(),
+    orderUuid: z.string().uuid().nullable().optional(),
+    orderNumber: z.string().nullable().optional(),
+    orderStatus: z.string(),
+    pickup: OrderLocationJSONBZ.nullable().optional(),
+    delivery: OrderLocationJSONBZ.nullable().optional(),
+    actualDistanceKm: z.number().nullable().optional(),
+    netEarning: z.number(),
+    snapshot: OrderSnapshotJSONBZ.nullable().optional(),
+    assignedAt: z.iso.datetime().nullable().optional(),
+    deliveredAt: z.iso.datetime().nullable().optional(),
+    cancelledAt: z.iso.datetime().nullable().optional(),
+  })
+  .strict();
+
+export const TripHistoryResponseZ = z
+  .object({
+    trips: z.array(TripItemZ),
+    pagination: z
+      .object({
+        page: z.number().int().positive(),
+        limit: z.number().int().positive(),
+        total: z.number().int().nonnegative(),
+        totalPages: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
+export type TripHistoryResponse = z.infer<typeof TripHistoryResponseZ>;

@@ -20,6 +20,8 @@ import type {
   DriverLocationResponse,
   DriverProfileMutationResponse,
   DriverProfileResponse,
+  TripHistoryQuery,
+  TripHistoryResponse,
   UpdateDriverProfileRequest,
   UpdateLocationRequest,
 } from "./drivers.zod.js";
@@ -107,6 +109,12 @@ class DriversService {
 
       if (!driver) {
         throw new NotFoundError("Driver profile not found");
+      }
+
+      // Lazy offline detection: if courier is marked online but location is stale,
+      // flip offline without blocking the response.
+      if (driver.isOnline) {
+        driversRepository.markOfflineIfStale(driver.courierId).catch(() => {});
       }
 
       return {
@@ -542,6 +550,58 @@ class DriversService {
     } catch (error) {
       logger.error({
         msg: "Error getting driver earnings",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get paginated trip history for driver
+   */
+  async getTripHistory(
+    userId: number,
+    query: TripHistoryQuery,
+  ): Promise<TripHistoryResponse> {
+    try {
+      const { page, limit, dateFrom, dateTo } = query;
+      const offset = (page - 1) * limit;
+
+      const { rows, total } = await driversRepository.getTripHistory(
+        userId,
+        limit,
+        offset,
+        dateFrom,
+        dateTo,
+      );
+
+      return {
+        trips: rows.map((row) => ({
+          assignmentId: row.assignmentId,
+          orderId: row.orderId,
+          orderUuid: row.orderUuid ?? null,
+          orderNumber: row.orderNumber ?? null,
+          orderStatus: row.orderStatus,
+          pickup: row.pickup ?? null,
+          delivery: row.delivery ?? null,
+          actualDistanceKm:
+            row.actualDistanceKm != null ? Number(row.actualDistanceKm) : null,
+          netEarning: Number(row.netEarning),
+          snapshot: row.snapshot ?? null,
+          assignedAt: toIsoDateTimeOrNull(row.assignedAt),
+          deliveredAt: toIsoDateTimeOrNull(row.deliveredAt),
+          cancelledAt: toIsoDateTimeOrNull(row.cancelledAt),
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error getting driver trip history",
         error: (error as Error).message,
       });
       throw error;

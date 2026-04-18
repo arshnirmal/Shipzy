@@ -7,6 +7,7 @@ import {
   updateProfileSchema,
   getAddressesSchema,
   getCurrentUserSchema,
+  registerDeviceTokenSchema,
 } from "./users.schema.js";
 
 async function usersRoutes(fastify: FastifyInstance, _options: unknown) {
@@ -46,6 +47,13 @@ async function usersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/me/addresses/:id",
     { schema: deleteAddressSchema },
     usersController.deleteAddress.bind(usersController),
+  );
+
+  // POST /api/v1/users/me/device-token - Register FCM device token
+  fastify.post(
+    "/me/device-token",
+    { schema: registerDeviceTokenSchema },
+    usersController.registerDeviceToken.bind(usersController),
   );
 }
 

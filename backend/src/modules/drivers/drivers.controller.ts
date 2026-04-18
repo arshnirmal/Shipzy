@@ -8,6 +8,7 @@ import ratingsService from "../ratings/ratings.service.js";
 
 import {
   type EarningsPeriodQuery,
+  type TripHistoryQuery,
   type UpdateAvailabilityRequest,
   type UpdateDriverProfileRequest,
   type UpdateLocationRequest,
@@ -220,6 +221,31 @@ class DriversController {
     } catch (error) {
       logger.error({
         msg: "Get rating stats controller error",
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * GET /api/v1/drivers/me/trips
+   * Get paginated trip history
+   */
+  async getTripHistory(
+    request: FastifyRequest<{ Querystring: TripHistoryQuery }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const { userId } = request.user!;
+      const result = await driversService.getTripHistory(userId, request.query);
+
+      return successResponse(reply, result, "Trip history retrieved successfully");
+    } catch (error) {
+      logger.error({
+        msg: "Get trip history controller error",
         error: (error as Error).message,
       });
       if (error instanceof AppError) {

@@ -37,6 +37,18 @@ export const DeleteAddressParamsZ = z
   .strict();
 export type DeleteAddressParams = z.infer<typeof DeleteAddressParamsZ>;
 
+// Register Device Token Request
+export const RegisterDeviceTokenRequestZ = z
+  .object({
+    deviceToken: z.string().min(10).max(4096),
+    deviceType: z.enum(["android", "ios", "web"]),
+    deviceInfo: z.record(z.string(), z.any()).optional(),
+  })
+  .strict();
+export type RegisterDeviceTokenRequest = z.infer<
+  typeof RegisterDeviceTokenRequestZ
+>;
+
 // ============================================================================
 // RESPONSE SCHEMAS - API responses
 // ============================================================================
@@ -85,3 +97,17 @@ export const DeleteAddressResponseZ = z
   })
   .strict();
 export type DeleteAddressResponse = z.infer<typeof DeleteAddressResponseZ>;
+
+export const RegisterDeviceTokenResponseZ = z
+  .object({
+    deviceToken: z
+      .object({
+        tokenId: z.number().int().positive(),
+        registered: z.literal(true),
+      })
+      .strict(),
+  })
+  .strict();
+export type RegisterDeviceTokenResponse = z.infer<
+  typeof RegisterDeviceTokenResponseZ
+>;

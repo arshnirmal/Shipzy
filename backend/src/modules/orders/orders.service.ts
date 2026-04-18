@@ -7,6 +7,9 @@ import {
 } from "../../utils/error.util.js";
 import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ordersRepository from "./orders.repository.js";
+import fcmService from "../../services/fcm.service.js";
+import { drizzlePool } from "../../database/drizzle.js";
+import driversQueries from "../../database/queries/drivers.queries.js";
 
 import type {
   AcceptOrderResult,
@@ -263,11 +266,63 @@ class OrdersService {
         clientId,
         "Order scheduled at creation",
       );
+    } else {
+      // Fire-and-forget: notify nearby online couriers of the new order.
+      this.broadcastNewOrderToNearbyCouriers({
+        orderId: result.order.identifiers.orderId,
+        orderNumber: result.order.identifiers.orderNumber ?? "",
+        pickupLat: orderData.locations.pickup.latitude,
+        pickupLng: orderData.locations.pickup.longitude,
+        totalPrice: pricing.totalPrice,
+      }).catch((err) => {
+        logger.warn({
+          msg: "broadcastNewOrderToNearbyCouriers failed",
+          error: (err as Error).message,
+        });
+      });
     }
 
     return {
       order: result.order,
     };
+  }
+
+  /**
+   * Notify online, idle couriers within radius about a freshly created order.
+   * Uses logistics.find_nearby_couriers() then dispatches FCM via fcmService.
+   */
+  private async broadcastNewOrderToNearbyCouriers(params: {
+    orderId: number;
+    orderNumber: string;
+    pickupLat: number;
+    pickupLng: number;
+    totalPrice: number;
+  }): Promise<void> {
+    try {
+      const radiusKm = 10;
+      const limit = 25;
+      const result = await drizzlePool.query<{ courier_id: number }>(
+        driversQueries.CALL_FIND_NEARBY_COURIERS,
+        [params.pickupLat, params.pickupLng, radiusKm, limit],
+      );
+      const courierIds = result.rows.map((r) => r.courier_id);
+      if (courierIds.length === 0) return;
+
+      await fcmService.sendToUsers(courierIds, {
+        title: "New delivery nearby",
+        body: `₹${params.totalPrice} · Tap to view pickup`,
+        data: {
+          type: "order.available",
+          orderId: String(params.orderId),
+          orderNumber: params.orderNumber,
+        },
+      });
+    } catch (error) {
+      logger.warn({
+        msg: "Error broadcasting new order to nearby couriers",
+        error: (error as Error).message,
+      });
+    }
   }
 
   async releaseScheduledOrders() {
@@ -439,18 +494,59 @@ class OrdersService {
       throw new AuthorizationError("You can only cancel your own orders");
     }
 
-    const nonCancellableStatuses = ["delivered", "cancelled"];
-    if (nonCancellableStatuses.includes(order.status)) {
+    // MVP guard: clients/businesses cannot cancel once the courier has
+    // committed to handling the parcel. After picked_up the parcel is in
+    // the driver's custody and cancellation must go through driver-side
+    // undeliverable + return flow.
+    const clientNonCancellableStatuses = [
+      "picked_up",
+      "in_transit",
+      "undeliverable",
+      "returning",
+      "returned",
+      "delivered",
+      "cancelled",
+    ];
+    const adminNonCancellableStatuses = ["delivered", "cancelled"];
+    const blockedStatuses =
+      userRole === "admin"
+        ? adminNonCancellableStatuses
+        : clientNonCancellableStatuses;
+
+    if (blockedStatuses.includes(order.status)) {
       throw new ValidationError(
         `Order cannot be cancelled in ${order.status} status`,
       );
     }
 
-    return await ordersRepository.cancelOrder(
+    const cancelResult = await ordersRepository.cancelOrder(
       orderId,
       cancellationReason,
       userId,
     );
+
+    // Fire-and-forget: if a courier was assigned, notify them immediately.
+    if (order.courierId) {
+      fcmService
+        .sendToUser(order.courierId, {
+          title: "Order cancelled",
+          body: `Order ${order.orderNumber ?? orderId} was cancelled by the customer.`,
+          data: {
+            type: "order.cancelled",
+            orderId: String(orderId),
+            reason: cancellationReason,
+          },
+        })
+        .catch((err) => {
+          logger.warn({
+            msg: "FCM cancel notification failed",
+            courierId: order.courierId,
+            error: (err as Error).message,
+          });
+        });
+    }
+
+    return cancelResult;
   }
 
   async acceptOrder(

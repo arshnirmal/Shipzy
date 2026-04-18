@@ -9,6 +9,7 @@ import type {
   UpdateProfileRequest,
   SaveAddressRequest,
   DeleteAddressParams,
+  RegisterDeviceTokenRequest,
 } from "./users.zod.js";
 
 class UsersController {
@@ -140,6 +141,38 @@ class UsersController {
     } catch (error) {
       logger.error({
         msg: "Save address controller error",
+        requestId: request.id,
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/users/me/device-token
+   * Register (upsert) the caller's FCM device token
+   */
+  async registerDeviceToken(
+    request: FastifyRequest<{ Body: RegisterDeviceTokenRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const { userId } = this._requireAuthenticatedUser(request);
+      const result = await usersService.registerDeviceToken(
+        userId,
+        request.body,
+      );
+      return successResponse(
+        reply,
+        { deviceToken: result },
+        "Device token registered",
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Register device token controller error",
         requestId: request.id,
         error: (error as Error).message,
       });
