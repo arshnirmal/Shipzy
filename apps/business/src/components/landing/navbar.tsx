@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How it Works" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#cta", label: "Get started" },
 ];
 
 export function Navbar() {
@@ -39,9 +39,9 @@ export function Navbar() {
       <div className="container-shell">
         <div
           className={cn(
-            "flex items-center justify-between rounded-2xl px-4 py-3 transition-all md:px-6",
+            "flex items-center justify-between rounded-lg px-4 py-3 transition-all md:px-6",
             isScrolled
-              ? "glass-panel ring-1 ring-outline-variant/40"
+              ? "glass-panel ring-1 ring-outline-variant/20"
               : "bg-transparent ring-1 ring-transparent",
           )}
         >
@@ -64,7 +64,7 @@ export function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className="body-sm link-clean"
+                className="body-sm link-clean rounded-md px-1 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 {link.label}
               </a>
@@ -74,7 +74,7 @@ export function Navbar() {
           <div className="hidden items-center gap-2 md:flex">
             <Link
               href="?auth=login"
-              className={cn(buttonVariants({ variant: "ghost", size: "lg" }))}
+              className={cn(buttonVariants({ variant: "ghost", size: "touch" }))}
               scroll={false}
             >
               Sign in
@@ -82,7 +82,7 @@ export function Navbar() {
             <Link
               href="?auth=register"
               className={cn(
-                buttonVariants({ size: "lg" }),
+                buttonVariants({ size: "touch" }),
                 "gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-sm)]",
               )}
               scroll={false}
@@ -92,7 +92,8 @@ export function Navbar() {
           </div>
 
           <button
-            className="inline-flex size-9 items-center justify-center rounded-xl text-foreground transition hover:bg-surface-container-low md:hidden"
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-foreground transition hover:bg-surface-container-low focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:hidden"
             aria-label="Open menu"
             aria-expanded={isMenuOpen}
             aria-controls="mobile-navigation"
@@ -112,7 +113,8 @@ export function Navbar() {
           <div className="flex items-center justify-between p-5">
             <p className="title-md">Navigate</p>
             <button
-              className="inline-flex size-9 items-center justify-center rounded-lg transition hover:bg-surface-container-low"
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition hover:bg-surface-container-low focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
               onClick={() => setIsMenuOpen(false)}
               aria-label="Close menu"
             >
@@ -125,7 +127,7 @@ export function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className="block rounded-lg px-3 py-2 text-base text-muted-foreground transition hover:bg-surface-container-low hover:text-foreground"
+                className="block rounded-lg px-3 py-2 text-base text-muted-foreground transition hover:bg-surface-container-low hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.label}
@@ -137,8 +139,8 @@ export function Navbar() {
             <Link
               href="?auth=login"
               className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "border-outline-variant/40",
+                buttonVariants({ variant: "outline", size: "touch" }),
+                "border-outline-variant/20",
               )}
               onClick={() => setIsMenuOpen(false)}
               scroll={false}
@@ -148,7 +150,7 @@ export function Navbar() {
             <Link
               href="?auth=register"
               className={cn(
-                buttonVariants({ size: "lg" }),
+                buttonVariants({ size: "touch" }),
                 "gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-sm)]",
               )}
               onClick={() => setIsMenuOpen(false)}

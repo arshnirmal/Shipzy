@@ -44,19 +44,17 @@ export function HowItWorks() {
 
         <div
           ref={ref}
-          className="relative mt-14 grid gap-8 lg:grid-cols-3 lg:gap-6"
+          className="mt-14 grid gap-8 lg:grid-cols-3 lg:gap-6"
         >
-          <div className="absolute top-11 left-[16.66%] hidden h-px w-[66%] bg-primary/22 lg:block" />
-
           {steps.map((step, index) => (
             <article
               key={step.title}
-              className={`surface-pane rounded-2xl p-6 text-left shadow-[var(--shadow-ambient-sm)] ${
+              className={`surface-pane rounded-lg p-6 text-left shadow-[var(--shadow-ambient-sm)] ${
                 isVisible ? "reveal-visible" : "reveal"
               }`}
               style={{ animationDelay: `${index * 140}ms` }}
             >
-              <div className="mb-4 inline-flex size-11 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+              <div className="mb-4 inline-flex size-11 min-h-11 min-w-11 items-center justify-center rounded-lg bg-primary text-base font-semibold text-primary-foreground">
                 {index + 1}
               </div>
               <h3 className="headline-sm text-on-surface">{step.title}</h3>

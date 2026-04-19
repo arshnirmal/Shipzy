@@ -43,8 +43,8 @@ export function HeroSection() {
             <Link
               href="/register"
               className={cn(
-                buttonVariants({ size: "lg" }),
-                "gradient-brand h-11 px-6 text-primary-foreground shadow-[var(--shadow-ambient-md)]",
+                buttonVariants({ size: "touch" }),
+                "gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-md)]",
               )}
             >
               Get Started
@@ -52,11 +52,11 @@ export function HeroSection() {
             <a
               href="#how-it-works"
               className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "h-11 border-outline-variant/40 bg-surface-container-lowest/70 px-6",
+                buttonVariants({ variant: "outline", size: "touch" }),
+                "border-outline-variant/20 bg-surface-container-lowest/80",
               )}
             >
-              Book a Demo
+              See how it works
             </a>
           </div>
         </div>

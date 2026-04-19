@@ -92,7 +92,8 @@
   --chart-3: oklch(0.69 0.17 184);
   --chart-4: oklch(0.65 0.18 130);
   --chart-5: oklch(0.56 0.14 58);
-  --radius: 1rem;
+  /* Design system structural radius (~8px / lg) */
+  --radius: 0.5rem;
 
   --sidebar: var(--surface-container-lowest);
   --sidebar-foreground: var(--on-surface);
@@ -291,7 +292,7 @@
   .glass-panel {
     background: color-mix(
       in oklab,
-      var(--surface-container-lowest) 70%,
+      var(--surface-container-low) 80%,
       transparent
     );
     backdrop-filter: blur(14px);
@@ -348,6 +349,21 @@
   .link-clean {
     @apply text-muted-foreground transition-colors hover:text-foreground;
   }
+
+  /**
+   * Shared form control chrome (Design System: surface-container-lowest fill,
+   * ghost border outline-variant ~20%, primary focus ring).
+   * Use on Input, Textarea, SelectTrigger, and similar controls app-wide.
+   */
+  .field-control {
+    @apply w-full min-w-0 rounded-lg border border-solid border-outline-variant/40 bg-surface-container-lowest text-foreground shadow-none;
+    @apply text-base transition-[color,box-shadow,border-color] outline-none md:text-sm;
+    @apply placeholder:text-muted-foreground;
+    @apply focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/30;
+    @apply disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50;
+    @apply aria-invalid:border-destructive aria-invalid:ring-4 aria-invalid:ring-destructive/25;
+    @apply dark:border-outline-variant/50 dark:bg-surface-container-high;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -367,6 +383,12 @@
   .reveal-visible {
     opacity: 1;
     transform: none;
+    animation: none !important;
+  }
+
+  .orb-float,
+  .pulse-soft,
+  .gradient-mesh {
     animation: none !important;
   }
 }

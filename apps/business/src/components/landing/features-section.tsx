@@ -68,7 +68,7 @@ export function FeaturesSection() {
               style={{ animationDelay: `${index * 120}ms` }}
             >
               <CardHeader>
-                <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <div className="mb-3 flex size-11 min-h-11 min-w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <feature.icon className="size-5" />
                 </div>
                 <CardTitle className="headline-sm text-on-surface">

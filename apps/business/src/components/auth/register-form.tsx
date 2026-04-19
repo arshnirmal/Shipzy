@@ -33,8 +33,10 @@ import {
 } from "@/lib/validations/auth";
 import type { RegisterPayload } from "@/types/auth";
 import { useAuth } from "@/providers/auth-provider";
+import { cn } from "@/lib/utils";
 
 const MONTHLY_VOLUME_UNSET = "__unset__" as const;
+
 
 const MONTHLY_VOLUME_LABELS: Record<MonthlyVolume, string> = {
   "0-100": "0 – 100 shipments",
@@ -43,16 +45,32 @@ const MONTHLY_VOLUME_LABELS: Record<MonthlyVolume, string> = {
   "2000+": "2,000+ shipments",
 };
 
+/** Base UI Select requires `items` for SelectValue to show labels, not raw values. */
+const MONTHLY_VOLUME_SELECT_ITEMS: ReadonlyArray<{
+  value: typeof MONTHLY_VOLUME_UNSET | MonthlyVolume;
+  label: string;
+}> = [
+  { value: MONTHLY_VOLUME_UNSET, label: "Prefer not to say" },
+  ...MONTHLY_VOLUME_VALUES.map((v) => ({
+    value: v,
+    label: MONTHLY_VOLUME_LABELS[v],
+  })),
+];
+
 function toRegisterPayload(values: BusinessRegisterValues): RegisterPayload {
+  const phone = values.phoneNumber.replaceAll(/\s/g, "").trim();
+  const phoneNumber =
+    phone === "" || phone === "+91" ? undefined : phone;
+
   return {
-    fullName: values.fullName,
-    email: values.email,
+    fullName: values.fullName.trim(),
+    email: values.email.trim(),
     password: values.password,
-    phoneNumber: values.phoneNumber?.trim()
-      ? values.phoneNumber.trim()
+    phoneNumber,
+    businessName: values.businessName.trim(),
+    gstNumber: values.gstNumber.trim()
+      ? values.gstNumber.trim().toUpperCase()
       : undefined,
-    businessName: values.businessName,
-    gstNumber: values.gstNumber?.trim() ? values.gstNumber.trim() : undefined,
     monthlyVolume: values.monthlyVolume,
   };
 }
@@ -66,11 +84,13 @@ export function RegisterForm({
 
   const form = useForm<BusinessRegisterValues>({
     resolver: standardSchemaResolver(businessRegisterSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: {
       fullName: "",
       email: "",
       password: "",
-      phoneNumber: "",
+      phoneNumber: "+91",
       businessName: "",
       gstNumber: "",
       monthlyVolume: undefined,
@@ -107,7 +127,7 @@ export function RegisterForm({
                     <Input
                       placeholder="John Doe"
                       disabled={isLoading}
-                      className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                      className="h-11"
                       {...field}
                     />
                   </FormControl>
@@ -118,20 +138,53 @@ export function RegisterForm({
             <FormField
               control={form.control}
               name="phoneNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="+1..."
-                      disabled={isLoading}
-                      className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field, fieldState }) => {
+                const raw = field.value ?? "";
+                const tail = raw.startsWith("+91")
+                  ? raw.slice(3)
+                  : raw.replaceAll(/\D/g, "");
+                const safeDigits = tail.replaceAll(/\D/g, "").slice(0, 10);
+
+                return (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <div
+                      className={cn(
+                        "field-control flex h-11 min-w-0 items-stretch overflow-hidden p-0",
+                        "focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/30",
+                        fieldState.error &&
+                          "border-destructive ring-4 ring-destructive/25 dark:border-destructive",
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="flex shrink-0 items-center border-r border-outline-variant/40 bg-muted/25 px-3 text-sm text-muted-foreground select-none tabular-nums dark:bg-muted/20"
+                      >
+                        +91
+                      </span>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="h-11 min-w-0 flex-1 rounded-none border-0 bg-transparent px-2.5 shadow-none focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                          inputMode="numeric"
+                          autoComplete="tel-national"
+                          maxLength={10}
+                          placeholder="9876543210"
+                          disabled={isLoading}
+                          value={safeDigits}
+                          onChange={(e) => {
+                            const next = e.target.value
+                              .replaceAll(/\D/g, "")
+                              .slice(0, 10);
+                            field.onChange(`+91${next}`);
+                          }}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </div>
 
@@ -146,7 +199,7 @@ export function RegisterForm({
                     type="email"
                     placeholder="name@example.com"
                     disabled={isLoading}
-                    className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                    className="h-11"
                     {...field}
                   />
                 </FormControl>
@@ -164,8 +217,9 @@ export function RegisterForm({
                 <FormControl>
                   <Input
                     type="password"
+                    placeholder="8+ characters, letter and number"
                     disabled={isLoading}
-                    className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                    className="h-11"
                     {...field}
                   />
                 </FormControl>
@@ -185,7 +239,7 @@ export function RegisterForm({
                     <Input
                       placeholder="Acme Corp"
                       disabled={isLoading}
-                      className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                      className="h-11"
                       {...field}
                     />
                   </FormControl>
@@ -201,8 +255,10 @@ export function RegisterForm({
                   <FormLabel>GST Number (Optional)</FormLabel>
                   <FormControl>
                     <Input
+                      placeholder="15-character GSTIN if registered"
                       disabled={isLoading}
-                      className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                      className="h-11"
+                      spellCheck={false}
                       {...field}
                     />
                   </FormControl>
@@ -219,6 +275,7 @@ export function RegisterForm({
               <FormItem>
                 <FormLabel>Monthly shipping volume</FormLabel>
                 <Select
+                  items={MONTHLY_VOLUME_SELECT_ITEMS}
                   value={field.value ?? MONTHLY_VOLUME_UNSET}
                   onValueChange={(v) =>
                     field.onChange(
@@ -229,7 +286,7 @@ export function RegisterForm({
                 >
                   <FormControl>
                     <SelectTrigger
-                      className="h-11 w-full min-w-0 rounded-lg border-outline-variant/20 bg-surface-container-lowest px-3 text-base shadow-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/30 md:text-sm"
+                      className="h-11 w-full min-w-0 px-3 text-base md:text-sm"
                       size="default"
                     >
                       <SelectValue placeholder="Prefer not to say" />

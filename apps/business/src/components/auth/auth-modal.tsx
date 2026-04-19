@@ -37,7 +37,7 @@ export function AuthModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeDialog()}>
-      <DialogContent className="sm:max-w-[440px] overflow-hidden p-0 bg-surface-container-lowest border border-outline-variant/20 shadow-[0_12px_32px_rgba(13,28,46,0.06)]">
+      <DialogContent className="sm:max-w-[440px] overflow-x-hidden overflow-y-auto max-h-[min(90dvh,720px)] p-0 bg-surface-container-lowest border border-outline-variant/20 shadow-[0_12px_32px_rgba(13,28,46,0.06)]">
         <div className="flex flex-col items-center justify-center p-8 pb-4 text-center">
           <Image
             src="/app_logo.svg"

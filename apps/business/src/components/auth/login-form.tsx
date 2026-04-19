@@ -66,7 +66,7 @@ export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
                     autoComplete="email"
                     autoCorrect="off"
                     disabled={isLoading}
-                    className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                    className="h-11"
                     {...field}
                   />
                 </FormControl>
@@ -85,7 +85,7 @@ export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
                     type="password"
                     autoComplete="current-password"
                     disabled={isLoading}
-                    className="h-11 rounded-lg bg-surface-container-lowest border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4"
+                    className="h-11"
                     {...field}
                   />
                 </FormControl>

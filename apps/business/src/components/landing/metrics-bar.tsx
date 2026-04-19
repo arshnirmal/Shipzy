@@ -34,7 +34,7 @@ function MetricCard({ metric, start }: { metric: MetricItem; start: boolean }) {
   );
 
   return (
-    <li className="space-y-1 text-center sm:text-left lg:px-4">
+    <li className="flex flex-col space-y-1 text-center sm:text-left lg:items-start">
       <p className="display-sm text-primary">
         {formatMetric(metric, animatedValue)}
       </p>
@@ -49,10 +49,17 @@ export function MetricsBar() {
   });
 
   return (
-    <section className="pb-8" aria-label="Business metrics">
+    <section
+      className="relative z-10 -mt-10 pb-10 sm:-mt-14 sm:pb-12"
+      aria-labelledby="metrics-heading"
+    >
+      <h2 id="metrics-heading" className="sr-only">
+        Platform metrics
+      </h2>
       <div ref={ref} className="container-shell">
-        <div className="surface-pane rounded-2xl px-6 py-6 shadow-[var(--shadow-ambient-sm)] md:px-10">
-          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-3">
+        {/* max-w-4xl matches hero inner column so the strip aligns with headline/CTAs */}
+        <div className="surface-pane mx-auto w-full max-w-4xl rounded-lg px-6 py-8 shadow-[var(--shadow-ambient-sm)] sm:px-8 md:px-10">
+          <ul className="grid gap-8 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-6 lg:grid-cols-4 lg:gap-6">
             {metrics.map((metric) => (
               <MetricCard
                 key={metric.label}
