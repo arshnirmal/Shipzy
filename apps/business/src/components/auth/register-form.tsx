@@ -21,14 +21,13 @@ import {
   businessRegisterSchema,
   type BusinessRegisterValues,
 } from "@/lib/validations/auth";
-import { apiRequest } from "@/lib/api";
-import { setStoredTokens, setStoredUser } from "@/lib/auth";
-import type { AuthResponseData } from "@/types/auth";
+import { useAuth } from "@/providers/auth-provider";
 
 export function RegisterForm({
   onSuccess,
 }: Readonly<{ onSuccess?: () => void }>) {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<BusinessRegisterValues>({
@@ -47,43 +46,10 @@ export function RegisterForm({
   async function onSubmit(data: BusinessRegisterValues) {
     setIsLoading(true);
     try {
-      const response = await apiRequest<{
-        success: boolean;
-        message: string;
-        data: AuthResponseData;
-      }>(
-        "/auth/register/business",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            identity: {
-              fullName: data.fullName,
-              phoneNumber: data.phoneNumber || undefined,
-            },
-            credentials: {
-              email: data.email,
-              password: data.password,
-            },
-            business: {
-              businessName: data.businessName,
-              gstNumber: data.gstNumber || undefined,
-              monthlyVolume: data.monthlyVolume || undefined,
-            },
-          }),
-        },
-        { auth: false },
-      );
-
-      if (response.success && response.data) {
-        setStoredTokens({
-          accessToken: response.data.auth.tokens.accessToken,
-          refreshToken: response.data.auth.tokens.refreshToken,
-        });
-        setStoredUser(response.data.actor.user);
-        toast.success("Account created successfully!");
-        if (onSuccess) onSuccess();
-        router.push("/dashboard");
-      }
+      await signUp(data);
+      toast.success("Account created successfully!");
+      if (onSuccess) onSuccess();
+      router.push("/dashboard");
     } catch (error) {
       const err = error as Error;
       toast.error(err.message || "Failed to create account. Please try again.");

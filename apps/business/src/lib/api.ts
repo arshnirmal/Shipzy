@@ -1,21 +1,7 @@
-import {
-  clearStoredTokens,
-  getStoredTokens,
-  setStoredTokens,
-} from "@/lib/auth";
-
 type ApiOptions = {
   auth?: boolean;
   retryOnUnauthorized?: boolean;
 };
-
-type RefreshResponse = {
-  accessToken: string;
-  refreshToken?: string;
-};
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -29,77 +15,33 @@ export class ApiError extends Error {
   }
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  const tokens = getStoredTokens();
-  if (!tokens?.refreshToken) return null;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refreshToken: tokens.refreshToken }),
-    });
-
-    if (!response.ok) {
-      clearStoredTokens();
-      return null;
-    }
-
-    const payload = (await response.json()) as {
-      data?: RefreshResponse;
-      success?: boolean;
-    };
-
-    if (!payload.success || !payload.data?.accessToken) {
-      clearStoredTokens();
-      return null;
-    }
-
-    setStoredTokens({
-      accessToken: payload.data.accessToken,
-      refreshToken: payload.data.refreshToken ?? tokens.refreshToken,
-    });
-
-    return payload.data.accessToken;
-  } catch {
-    clearStoredTokens();
-    return null;
-  }
-}
-
 export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
   options: ApiOptions = {},
 ): Promise<T> {
-  const requiresAuth = options.auth ?? true;
   const retryOnUnauthorized = options.retryOnUnauthorized ?? true;
   const headers = new Headers(init.headers);
 
-  if (!headers.has("Content-Type") && init.body) {
+  if (!headers.has("Content-Type") && init.body && typeof init.body === "string") {
     headers.set("Content-Type", "application/json");
   }
 
-  if (requiresAuth) {
-    const token = getStoredTokens()?.accessToken;
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  // All requests go through the Next.js API proxy to automatically attach HttpOnly cookies
+  const baseUrl = "/api/proxy";
+  
+  const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers,
   });
 
-  if (response.status === 401 && requiresAuth && retryOnUnauthorized) {
-    const refreshedToken = await refreshAccessToken();
-
-    if (refreshedToken) {
-      headers.set("Authorization", `Bearer ${refreshedToken}`);
-      const retryResponse = await fetch(`${API_BASE_URL}${path}`, {
+  if (response.status === 401 && retryOnUnauthorized) {
+    // Attempt to refresh token via the Next.js BFF endpoint
+    const refreshRes = await fetch("/api/auth/refresh", { method: "POST" });
+    
+    if (refreshRes.ok) {
+      // Retry the original request; the proxy will use the new HttpOnly cookie automatically
+      const retryResponse = await fetch(`${baseUrl}${path}`, {
         ...init,
         headers,
       });

@@ -2,16 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, ApiError } from "@/lib/api";
-import { getStoredTokens } from "@/lib/auth";
 import type {
   BulkCancelApiResponse,
   OrderFilters,
   PaginatedOrdersResponse,
 } from "@/types/orders";
 import type { BulkOrderResponse } from "@/types/business";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 
 function buildOrdersQueryString(filters: OrderFilters): string {
   const params = new URLSearchParams();
@@ -78,13 +74,9 @@ export async function downloadOrdersCsv(filters: Partial<OrderFilters>): Promise
   if (filters.dateFrom) params.set("dateFrom", `${filters.dateFrom}T00:00:00.000Z`);
   if (filters.dateTo) params.set("dateTo", `${filters.dateTo}T23:59:59.999Z`);
 
-  const token = getStoredTokens()?.accessToken;
-  const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
   const response = await fetch(
-    `${API_BASE_URL}/business/orders/export?${params.toString()}`,
-    { headers },
+    `/api/proxy/business/orders/export?${params.toString()}`,
+    { headers: {} }, // Cookies are sent automatically to same-origin
   );
 
   if (!response.ok) {
@@ -100,7 +92,7 @@ export async function downloadOrdersCsv(filters: Partial<OrderFilters>): Promise
   a.download = `orders-${dateStr}.csv`;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  a.remove();
   URL.revokeObjectURL(url);
 }
 

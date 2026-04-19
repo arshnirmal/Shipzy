@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { BulkCancelDialog } from "@/components/orders/bulk-cancel-dialog";
@@ -22,21 +23,49 @@ const STATUS_TABS = [
   { value: "cancelled", label: "Cancelled" },
 ] as const;
 
-export default function OrdersPage() {
-  const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
+function OrdersContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [bulkCancelIds, setBulkCancelIds] = useState<number[]>([]);
+
+  // Derive filters from URL
+  const filters: OrderFilters = {
+    ...DEFAULT_FILTERS,
+    status: (searchParams.get("status") as OrderFilters["status"]) || DEFAULT_FILTERS.status,
+    page: searchParams.get("page") ? Number(searchParams.get("page")) : DEFAULT_FILTERS.page,
+    limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : DEFAULT_FILTERS.limit,
+    sortBy: (searchParams.get("sortBy") as OrderFilters["sortBy"]) || DEFAULT_FILTERS.sortBy,
+    sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || DEFAULT_FILTERS.sortOrder,
+    search: searchParams.get("search") || DEFAULT_FILTERS.search,
+    dateFrom: searchParams.get("dateFrom") || DEFAULT_FILTERS.dateFrom,
+    dateTo: searchParams.get("dateTo") || DEFAULT_FILTERS.dateTo,
+    deliveryTypeId: searchParams.get("deliveryTypeId") || DEFAULT_FILTERS.deliveryTypeId,
+    minPrice: searchParams.get("minPrice") || DEFAULT_FILTERS.minPrice,
+    maxPrice: searchParams.get("maxPrice") || DEFAULT_FILTERS.maxPrice,
+  };
 
   const { data, isLoading } = useOrders(filters);
   const bulkCancel = useBulkCancelOrders();
 
   function updateFilters(patch: Partial<OrderFilters>) {
-    setFilters((prev) => ({ ...prev, ...patch }));
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(patch).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, String(value as string | number));
+      }
+    });
+    // Use replace for filter changes to avoid filling history with every keystroke
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   function handleStatusTab(value: string) {
     updateFilters({
       status: value as OrderFilters["status"],
-      page: 1,
+      page: 1, // Reset to first page on status change
     });
   }
 
@@ -49,12 +78,12 @@ export default function OrdersPage() {
       const { cancelled, failed } = result.data.bulk;
       if (cancelled > 0) {
         toast.success(
-          `${cancelled} order${cancelled !== 1 ? "s" : ""} cancelled successfully.`,
+          `${cancelled} order${cancelled === 1 ? "" : "s"} cancelled successfully.`,
         );
       }
       if (failed > 0) {
         toast.warning(
-          `${failed} order${failed !== 1 ? "s" : ""} could not be cancelled.`,
+          `${failed} order${failed === 1 ? "" : "s"} could not be cancelled.`,
         );
       }
     } catch {
@@ -126,5 +155,13 @@ export default function OrdersPage() {
         isPending={bulkCancel.isPending}
       />
     </div>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading orders...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }

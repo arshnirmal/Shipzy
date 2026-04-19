@@ -18,12 +18,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { loginSchema, type LoginValues } from "@/lib/validations/auth";
-import { apiRequest } from "@/lib/api";
-import { setStoredTokens, setStoredUser } from "@/lib/auth";
-import type { AuthResponseData } from "@/types/auth";
+import { useAuth } from "@/providers/auth-provider";
 
 export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginValues>({
@@ -37,29 +36,10 @@ export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
   async function onSubmit(data: LoginValues) {
     setIsLoading(true);
     try {
-      const response = await apiRequest<{
-        success: boolean;
-        message: string;
-        data: AuthResponseData;
-      }>(
-        "/auth/login",
-        {
-          method: "POST",
-          body: JSON.stringify({ credentials: data }),
-        },
-        { auth: false },
-      );
-
-      if (response.success && response.data) {
-        setStoredTokens({
-          accessToken: response.data.auth.tokens.accessToken,
-          refreshToken: response.data.auth.tokens.refreshToken,
-        });
-        setStoredUser(response.data.actor.user);
-        toast.success("Welcome back!");
-        if (onSuccess) onSuccess();
-        router.push("/dashboard");
-      }
+      await signIn(data);
+      toast.success("Welcome back!");
+      if (onSuccess) onSuccess();
+      router.push("/dashboard");
     } catch (error) {
       const err = error as Error;
       toast.error(err.message || "Failed to login. Please try again.");

@@ -9,19 +9,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 
-import { apiRequest } from "@/lib/api";
 import {
-  clearStoredTokens,
   clearStoredUser,
-  getStoredTokens,
   getStoredUser,
-  setStoredTokens,
   setStoredUser,
 } from "@/lib/auth";
 import type {
-  ApiSuccess,
-  AuthResponseData,
   AuthUser,
   LoginPayload,
   RegisterPayload,
@@ -33,7 +28,7 @@ type AuthContextValue = {
   isLoading: boolean;
   signIn: (payload: LoginPayload) => Promise<void>;
   signUp: (payload: RegisterPayload) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -42,79 +37,74 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
+  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const tokens = getStoredTokens();
+    // Only rely on stored user. Tokens are securely managed by Next.js HttpOnly cookies.
     const storedUser = getStoredUser();
-    setUser(tokens && storedUser ? storedUser : null);
+    setUser(storedUser || null);
     setIsLoading(false);
   }, []);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
-    const response = await apiRequest<ApiSuccess<AuthResponseData>>(
-      "/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          credentials: {
-            email: payload.email,
-            password: payload.password,
-          },
-        }),
-      },
-      { auth: false },
-    );
-
-    const { tokens } = response.data.auth;
-    setStoredTokens({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credentials: payload }),
     });
-    setStoredUser(response.data.actor.user);
-    setUser(response.data.actor.user);
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to sign in");
+    }
+
+    setStoredUser(data.data.actor.user);
+    setUser(data.data.actor.user);
   }, []);
 
   const signUp = useCallback(async (payload: RegisterPayload) => {
-    const response = await apiRequest<ApiSuccess<AuthResponseData>>(
-      "/auth/register/business",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          identity: {
-            fullName: payload.fullName,
-            phoneNumber: payload.phone,
-          },
-          credentials: {
-            email: payload.email,
-            password: payload.password,
-          },
-          business: {
-            businessName: payload.businessName,
-            gstNumber: payload.gstNumber,
-            monthlyVolume: payload.monthlyVolume,
-          },
-        }),
-      },
-      { auth: false },
-    );
-
-    const { tokens } = response.data.auth;
-    setStoredTokens({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identity: {
+          fullName: payload.fullName,
+          phoneNumber: payload.phone,
+        },
+        credentials: {
+          email: payload.email,
+          password: payload.password,
+        },
+        business: {
+          businessName: payload.businessName,
+          gstNumber: payload.gstNumber,
+          monthlyVolume: payload.monthlyVolume,
+        },
+      }),
     });
-    setStoredUser(response.data.actor.user);
-    setUser(response.data.actor.user);
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to sign up");
+    }
+
+    setStoredUser(data.data.actor.user);
+    setUser(data.data.actor.user);
   }, []);
 
-  const signOut = useCallback(() => {
-    clearStoredTokens();
+  const signOut = useCallback(async () => {
+    // Call the logout endpoint to clear HttpOnly cookies
+    await fetch("/api/auth/logout", { method: "POST" });
+    
     clearStoredUser();
     setUser(null);
-  }, []);
+    router.push("/login");
+  }, [router]);
 
   const value = useMemo(
     () => ({

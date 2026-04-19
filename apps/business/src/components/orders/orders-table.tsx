@@ -300,16 +300,33 @@ export function OrdersTable({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   colSpan={columns.length}
-                  className="py-20 text-center"
+                  className="py-24 text-center"
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <Package className="size-10 text-muted-foreground/40" />
-                    <p className="text-sm font-medium text-muted-foreground">
-                      No orders found
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      Try adjusting your filters or date range.
-                    </p>
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="relative flex size-20 items-center justify-center rounded-full bg-surface-container-low shadow-sm">
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent" />
+                      <Package className="relative size-10 text-primary/60" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold tracking-tight text-foreground">
+                        No orders found
+                      </p>
+                      <p className="text-sm text-muted-foreground/80 max-w-sm mx-auto">
+                        We couldn't find any orders matching your current criteria. Try adjusting your filters or date range.
+                      </p>
+                    </div>
+                    {Object.values(filters).some(
+                      (val) => val !== undefined && val !== "" && val !== "all" && val !== 1 && val !== 10
+                    ) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => onFiltersChange({ status: "all", search: "", dateFrom: "", dateTo: "", minPrice: "", maxPrice: "", page: 1 })}
+                      >
+                        Clear all filters
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
