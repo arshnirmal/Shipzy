@@ -1,17 +1,15 @@
 // services/backend/src/database/schema/logistics.ts
-// Logistics schema: courier_status, courier_vehicles, driver_sessions
+// Logistics schema: courier_status, driver_sessions
 
 import {
   pgSchema,
   serial,
   index,
   check,
-  uniqueIndex,
   varchar,
   boolean,
   integer,
   numeric,
-  date,
   bigserial,
   timestamp,
   jsonb,
@@ -21,43 +19,9 @@ import { userProfiles } from "./users.js";
 import { vehicleCategories } from "./public.js";
 import { courierAssignments } from "./orders.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
-import type { LocationMetaJSONB } from "./types.js";
+import type { LocationMetaJSONB, VehicleJSONB, KycJSONB } from "./types.js";
 
 const logisticsSchema = pgSchema("logistics");
-
-// Courier Vehicles
-export const courierVehicles = logisticsSchema.table(
-  "courier_vehicles",
-  {
-    vehicleId: serial("vehicle_id").primaryKey(),
-    courierId: integer("courier_id")
-      .notNull()
-      .references(() => userProfiles.userId, { onDelete: "cascade" }),
-    categoryId: integer("category_id")
-      .notNull()
-      .references(() => vehicleCategories.categoryId),
-    vehicleNumber: varchar("vehicle_number", { length: 50 }).notNull(),
-    model: varchar("model", { length: 100 }),
-    year: integer("year"),
-    insuranceExpiry: date("insurance_expiry"),
-    registrationDocumentUrl: varchar("registration_document_url", {
-      length: 255,
-    }),
-    isPrimary: boolean("is_primary").default(false).notNull(),
-    isActive: boolean("is_active").default(true).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("uq_courier_vehicles_primary_per_courier")
-      .on(table.courierId)
-      .where(sql`${table.isPrimary} = true AND ${table.isActive} = true`),
-  ],
-);
 
 // Courier Status
 export const courierStatus = logisticsSchema.table(
@@ -80,6 +44,11 @@ export const courierStatus = logisticsSchema.table(
     totalDeliveriesToday: integer("total_deliveries_today").default(0).notNull(),
     avgRating: numeric("avg_rating", { precision: 3, scale: 2, mode: "number" }),
     totalRatings: integer("total_ratings").default(0).notNull(),
+    vehicle: jsonb("vehicle").$type<VehicleJSONB>(),
+    kyc: jsonb("kyc").$type<KycJSONB>(),
+    vehicleCategoryId: integer("vehicle_category_id").references(
+      () => vehicleCategories.categoryId,
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -101,6 +70,7 @@ export const courierStatus = logisticsSchema.table(
       sql`${table.totalRatings} >= 0`,
     ),
     index("idx_courier_status_assignment").on(table.currentAssignmentId),
+    index("idx_courier_status_vehicle_category").on(table.vehicleCategoryId),
     // GIST index on current_location is created by src/database/functions/spatial.sql
   ],
 );

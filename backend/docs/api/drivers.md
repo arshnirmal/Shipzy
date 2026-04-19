@@ -31,7 +31,7 @@ Content-Type: application/json
 | Method | Path               | Auth    | Notes                                 |
 | ------ | ------------------ | ------- | ------------------------------------- |
 | GET    | `/me`              | courier | Fetch the current driver profile      |
-| PATCH  | `/me`              | courier | Update driver profile details         |
+| PATCH  | `/me`              | courier | Update profile and/or vehicle details   |
 | PATCH  | `/me/availability` | courier | Toggle availability and online status |
 | PATCH  | `/me/location`     | courier | Update the current driver location    |
 | GET    | `/me/assignments`  | courier | List active assignments               |
@@ -51,7 +51,17 @@ Success response fields include: data.driver (profile + status + vehicle + earni
 
 ### PATCH /me
 
-Request body (at least one field inside profile):
+Request body: include at least one of `profile` (non-empty object) or `vehicle`.
+
+Profile fields (all optional inside `profile`):
+
+- `fullName`, `email`, `profilePictureUrl`, `phoneNumber`
+
+Vehicle (optional object `vehicle`): written to `logistics.courier_status` as JSONB plus `vehicle_category_id` for dispatch.
+
+- `categoryId` (required): must reference an active row in `public.vehicle_categories`
+- `vehicleNumber` (required)
+- `model`, `year`, `insuranceExpiry`, `registrationDocumentUrl` (optional)
 
 ```json
 {
@@ -62,11 +72,29 @@ Request body (at least one field inside profile):
 }
 ```
 
+```json
+{
+  "vehicle": {
+    "categoryId": 1,
+    "vehicleNumber": "KA01AB1234",
+    "model": "Activa",
+    "year": 2022
+  }
+}
+```
+
 ```bash
 curl -X PATCH "$API_BASE_URL/drivers/me" \
 	-H "Authorization: Bearer $ACCESS_TOKEN" \
 	-H "Content-Type: application/json" \
 	-d '{"profile":{"fullName":"Rohit Kumar","phoneNumber":"+919777777777"}}'
+```
+
+```bash
+curl -X PATCH "$API_BASE_URL/drivers/me" \
+	-H "Authorization: Bearer $ACCESS_TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{"vehicle":{"categoryId":1,"vehicleNumber":"KA01AB1234","model":"Activa","year":2022}}'
 ```
 
 Response payload: data.driver (BaseDriverCore fields).

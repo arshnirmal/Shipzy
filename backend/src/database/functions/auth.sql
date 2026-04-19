@@ -214,12 +214,6 @@ BEGIN
             true
         )
         RETURNING user_id, user_uuid INTO v_user_id, v_user_uuid;
-        
-        -- Initialize courier status if role is courier
-        IF p_role_name = 'courier' THEN
-            INSERT INTO logistics.courier_status (courier_id, is_available, is_online)
-            VALUES (v_user_id, false, false);
-        END IF;
     END IF;
     
     -- Link session to user
@@ -256,3 +250,24 @@ END;
 $$;
 
 COMMENT ON FUNCTION users.verify_otp_and_create_user IS 'Verify OTP and create user profile if first-time login';
+
+-- Bootstrap courier_status when a courier profile is inserted (DB-level guarantee)
+CREATE OR REPLACE FUNCTION users.bootstrap_courier_status_after_profile_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.role = 'courier' THEN
+        INSERT INTO logistics.courier_status (courier_id, is_available, is_online)
+        VALUES (NEW.user_id, false, false)
+        ON CONFLICT (courier_id) DO NOTHING;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_users_profiles_bootstrap_courier_status ON users.profiles;
+CREATE TRIGGER trg_users_profiles_bootstrap_courier_status
+    AFTER INSERT ON users.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION users.bootstrap_courier_status_after_profile_insert();

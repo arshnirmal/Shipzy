@@ -1,14 +1,15 @@
 // services/backend/src/modules/drivers/drivers.repository.ts
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
 import sessionsRepository from "./sessions.repository.js";
-import { AppError } from "../../utils/error.util.js";
+import { AppError, ValidationError } from "../../utils/error.util.js";
 import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
 import type { Coordinates } from "../../schemas/common.zod.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { courierStatus } from "../../database/schema/logistics.js";
+import { vehicleCategories } from "../../database/schema/public.js";
 
 import {
   CourierAssignmentDbZ,
@@ -26,15 +27,9 @@ import type {
   CourierAssignmentRow,
   TripHistoryRow,
 } from "../../types/drivers.js";
+import type { UpdateDriverProfileRequest } from "./drivers.zod.js";
 
 type Courier = DbCourier;
-
-type UpdateProfileData = {
-  fullName?: string;
-  email?: string;
-  profilePictureUrl?: string;
-  phoneNumber?: string;
-};
 
 class DriversRepository {
   /**
@@ -60,27 +55,72 @@ class DriversRepository {
   }
 
   /**
-   * Update courier profile (migrated to Drizzle)
+   * Update courier profile and/or vehicle (courier_status JSONB + vehicle_category_id)
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData,
+    updateData: UpdateDriverProfileRequest,
   ): Promise<Courier> {
     try {
-      const { fullName, email, profilePictureUrl, phoneNumber } = updateData;
+      const profile = updateData.profile;
+      const vehicle = updateData.vehicle;
 
-      await drizzleDb
-        .update(userProfiles)
-        .set({
-          fullName: fullName ?? undefined,
-          email: email ?? undefined,
-          profilePictureUrl: profilePictureUrl ?? undefined,
-          phoneNumber: phoneNumber ?? undefined,
-          updatedAt: new Date(),
-        })
-        .where(eq(userProfiles.userId, userId));
+      const hasProfilePatch =
+        profile !== undefined && Object.keys(profile).length > 0;
 
-      // Fetch updated courier profile (complex query - keep as raw SQL)
+      await drizzleDb.transaction(async (tx) => {
+        if (hasProfilePatch) {
+          const { fullName, email, profilePictureUrl, phoneNumber } = profile;
+          await tx
+            .update(userProfiles)
+            .set({
+              fullName: fullName ?? undefined,
+              email: email ?? undefined,
+              profilePictureUrl: profilePictureUrl ?? undefined,
+              phoneNumber: phoneNumber ?? undefined,
+              updatedAt: new Date(),
+            })
+            .where(eq(userProfiles.userId, userId));
+        }
+
+        if (vehicle) {
+          const [cat] = await tx
+            .select({ categoryId: vehicleCategories.categoryId })
+            .from(vehicleCategories)
+            .where(
+              and(
+                eq(vehicleCategories.categoryId, vehicle.categoryId),
+                eq(vehicleCategories.isActive, true),
+              ),
+            )
+            .limit(1);
+
+          if (!cat) {
+            throw new ValidationError("Invalid or inactive vehicle category");
+          }
+
+          const updatedCs = await tx
+            .update(courierStatus)
+            .set({
+              vehicleCategoryId: vehicle.categoryId,
+              vehicle: {
+                vehicleNumber: vehicle.vehicleNumber,
+                model: vehicle.model,
+                year: vehicle.year,
+                insuranceExpiry: vehicle.insuranceExpiry,
+                registrationDocumentUrl: vehicle.registrationDocumentUrl,
+              },
+              updatedAt: new Date(),
+            })
+            .where(eq(courierStatus.courierId, userId))
+            .returning({ courierId: courierStatus.courierId });
+
+          if (updatedCs.length === 0) {
+            throw new AppError("Courier status not found for user", 500);
+          }
+        }
+      });
+
       const result = await drizzlePool.query(
         driversQueries.FIND_COURIER_BY_USER_ID,
         [userId],

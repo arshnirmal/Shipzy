@@ -718,17 +718,20 @@ class OrdersRepository {
         ordersQueries.INSERT_PROOF_OF_DELIVERY,
         [
           data.orderId,
-          data.assignmentId,
           data.recipientName ?? null,
           data.photoUrl ?? null,
           data.recipientSignatureUrl ?? null,
           data.deliveryNotes ?? null,
         ],
       );
-      return result.rows[0] as {
-        proofId: number;
+      const row = result.rows[0] as {
         orderId: number;
         deliveredAt: Date;
+      };
+      return {
+        proofId: row.orderId,
+        orderId: row.orderId,
+        deliveredAt: row.deliveredAt,
       };
     } catch (error) {
       logger.error({

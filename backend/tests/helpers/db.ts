@@ -12,7 +12,6 @@ dotenv.config({ path: path.resolve(BACKEND_ROOT, ".env.test") });
 dotenv.config({ path: path.resolve(BACKEND_ROOT, ".env") });
 
 const STATIC_TABLES = new Set([
-  "public.delivery_type_capabilities",
   "public.delivery_types",
   "public.package_types",
   "public.pricing_config",

@@ -64,6 +64,10 @@ export const paymentTransactions = paymentsSchema.table(
   },
   (table) => [
     check("payments_transactions_amount_non_negative_chk", sql`${table.amount} >= 0`),
+    check(
+      "chk_payment_status_timestamp",
+      sql`(${table.status} <> 'completed' OR ${table.paymentCompletedAt} IS NOT NULL) AND (${table.status} <> 'failed' OR ${table.paymentFailedAt} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -94,5 +98,9 @@ export const refunds = paymentsSchema.table(
   },
   (table) => [
     check("payments_refunds_amount_non_negative_chk", sql`${table.refundAmount} >= 0`),
+    check(
+      "chk_refund_status_timestamp",
+      sql`${table.refundStatus} NOT IN ('completed', 'failed') OR ${table.processedAt} IS NOT NULL`,
+    ),
   ],
 );

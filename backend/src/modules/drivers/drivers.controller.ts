@@ -57,7 +57,7 @@ class DriversController {
       const { userId } = request.user!;
       const updatedDriver = await driversService.updateProfile(
         userId,
-        request.body.profile,
+        request.body,
       );
 
       return successResponse(

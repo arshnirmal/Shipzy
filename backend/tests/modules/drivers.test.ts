@@ -72,6 +72,38 @@ describe("Drivers Module", () => {
     expect(clientResponse.statusCode).toBe(403);
   });
 
+  it("PATCH /api/v1/drivers/me updates vehicle JSONB and vehicle category", async () => {
+    const courier = await createCourier(app, { activate: false });
+
+    const catalogResponse = await inject(app, {
+      method: "GET",
+      url: "/api/v1/static/create-order-data",
+    });
+    expect(catalogResponse.statusCode).toBe(200);
+    const catalog = catalogResponse.json().data.createOrder;
+    const vehicleCat = catalog.deliveryTypes[0]?.supportedVehicles?.[0];
+    expect(vehicleCat?.categoryId).toBeDefined();
+
+    const patchResponse = await inject(app, {
+      method: "PATCH",
+      url: "/api/v1/drivers/me",
+      headers: authHeaders(courier.accessToken),
+      payload: {
+        vehicle: {
+          categoryId: Number(vehicleCat.categoryId),
+          vehicleNumber: "KA01AB1234",
+          model: "Activa",
+          year: 2022,
+        },
+      },
+    });
+
+    expect(patchResponse.statusCode).toBe(200);
+    const driver = patchResponse.json().data.driver;
+    expect(driver.vehicle?.vehicleNumber).toBe("KA01AB1234");
+    expect(driver.vehicle?.categoryId).toBe(Number(vehicleCat.categoryId));
+  });
+
   it("PATCH /api/v1/drivers/me/availability toggles availability", async () => {
     const courier = await createCourier(app);
 

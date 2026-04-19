@@ -31,20 +31,19 @@ export default {
             ST_X(cs.current_location::geometry) AS "currentLongitude",
                         cs.avg_rating AS "avgRating",
                         COALESCE(cs.total_ratings, 0) AS "totalRatings",
-            cv.vehicle_id AS "vehicleId",
-            cv.vehicle_number AS "vehicleNumber",
-            cv.model AS "vehicleModel",
-            cv.year AS "vehicleYear",
-            vc.category_id AS "vehicleCategoryId",
+            NULL::int AS "vehicleId",
+            cs.vehicle->>'vehicleNumber' AS "vehicleNumber",
+            cs.vehicle->>'model' AS "vehicleModel",
+            (cs.vehicle->>'year')::int AS "vehicleYear",
+            cs.vehicle_category_id AS "vehicleCategoryId",
             vc.name AS "vehicleCategory",
             vc.max_weight_kg AS "vehicleMaxWeight",
-            cv.is_active AS "vehicleIsActive",
+            (cs.vehicle IS NOT NULL) AS "vehicleIsActive",
                         u.created_at AS "createdAt",
                         u.updated_at AS "updatedAt"
       FROM users.profiles u
       LEFT JOIN logistics.courier_status cs ON u.user_id = cs.courier_id
-      LEFT JOIN logistics.courier_vehicles cv ON u.user_id = cv.courier_id AND cv.is_active = true
-      LEFT JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
+      LEFT JOIN public.vehicle_categories vc ON cs.vehicle_category_id = vc.category_id
       WHERE u.user_id = $1
           AND u.role = 'courier'
           AND u.deleted_at IS NULL

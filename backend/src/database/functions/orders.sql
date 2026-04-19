@@ -64,11 +64,12 @@ BEGIN
     -- ============================================================
     IF NOT EXISTS (
         SELECT 1
-        FROM public.delivery_type_capabilities dtc
-        WHERE dtc.delivery_type_id    = p_delivery_type_id
-          AND dtc.vehicle_category_id = p_vehicle_category_id
-          AND dtc.weight_tier_id      = p_weight_tier_id
-          AND dtc.is_active           = TRUE
+        FROM public.delivery_types dt,
+             jsonb_array_elements(COALESCE(dt.capabilities, '[]'::jsonb)) cap
+        WHERE dt.delivery_type_id = p_delivery_type_id
+          AND dt.is_active        = TRUE
+          AND (cap->>'vehicleCategoryId')::int = p_vehicle_category_id
+          AND (cap->>'weightTierId')::int      = p_weight_tier_id
     ) THEN
         RETURN json_build_object(
             'success', FALSE,
@@ -81,15 +82,17 @@ BEGIN
     -- STEP 4: Get base and per-km rates (with override support)
     -- ============================================================
     SELECT
-        COALESCE(dtc.base_rate_override, dt.base_rate),
-        COALESCE(dtc.per_km_rate_override, dt.per_km_rate)
+        COALESCE((matched.elem->>'baseRateOverride')::numeric, dt.base_rate),
+        COALESCE((matched.elem->>'perKmRateOverride')::numeric, dt.per_km_rate)
     INTO v_base_rate, v_per_km_rate
     FROM public.delivery_types dt
-    LEFT JOIN public.delivery_type_capabilities dtc
-        ON  dt.delivery_type_id      = dtc.delivery_type_id
-        AND dtc.vehicle_category_id  = p_vehicle_category_id
-        AND dtc.weight_tier_id       = p_weight_tier_id
-        AND dtc.is_active            = TRUE
+    LEFT JOIN LATERAL (
+        SELECT elem
+        FROM jsonb_array_elements(COALESCE(dt.capabilities, '[]'::jsonb)) AS elem
+        WHERE (elem->>'vehicleCategoryId')::int = p_vehicle_category_id
+          AND (elem->>'weightTierId')::int      = p_weight_tier_id
+        LIMIT 1
+    ) matched ON true
     WHERE dt.delivery_type_id = p_delivery_type_id
       AND dt.is_active        = TRUE
     LIMIT 1;
@@ -244,10 +247,12 @@ BEGIN
 
     -- Validate vehicle category is supported for this delivery type
     IF NOT EXISTS (
-        SELECT 1 FROM public.delivery_type_capabilities
-        WHERE delivery_type_id    = v_delivery_type_id
-          AND vehicle_category_id = v_vehicle_category_id
-          AND is_active           = TRUE
+        SELECT 1
+        FROM public.delivery_types dt,
+             jsonb_array_elements(COALESCE(dt.capabilities, '[]'::jsonb)) cap
+        WHERE dt.delivery_type_id = v_delivery_type_id
+          AND dt.is_active        = TRUE
+          AND (cap->>'vehicleCategoryId')::int = v_vehicle_category_id
     ) THEN
         RETURN json_build_object('success', FALSE, 'error', 'Vehicle category not supported for this delivery type');
     END IF;

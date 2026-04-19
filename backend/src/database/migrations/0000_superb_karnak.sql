@@ -22,17 +22,6 @@ CREATE TABLE "business_discount_tiers" (
 	CONSTRAINT "max_orders_valid_chk" CHECK ("business_discount_tiers"."max_orders" > "business_discount_tiers"."min_orders" OR "business_discount_tiers"."max_orders" IS NULL)
 );
 --> statement-breakpoint
-CREATE TABLE "delivery_type_capabilities" (
-	"capability_id" serial PRIMARY KEY NOT NULL,
-	"delivery_type_id" integer NOT NULL,
-	"vehicle_category_id" integer NOT NULL,
-	"weight_tier_id" integer NOT NULL,
-	"base_rate_override" numeric(10, 2),
-	"per_km_rate_override" numeric(10, 2),
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "delivery_types" (
 	"delivery_type_id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -42,6 +31,7 @@ CREATE TABLE "delivery_types" (
 	"per_km_rate" numeric(10, 2) NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
+	"capabilities" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "delivery_types_name_unique" UNIQUE("name"),
@@ -123,20 +113,6 @@ CREATE TABLE "users"."auth_sessions" (
 	CONSTRAINT "auth_sessions_contact_present_chk" CHECK ("users"."auth_sessions"."email" IS NOT NULL OR "users"."auth_sessions"."phone_number" IS NOT NULL)
 );
 --> statement-breakpoint
-CREATE TABLE "users"."business_accounts" (
-	"business_id" serial PRIMARY KEY NOT NULL,
-	"user_id" integer NOT NULL,
-	"business_name" varchar(200) NOT NULL,
-	"gst_number" varchar(15),
-	"pan_number" varchar(10),
-	"business_type" varchar(100),
-	"website" varchar(255),
-	"monthly_volume" "monthly_volume",
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "business_accounts_gst_number_unique" UNIQUE("gst_number")
-);
---> statement-breakpoint
 CREATE TABLE "users"."addresses" (
 	"address_id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
@@ -172,6 +148,8 @@ CREATE TABLE "users"."profiles" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
+	"onboarding" jsonb,
+	"business_meta" jsonb,
 	CONSTRAINT "profiles_user_uuid_unique" UNIQUE("user_uuid"),
 	CONSTRAINT "profiles_firebase_uid_unique" UNIQUE("firebase_uid"),
 	CONSTRAINT "profiles_email_unique" UNIQUE("email")
@@ -247,6 +225,8 @@ CREATE TABLE "orders"."requests" (
 	"cancelled_at" timestamp with time zone,
 	"cancellation_reason" text,
 	"delivery_attempt" jsonb,
+	"pod" jsonb,
+	"rating" jsonb,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"deleted_at" timestamp with time zone,
 	CONSTRAINT "requests_order_uuid_unique" UNIQUE("order_uuid"),
@@ -286,19 +266,6 @@ CREATE TABLE "orders"."templates" (
 	CONSTRAINT "templates_template_uuid_unique" UNIQUE("template_uuid")
 );
 --> statement-breakpoint
-CREATE TABLE "orders"."proof_of_delivery" (
-	"proof_id" serial PRIMARY KEY NOT NULL,
-	"order_id" integer NOT NULL,
-	"assignment_id" integer NOT NULL,
-	"recipient_name" varchar(100),
-	"recipient_signature_url" varchar(255),
-	"photo_url" varchar(255),
-	"delivery_notes" text,
-	"delivered_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "proof_of_delivery_order_id_unique" UNIQUE("order_id")
-);
---> statement-breakpoint
 CREATE TABLE "logistics"."courier_status" (
 	"status_id" serial PRIMARY KEY NOT NULL,
 	"courier_id" integer NOT NULL,
@@ -311,27 +278,15 @@ CREATE TABLE "logistics"."courier_status" (
 	"total_deliveries_today" integer DEFAULT 0 NOT NULL,
 	"avg_rating" numeric(3, 2),
 	"total_ratings" integer DEFAULT 0 NOT NULL,
+	"vehicle" jsonb,
+	"kyc" jsonb,
+	"vehicle_category_id" integer,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "courier_status_courier_id_unique" UNIQUE("courier_id"),
 	CONSTRAINT "courier_status_total_deliveries_non_negative_chk" CHECK ("logistics"."courier_status"."total_deliveries_today" >= 0),
 	CONSTRAINT "courier_status_avg_rating_range_chk" CHECK ("logistics"."courier_status"."avg_rating" IS NULL OR ("logistics"."courier_status"."avg_rating" >= 1.00 AND "logistics"."courier_status"."avg_rating" <= 5.00)),
 	CONSTRAINT "courier_status_total_ratings_non_negative_chk" CHECK ("logistics"."courier_status"."total_ratings" >= 0)
-);
---> statement-breakpoint
-CREATE TABLE "logistics"."courier_vehicles" (
-	"vehicle_id" serial PRIMARY KEY NOT NULL,
-	"courier_id" integer NOT NULL,
-	"category_id" integer NOT NULL,
-	"vehicle_number" varchar(50) NOT NULL,
-	"model" varchar(100),
-	"year" integer,
-	"insurance_expiry" date,
-	"registration_document_url" varchar(255),
-	"is_primary" boolean DEFAULT false NOT NULL,
-	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "logistics"."driver_sessions" (
@@ -370,7 +325,8 @@ CREATE TABLE "payments"."transactions" (
 	"metadata" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "payments_transactions_amount_non_negative_chk" CHECK ("payments"."transactions"."amount" >= 0)
+	CONSTRAINT "payments_transactions_amount_non_negative_chk" CHECK ("payments"."transactions"."amount" >= 0),
+	CONSTRAINT "chk_payment_status_timestamp" CHECK (("payments"."transactions"."status" <> 'completed' OR "payments"."transactions"."payment_completed_at" IS NOT NULL) AND ("payments"."transactions"."status" <> 'failed' OR "payments"."transactions"."payment_failed_at" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "payments"."refunds" (
@@ -384,7 +340,8 @@ CREATE TABLE "payments"."refunds" (
 	"initiated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"processed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "payments_refunds_amount_non_negative_chk" CHECK ("payments"."refunds"."refund_amount" >= 0)
+	CONSTRAINT "payments_refunds_amount_non_negative_chk" CHECK ("payments"."refunds"."refund_amount" >= 0),
+	CONSTRAINT "chk_refund_status_timestamp" CHECK ("payments"."refunds"."refund_status" NOT IN ('completed', 'failed') OR "payments"."refunds"."processed_at" IS NOT NULL)
 );
 --> statement-breakpoint
 CREATE TABLE "tracking"."events" (
@@ -403,19 +360,6 @@ CREATE TABLE "tracking"."events" (
 	CONSTRAINT "tracking_events_accuracy_non_negative_chk" CHECK ("tracking"."events"."accuracy_meters" IS NULL OR "tracking"."events"."accuracy_meters" >= 0),
 	CONSTRAINT "tracking_events_speed_non_negative_chk" CHECK ("tracking"."events"."speed_kmph" IS NULL OR "tracking"."events"."speed_kmph" >= 0),
 	CONSTRAINT "tracking_events_bearing_valid_chk" CHECK ("tracking"."events"."bearing_degrees" IS NULL OR ("tracking"."events"."bearing_degrees" >= 0 AND "tracking"."events"."bearing_degrees" < 360))
-);
---> statement-breakpoint
-CREATE TABLE "logistics"."driver_ratings" (
-	"rating_id" bigserial PRIMARY KEY NOT NULL,
-	"order_id" integer NOT NULL,
-	"driver_id" integer NOT NULL,
-	"customer_id" integer NOT NULL,
-	"rating" smallint NOT NULL,
-	"is_anonymous" boolean DEFAULT false NOT NULL,
-	"comment" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "driver_ratings_order_id_unique" UNIQUE("order_id"),
-	CONSTRAINT "driver_ratings_rating_range_chk" CHECK ("logistics"."driver_ratings"."rating" BETWEEN 1 AND 5)
 );
 --> statement-breakpoint
 CREATE TABLE "notifications"."fcm_tokens" (
@@ -452,11 +396,7 @@ CREATE TABLE "notifications"."queue" (
 	CONSTRAINT "notifications_queue_max_retries_non_negative_chk" CHECK ("notifications"."queue"."max_retries" >= 0)
 );
 --> statement-breakpoint
-ALTER TABLE "delivery_type_capabilities" ADD CONSTRAINT "delivery_type_capabilities_delivery_type_id_delivery_types_delivery_type_id_fk" FOREIGN KEY ("delivery_type_id") REFERENCES "public"."delivery_types"("delivery_type_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "delivery_type_capabilities" ADD CONSTRAINT "delivery_type_capabilities_vehicle_category_id_vehicle_categories_category_id_fk" FOREIGN KEY ("vehicle_category_id") REFERENCES "public"."vehicle_categories"("category_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "delivery_type_capabilities" ADD CONSTRAINT "delivery_type_capabilities_weight_tier_id_weight_tiers_tier_id_fk" FOREIGN KEY ("weight_tier_id") REFERENCES "public"."weight_tiers"("tier_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users"."auth_sessions" ADD CONSTRAINT "auth_sessions_user_id_profiles_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "users"."business_accounts" ADD CONSTRAINT "business_accounts_user_id_profiles_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users"."addresses" ADD CONSTRAINT "addresses_user_id_profiles_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders"."courier_assignments" ADD CONSTRAINT "courier_assignments_order_id_requests_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "orders"."requests"("order_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders"."courier_assignments" ADD CONSTRAINT "courier_assignments_courier_id_profiles_user_id_fk" FOREIGN KEY ("courier_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -472,12 +412,9 @@ ALTER TABLE "orders"."requests" ADD CONSTRAINT "requests_payment_method_id_payme
 ALTER TABLE "orders"."status_history" ADD CONSTRAINT "status_history_order_id_requests_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "orders"."requests"("order_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders"."status_history" ADD CONSTRAINT "status_history_changed_by_profiles_user_id_fk" FOREIGN KEY ("changed_by") REFERENCES "users"."profiles"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders"."templates" ADD CONSTRAINT "templates_client_id_profiles_user_id_fk" FOREIGN KEY ("client_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders"."proof_of_delivery" ADD CONSTRAINT "proof_of_delivery_order_id_requests_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "orders"."requests"("order_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "orders"."proof_of_delivery" ADD CONSTRAINT "proof_of_delivery_assignment_id_courier_assignments_assignment_id_fk" FOREIGN KEY ("assignment_id") REFERENCES "orders"."courier_assignments"("assignment_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "logistics"."courier_status" ADD CONSTRAINT "courier_status_courier_id_profiles_user_id_fk" FOREIGN KEY ("courier_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "logistics"."courier_status" ADD CONSTRAINT "courier_status_current_assignment_id_courier_assignments_assignment_id_fk" FOREIGN KEY ("current_assignment_id") REFERENCES "orders"."courier_assignments"("assignment_id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logistics"."courier_vehicles" ADD CONSTRAINT "courier_vehicles_courier_id_profiles_user_id_fk" FOREIGN KEY ("courier_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logistics"."courier_vehicles" ADD CONSTRAINT "courier_vehicles_category_id_vehicle_categories_category_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."vehicle_categories"("category_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "logistics"."courier_status" ADD CONSTRAINT "courier_status_vehicle_category_id_vehicle_categories_category_id_fk" FOREIGN KEY ("vehicle_category_id") REFERENCES "public"."vehicle_categories"("category_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "logistics"."driver_sessions" ADD CONSTRAINT "driver_sessions_driver_id_profiles_user_id_fk" FOREIGN KEY ("driver_id") REFERENCES "users"."profiles"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments"."transactions" ADD CONSTRAINT "transactions_order_id_requests_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "orders"."requests"("order_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments"."transactions" ADD CONSTRAINT "transactions_payment_method_id_payment_methods_method_id_fk" FOREIGN KEY ("payment_method_id") REFERENCES "payments"."payment_methods"("method_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -486,18 +423,15 @@ ALTER TABLE "payments"."refunds" ADD CONSTRAINT "refunds_order_id_requests_order
 ALTER TABLE "tracking"."events" ADD CONSTRAINT "events_assignment_id_courier_assignments_assignment_id_fk" FOREIGN KEY ("assignment_id") REFERENCES "orders"."courier_assignments"("assignment_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tracking"."events" ADD CONSTRAINT "events_order_id_requests_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "orders"."requests"("order_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tracking"."events" ADD CONSTRAINT "events_courier_id_profiles_user_id_fk" FOREIGN KEY ("courier_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logistics"."driver_ratings" ADD CONSTRAINT "driver_ratings_order_id_requests_order_id_fk" FOREIGN KEY ("order_id") REFERENCES "orders"."requests"("order_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logistics"."driver_ratings" ADD CONSTRAINT "driver_ratings_driver_id_courier_status_courier_id_fk" FOREIGN KEY ("driver_id") REFERENCES "logistics"."courier_status"("courier_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logistics"."driver_ratings" ADD CONSTRAINT "driver_ratings_customer_id_profiles_user_id_fk" FOREIGN KEY ("customer_id") REFERENCES "users"."profiles"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notifications"."fcm_tokens" ADD CONSTRAINT "fcm_tokens_user_id_profiles_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notifications"."queue" ADD CONSTRAINT "queue_user_id_profiles_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"."profiles"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "uq_delivery_type_vehicle_weight" ON "delivery_type_capabilities" USING btree ("delivery_type_id","vehicle_category_id","weight_tier_id");--> statement-breakpoint
 CREATE INDEX "idx_pricing_config_active_key" ON "pricing_config" USING btree ("config_key") WHERE "pricing_config"."is_active" = true;--> statement-breakpoint
 CREATE UNIQUE INDEX "uq_weight_tiers_name_range" ON "weight_tiers" USING btree ("name","min_weight_kg","max_weight_kg");--> statement-breakpoint
 CREATE UNIQUE INDEX "uq_auth_sessions_user_device" ON "users"."auth_sessions" USING btree ("user_id","device_id") WHERE "users"."auth_sessions"."device_id" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "idx_users_profiles_uuid_active" ON "users"."profiles" USING btree ("user_uuid") WHERE "users"."profiles"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "idx_users_profiles_phone_active" ON "users"."profiles" USING btree ("phone_number") WHERE "users"."profiles"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "idx_users_profiles_email_active" ON "users"."profiles" USING btree ("email") WHERE "users"."profiles"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "uq_users_profiles_business_gst_lower" ON "users"."profiles" USING btree (lower("business_meta"->>'gstNumber')) WHERE "users"."profiles"."role" = 'business' AND "users"."profiles"."business_meta" IS NOT NULL AND coalesce(trim("users"."profiles"."business_meta"->>'gstNumber'), '') <> '';--> statement-breakpoint
 CREATE INDEX "idx_assignments_order" ON "orders"."courier_assignments" USING btree ("order_id");--> statement-breakpoint
 CREATE INDEX "idx_assignments_courier_active" ON "orders"."courier_assignments" USING btree ("courier_id") WHERE "orders"."courier_assignments"."status" NOT IN ('rejected', 'cancelled');--> statement-breakpoint
 CREATE INDEX "idx_drafts_client_created" ON "orders"."drafts" USING btree ("client_id","created_at") WHERE "orders"."drafts"."deleted_at" IS NULL;--> statement-breakpoint
@@ -508,9 +442,8 @@ CREATE INDEX "idx_orders_scheduled_pickup" ON "orders"."requests" USING btree ("
 CREATE INDEX "idx_status_history_order" ON "orders"."status_history" USING btree ("order_id","changed_at");--> statement-breakpoint
 CREATE INDEX "idx_templates_client_active" ON "orders"."templates" USING btree ("client_id") WHERE "orders"."templates"."deleted_at" IS NULL AND "orders"."templates"."is_active" = true;--> statement-breakpoint
 CREATE INDEX "idx_courier_status_assignment" ON "logistics"."courier_status" USING btree ("current_assignment_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "uq_courier_vehicles_primary_per_courier" ON "logistics"."courier_vehicles" USING btree ("courier_id") WHERE "logistics"."courier_vehicles"."is_primary" = true AND "logistics"."courier_vehicles"."is_active" = true;--> statement-breakpoint
+CREATE INDEX "idx_courier_status_vehicle_category" ON "logistics"."courier_status" USING btree ("vehicle_category_id");--> statement-breakpoint
 CREATE INDEX "idx_tracking_assignment_time" ON "tracking"."events" USING btree ("assignment_id","timestamp");--> statement-breakpoint
-CREATE INDEX "idx_ratings_driver" ON "logistics"."driver_ratings" USING btree ("driver_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "uq_fcm_tokens_user" ON "notifications"."fcm_tokens" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_fcm_tokens_user_active" ON "notifications"."fcm_tokens" USING btree ("user_id") WHERE "notifications"."fcm_tokens"."is_active" = true;--> statement-breakpoint
 CREATE INDEX "idx_notifications_user_unread" ON "notifications"."queue" USING btree ("user_id","status") WHERE "notifications"."queue"."status" NOT IN ('read', 'failed');

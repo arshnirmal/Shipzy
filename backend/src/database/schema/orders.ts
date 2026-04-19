@@ -38,6 +38,8 @@ import type {
   OrderSnapshotJSONB,
   AssignmentTimelineJSONB,
   DeliveryAttemptJSONB,
+  PodJSONB,
+  RatingJSONB,
 } from "./types.js";
 
 const ordersSchema = pgSchema("orders");
@@ -144,6 +146,9 @@ export const orderRequests = ordersSchema.table(
     // ── Delivery attempt (RTO flow) ─────────────────────────────────────────
     deliveryAttempt: jsonb("delivery_attempt").$type<DeliveryAttemptJSONB>(),
 
+    pod: jsonb("pod").$type<PodJSONB>(),
+    rating: jsonb("rating").$type<RatingJSONB>(),
+
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -248,28 +253,6 @@ export const orderStatusHistory = ordersSchema.table(
     index("idx_status_history_order").on(table.orderId, table.changedAt),
   ],
 );
-
-// Proof of Delivery
-export const proofOfDelivery = ordersSchema.table("proof_of_delivery", {
-  proofId: serial("proof_id").primaryKey(),
-  orderId: integer("order_id")
-    .notNull()
-    .unique()
-    .references(() => orderRequests.orderId, { onDelete: "cascade" }),
-  assignmentId: integer("assignment_id")
-    .notNull()
-    .references(() => courierAssignments.assignmentId),
-  recipientName: varchar("recipient_name", { length: 100 }),
-  recipientSignatureUrl: varchar("recipient_signature_url", { length: 255 }),
-  photoUrl: varchar("photo_url", { length: 255 }),
-  deliveryNotes: text("delivery_notes"),
-  deliveredAt: timestamp("delivered_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
 
 // Templates
 export const orderTemplates = ordersSchema.table(

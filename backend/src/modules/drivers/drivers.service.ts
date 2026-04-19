@@ -26,7 +26,6 @@ import type {
   UpdateLocationRequest,
 } from "./drivers.zod.js";
 
-type UpdateProfileData = UpdateDriverProfileRequest["profile"];
 type UpdateAvailabilityData =
   import("./drivers.zod.js").UpdateAvailabilityRequest;
 type LocationData = UpdateLocationRequest["location"]["current"];
@@ -134,7 +133,7 @@ class DriversService {
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData,
+    updateData: UpdateDriverProfileRequest,
   ): Promise<DriverProfileMutationResponse> {
     try {
       // Validate role is courier

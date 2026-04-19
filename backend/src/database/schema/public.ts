@@ -14,8 +14,10 @@ import {
   boolean,
   integer,
   timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { DeliveryTypeCapabilitiesJSONB } from "./types.js";
 
 // Tables in PostgreSQL default "public" schema — use pgTable() directly (no pgSchema("public")).
 
@@ -152,6 +154,10 @@ export const deliveryTypes = pgTable(
     perKmRate: numeric("per_km_rate", { precision: 10, scale: 2, mode: "number" }).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
+    capabilities: jsonb("capabilities")
+      .$type<DeliveryTypeCapabilitiesJSONB>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -191,44 +197,6 @@ export const packageTypes = pgTable(
     check(
       "package_types_special_handling_fee_non_negative_chk",
       sql`${table.specialHandlingFee} >= 0`,
-    ),
-  ],
-);
-
-// Delivery Type Capabilities
-export const deliveryTypeCapabilities = pgTable(
-  "delivery_type_capabilities",
-  {
-    capabilityId: serial("capability_id").primaryKey(),
-    deliveryTypeId: integer("delivery_type_id")
-      .notNull()
-      .references(() => deliveryTypes.deliveryTypeId, { onDelete: "cascade" }),
-    vehicleCategoryId: integer("vehicle_category_id")
-      .notNull()
-      .references(() => vehicleCategories.categoryId, { onDelete: "cascade" }),
-    weightTierId: integer("weight_tier_id")
-      .notNull()
-      .references(() => weightTiers.tierId, { onDelete: "cascade" }),
-    baseRateOverride: numeric("base_rate_override", {
-      precision: 10,
-      scale: 2,
-      mode: "number",
-    }),
-    perKmRateOverride: numeric("per_km_rate_override", {
-      precision: 10,
-      scale: 2,
-      mode: "number",
-    }),
-    isActive: boolean("is_active").default(true).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("uq_delivery_type_vehicle_weight").on(
-      table.deliveryTypeId,
-      table.vehicleCategoryId,
-      table.weightTierId,
     ),
   ],
 );

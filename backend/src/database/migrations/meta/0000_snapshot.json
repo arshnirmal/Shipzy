@@ -1,5 +1,5 @@
 {
-  "id": "89b36b64-6a79-4c50-93bb-ff01082ae66c",
+  "id": "aeb729ed-8a0e-4717-b537-24bcadd0672e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -74,137 +74,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.delivery_type_capabilities": {
-      "name": "delivery_type_capabilities",
-      "schema": "",
-      "columns": {
-        "capability_id": {
-          "name": "capability_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "delivery_type_id": {
-          "name": "delivery_type_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "vehicle_category_id": {
-          "name": "vehicle_category_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "weight_tier_id": {
-          "name": "weight_tier_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "base_rate_override": {
-          "name": "base_rate_override",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "per_km_rate_override": {
-          "name": "per_km_rate_override",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "uq_delivery_type_vehicle_weight": {
-          "name": "uq_delivery_type_vehicle_weight",
-          "columns": [
-            {
-              "expression": "delivery_type_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "vehicle_category_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "weight_tier_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "delivery_type_capabilities_delivery_type_id_delivery_types_delivery_type_id_fk": {
-          "name": "delivery_type_capabilities_delivery_type_id_delivery_types_delivery_type_id_fk",
-          "tableFrom": "delivery_type_capabilities",
-          "tableTo": "delivery_types",
-          "columnsFrom": [
-            "delivery_type_id"
-          ],
-          "columnsTo": [
-            "delivery_type_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "delivery_type_capabilities_vehicle_category_id_vehicle_categories_category_id_fk": {
-          "name": "delivery_type_capabilities_vehicle_category_id_vehicle_categories_category_id_fk",
-          "tableFrom": "delivery_type_capabilities",
-          "tableTo": "vehicle_categories",
-          "columnsFrom": [
-            "vehicle_category_id"
-          ],
-          "columnsTo": [
-            "category_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "delivery_type_capabilities_weight_tier_id_weight_tiers_tier_id_fk": {
-          "name": "delivery_type_capabilities_weight_tier_id_weight_tiers_tier_id_fk",
-          "tableFrom": "delivery_type_capabilities",
-          "tableTo": "weight_tiers",
-          "columnsFrom": [
-            "weight_tier_id"
-          ],
-          "columnsTo": [
-            "tier_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.delivery_types": {
       "name": "delivery_types",
       "schema": "",
@@ -258,6 +127,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "capabilities": {
+          "name": "capabilities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "created_at": {
           "name": "created_at",
@@ -816,105 +692,6 @@
       },
       "isRLSEnabled": false
     },
-    "users.business_accounts": {
-      "name": "business_accounts",
-      "schema": "users",
-      "columns": {
-        "business_id": {
-          "name": "business_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "business_name": {
-          "name": "business_name",
-          "type": "varchar(200)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "gst_number": {
-          "name": "gst_number",
-          "type": "varchar(15)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pan_number": {
-          "name": "pan_number",
-          "type": "varchar(10)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "business_type": {
-          "name": "business_type",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "website": {
-          "name": "website",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "monthly_volume": {
-          "name": "monthly_volume",
-          "type": "monthly_volume",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "business_accounts_user_id_profiles_user_id_fk": {
-          "name": "business_accounts_user_id_profiles_user_id_fk",
-          "tableFrom": "business_accounts",
-          "tableTo": "profiles",
-          "schemaTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "business_accounts_gst_number_unique": {
-          "name": "business_accounts_gst_number_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "gst_number"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "users.addresses": {
       "name": "addresses",
       "schema": "users",
@@ -1142,6 +919,18 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "onboarding": {
+          "name": "onboarding",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "business_meta": {
+          "name": "business_meta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1189,6 +978,22 @@
           ],
           "isUnique": false,
           "where": "\"users\".\"profiles\".\"deleted_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_users_profiles_business_gst_lower": {
+          "name": "uq_users_profiles_business_gst_lower",
+          "columns": [
+            {
+              "expression": "lower(\"business_meta\"->>'gstNumber')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"users\".\"profiles\".\"role\" = 'business' AND \"users\".\"profiles\".\"business_meta\" IS NOT NULL AND coalesce(trim(\"users\".\"profiles\".\"business_meta\"->>'gstNumber'), '') <> ''",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1799,6 +1604,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "pod": {
+          "name": "pod",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rating": {
+          "name": "rating",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -2259,112 +2076,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "orders.proof_of_delivery": {
-      "name": "proof_of_delivery",
-      "schema": "orders",
-      "columns": {
-        "proof_id": {
-          "name": "proof_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order_id": {
-          "name": "order_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "assignment_id": {
-          "name": "assignment_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "recipient_name": {
-          "name": "recipient_name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "recipient_signature_url": {
-          "name": "recipient_signature_url",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "photo_url": {
-          "name": "photo_url",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "delivery_notes": {
-          "name": "delivery_notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "delivered_at": {
-          "name": "delivered_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "proof_of_delivery_order_id_requests_order_id_fk": {
-          "name": "proof_of_delivery_order_id_requests_order_id_fk",
-          "tableFrom": "proof_of_delivery",
-          "tableTo": "requests",
-          "schemaTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "order_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "proof_of_delivery_assignment_id_courier_assignments_assignment_id_fk": {
-          "name": "proof_of_delivery_assignment_id_courier_assignments_assignment_id_fk",
-          "tableFrom": "proof_of_delivery",
-          "tableTo": "courier_assignments",
-          "schemaTo": "orders",
-          "columnsFrom": [
-            "assignment_id"
-          ],
-          "columnsTo": [
-            "assignment_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "proof_of_delivery_order_id_unique": {
-          "name": "proof_of_delivery_order_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "order_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "logistics.courier_status": {
       "name": "courier_status",
       "schema": "logistics",
@@ -2439,6 +2150,24 @@
           "notNull": true,
           "default": 0
         },
+        "vehicle": {
+          "name": "vehicle",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kyc": {
+          "name": "kyc",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vehicle_category_id": {
+          "name": "vehicle_category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2460,6 +2189,21 @@
           "columns": [
             {
               "expression": "current_assignment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_courier_status_vehicle_category": {
+          "name": "idx_courier_status_vehicle_category",
+          "columns": [
+            {
+              "expression": "vehicle_category_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2499,6 +2243,19 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "courier_status_vehicle_category_id_vehicle_categories_category_id_fk": {
+          "name": "courier_status_vehicle_category_id_vehicle_categories_category_id_fk",
+          "tableFrom": "courier_status",
+          "tableTo": "vehicle_categories",
+          "columnsFrom": [
+            "vehicle_category_id"
+          ],
+          "columnsTo": [
+            "category_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2526,140 +2283,6 @@
           "value": "\"logistics\".\"courier_status\".\"total_ratings\" >= 0"
         }
       },
-      "isRLSEnabled": false
-    },
-    "logistics.courier_vehicles": {
-      "name": "courier_vehicles",
-      "schema": "logistics",
-      "columns": {
-        "vehicle_id": {
-          "name": "vehicle_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "courier_id": {
-          "name": "courier_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "vehicle_number": {
-          "name": "vehicle_number",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "model": {
-          "name": "model",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "year": {
-          "name": "year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "insurance_expiry": {
-          "name": "insurance_expiry",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "registration_document_url": {
-          "name": "registration_document_url",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_primary": {
-          "name": "is_primary",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "uq_courier_vehicles_primary_per_courier": {
-          "name": "uq_courier_vehicles_primary_per_courier",
-          "columns": [
-            {
-              "expression": "courier_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"logistics\".\"courier_vehicles\".\"is_primary\" = true AND \"logistics\".\"courier_vehicles\".\"is_active\" = true",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "courier_vehicles_courier_id_profiles_user_id_fk": {
-          "name": "courier_vehicles_courier_id_profiles_user_id_fk",
-          "tableFrom": "courier_vehicles",
-          "tableTo": "profiles",
-          "schemaTo": "users",
-          "columnsFrom": [
-            "courier_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "courier_vehicles_category_id_vehicle_categories_category_id_fk": {
-          "name": "courier_vehicles_category_id_vehicle_categories_category_id_fk",
-          "tableFrom": "courier_vehicles",
-          "tableTo": "vehicle_categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "category_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "logistics.driver_sessions": {
@@ -2929,6 +2552,10 @@
         "payments_transactions_amount_non_negative_chk": {
           "name": "payments_transactions_amount_non_negative_chk",
           "value": "\"payments\".\"transactions\".\"amount\" >= 0"
+        },
+        "chk_payment_status_timestamp": {
+          "name": "chk_payment_status_timestamp",
+          "value": "(\"payments\".\"transactions\".\"status\" <> 'completed' OR \"payments\".\"transactions\".\"payment_completed_at\" IS NOT NULL) AND (\"payments\".\"transactions\".\"status\" <> 'failed' OR \"payments\".\"transactions\".\"payment_failed_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -3039,6 +2666,10 @@
         "payments_refunds_amount_non_negative_chk": {
           "name": "payments_refunds_amount_non_negative_chk",
           "value": "\"payments\".\"refunds\".\"refund_amount\" >= 0"
+        },
+        "chk_refund_status_timestamp": {
+          "name": "chk_refund_status_timestamp",
+          "value": "\"payments\".\"refunds\".\"refund_status\" NOT IN ('completed', 'failed') OR \"payments\".\"refunds\".\"processed_at\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false
@@ -3204,147 +2835,6 @@
         "tracking_events_bearing_valid_chk": {
           "name": "tracking_events_bearing_valid_chk",
           "value": "\"tracking\".\"events\".\"bearing_degrees\" IS NULL OR (\"tracking\".\"events\".\"bearing_degrees\" >= 0 AND \"tracking\".\"events\".\"bearing_degrees\" < 360)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "logistics.driver_ratings": {
-      "name": "driver_ratings",
-      "schema": "logistics",
-      "columns": {
-        "rating_id": {
-          "name": "rating_id",
-          "type": "bigserial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "order_id": {
-          "name": "order_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "driver_id": {
-          "name": "driver_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rating": {
-          "name": "rating",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_anonymous": {
-          "name": "is_anonymous",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "comment": {
-          "name": "comment",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_ratings_driver": {
-          "name": "idx_ratings_driver",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "driver_ratings_order_id_requests_order_id_fk": {
-          "name": "driver_ratings_order_id_requests_order_id_fk",
-          "tableFrom": "driver_ratings",
-          "tableTo": "requests",
-          "schemaTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "order_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "driver_ratings_driver_id_courier_status_courier_id_fk": {
-          "name": "driver_ratings_driver_id_courier_status_courier_id_fk",
-          "tableFrom": "driver_ratings",
-          "tableTo": "courier_status",
-          "schemaTo": "logistics",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "courier_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "driver_ratings_customer_id_profiles_user_id_fk": {
-          "name": "driver_ratings_customer_id_profiles_user_id_fk",
-          "tableFrom": "driver_ratings",
-          "tableTo": "profiles",
-          "schemaTo": "users",
-          "columnsFrom": [
-            "customer_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "driver_ratings_order_id_unique": {
-          "name": "driver_ratings_order_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "order_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "driver_ratings_rating_range_chk": {
-          "name": "driver_ratings_rating_range_chk",
-          "value": "\"logistics\".\"driver_ratings\".\"rating\" BETWEEN 1 AND 5"
         }
       },
       "isRLSEnabled": false

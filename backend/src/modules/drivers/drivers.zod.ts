@@ -24,17 +24,34 @@ export const DriverProfilePatchZ = z
     profilePictureUrl: z.string().url().optional(),
     phoneNumber: z.string().min(10).max(20).optional(),
   })
-  .strict()
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one profile field must be provided",
-  });
+  .strict();
+
+export const DriverVehiclePatchZ = z
+  .object({
+    categoryId: z.number().int().positive(),
+    vehicleNumber: z.string().min(1).max(50),
+    model: z.string().max(100).optional(),
+    year: z.number().int().min(1900).max(2100).optional(),
+    insuranceExpiry: z.string().max(32).optional(),
+    registrationDocumentUrl: z.string().url().max(255).optional(),
+  })
+  .strict();
 
 // Update Driver Profile Request
 export const UpdateDriverProfileRequestZ = z
   .object({
-    profile: DriverProfilePatchZ,
+    profile: DriverProfilePatchZ.optional(),
+    vehicle: DriverVehiclePatchZ.optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (body) => {
+      const hasProfile =
+        body.profile !== undefined && Object.keys(body.profile).length > 0;
+      return hasProfile || body.vehicle !== undefined;
+    },
+    { message: "Provide at least one profile field and/or vehicle" },
+  );
 export type UpdateDriverProfileRequest = z.infer<
   typeof UpdateDriverProfileRequestZ
 >;

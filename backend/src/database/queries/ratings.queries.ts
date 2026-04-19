@@ -7,43 +7,28 @@
 
 export default {
   /**
-   * Insert a new driver rating
-   */
-  INSERT_RATING: `
-    INSERT INTO logistics.driver_ratings (
-      order_id, driver_id, customer_id, rating, comment
-    ) VALUES ($1, $2, $3, $4, $5)
-    RETURNING
-      rating_id AS "ratingId",
-      order_id AS "orderId",
-      driver_id AS "driverId",
-      customer_id AS "customerId",
-      rating AS "rating",
-      comment AS "comment",
-      created_at AS "createdAt"
-  `,
-
-  /**
    * Get recent ratings for a driver (last 90 days for aggregation)
    */
   FIND_DRIVER_RATINGS_RECENT: `
     SELECT
-      r.rating_id AS "ratingId",
-      r.order_id AS "orderId",
-      r.driver_id AS "driverId",
-      r.customer_id AS "customerId",
-      r.is_anonymous AS "isAnonymous",
-      r.rating AS "rating",
-      r.comment AS "comment",
-      r.created_at AS "createdAt",
+      o.order_id AS "ratingId",
+      o.order_id AS "orderId",
+      ca.courier_id AS "driverId",
+      (o.rating->>'customerId')::int AS "customerId",
+      (o.rating->>'isAnonymous')::boolean AS "isAnonymous",
+      (o.rating->>'value')::int AS "rating",
+      o.rating->>'comment' AS "comment",
+      (o.rating->>'createdAt')::timestamptz AS "createdAt",
       o.order_number AS "orderNumber",
       o.delivered_at AS "deliveredAt"
-    FROM logistics.driver_ratings r
-    JOIN orders.requests o ON r.order_id = o.order_id
-    WHERE r.driver_id = $1
-      AND r.created_at >= $2
+    FROM orders.requests o
+    JOIN orders.courier_assignments ca
+      ON ca.order_id = o.order_id AND ca.status = 'delivered'
+    WHERE ca.courier_id = $1
+      AND o.rating IS NOT NULL
+      AND (o.rating->>'createdAt')::timestamptz >= $2
       AND o.status = 'delivered'
-    ORDER BY r.created_at DESC
+    ORDER BY (o.rating->>'createdAt')::timestamptz DESC
   `,
 
   /**
@@ -81,8 +66,9 @@ export default {
    * Check if rating already exists for order
    */
   RATING_EXISTS_FOR_ORDER: `
-    SELECT 1 FROM logistics.driver_ratings
+    SELECT 1 FROM orders.requests
     WHERE order_id = $1
+      AND rating IS NOT NULL
     LIMIT 1
   `,
 };

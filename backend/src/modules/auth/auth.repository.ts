@@ -2,13 +2,7 @@
 import { eq, and, isNull, gt, sql, not } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
-import {
-  userProfiles,
-  authSessions,
-  businessAccounts,
-} from "../../database/schema/users.js";
-import { courierStatus } from "../../database/schema/logistics.js";
-
+import { userProfiles, authSessions } from "../../database/schema/users.js";
 import type { AuthUser } from "../../types/user.js";
 import type { DeviceInfo } from "../../types/index.js";
 
@@ -242,18 +236,6 @@ class AuthRepository {
         throw new Error("User insert returned no row");
       }
 
-      // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
-      if (role === "courier") {
-        await drizzleDb
-          .insert(courierStatus)
-          .values({
-            courierId: createdUser.userId,
-            isAvailable: false,
-            isOnline: false,
-          })
-          .onConflictDoNothing({ target: courierStatus.courierId });
-      }
-
       // Fetch full user with role for return type compatibility
       const user = await this.findByUuid(createdUser.userUuid);
       if (!user) {
@@ -300,18 +282,6 @@ class AuthRepository {
         throw new Error("User insert returned no row");
       }
 
-      // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
-      if (role === "courier") {
-        await drizzleDb
-          .insert(courierStatus)
-          .values({
-            courierId: createdUser.userId,
-            isAvailable: false,
-            isOnline: false,
-          })
-          .onConflictDoNothing({ target: courierStatus.courierId });
-      }
-
       // Fetch full user with role for return type compatibility
       const user = await this.findByUuid(createdUser.userUuid);
       if (!user) {
@@ -346,17 +316,15 @@ class AuthRepository {
             passwordHash: userData.passwordHash,
             phoneNumber: userData.phoneNumber || undefined,
             isVerified: false,
+            businessMeta: {
+              businessName: accountData.businessName,
+              gstNumber: accountData.gstNumber,
+              monthlyVolume: accountData.monthlyVolume,
+            },
           })
           .returning();
 
         if (!createdUser) throw new Error("User insert returned no row");
-
-        await tx.insert(businessAccounts).values({
-          userId: createdUser.userId,
-          businessName: accountData.businessName,
-          gstNumber: accountData.gstNumber || undefined,
-          monthlyVolume: accountData.monthlyVolume,
-        });
 
         const [fetched] = await tx
           .select({

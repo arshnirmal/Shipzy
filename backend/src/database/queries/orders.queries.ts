@@ -279,18 +279,24 @@ export default {
   `,
 
   /**
-   * Insert proof of delivery record
+   * Persist proof of delivery on the order row (1:1 JSONB)
    */
   INSERT_PROOF_OF_DELIVERY: `
-    INSERT INTO orders.proof_of_delivery (
-      order_id, assignment_id, recipient_name,
-      photo_url, recipient_signature_url, delivery_notes
-    )
-    VALUES ($1, $2, $3, $4, $5, $6)
+    UPDATE orders.requests
+    SET
+      pod = jsonb_build_object(
+        'recipientName', $2::text,
+        'photoUrl', $3::text,
+        'signatureUrl', $4::text,
+        'deliveryNotes', $5::text,
+        'deliveredAt', to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+      ),
+      updated_at = NOW()
+    WHERE order_id = $1
+      AND deleted_at IS NULL
     RETURNING
-      proof_id      AS "proofId",
-      order_id      AS "orderId",
-      delivered_at   AS "deliveredAt"
+      order_id AS "orderId",
+      (pod->>'deliveredAt')::timestamptz AS "deliveredAt"
   `,
 
   /**
