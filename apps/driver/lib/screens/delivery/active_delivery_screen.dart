@@ -46,7 +46,11 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     ref.listen<OrderState>(orderProvider, (previous, next) {
       _syncCountdownTicker(next);
 
-      if (previous?.status != OrderStatus.delivered && next.status == OrderStatus.delivered && !_hasOpenedPodSheet) {
+      // Trigger PoD sheet on both completed (fresh flow) and delivered (app-kill recovery).
+      final justFinished = (next.status == OrderStatus.completed || next.status == OrderStatus.delivered) &&
+          previous?.status != OrderStatus.completed &&
+          previous?.status != OrderStatus.delivered;
+      if (justFinished && !_hasOpenedPodSheet) {
         _hasOpenedPodSheet = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -144,13 +148,17 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       case OrderStatus.arrivedAtPickup:
         return true;
       case OrderStatus.idle:
+      case OrderStatus.incoming:
       case OrderStatus.pickedUp:
       case OrderStatus.navigatingToDropoff:
       case OrderStatus.arrivedAtDropoff:
       case OrderStatus.delivered:
       case OrderStatus.undeliverable:
       case OrderStatus.returning:
+      case OrderStatus.atOrigin:
       case OrderStatus.returned:
+      case OrderStatus.completed:
+      case OrderStatus.cancelledByCustomer:
         return false;
     }
   }
@@ -159,6 +167,8 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     switch (status) {
       case OrderStatus.idle:
         return 'Unknown Status';
+      case OrderStatus.incoming:
+        return 'Incoming Order';
       case OrderStatus.accepted:
         return 'Head to Pickup';
       case OrderStatus.navigatingToPickup:
@@ -177,14 +187,21 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
         return 'Marked Undeliverable';
       case OrderStatus.returning:
         return 'Return to Sender';
+      case OrderStatus.atOrigin:
+        return 'Arrived at Sender';
       case OrderStatus.returned:
         return 'Returned to Sender';
+      case OrderStatus.completed:
+        return 'Delivery Complete';
+      case OrderStatus.cancelledByCustomer:
+        return 'Order Cancelled';
     }
   }
 
   String _getPrimaryActionText(OrderStatus status) {
     switch (status) {
       case OrderStatus.idle:
+      case OrderStatus.incoming:
         return 'Continue';
       case OrderStatus.accepted:
         return 'Start Navigation to Pickup';
@@ -199,13 +216,18 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       case OrderStatus.arrivedAtDropoff:
         return 'Mark Delivered';
       case OrderStatus.delivered:
+      case OrderStatus.completed:
         return 'Done';
       case OrderStatus.undeliverable:
         return 'Start Return';
       case OrderStatus.returning:
-        return 'Confirm Returned';
+        return 'Arrived at Sender';
+      case OrderStatus.atOrigin:
+        return 'Confirm Return';
       case OrderStatus.returned:
         return 'Done';
+      case OrderStatus.cancelledByCustomer:
+        return 'Go Home';
     }
   }
 
@@ -271,12 +293,23 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
           onPressed: _isActionInProgress
               ? null
               : () => _runAction(() async {
+                  await notifier.arrivedAtOrigin(widget.orderId);
+                }),
+          style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+          child: Text(_getPrimaryActionText(state.status)),
+        );
+      case OrderStatus.atOrigin:
+        return ElevatedButton(
+          onPressed: _isActionInProgress
+              ? null
+              : () => _runAction(() async {
                   await notifier.confirmReturned(widget.orderId);
                 }),
           style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
           child: Text(_getPrimaryActionText(state.status)),
         );
       case OrderStatus.returned:
+      case OrderStatus.completed:
         return ElevatedButton(
           onPressed: () {
             notifier.closeActiveOrderFlow();
@@ -285,7 +318,27 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
           style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
           child: const Text('Done'),
         );
+      case OrderStatus.cancelledByCustomer:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'The customer has cancelled this order.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                notifier.closeActiveOrderFlow();
+                context.go('/home');
+              },
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+              child: const Text('Go Home'),
+            ),
+          ],
+        );
       case OrderStatus.idle:
+      case OrderStatus.incoming:
       case OrderStatus.accepted:
       case OrderStatus.navigatingToPickup:
       case OrderStatus.arrivedAtPickup:
@@ -304,6 +357,7 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
 
     switch (status) {
       case OrderStatus.idle:
+      case OrderStatus.incoming:
         return;
       case OrderStatus.accepted:
         final pickup = assignment?.routing.pickup;
@@ -336,7 +390,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       case OrderStatus.delivered:
       case OrderStatus.undeliverable:
       case OrderStatus.returning:
+      case OrderStatus.atOrigin:
       case OrderStatus.returned:
+      case OrderStatus.completed:
+      case OrderStatus.cancelledByCustomer:
         return;
     }
   }

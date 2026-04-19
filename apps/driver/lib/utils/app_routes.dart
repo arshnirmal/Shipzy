@@ -26,6 +26,9 @@ class AppRoutes {
   /// Route for document upload.
   static const String documentUpload = '/document-upload';
 
+  /// Route for the permissions gate screen.
+  static const String permissions = '/permissions';
+
   // ============ MAIN APP ROUTES ============
 
   /// Route for the home screen.

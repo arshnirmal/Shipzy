@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../services/dio/interceptors/auth_interceptor.dart';
 import '../services/dio/interceptors/error_interceptor.dart';
+import '../services/dio/interceptors/retry_interceptor.dart';
 
 part 'dio_provider.g.dart';
 
@@ -20,8 +21,10 @@ Dio dio(Ref ref) {
     ),
   );
 
-  // Add interceptors
+  // Interceptor order matters for errors: RetryInterceptor first so retries
+  // pass through AuthInterceptor again (tokens re-attached on each attempt).
   dio.interceptors.addAll([
+    RetryInterceptor(dio),
     AuthInterceptor(ref),
     ErrorInterceptor(ref),
     PrettyDioLogger(requestHeader: true, requestBody: true, responseHeader: true),

@@ -8,6 +8,7 @@ import '../models/delivery_attempt.dart';
 import '../models/location_meta.dart';
 import '../models/order_types.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
 import '../services/foreground_task_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/location_queue.dart';
@@ -35,13 +36,22 @@ class Order extends _$Order {
       _stopLocationTimer();
     });
 
-    // When FCM signals an order cancellation, clear the active flow.
+    // When FCM signals an order cancellation, enter cancelledByCustomer state
+    // so the UI can show a blocking modal before the flow is cleared.
     ref.listen(orderCancelledSignalProvider, (_, __) {
       if (state.activeOrderId != null) {
         _waitTimer?.cancel();
         _stopLocationTimer();
         unawaited(_foregroundTask.stop());
-        state = const OrderState();
+        state = state.copyWith(status: OrderStatus.cancelledByCustomer);
+      }
+    });
+
+    // On connectivity restore, immediately flush the location queue rather
+    // than waiting for the next 30-second tick.
+    ref.listen(connectivityRestoredSignalProvider, (_, __) {
+      if (_shouldTrackLocation(state.status)) {
+        unawaited(_pushLocationUpdate());
       }
     });
 
@@ -103,10 +113,14 @@ class Order extends _$Order {
     _setState(state.copyWith(status: OrderStatus.returning));
   }
 
+  Future<void> arrivedAtOrigin(String orderId) async {
+    _setState(state.copyWith(status: OrderStatus.atOrigin));
+  }
+
   Future<void> confirmReturned(String orderId) async {
     await ref.read(apiServiceProvider).confirmReturned(_parseOrderId(orderId));
     _waitTimer?.cancel();
-    _setState(state.copyWith(status: OrderStatus.returned, activeOrderId: null, waitUntil: null, waitElapsed: false));
+    _setState(state.copyWith(status: OrderStatus.completed, activeOrderId: null, waitUntil: null, waitElapsed: false));
   }
 
   Future<void> submitProofOfDelivery(
@@ -130,7 +144,7 @@ class Order extends _$Order {
   Future<void> completeDelivery(String orderId) async {
     await ref.read(apiServiceProvider).updateOrderStatus(_parseOrderId(orderId), AssignmentOrderStatus.delivered);
     _waitTimer?.cancel();
-    _setState(state.copyWith(status: OrderStatus.delivered, waitUntil: null, waitElapsed: false));
+    _setState(state.copyWith(status: OrderStatus.completed, waitUntil: null, waitElapsed: false));
   }
 
   void closeActiveOrderFlow() {
@@ -180,11 +194,15 @@ class Order extends _$Order {
       case OrderStatus.returning:
         return true;
       case OrderStatus.idle:
+      case OrderStatus.incoming:
       case OrderStatus.accepted:
       case OrderStatus.navigatingToPickup:
       case OrderStatus.arrivedAtPickup:
       case OrderStatus.delivered:
+      case OrderStatus.atOrigin:
       case OrderStatus.returned:
+      case OrderStatus.completed:
+      case OrderStatus.cancelledByCustomer:
         return false;
     }
   }
@@ -376,7 +394,11 @@ class Order extends _$Order {
 }
 
 enum OrderStatus {
+  /// No active order.
   idle,
+  /// FCM new-order sheet visible; driver hasn't accepted yet.
+  incoming,
+  /// Driver accepted; navigating to pickup address.
   accepted,
   navigatingToPickup,
   arrivedAtPickup,
@@ -386,7 +408,13 @@ enum OrderStatus {
   delivered,
   undeliverable,
   returning,
+  /// Driver arrived back at pickup point for return handback.
+  atOrigin,
   returned,
+  /// Terminal: PoD submitted or return confirmed. UI shows completion screen.
+  completed,
+  /// FCM cancel received while order was active. UI shows blocking modal.
+  cancelledByCustomer,
 }
 
 class OrderState {

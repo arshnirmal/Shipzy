@@ -12,6 +12,7 @@ import '../screens/earnings/earnings_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/orders/orders_list_screen.dart';
+import '../screens/permissions_screen.dart';
 import '../screens/profile/document_upload_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/profile/setup_profile_screen.dart';
@@ -94,6 +95,7 @@ GoRouter router(Ref ref) {
       GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: AppRoutes.setupProfile, name: 'setupProfile', builder: (context, state) => const SetupProfileScreen()),
       GoRoute(path: AppRoutes.documentUpload, name: 'documentUpload', builder: (context, state) => const DocumentUploadScreen()),
+      GoRoute(path: AppRoutes.permissions, name: 'permissions', builder: (context, state) => const PermissionsScreen()),
       GoRoute(
         path: AppRoutes.activeDelivery,
         name: 'activeDelivery',
