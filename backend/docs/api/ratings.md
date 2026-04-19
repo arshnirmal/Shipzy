@@ -27,6 +27,8 @@ ACCESS_TOKEN="<jwt-access-token>"
 
 ## Curl And Response Examples
 
+Driver ratings are stored on `orders.requests.rating` JSONB; `ratingId` in API responses is the same as `orderId` for that row.
+
 ### POST /orders/:orderId
 
 Auth: client role
@@ -62,7 +64,7 @@ curl -X POST "$API_BASE_URL/ratings/orders/1024" \
   "message": "Rating submitted",
   "data": {
     "rating": {
-      "ratingId": 345,
+      "ratingId": 1024,
       "orderId": 1024,
       "driverId": 77,
       "customerId": 12,

@@ -77,6 +77,9 @@ export const BusinessRegisterRequestZ = z
       .object({
         businessName: z.string().min(2).max(200),
         gstNumber: z.string().max(15).optional(),
+        panNumber: z.string().max(10).optional(),
+        businessType: z.string().max(100).optional(),
+        website: z.string().max(255).optional(),
         monthlyVolume: z
           .enum(["0-100", "100-500", "500-2000", "2000+"])
           .optional(),

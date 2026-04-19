@@ -61,7 +61,7 @@ export const OrderFulfillmentZ = z
     vehicleCategoryId: z.number().int().positive(),
     weightTierId: z.number().int().positive().nullable().optional(),
     packageTypeId: z.number().int().positive().nullable().optional(),
-    paymentMethodId: z.number().int().positive().nullable().optional(),
+    paymentMethodId: z.number().int().positive(),
   })
   .strict();
 
@@ -631,7 +631,7 @@ export type OrderRow = {
   vehicleCategoryId: number;
   weightTierId?: number | null;
   packageTypeId?: number | null;
-  paymentMethodId?: number | null;
+  paymentMethodId: number;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   actualDistanceKm?: number | null;
@@ -673,7 +673,7 @@ export type OrderListRow = {
   vehicleCategoryId: number;
   weightTierId?: number | null;
   packageTypeId?: number | null;
-  paymentMethodId?: number | null;
+  paymentMethodId: number;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   actualDistanceKm?: number | null;
@@ -703,7 +703,7 @@ export type AvailableOrderRow = {
   vehicleCategoryId: number;
   weightTierId?: number | null;
   packageTypeId?: number | null;
-  paymentMethodId?: number | null;
+  paymentMethodId: number;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   createdAt: Date;

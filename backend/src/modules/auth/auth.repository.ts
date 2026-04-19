@@ -3,6 +3,7 @@ import { eq, and, isNull, gt, sql, not } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import { userProfiles, authSessions } from "../../database/schema/users.js";
+import type { BusinessMetaJSONB } from "../../database/schema/types.js";
 import type { AuthUser } from "../../types/user.js";
 import type { DeviceInfo } from "../../types/index.js";
 
@@ -70,6 +71,9 @@ interface CreateBusinessUserData {
 interface CreateBusinessAccountData {
   businessName: string;
   gstNumber?: string;
+  panNumber?: string;
+  businessType?: string;
+  website?: string;
   monthlyVolume?: "0-100" | "100-500" | "500-2000" | "2000+";
 }
 
@@ -307,6 +311,25 @@ class AuthRepository {
   ): Promise<User> {
     try {
       const user = await drizzleDb.transaction(async (tx) => {
+        const businessMeta: BusinessMetaJSONB = {
+          businessName: accountData.businessName,
+        };
+        if (accountData.gstNumber !== undefined) {
+          businessMeta.gstNumber = accountData.gstNumber;
+        }
+        if (accountData.panNumber !== undefined) {
+          businessMeta.panNumber = accountData.panNumber;
+        }
+        if (accountData.businessType !== undefined) {
+          businessMeta.businessType = accountData.businessType;
+        }
+        if (accountData.website !== undefined) {
+          businessMeta.website = accountData.website;
+        }
+        if (accountData.monthlyVolume !== undefined) {
+          businessMeta.monthlyVolume = accountData.monthlyVolume;
+        }
+
         const [createdUser] = await tx
           .insert(userProfiles)
           .values({
@@ -316,11 +339,7 @@ class AuthRepository {
             passwordHash: userData.passwordHash,
             phoneNumber: userData.phoneNumber || undefined,
             isVerified: false,
-            businessMeta: {
-              businessName: accountData.businessName,
-              gstNumber: accountData.gstNumber,
-              monthlyVolume: accountData.monthlyVolume,
-            },
+            businessMeta,
           })
           .returning();
 

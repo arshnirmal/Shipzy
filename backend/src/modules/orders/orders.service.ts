@@ -65,7 +65,7 @@ class OrdersService {
         vehicleCategoryId: row.vehicleCategoryId,
         weightTierId: row.weightTierId ?? null,
         packageTypeId: row.packageTypeId ?? null,
-        paymentMethodId: row.paymentMethodId ?? null,
+        paymentMethodId: row.paymentMethodId,
       },
       locations: {
         pickup: row.pickup,

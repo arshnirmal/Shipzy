@@ -201,3 +201,4 @@ curl -X DELETE "$API_BASE_URL/users/me/addresses/21" \
 
 - The module focuses on the current authenticated user; there are no public user endpoints here.
 - Validation is defined in `users.schema.ts`.
+- Saved addresses map to `users.addresses`: optional `label` is up to 100 characters (`varchar(100)`); optional `building`, `floor`, `flatNumber`, and `landmark` follow the same column limits as in the Drizzle schema.

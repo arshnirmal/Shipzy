@@ -58,7 +58,43 @@ else
     echo "⚠️  Setup SQL not found at $SETUP_SQL or /src/database/setup.sql!"
 fi
 
-# 2. Functions (Always run / Replace)
+# 2. Drizzle migrations (tables, enums, etc.) — required before SQL functions
+#    that reference schema types (e.g. public.user_role). Matches db-deploy.ts order.
+echo "📦 Applying schema (Drizzle migrations)..."
+MIGRATIONS_DIR="$BACKEND_DIR/src/database/migrations"
+if [ ! -d "$MIGRATIONS_DIR" ] && [ -d "/src/database/migrations" ]; then
+    MIGRATIONS_DIR="/src/database/migrations"
+fi
+
+if [ -d "$MIGRATIONS_DIR" ]; then
+    echo "   Migrations directory: $MIGRATIONS_DIR"
+    psql -v ON_ERROR_STOP=1 <<-EOSQL
+	CREATE TABLE IF NOT EXISTS _deployment_log (
+	    id SERIAL PRIMARY KEY,
+	    filename VARCHAR(255) UNIQUE NOT NULL,
+	    hash VARCHAR(64),
+	    executed_at TIMESTAMPTZ DEFAULT NOW()
+	);
+EOSQL
+    psql -v ON_ERROR_STOP=1 -c "INSERT INTO _deployment_log (filename) VALUES ('setup.sql') ON CONFLICT (filename) DO NOTHING;"
+
+    for m in $(ls "$MIGRATIONS_DIR"/*.sql 2>/dev/null | sort); do
+        [ -f "$m" ] || continue
+        base=$(basename "$m")
+        applied=$(psql -tAc "SELECT COUNT(*)::int FROM _deployment_log WHERE filename = '$base'")
+        if [ "$applied" != "0" ]; then
+            echo "   ⏭️  Skipping (already applied): $base"
+            continue
+        fi
+        echo "   Applying: $base"
+        psql -v ON_ERROR_STOP=1 -f "$m"
+        psql -v ON_ERROR_STOP=1 -c "INSERT INTO _deployment_log (filename) VALUES ('$base');"
+    done
+else
+    echo "⚠️  Migrations directory not found at $MIGRATIONS_DIR or /src/database/migrations!"
+fi
+
+# 3. Functions (Always run / Replace)
 echo "⚙️  Installing Functions..."
 FUNC_DIR="$BACKEND_DIR/src/database/functions"
 # Also check absolute path for Docker
@@ -78,7 +114,7 @@ else
     echo "⚠️  Functions directory not found at $FUNC_DIR or /src/database/functions!"
 fi
 
-# 3. User Permissions
+# 4. User Permissions
 echo "🔒 Configure Permissions..."
 # Create user if not exists using configured password
 psql -v ON_ERROR_STOP=0 -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';" 2>/dev/null || echo "   User '$PGUSER' may already exist."
@@ -100,5 +136,5 @@ EOSQL
 
 echo ""
 echo "✅ Database Initialization Complete!"
-echo "📝 Note: Migrations will be deployed when backend starts or run manually:"
-echo "   npm run db:deploy"
+echo "📝 Note: Run db:deploy after init to refresh functions, apply any new migrations, and load master-data:"
+echo "   pnpm run db:deploy"

@@ -24,7 +24,7 @@ export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestZ>;
 // Save Address Request
 export const SaveAddressRequestZ = BaseAddressZ.extend({
   addressType: z.enum(["home", "work", "other"]).optional(),
-  label: z.string().max(50).optional(),
+  label: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 }).strict();
 export type SaveAddressRequest = z.infer<typeof SaveAddressRequestZ>;

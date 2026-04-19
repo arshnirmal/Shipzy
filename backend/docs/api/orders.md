@@ -95,6 +95,8 @@ Paginated list envelope (GET /orders):
 - The route plugin applies `authenticate` to every order endpoint, so `calculate-fare` is authenticated in the implementation.
 - Order rating is not handled here; use [Ratings API](ratings.md).
 - Validation is defined in `orders.schema.ts`.
+- Persisted orders always include `fulfillment.paymentMethodId` (matches `orders.requests.payment_method_id`, NOT NULL).
+- Proof-of-delivery: `recipientSignatureUrl` in the request body is stored as `signatureUrl` inside the `orders.requests.pod` JSONB column (see `backend/src/database/schema/types.ts` `PodJSONBZ`).
 
 ## Curl And Response Examples
 

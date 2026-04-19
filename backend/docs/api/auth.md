@@ -214,10 +214,15 @@ Request body:
   "business": {
     "businessName": "Acme Logistics",
     "gstNumber": "22AAAAA0000A1Z5",
+    "panNumber": "AAAAA9999A",
+    "businessType": "Pvt Ltd",
+    "website": "https://acme-logistics.example",
     "monthlyVolume": "500-2000"
   }
 }
 ```
+
+Optional `business` fields (`gstNumber`, `panNumber`, `businessType`, `website`, `monthlyVolume`) are persisted in `users.profiles.business_meta` JSONB when provided.
 
 Curl:
 

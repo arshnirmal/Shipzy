@@ -378,7 +378,14 @@ class AuthService {
       const {
         identity: { fullName, phoneNumber },
         credentials: { email, password },
-        business: { businessName, gstNumber, monthlyVolume },
+        business: {
+          businessName,
+          gstNumber,
+          panNumber,
+          businessType,
+          website,
+          monthlyVolume,
+        },
       } = userData;
 
       const existingUser = await authRepository.findByEmail(email);
@@ -390,7 +397,14 @@ class AuthService {
 
       const user = await authRepository.createBusinessUser(
         { fullName, email, passwordHash, phoneNumber },
-        { businessName, gstNumber, monthlyVolume },
+        {
+          businessName,
+          gstNumber,
+          panNumber,
+          businessType,
+          website,
+          monthlyVolume,
+        },
       );
 
       logger.info({
