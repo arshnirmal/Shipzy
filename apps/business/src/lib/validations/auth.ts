@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export const MONTHLY_VOLUME_VALUES = [
+  "0-100",
+  "100-500",
+  "500-2000",
+  "2000+",
+] as const;
+
+export type MonthlyVolume = (typeof MONTHLY_VOLUME_VALUES)[number];
+
+const monthlyVolumeEnum = z.enum(MONTHLY_VOLUME_VALUES);
+
 export const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z
@@ -37,10 +48,7 @@ export const businessRegisterSchema = z.object({
     .max(15, { message: "GST Number cannot exceed 15 characters." })
     .optional()
     .or(z.literal("")),
-  monthlyVolume: z
-    .enum(["0-100", "100-500", "500-2000", "2000+"])
-    .optional()
-    .or(z.literal("")),
+  monthlyVolume: monthlyVolumeEnum.optional(),
 });
 
 export type BusinessRegisterValues = z.infer<typeof businessRegisterSchema>;

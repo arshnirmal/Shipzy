@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -18,10 +19,43 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  MONTHLY_VOLUME_VALUES,
   businessRegisterSchema,
   type BusinessRegisterValues,
+  type MonthlyVolume,
 } from "@/lib/validations/auth";
+import type { RegisterPayload } from "@/types/auth";
 import { useAuth } from "@/providers/auth-provider";
+
+const MONTHLY_VOLUME_UNSET = "__unset__" as const;
+
+const MONTHLY_VOLUME_LABELS: Record<MonthlyVolume, string> = {
+  "0-100": "0 – 100 shipments",
+  "100-500": "100 – 500 shipments",
+  "500-2000": "500 – 2,000 shipments",
+  "2000+": "2,000+ shipments",
+};
+
+function toRegisterPayload(values: BusinessRegisterValues): RegisterPayload {
+  return {
+    fullName: values.fullName,
+    email: values.email,
+    password: values.password,
+    phoneNumber: values.phoneNumber?.trim()
+      ? values.phoneNumber.trim()
+      : undefined,
+    businessName: values.businessName,
+    gstNumber: values.gstNumber?.trim() ? values.gstNumber.trim() : undefined,
+    monthlyVolume: values.monthlyVolume,
+  };
+}
 
 export function RegisterForm({
   onSuccess,
@@ -31,7 +65,7 @@ export function RegisterForm({
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<BusinessRegisterValues>({
-    resolver: zodResolver(businessRegisterSchema as any),
+    resolver: standardSchemaResolver(businessRegisterSchema),
     defaultValues: {
       fullName: "",
       email: "",
@@ -39,14 +73,14 @@ export function RegisterForm({
       phoneNumber: "",
       businessName: "",
       gstNumber: "",
-      monthlyVolume: "",
+      monthlyVolume: undefined,
     },
   });
 
   async function onSubmit(data: BusinessRegisterValues) {
     setIsLoading(true);
     try {
-      await signUp(data);
+      await signUp(toRegisterPayload(data));
       toast.success("Account created successfully!");
       if (onSuccess) onSuccess();
       router.push("/dashboard");
@@ -183,22 +217,38 @@ export function RegisterForm({
             name="monthlyVolume"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Monthly Volume (Optional)</FormLabel>
-                <FormControl>
-                  <select
-                    className="flex h-11 w-full min-w-0 rounded-lg bg-surface-container-lowest border border-outline-variant/20 focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-4 px-3 py-1 text-base transition-colors outline-none disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm"
-                    disabled={isLoading}
-                    {...field}
-                  >
-                    <option value="" disabled>
-                      Select volume
-                    </option>
-                    <option value="0-100">0 - 100</option>
-                    <option value="100-500">100 - 500</option>
-                    <option value="500-2000">500 - 2000</option>
-                    <option value="2000+">2000+</option>
-                  </select>
-                </FormControl>
+                <FormLabel>Monthly shipping volume</FormLabel>
+                <Select
+                  value={field.value ?? MONTHLY_VOLUME_UNSET}
+                  onValueChange={(v) =>
+                    field.onChange(
+                      v === MONTHLY_VOLUME_UNSET ? undefined : (v as MonthlyVolume),
+                    )
+                  }
+                  disabled={isLoading}
+                >
+                  <FormControl>
+                    <SelectTrigger
+                      className="h-11 w-full min-w-0 rounded-lg border-outline-variant/20 bg-surface-container-lowest px-3 text-base shadow-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/30 md:text-sm"
+                      size="default"
+                    >
+                      <SelectValue placeholder="Prefer not to say" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={MONTHLY_VOLUME_UNSET}>
+                      Prefer not to say
+                    </SelectItem>
+                    {MONTHLY_VOLUME_VALUES.map((bucket) => (
+                      <SelectItem key={bucket} value={bucket}>
+                        {MONTHLY_VOLUME_LABELS[bucket]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Optional. Helps us size your account and support.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

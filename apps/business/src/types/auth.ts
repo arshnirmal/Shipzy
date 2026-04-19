@@ -27,14 +27,16 @@ export type LoginPayload = {
   password: string;
 };
 
+import type { MonthlyVolume } from "@/lib/validations/auth";
+
 export type RegisterPayload = {
   fullName: string;
   email: string;
   password: string;
-  phone?: string;
+  phoneNumber?: string;
   businessName: string;
   gstNumber?: string;
-  monthlyVolume?: "0-100" | "100-500" | "500-2000" | "2000+";
+  monthlyVolume?: MonthlyVolume;
 };
 
 export type AuthResponseData = {

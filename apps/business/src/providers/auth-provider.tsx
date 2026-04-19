@@ -73,7 +73,7 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
       body: JSON.stringify({
         identity: {
           fullName: payload.fullName,
-          phoneNumber: payload.phone,
+          phoneNumber: payload.phoneNumber,
         },
         credentials: {
           email: payload.email,

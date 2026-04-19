@@ -50,6 +50,7 @@ export const config = {
      * - favicon.ico (favicon file)
      * - images, fonts, etc.
      */
-    String.raw`/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)`,
+    // String.raw breaks Turbopack static analysis for proxy `config.matcher` (Next.js 16).
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
