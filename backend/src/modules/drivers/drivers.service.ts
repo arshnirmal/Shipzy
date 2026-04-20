@@ -35,6 +35,64 @@ type LocationData = UpdateLocationRequest["location"]["current"];
 type DriverProfile = DriverProfileResponse["driver"];
 
 class DriversService {
+  /**
+   * Build nested `vehicle` for profile responses from `courier_status` row fields.
+   */
+  private mapDriverVehicle(
+    driver: import("../../types/drivers.js").DbCourier,
+  ): DriverProfileMutationResponse["driver"]["vehicle"] {
+    const category =
+      driver.vehicleCategoryId != null ||
+      (driver.vehicleCategory != null && driver.vehicleCategory !== "") ||
+      driver.vehicleMaxWeight != null
+        ? {
+            ...(driver.vehicleCategoryId != null
+              ? { id: driver.vehicleCategoryId }
+              : {}),
+            ...(driver.vehicleCategory
+              ? { name: driver.vehicleCategory }
+              : {}),
+            ...(driver.vehicleMaxWeight != null
+              ? { maxWeightKg: Number(driver.vehicleMaxWeight) }
+              : {}),
+          }
+        : undefined;
+
+    const specification =
+      (driver.vehicleNumber != null && driver.vehicleNumber !== "") ||
+      (driver.vehicleModel != null && driver.vehicleModel !== "") ||
+      (driver.vehicleYear != null && driver.vehicleYear > 0)
+        ? {
+            ...(driver.vehicleNumber
+              ? { vehicleNumber: driver.vehicleNumber }
+              : {}),
+            ...(driver.vehicleModel ? { model: driver.vehicleModel } : {}),
+            ...(driver.vehicleYear != null && driver.vehicleYear > 0
+              ? { year: driver.vehicleYear }
+              : {}),
+          }
+        : undefined;
+
+    const hasVehicleData =
+      driver.vehicleId != null ||
+      category !== undefined ||
+      specification !== undefined ||
+      driver.vehicleIsActive != null;
+
+    if (!hasVehicleData) {
+      return null;
+    }
+
+    return {
+      ...(driver.vehicleId != null ? { vehicleId: driver.vehicleId } : {}),
+      ...(driver.vehicleIsActive != null
+        ? { isActive: Boolean(driver.vehicleIsActive) }
+        : {}),
+      ...(category !== undefined ? { category } : {}),
+      ...(specification !== undefined ? { specification } : {}),
+    };
+  }
+
   private mapDriverCore(
     driver: import("../../types/drivers.js").DbCourier,
   ): DriverProfileMutationResponse["driver"] {
@@ -63,17 +121,9 @@ class DriversService {
           : null,
         lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
       },
-      vehicle: driver.vehicleId
-        ? {
-            vehicleId: driver.vehicleId,
-            categoryId: driver.vehicleCategoryId ?? undefined,
-            category: driver.vehicleCategory || "",
-            isActive: Boolean(driver.vehicleIsActive),
-            vehicleNumber: driver.vehicleNumber || "",
-            model: driver.vehicleModel || "",
-            year: driver.vehicleYear || 0,
-          }
-        : null,
+      vehicle: this.mapDriverVehicle(driver),
+      onboarding: driver.onboarding ?? null,
+      kyc: driver.kyc ?? null,
       createdAt: toIsoDateTime(driver.createdAt),
       updatedAt: toIsoDateTime(driver.updatedAt),
     };

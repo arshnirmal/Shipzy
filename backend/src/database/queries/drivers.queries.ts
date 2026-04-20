@@ -39,6 +39,8 @@ export default {
             vc.name AS "vehicleCategory",
             vc.max_weight_kg AS "vehicleMaxWeight",
             (cs.vehicle IS NOT NULL) AS "vehicleIsActive",
+            u.onboarding AS "onboarding",
+            cs.kyc AS "kyc",
                         u.created_at AS "createdAt",
                         u.updated_at AS "updatedAt"
       FROM users.profiles u

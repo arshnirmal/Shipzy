@@ -1,10 +1,12 @@
 import { z } from "zod";
 import {
+  AssignmentTimelineJSONBZ,
+  KycJSONBZ,
+  OnboardingJSONBZ,
   OrderLocationJSONBZ,
+  OrderPackageJSONBZ,
   OrderPricingJSONBZ,
   OrderSnapshotJSONBZ,
-  OrderPackageJSONBZ,
-  AssignmentTimelineJSONBZ,
 } from "../database/schema/types.js";
 
 // ============================================================================
@@ -52,6 +54,20 @@ export const PackageHandlingFeeDbZ = z.object({
 });
 export type PackageHandlingFeeDb = z.infer<typeof PackageHandlingFeeDbZ>;
 
+/** JSONB from Postgres: object, stringified JSON, or null. */
+const pgJsonb = <S extends z.ZodTypeAny>(schema: S) =>
+  z.preprocess((raw: unknown) => {
+    if (raw == null || raw === "") return null;
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw) as unknown;
+      } catch {
+        return null;
+      }
+    }
+    return raw;
+  }, schema.nullable());
+
 export const CourierDbZ = z.object({
   courierId: z.number().int().positive(),
   userId: z.number().int().positive(),
@@ -81,6 +97,8 @@ export const CourierDbZ = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   roleName: z.string().optional(),
+  onboarding: pgJsonb(OnboardingJSONBZ).optional(),
+  kyc: pgJsonb(KycJSONBZ).optional(),
 });
 export type CourierDb = z.infer<typeof CourierDbZ>;
 

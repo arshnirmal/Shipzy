@@ -29,7 +29,16 @@ describe("Drivers Module", () => {
       headers: authHeaders(courier.accessToken),
     });
     expect(courierResponse.statusCode).toBe(200);
-    expect(courierResponse.json().data.driver.userId).toBe(courier.user.userId);
+    const courierBody = courierResponse.json().data.driver;
+    expect(courierBody.userId).toBe(courier.user.userId);
+    expect(courierBody).toHaveProperty("onboarding");
+    expect(courierBody).toHaveProperty("kyc");
+    expect(
+      courierBody.onboarding === null || courierBody.onboarding === undefined,
+    ).toBe(true);
+    expect(courierBody.kyc === null || courierBody.kyc === undefined).toBe(
+      true,
+    );
 
     const clientResponse = await inject(app, {
       method: "GET",
@@ -100,8 +109,8 @@ describe("Drivers Module", () => {
 
     expect(patchResponse.statusCode).toBe(200);
     const driver = patchResponse.json().data.driver;
-    expect(driver.vehicle?.vehicleNumber).toBe("KA01AB1234");
-    expect(driver.vehicle?.categoryId).toBe(Number(vehicleCat.categoryId));
+    expect(driver.vehicle?.specification?.vehicleNumber).toBe("KA01AB1234");
+    expect(driver.vehicle?.category?.id).toBe(Number(vehicleCat.categoryId));
   });
 
   it("POST /api/v1/drivers/me/kyc stores document URLs and onboarding state", async () => {
@@ -131,6 +140,22 @@ describe("Drivers Module", () => {
       "documents",
     ]);
     expect(typeof kycBody.data.onboarding.submittedAt).toBe("string");
+
+    const profileAfterKyc = await inject(app, {
+      method: "GET",
+      url: "/api/v1/drivers/me",
+      headers: authHeaders(courier.accessToken),
+    });
+    expect(profileAfterKyc.statusCode).toBe(200);
+    const driver = profileAfterKyc.json().data.driver;
+    expect(driver.onboarding?.status).toBe("pending_review");
+    expect(driver.onboarding?.stepsCompleted).toEqual([
+      "vehicle_details",
+      "documents",
+    ]);
+    expect(driver.kyc?.license?.url).toBe(lic);
+    expect(driver.kyc?.vehicleReg?.url).toBe(reg);
+    expect(driver.kyc?.insurance?.url).toBe(ins);
 
     const client = await createClient(app);
     const forbidden = await inject(app, {

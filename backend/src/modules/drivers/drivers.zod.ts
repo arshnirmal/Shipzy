@@ -4,9 +4,10 @@ import {
   BaseUserZ,
   CoordinatesZ,
   EarningsZ,
-  VehicleZ,
 } from "../../schemas/common.zod.js";
 import {
+  KycJSONBZ,
+  OnboardingJSONBZ,
   OrderLocationJSONBZ,
   OrderPackageJSONBZ,
   OrderPricingJSONBZ,
@@ -151,10 +152,42 @@ export const DriverPerformanceRatingZ = z
   })
   .strict();
 
+/** Vehicle category slice (from `vehicle_categories` + `courier_status.vehicle_category_id`). */
+export const DriverProfileVehicleCategoryZ = z
+  .object({
+    id: z.number().int().positive().optional(),
+    name: z.string().optional(),
+    maxWeightKg: z.number().nonnegative().optional(),
+  })
+  .strict();
+
+/** Registration / model / year (from `courier_status.vehicle` JSONB). */
+export const DriverProfileVehicleSpecificationZ = z
+  .object({
+    vehicleNumber: z.string().optional(),
+    model: z.string().optional(),
+    year: z.number().int().min(1900).max(2100).optional(),
+  })
+  .strict();
+
+/** Nested vehicle payload on driver profile GET/PATCH responses. */
+export const DriverProfileVehicleZ = z
+  .object({
+    vehicleId: z.number().int().positive().optional(),
+    isActive: z.boolean().optional(),
+    category: DriverProfileVehicleCategoryZ.optional(),
+    specification: DriverProfileVehicleSpecificationZ.optional(),
+  })
+  .strict();
+
 export const BaseDriverCoreZ = BaseUserZ.extend({
   role: z.literal("courier"),
   status: DriverStatusZ,
-  vehicle: VehicleZ.nullable(),
+  vehicle: DriverProfileVehicleZ.nullable(),
+  /** From `users.profiles.onboarding` — verification workflow state. */
+  onboarding: OnboardingJSONBZ.nullable().optional(),
+  /** From `logistics.courier_status.kyc` — submitted document metadata (URLs). */
+  kyc: KycJSONBZ.nullable().optional(),
 }).strict();
 
 export const BaseDriverZ = BaseDriverCoreZ.extend({

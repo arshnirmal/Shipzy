@@ -10,6 +10,8 @@ class ProfileOnboardingState with _$ProfileOnboardingState {
     required String status,
     required List<String> stepsCompleted,
     String? submittedAt,
+    String? approvedAt,
+    String? rejectedReason,
   }) = _ProfileOnboardingState;
 
   factory ProfileOnboardingState.fromJson(Map<String, dynamic> json) =>
