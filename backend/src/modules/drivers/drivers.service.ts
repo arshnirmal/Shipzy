@@ -20,6 +20,8 @@ import type {
   DriverLocationResponse,
   DriverProfileMutationResponse,
   DriverProfileResponse,
+  SubmitKycRequest,
+  SubmitKycResponse,
   TripHistoryQuery,
   TripHistoryResponse,
   UpdateDriverProfileRequest,
@@ -157,6 +159,23 @@ class DriversService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Submit KYC document URLs for admin review.
+   */
+  async submitKyc(
+    userId: number,
+    docs: SubmitKycRequest,
+  ): Promise<SubmitKycResponse> {
+    const result = await driversRepository.submitKyc(userId, docs);
+    return {
+      onboarding: {
+        status: "pending_review",
+        stepsCompleted: result.stepsCompleted,
+        submittedAt: result.submittedAt,
+      },
+    };
   }
 
   /**

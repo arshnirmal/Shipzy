@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shipzy — Driver Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:#0f0e1a;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    overflow:hidden;
+  }
+  /* subtle radial glow in bg */
+  body::before{
+    content:'';
+    position:fixed;inset:0;
+    background:radial-gradient(ellipse 70% 60% at 30% 20%, rgba(70,72,212,0.18) 0%, transparent 70%),
+               radial-gradient(ellipse 50% 50% at 80% 80%, rgba(96,99,238,0.12) 0%, transparent 60%);
+    pointer-events:none;
+  }
+  @keyframes fadeSlideUp{
+    from{opacity:0;transform:translateY(20px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @keyframes fadeSlideDown{
+    from{opacity:0;transform:translateY(-20px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @keyframes scaleIn{
+    from{opacity:0;transform:scale(0.7);}
+    to{opacity:1;transform:scale(1);}
+  }
+  @keyframes checkDraw{
+    from{stroke-dashoffset:60;}
+    to{stroke-dashoffset:0;}
+  }
+  @keyframes ripple{
+    0%{transform:scale(0);opacity:0.5;}
+    100%{transform:scale(4);opacity:0;}
+  }
+  @keyframes spin{
+    to{transform:rotate(360deg);}
+  }
+  @keyframes pulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.05);}
+  }
+  @keyframes floatUp{
+    0%{opacity:0;transform:translateY(16px);}
+    20%{opacity:1;transform:translateY(0);}
+    80%{opacity:1;transform:translateY(0);}
+    100%{opacity:0;transform:translateY(-8px);}
+  }
+</style>
+</head>
+<body>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel">
+const DS = {
+  primary: '#4648d4',
+  primaryGrad: 'linear-gradient(135deg, #4648d4 0%, #6063ee 100%)',
+  primaryLight: '#e8e8ff',
+  surface: '#fcf8ff',
+  surfaceLow: '#f5f2fe',
+  surfaceHigh: '#e4e1ed',
+  surfaceHighest: '#d9d6e8',
+  onSurface: '#1b1b23',
+  onSurfaceVar: '#605d72',
+  tertiary: '#006c49',
+  tertiaryContainer: '#89f8c3',
+  error: '#ba1a1a',
+  errorContainer: '#ffdad6',
+  outline: 'rgba(96,93,114,0.15)',
+  white: '#fcf8ff',
+};
+
+// ── Icons ──────────────────────────────────────────────────────
+const IconCamera = ({size=24,color='currentColor'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" fill={color}/>
+    <path d="M20 4h-2.17l-1.24-1.35A2 2 0 0015.12 2H8.88a2 2 0 00-1.47.65L6.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z" fill={color} fillOpacity=".85"/>
+    <path d="M12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9z" fill={DS.surface} fillOpacity=".3"/>
+  </svg>
+);
+const IconChevron = ({dir='right',size=20,color='currentColor'}) => {
+  const r = dir==='right'?0:dir==='left'?180:dir==='down'?90:-90;
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" style={{transform:`rotate(${r}deg)`}}>
+      <path d="M7.5 5l5 5-5 5" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+};
+const IconCheck = ({size=18,color='#fff'}) => (
+  <svg width={size} height={size} viewBox="0 0 18 18" fill="none">
+    <path d="M3.5 9l4 4 7-7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      strokeDasharray="60" strokeDashoffset="0"
+      style={{animation:'checkDraw 0.4s ease forwards'}}/>
+  </svg>
+);
+const IconDoc = ({size=22,color='currentColor'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" fill={color} fillOpacity=".15"/>
+    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconBike = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+    <circle cx="5" cy="17" r="3" stroke={DS.primary} strokeWidth="1.75"/>
+    <circle cx="19" cy="17" r="3" stroke={DS.primary} strokeWidth="1.75"/>
+    <path d="M5 17l4-8 3 5h5l-3-8" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 9h3" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round"/>
+  </svg>
+);
+const IconCar = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+    <path d="M5 11l2-5h10l2 5" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round"/>
+    <rect x="2" y="11" width="20" height="7" rx="2" stroke={DS.primary} strokeWidth="1.75"/>
+    <circle cx="7" cy="18" r="2" fill={DS.surfaceLow} stroke={DS.primary} strokeWidth="1.5"/>
+    <circle cx="17" cy="18" r="2" fill={DS.surfaceLow} stroke={DS.primary} strokeWidth="1.5"/>
+    <path d="M2 14h20" stroke={DS.primary} strokeWidth="1.25"/>
+  </svg>
+);
+const IconVan = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+    <path d="M2 8h14l4 5v3H2V8z" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M2 8V6a1 1 0 011-1h13" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round"/>
+    <circle cx="6" cy="16" r="2" fill={DS.surfaceLow} stroke={DS.primary} strokeWidth="1.5"/>
+    <circle cx="16" cy="16" r="2" fill={DS.surfaceLow} stroke={DS.primary} strokeWidth="1.5"/>
+  </svg>
+);
+const IconUpload = ({size=20,color='currentColor'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M12 16V8M9 11l3-3 3 3" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20 16.5a4 4 0 10-7.79-1.5H11a3 3 0 100 6h8a3 3 0 001-5.83" stroke={color} strokeWidth="1.75" strokeLinecap="round"/>
+  </svg>
+);
+const IconArrowLeft = ({size=22,color='currentColor'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M19 12H5M10 7l-5 5 5 5" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const IconClock = ({size=44,color=DS.primary}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.5"/>
+    <path d="M12 7v5l3 3" stroke={color} strokeWidth="1.75" strokeLinecap="round"/>
+  </svg>
+);
+
+// ── Segmented Progress Bar ─────────────────────────────────────
+function ProgressBar({step, total=2}) {
+  return (
+    <div style={{display:'flex',gap:6,padding:'0 24px 20px'}}>
+      {Array.from({length:total},(_,i)=>(
+        <div key={i} style={{
+          flex:1, height:4, borderRadius:2,
+          background: i<step ? DS.primary : DS.surfaceHigh,
+          transition:'background 0.4s ease',
+          overflow:'hidden',
+        }}>
+          {i===step-1 && (
+            <div style={{
+              height:'100%',width:'100%',
+              background:DS.primaryGrad,
+              borderRadius:2,
+              animation:'fadeSlideUp 0.3s ease',
+            }}/>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Input Field ────────────────────────────────────────────────
+function Field({label, value, onChange, placeholder, type='text', error, capitalize}) {
+  const [focused, setFocused] = React.useState(false);
+  return (
+    <div style={{marginBottom:16}}>
+      <div style={{
+        fontSize:11, fontWeight:700, letterSpacing:'0.07em',
+        color: error ? DS.error : focused ? DS.primary : DS.onSurfaceVar,
+        marginBottom:6, textTransform:'uppercase',
+        transition:'color 0.2s',
+      }}>{label}</div>
+      <div style={{
+        background: focused ? DS.surfaceHighest : DS.surfaceLow,
+        borderRadius:10,
+        padding:'13px 14px',
+        position:'relative',
+        transition:'background 0.2s',
+        boxShadow: focused ? `0 0 0 2px ${DS.primary}` : error ? `0 0 0 1.5px ${DS.error}` : 'none',
+      }}>
+        <input
+          type={type}
+          value={value}
+          onChange={e=>onChange(e.target.value)}
+          onFocus={()=>setFocused(true)}
+          onBlur={()=>setFocused(false)}
+          placeholder={placeholder}
+          style={{
+            width:'100%', border:'none', outline:'none', background:'transparent',
+            fontSize:15, fontWeight:500, color:DS.onSurface,
+            fontFamily:'Plus Jakarta Sans,sans-serif',
+            textTransform: capitalize?'capitalize':'none',
+            caretColor:DS.primary,
+          }}
+        />
+      </div>
+      {error && (
+        <div style={{fontSize:12,color:DS.error,marginTop:4,fontWeight:500}}>{error}</div>
+      )}
+    </div>
+  );
+}
+
+// ── Vehicle Type Selector ──────────────────────────────────────
+function VehicleSelector({value, onChange}) {
+  const types = [
+    {id:'bike', label:'Bike', Icon:IconBike},
+    {id:'car', label:'Car', Icon:IconCar},
+    {id:'van', label:'Van', Icon:IconVan},
+  ];
+  return (
+    <div style={{marginBottom:16}}>
+      <div style={{
+        fontSize:11,fontWeight:700,letterSpacing:'0.07em',
+        color:DS.onSurfaceVar,marginBottom:8,textTransform:'uppercase',
+      }}>Vehicle Type</div>
+      <div style={{display:'flex',gap:8}}>
+        {types.map(({id,label,Icon})=>{
+          const sel = value===id;
+          return (
+            <button key={id} onClick={()=>onChange(id)} style={{
+              flex:1, display:'flex', flexDirection:'column',
+              alignItems:'center', gap:6, padding:'14px 8px',
+              background: sel ? DS.primaryLight : DS.surfaceLow,
+              border:'none', borderRadius:12,
+              cursor:'pointer',
+              boxShadow: sel ? `0 0 0 2px ${DS.primary}` : 'none',
+              transition:'all 0.2s',
+            }}>
+              <Icon/>
+              <span style={{
+                fontSize:12, fontWeight:700,
+                color: sel ? DS.primary : DS.onSurfaceVar,
+                letterSpacing:'0.03em',
+              }}>{label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Profile Photo Picker ──────────────────────────────────────
+function PhotoPicker({hasPhoto, onPick}) {
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:28}}>
+      <div style={{position:'relative',cursor:'pointer'}} onClick={onPick}>
+        <div style={{
+          width:90, height:90, borderRadius:45,
+          background: hasPhoto ? DS.primaryLight : DS.surfaceHigh,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          overflow:'hidden',
+          boxShadow: hasPhoto ? `0 0 0 3px ${DS.primary}` : `0 0 0 2px ${DS.surfaceHigh}`,
+          transition:'all 0.3s',
+        }}>
+          {hasPhoto ? (
+            <div style={{
+              width:'100%',height:'100%',
+              background:`linear-gradient(135deg,${DS.primary}40,${DS.primaryLight})`,
+              display:'flex',alignItems:'center',justifyContent:'center',
+            }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="8" r="4" fill={DS.primary}/>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" fill={DS.primary} fillOpacity=".7"/>
+              </svg>
+            </div>
+          ) : (
+            <IconCamera size={32} color={DS.onSurfaceVar}/>
+          )}
+        </div>
+        <div style={{
+          position:'absolute',bottom:0,right:0,
+          width:28,height:28,borderRadius:14,
+          background:DS.primaryGrad,
+          display:'flex',alignItems:'center',justifyContent:'center',
+          boxShadow:`0 2px 8px rgba(70,72,212,0.4)`,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M12 5v14M5 12h14" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div style={{
+        marginTop:10, fontSize:12, fontWeight:600,
+        color:DS.primary, letterSpacing:'0.04em',
+      }}>
+        {hasPhoto ? 'Photo Added ✓' : 'Add Profile Photo'}
+      </div>
+      <div style={{fontSize:11,color:DS.onSurfaceVar,marginTop:2}}>
+        Tap to upload from gallery
+      </div>
+    </div>
+  );
+}
+
+// ── Document Card ──────────────────────────────────────────────
+function DocCard({name, uploaded, onTap, idx}) {
+  const [pressed, setPressed] = React.useState(false);
+  const icons = [
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" key="lic">
+      <rect x="3" y="4" width="18" height="16" rx="2" fill={DS.primary} fillOpacity=".12"/>
+      <path d="M7 8h10M7 12h6M7 16h4" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round"/>
+      <circle cx="16.5" cy="14.5" r="2.5" fill={DS.primary} fillOpacity=".25" stroke={DS.primary} strokeWidth="1.25"/>
+    </svg>,
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" key="reg">
+      <rect x="2" y="7" width="20" height="14" rx="2" fill={DS.primary} fillOpacity=".12"/>
+      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke={DS.primary} strokeWidth="1.75"/>
+      <circle cx="12" cy="14" r="3" stroke={DS.primary} strokeWidth="1.5"/>
+      <path d="M6 11h2M16 11h2M6 17h2M16 17h2" stroke={DS.primary} strokeWidth="1.25" strokeLinecap="round"/>
+    </svg>,
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" key="ins">
+      <path d="M12 3l8 3v5c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-3z" fill={DS.primary} fillOpacity=".12" stroke={DS.primary} strokeWidth="1.75" strokeLinejoin="round"/>
+      <path d="M9 12l2 2 4-4" stroke={DS.primary} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>,
+  ];
+  return (
+    <div
+      onClick={onTap}
+      onMouseDown={()=>setPressed(true)}
+      onMouseUp={()=>setPressed(false)}
+      onMouseLeave={()=>setPressed(false)}
+      onTouchStart={()=>setPressed(true)}
+      onTouchEnd={()=>setPressed(false)}
+      style={{
+        display:'flex', alignItems:'center', gap:14,
+        background: uploaded ? '#f0faf5' : DS.surfaceLow,
+        borderRadius:12, padding:'14px 16px',
+        marginBottom:10, cursor:'pointer',
+        transform: pressed?'scale(0.98)':'scale(1)',
+        transition:'all 0.15s ease',
+        boxShadow: uploaded ? `0 0 0 1.5px ${DS.tertiary}30` : 'none',
+        animation:`fadeSlideUp 0.35s ease ${idx*0.07}s both`,
+      }}
+    >
+      <div style={{
+        width:44,height:44,borderRadius:10,
+        background: uploaded ? '#e8f8f0' : DS.surface,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        flexShrink:0,
+      }}>
+        {icons[idx]}
+      </div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:14,fontWeight:700,color:DS.onSurface,marginBottom:2}}>{name}</div>
+        <div style={{
+          fontSize:12, fontWeight:500,
+          color: uploaded ? DS.tertiary : DS.onSurfaceVar,
+        }}>
+          {uploaded ? 'Document uploaded' : 'Tap to upload from gallery'}
+        </div>
+      </div>
+      <div style={{
+        width:28,height:28,borderRadius:14,
+        background: uploaded ? DS.tertiary : DS.surfaceHigh,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        transition:'all 0.3s ease',
+        flexShrink:0,
+      }}>
+        {uploaded ? (
+          <IconCheck size={14} color="#fff"/>
+        ) : (
+          <IconUpload size={14} color={DS.onSurfaceVar}/>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Primary Button ─────────────────────────────────────────────
+function PrimaryBtn({label, onClick, loading, disabled}) {
+  const [pressed, setPressed] = React.useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled||loading}
+      onMouseDown={()=>setPressed(true)}
+      onMouseUp={()=>setPressed(false)}
+      onMouseLeave={()=>setPressed(false)}
+      onTouchStart={()=>setPressed(true)}
+      onTouchEnd={()=>setPressed(false)}
+      style={{
+        width:'100%', height:56, borderRadius:12,
+        background: (disabled||loading) ? DS.surfaceHigh : DS.primaryGrad,
+        border:'none', cursor: (disabled||loading)?'not-allowed':'pointer',
+        display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+        fontSize:15, fontWeight:700, color: (disabled||loading)?DS.onSurfaceVar:'#fff',
+        letterSpacing:'0.02em',
+        transform: pressed&&!disabled?'scale(0.98)':'scale(1)',
+        transition:'all 0.15s ease',
+        boxShadow: (disabled||loading)?'none':`0 8px 24px rgba(70,72,212,0.35)`,
+        fontFamily:'Plus Jakarta Sans,sans-serif',
+      }}
+    >
+      {loading ? (
+        <div style={{
+          width:20,height:20,borderRadius:10,
+          border:`2.5px solid rgba(255,255,255,0.3)`,
+          borderTopColor:'#fff',
+          animation:'spin 0.7s linear infinite',
+        }}/>
+      ) : label}
+    </button>
+  );
+}
+
+// ── Snackbar ──────────────────────────────────────────────────
+function Snackbar({message}) {
+  return (
+    <div style={{
+      position:'absolute', bottom:80, left:16, right:16,
+      background:DS.onSurface, color:DS.white,
+      borderRadius:10, padding:'12px 16px',
+      fontSize:13, fontWeight:500,
+      animation:'floatUp 2.5s ease forwards',
+      zIndex:100,
+    }}>{message}</div>
+  );
+}
+
+// ── Step 1: Vehicle Details ────────────────────────────────────
+function StepVehicle({onNext, data, setData}) {
+  const [errors, setErrors] = React.useState({});
+  const [loading, setLoading] = React.useState(false);
+
+  const validate = () => {
+    const e = {};
+    if(!data.make.trim()) e.make='Vehicle make is required';
+    if(!data.model.trim()) e.model='Vehicle model is required';
+    if(!data.year.trim()||isNaN(data.year)||+data.year<1990||+data.year>2026) e.year='Enter a valid year (1990–2026)';
+    if(!data.plate.trim()) e.plate='Plate number is required';
+    if(!data.vehicleType) e.vehicleType='Select a vehicle type';
+    return e;
+  };
+
+  const handleNext = () => {
+    const e = validate();
+    if(Object.keys(e).length) {setErrors(e); return;}
+    setLoading(true);
+    setTimeout(()=>{setLoading(false); onNext();}, 700);
+  };
+
+  const set = (k,v)=>{setData(d=>({...d,[k]:v})); setErrors(e=>({...e,[k]:undefined}));};
+
+  return (
+    <div style={{flex:1,overflow:'auto',paddingBottom:24}}>
+      <div style={{padding:'0 24px'}}>
+        <PhotoPicker hasPhoto={data.photo} onPick={()=>set('photo',true)}/>
+        <VehicleSelector value={data.vehicleType} onChange={v=>set('vehicleType',v)}/>
+        {errors.vehicleType&&<div style={{fontSize:12,color:DS.error,marginTop:-8,marginBottom:12,fontWeight:500}}>{errors.vehicleType}</div>}
+        <Field label="Vehicle Make" placeholder="e.g. Honda, Maruti" value={data.make} onChange={v=>set('make',v)} error={errors.make} capitalize/>
+        <Field label="Vehicle Model" placeholder="e.g. Activa, Swift" value={data.model} onChange={v=>set('model',v)} error={errors.model} capitalize/>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          <div style={{gridColumn:'1'}}>
+            <Field label="Year" placeholder="e.g. 2021" value={data.year} onChange={v=>set('year',v)} error={errors.year} type="number"/>
+          </div>
+          <div style={{gridColumn:'2'}}>
+            <Field label="Plate Number" placeholder="MH12AB1234" value={data.plate} onChange={v=>set('plate',v.toUpperCase())} error={errors.plate}/>
+          </div>
+        </div>
+        <div style={{height:8}}/>
+        <PrimaryBtn label="Continue →" onClick={handleNext} loading={loading}/>
+      </div>
+    </div>
+  );
+}
+
+// ── Step 2: Documents ──────────────────────────────────────────
+function StepDocuments({onBack, onSubmit, docs, setDocs}) {
+  const [snack, setSnack] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const docList = ['Driving License','Vehicle Registration','Insurance'];
+  const allUploaded = docs.every(Boolean);
+
+  const handleTap = (idx) => {
+    setDocs(d=>{const n=[...d]; n[idx]=true; return n;});
+    setSnack('Document selected (Placeholder)');
+    setTimeout(()=>setSnack(null), 2500);
+  };
+
+  const handleSubmit = () => {
+    if(!allUploaded){
+      setSnack('Please upload all documents to continue');
+      setTimeout(()=>setSnack(null), 2500);
+      return;
+    }
+    setLoading(true);
+    setTimeout(()=>{setLoading(false); onSubmit();}, 1200);
+  };
+
+  return (
+    <div style={{flex:1,overflow:'auto',paddingBottom:24,position:'relative'}}>
+      <div style={{padding:'0 24px'}}>
+        <div style={{
+          background:DS.surfaceLow, borderRadius:12,
+          padding:'12px 14px', marginBottom:20,
+          display:'flex', gap:10, alignItems:'flex-start',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{flexShrink:0,marginTop:1}}>
+            <circle cx="12" cy="12" r="9" fill={DS.primary} fillOpacity=".15"/>
+            <path d="M12 8v4M12 16h.01" stroke={DS.primary} strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <div style={{fontSize:12,color:DS.onSurfaceVar,lineHeight:1.5,fontWeight:500}}>
+            Upload clear photos of your documents. All documents must be valid and legible for verification.
+          </div>
+        </div>
+
+        {docList.map((name,i)=>(
+          <DocCard key={name} name={name} uploaded={docs[i]} onTap={()=>handleTap(i)} idx={i}/>
+        ))}
+
+        <div style={{height:8}}/>
+
+        {/* Progress indicator */}
+        <div style={{
+          display:'flex', alignItems:'center', gap:6,
+          marginBottom:20, padding:'10px 14px',
+          background: allUploaded ? '#e8f8f0' : DS.surfaceLow,
+          borderRadius:10, transition:'background 0.3s',
+        }}>
+          <div style={{
+            width:6,height:6,borderRadius:3,
+            background: allUploaded ? DS.tertiary : DS.surfaceHighest,
+            transition:'background 0.3s',
+          }}/>
+          <span style={{
+            fontSize:12,fontWeight:600,
+            color: allUploaded ? DS.tertiary : DS.onSurfaceVar,
+          }}>
+            {docs.filter(Boolean).length} of {docList.length} documents uploaded
+          </span>
+        </div>
+
+        <PrimaryBtn
+          label="Submit for Verification"
+          onClick={handleSubmit}
+          loading={loading}
+        />
+      </div>
+      {snack && <Snackbar message={snack}/>}
+    </div>
+  );
+}
+
+// ── Success Screen ─────────────────────────────────────────────
+function SuccessScreen({onDone}) {
+  const [phase, setPhase] = React.useState(0);
+  React.useEffect(()=>{
+    const t1 = setTimeout(()=>setPhase(1), 200);
+    const t2 = setTimeout(()=>setPhase(2), 900);
+    const t3 = setTimeout(()=>onDone(), 2800);
+    return ()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
+  },[]);
+  return (
+    <div style={{
+      flex:1, display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center',
+      background:DS.surface, padding:'0 32px',
+    }}>
+      <div style={{position:'relative',marginBottom:32}}>
+        {/* Ripple rings */}
+        {phase>=1 && [0,1,2].map(i=>(
+          <div key={i} style={{
+            position:'absolute', inset:-8-(i*16),
+            borderRadius:'50%',
+            background:`rgba(70,72,212,${0.08-i*0.02})`,
+            animation:`ripple 1.2s ease ${i*0.2}s both`,
+          }}/>
+        ))}
+        <div style={{
+          width:88, height:88, borderRadius:44,
+          background:DS.primaryGrad,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          boxShadow:`0 12px 32px rgba(70,72,212,0.4)`,
+          transform: phase>=1?'scale(1)':'scale(0)',
+          transition:'transform 0.5s cubic-bezier(0.34,1.56,0.64,1)',
+          animation: phase>=2 ? 'pulse 0.4s ease' : 'none',
+        }}>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path d="M8 20l8 8 16-16" stroke="#fff" strokeWidth="3.5"
+              strokeLinecap="round" strokeLinejoin="round"
+              strokeDasharray="60" strokeDashoffset={phase>=1?0:60}
+              style={{transition:'stroke-dashoffset 0.6s ease 0.3s'}}/>
+          </svg>
+        </div>
+      </div>
+      <div style={{
+        fontSize:22, fontWeight:800, color:DS.onSurface,
+        textAlign:'center', marginBottom:10,
+        opacity:phase>=1?1:0, transform:phase>=1?'translateY(0)':'translateY(12px)',
+        transition:'all 0.5s ease 0.4s',
+      }}>Documents Submitted!</div>
+      <div style={{
+        fontSize:14, fontWeight:500, color:DS.onSurfaceVar,
+        textAlign:'center', lineHeight:1.6,
+        opacity:phase>=1?1:0, transform:phase>=1?'translateY(0)':'translateY(8px)',
+        transition:'all 0.5s ease 0.55s',
+      }}>We're reviewing your application.<br/>You'll hear from us shortly.</div>
+    </div>
+  );
+}
+
+// ── Pending Review Screen ─────────────────────────────────────
+function PendingScreen() {
+  return (
+    <div style={{
+      flex:1, overflow:'auto', background:DS.surface,
+    }}>
+      {/* Hero */}
+      <div style={{
+        background:DS.primaryGrad,
+        padding:'28px 24px 36px',
+        position:'relative', overflow:'hidden',
+      }}>
+        {/* Decorative circles */}
+        <div style={{position:'absolute',top:-40,right:-40,width:130,height:130,borderRadius:65,background:'rgba(255,255,255,0.08)'}}/>
+        <div style={{position:'absolute',bottom:-20,right:40,width:80,height:80,borderRadius:40,background:'rgba(255,255,255,0.06)'}}/>
+        <div style={{
+          display:'inline-flex', alignItems:'center', gap:6,
+          background:'rgba(255,255,255,0.18)', borderRadius:20,
+          padding:'4px 12px', marginBottom:16,
+        }}>
+          <div style={{width:6,height:6,borderRadius:3,background:'#ffd700',animation:'pulse 2s ease infinite'}}/>
+          <span style={{fontSize:11,fontWeight:700,color:'#fff',letterSpacing:'0.06em'}}>UNDER REVIEW</span>
+        </div>
+        <div style={{fontSize:24,fontWeight:800,color:'#fff',marginBottom:6,lineHeight:1.2}}>
+          Application<br/>Submitted 🎉
+        </div>
+        <div style={{fontSize:13,color:'rgba(255,255,255,0.8)',fontWeight:500,lineHeight:1.5}}>
+          Our team will verify your documents<br/>within 24–48 hours.
+        </div>
+      </div>
+
+      <div style={{padding:'20px 24px'}}>
+        {/* Timeline */}
+        <div style={{
+          fontSize:11,fontWeight:700,letterSpacing:'0.07em',
+          color:DS.onSurfaceVar, textTransform:'uppercase', marginBottom:14,
+        }}>Verification Steps</div>
+
+        {[
+          {label:'Application Received', sub:'Your details have been recorded', done:true},
+          {label:'Document Review', sub:'Our team is verifying your documents', active:true},
+          {label:'Background Check', sub:'Standard security verification', done:false},
+          {label:'Approval & Activation', sub:'Account ready to accept deliveries', done:false},
+        ].map((item,i)=>(
+          <div key={i} style={{display:'flex',gap:12,marginBottom:i<3?4:0}}>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+              <div style={{
+                width:28,height:28,borderRadius:14,
+                background: item.done?DS.tertiary : item.active?DS.primaryGrad : DS.surfaceHigh,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                flexShrink:0, marginTop:4,
+                boxShadow: item.active?`0 4px 12px rgba(70,72,212,0.3)`:'none',
+              }}>
+                {item.done ? (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M3 7l2.5 2.5L11 4" stroke="#fff" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : item.active ? (
+                  <div style={{width:8,height:8,borderRadius:4,background:'#fff',animation:'pulse 1.5s ease infinite'}}/>
+                ) : (
+                  <div style={{width:8,height:8,borderRadius:4,background:DS.onSurfaceVar,opacity:0.3}}/>
+                )}
+              </div>
+              {i<3 && <div style={{width:2,height:28,background:i===0?DS.tertiary:DS.surfaceHigh,borderRadius:1,margin:'2px 0'}}/>}
+            </div>
+            <div style={{paddingBottom:16}}>
+              <div style={{
+                fontSize:14,fontWeight:700,
+                color: item.done||item.active ? DS.onSurface : DS.onSurfaceVar,
+                marginBottom:2,
+              }}>{item.label}</div>
+              <div style={{fontSize:12,color:DS.onSurfaceVar,fontWeight:500}}>{item.sub}</div>
+            </div>
+          </div>
+        ))}
+
+        {/* ETA card */}
+        <div style={{
+          background:DS.surfaceLow, borderRadius:12,
+          padding:'16px', marginTop:8,
+          display:'flex', alignItems:'center', gap:14,
+        }}>
+          <div style={{
+            width:44,height:44,borderRadius:10,
+            background:DS.surface,
+            display:'flex',alignItems:'center',justifyContent:'center',
+          }}>
+            <IconClock size={24} color={DS.primary}/>
+          </div>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:DS.onSurface}}>Estimated Time</div>
+            <div style={{fontSize:12,color:DS.onSurfaceVar,fontWeight:500}}>24 – 48 business hours</div>
+          </div>
+          <div style={{marginLeft:'auto',textAlign:'right'}}>
+            <div style={{fontSize:18,fontWeight:800,color:DS.primary}}>~1</div>
+            <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:600}}>DAY</div>
+          </div>
+        </div>
+
+        {/* Support */}
+        <div style={{
+          marginTop:12, padding:'14px',
+          background:DS.surface, borderRadius:12,
+          display:'flex', alignItems:'center', gap:10,
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" fill={DS.primary} fillOpacity=".15" stroke={DS.primary} strokeWidth="1.5"/>
+          </svg>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:DS.onSurface}}>Need help?</div>
+            <div style={{fontSize:11,color:DS.onSurfaceVar}}>Contact support anytime</div>
+          </div>
+          <div style={{
+            fontSize:12,fontWeight:700,color:DS.primary,
+            letterSpacing:'0.03em',
+          }}>CHAT →</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ───────────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = React.useState(()=>localStorage.getItem('onboard_screen')||'step1');
+  const [vehicleData, setVehicleData] = React.useState({
+    photo:false, vehicleType:'', make:'', model:'', year:'', plate:'',
+  });
+  const [docs, setDocs] = React.useState([false,false,false]);
+
+  const go = (s) => { setScreen(s); localStorage.setItem('onboard_screen',s); };
+
+  const stepTitles = {
+    step1: {step:1, title:'Vehicle Details', sub:'Tell us about your vehicle'},
+    step2: {step:2, title:'Upload Documents', sub:'Required for verification'},
+  };
+  const curr = stepTitles[screen];
+
+  return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+      <AndroidDevice width={390} height={844} dark={false}>
+        {/* App Content */}
+        <div style={{
+          height:'100%', display:'flex', flexDirection:'column',
+          background:DS.surface, fontFamily:'Plus Jakarta Sans,sans-serif',
+        }}>
+
+          {/* Header (hidden on success/pending) */}
+          {curr && (
+            <div style={{padding:'8px 24px 0',background:DS.surface}}>
+              {/* Back + step label */}
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+                {screen==='step2' && (
+                  <button onClick={()=>go('step1')} style={{
+                    width:36,height:36,borderRadius:10,border:'none',
+                    background:DS.surfaceLow, cursor:'pointer',
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                  }}>
+                    <IconArrowLeft size={18} color={DS.onSurface}/>
+                  </button>
+                )}
+                <div style={{flex:1}}>
+                  <div style={{
+                    fontSize:11,fontWeight:700,letterSpacing:'0.07em',
+                    color:DS.onSurfaceVar,textTransform:'uppercase',
+                  }}>Step {curr.step} of 2</div>
+                </div>
+                <div style={{
+                  fontSize:11,fontWeight:700,color:DS.primary,
+                  background:DS.primaryLight,padding:'4px 10px',borderRadius:20,
+                  letterSpacing:'0.04em',
+                }}>{curr.step}/2</div>
+              </div>
+
+              {/* Progress bar */}
+              <ProgressBar step={curr.step} total={2}/>
+
+              {/* Title */}
+              <div style={{marginBottom:20}}>
+                <h1 style={{
+                  fontSize:22,fontWeight:800,color:DS.onSurface,
+                  margin:0,marginBottom:4,letterSpacing:'-0.02em',
+                }}>{curr.title}</h1>
+                <p style={{fontSize:13,color:DS.onSurfaceVar,margin:0,fontWeight:500}}>{curr.sub}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Screen content */}
+          {screen==='step1' && (
+            <StepVehicle
+              onNext={()=>go('step2')}
+              data={vehicleData}
+              setData={setVehicleData}
+            />
+          )}
+          {screen==='step2' && (
+            <StepDocuments
+              onBack={()=>go('step1')}
+              onSubmit={()=>go('success')}
+              docs={docs}
+              setDocs={setDocs}
+            />
+          )}
+          {screen==='success' && (
+            <SuccessScreen onDone={()=>go('pending')}/>
+          )}
+          {screen==='pending' && (
+            <PendingScreen/>
+          )}
+
+          {/* Dev reset */}
+          {(screen==='pending'||screen==='success') && (
+            <button onClick={()=>{localStorage.removeItem('onboard_screen');setScreen('step1');setVehicleData({photo:false,vehicleType:'',make:'',model:'',year:'',plate:''});setDocs([false,false,false]);}} style={{
+              position:'absolute',bottom:40,right:16,
+              fontSize:10,fontWeight:700,color:DS.onSurfaceVar,
+              background:DS.surfaceLow,border:'none',borderRadius:8,
+              padding:'6px 10px',cursor:'pointer',opacity:0.6,letterSpacing:'0.05em',
+            }}>RESTART FLOW</button>
+          )}
+        </div>
+      </AndroidDevice>
+
+      {/* Label */}
+      <div style={{
+        position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
+        background:'rgba(255,255,255,0.08)',backdropFilter:'blur(12px)',
+        borderRadius:20,padding:'8px 20px',
+        fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.5)',
+        letterSpacing:'0.05em',
+        border:'1px solid rgba(255,255,255,0.1)',
+      }}>
+        SHIPZY — DRIVER ONBOARDING · Android Prototype
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<div id="root"></div>
+</body>
+</html>

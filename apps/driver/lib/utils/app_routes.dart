@@ -26,6 +26,9 @@ class AppRoutes {
   /// Route for document upload.
   static const String documentUpload = '/document-upload';
 
+  /// Route while KYC is submitted and awaiting admin verification.
+  static const String pendingReview = '/pending-review';
+
   /// Route for the permissions gate screen.
   static const String permissions = '/permissions';
 

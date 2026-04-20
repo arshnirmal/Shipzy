@@ -8,6 +8,7 @@ import ratingsService from "../ratings/ratings.service.js";
 
 import {
   type EarningsPeriodQuery,
+  type SubmitKycRequest,
   type TripHistoryQuery,
   type UpdateAvailabilityRequest,
   type UpdateDriverProfileRequest,
@@ -68,6 +69,35 @@ class DriversController {
     } catch (error) {
       logger.error({
         msg: "Update driver profile controller error",
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/drivers/me/kyc
+   * Submit KYC document URLs (stored on courier_status + profile onboarding).
+   */
+  async submitKyc(
+    request: FastifyRequest<{ Body: SubmitKycRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const { userId } = request.user!;
+      const result = await driversService.submitKyc(userId, request.body);
+
+      return successResponse(
+        reply,
+        result,
+        "KYC documents submitted for review",
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Submit KYC controller error",
         error: (error as Error).message,
       });
       if (error instanceof AppError) {

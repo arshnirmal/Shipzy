@@ -56,6 +56,37 @@ export type UpdateDriverProfileRequest = z.infer<
   typeof UpdateDriverProfileRequestZ
 >;
 
+export const DocSubmitZ = z
+  .object({ url: z.string().url().max(512) })
+  .strict();
+
+export const SubmitKycRequestZ = z
+  .object({
+    license: DocSubmitZ,
+    vehicleReg: DocSubmitZ,
+    insurance: DocSubmitZ,
+  })
+  .strict();
+export type SubmitKycRequest = z.infer<typeof SubmitKycRequestZ>;
+
+export const SubmitKycResponseZ = z
+  .object({
+    onboarding: z
+      .object({
+        status: z.enum([
+          "incomplete",
+          "pending_review",
+          "approved",
+          "rejected",
+        ]),
+        stepsCompleted: z.array(z.string()),
+        submittedAt: z.iso.datetime().optional(),
+      })
+      .strict(),
+  })
+  .strict();
+export type SubmitKycResponse = z.infer<typeof SubmitKycResponseZ>;
+
 const DriverAvailabilityToggleZ = z
   .object({
     isAvailable: z.boolean(),

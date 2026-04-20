@@ -14,6 +14,8 @@ import {
   UpdateLocationRequestZ,
   TripHistoryQueryZ,
   TripHistoryResponseZ,
+  SubmitKycRequestZ,
+  SubmitKycResponseZ,
 } from "./drivers.zod.js";
 import {
   COMMON_ERROR_RESPONSES,
@@ -40,6 +42,16 @@ const DriverRatingResponseJson = toJsonSchema(DriverRatingResponseZ);
 const EarningsPeriodQueryJson = toJsonSchema(EarningsPeriodQueryZ);
 const TripHistoryQueryJson = toJsonSchema(TripHistoryQueryZ);
 const TripHistoryResponseJson = toJsonSchema(TripHistoryResponseZ);
+const SubmitKycRequestJson = toJsonSchema(SubmitKycRequestZ);
+const SubmitKycResponseJson = toJsonSchema(SubmitKycResponseZ);
+
+export const submitKycSchema: FastifySchema = {
+  body: SubmitKycRequestJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(SubmitKycResponseJson),
+  },
+};
 
 export const getDriverProfileSchema: FastifySchema = {
   response: {

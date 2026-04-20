@@ -27,7 +27,8 @@ import type {
   CourierAssignmentRow,
   TripHistoryRow,
 } from "../../types/drivers.js";
-import type { UpdateDriverProfileRequest } from "./drivers.zod.js";
+import type { SubmitKycRequest, UpdateDriverProfileRequest } from "./drivers.zod.js";
+import type { KycJSONB, OnboardingJSONB } from "../../database/schema/types.js";
 
 type Courier = DbCourier;
 
@@ -135,6 +136,62 @@ class DriversRepository {
     } catch (error) {
       logger.error({
         msg: "Error updating courier profile",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Persist KYC document URLs and mark profile onboarding as pending review.
+   */
+  async submitKyc(
+    userId: number,
+    docs: SubmitKycRequest,
+  ): Promise<{
+    status: string;
+    stepsCompleted: string[];
+    submittedAt: string;
+  }> {
+    try {
+      const now = new Date();
+      const kycPayload: KycJSONB = {
+        license: { url: docs.license.url },
+        insurance: { url: docs.insurance.url },
+        vehicleReg: { url: docs.vehicleReg.url },
+      };
+      const onboardingPayload: OnboardingJSONB = {
+        status: "pending_review",
+        stepsCompleted: ["vehicle_details", "documents"],
+        submittedAt: now.toISOString(),
+      };
+
+      await drizzleDb.transaction(async (tx) => {
+        await tx
+          .update(courierStatus)
+          .set({
+            kyc: kycPayload,
+            updatedAt: now,
+          })
+          .where(eq(courierStatus.courierId, userId));
+
+        await tx
+          .update(userProfiles)
+          .set({
+            onboarding: onboardingPayload,
+            updatedAt: now,
+          })
+          .where(eq(userProfiles.userId, userId));
+      });
+
+      return {
+        status: "pending_review",
+        stepsCompleted: ["vehicle_details", "documents"],
+        submittedAt: now.toISOString(),
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error submitting KYC",
         error: (error as Error).message,
       });
       throw error;

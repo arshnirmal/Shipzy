@@ -6,11 +6,13 @@ import '../models/active_order.dart';
 import '../models/arrive_result.dart';
 import '../models/available_order.dart';
 import '../models/delivery_attempt.dart';
+import '../models/driver_kyc_submission.dart';
 import '../models/driver_profile.dart';
 import '../models/driver_rating.dart';
 import '../models/earnings_summary.dart';
 import '../models/location_meta.dart';
 import '../models/proof_of_delivery_result.dart';
+import '../models/static/static_vehicle_category.dart';
 import '../providers/dio_provider.dart';
 
 part 'api_service.g.dart';
@@ -85,6 +87,61 @@ class ApiService {
     final response = await _dio.get('/drivers/me');
     _ensureSuccess(response, 'Failed to fetch driver profile');
     return DriverProfile.fromJson(response.data['data']['driver'] as Map<String, dynamic>);
+  }
+
+  /// Active vehicle categories from `GET /static/vehicle-categories` (canonical DB list).
+  Future<List<StaticVehicleCategory>> getVehicleCategoryCatalog() async {
+    final response = await _dio.get('/static/vehicle-categories');
+    final data = _extractDataMap(response, 'Failed to load vehicle categories');
+    final rawList = data['vehicleCategories'];
+    if (rawList is! List) {
+      return [];
+    }
+    return rawList
+        .whereType<Map<String, dynamic>>()
+        .map(StaticVehicleCategory.fromJson)
+        .toList();
+  }
+
+  Future<void> submitVehicleDetails({
+    required int vehicleCategoryId,
+    required String vehicleMake,
+    required String vehicleModel,
+    required int vehicleYear,
+    required String plateNumber,
+    String? profilePictureUrl,
+  }) async {
+    final response = await _dio.patch(
+      '/drivers/me',
+      data: {
+        if (profilePictureUrl != null && profilePictureUrl.isNotEmpty)
+          'profile': {'profilePictureUrl': profilePictureUrl},
+        'vehicle': {
+          'categoryId': vehicleCategoryId,
+          'vehicleNumber': plateNumber,
+          'model': '$vehicleMake $vehicleModel'.trim(),
+          'year': vehicleYear,
+        },
+      },
+    );
+    _ensureSuccess(response, 'Failed to save vehicle details');
+  }
+
+  Future<DriverKycSubmissionResult> submitKycDocuments({
+    required String licenseUrl,
+    required String vehicleRegUrl,
+    required String insuranceUrl,
+  }) async {
+    final response = await _dio.post(
+      '/drivers/me/kyc',
+      data: {
+        'license': {'url': licenseUrl},
+        'vehicleReg': {'url': vehicleRegUrl},
+        'insurance': {'url': insuranceUrl},
+      },
+    );
+    final data = _extractDataMap(response, 'Failed to submit KYC documents');
+    return DriverKycSubmissionResult.fromJson(data);
   }
 
   Future<List<AvailableOrderItem>> getAvailableOrders({required double latitude, required double longitude, int radius = 10}) async {

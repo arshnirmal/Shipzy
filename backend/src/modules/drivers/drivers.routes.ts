@@ -8,6 +8,7 @@ import {
   getDriverProfileSchema,
   getDriverRatingSchema,
   getTripHistorySchema,
+  submitKycSchema,
   updateAvailabilitySchema,
   updateDriverProfileSchema,
   updateLocationSchema,
@@ -32,6 +33,12 @@ async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
     "/me",
     { schema: updateDriverProfileSchema },
     driversController.updateProfile.bind(driversController),
+  );
+
+  fastify.post(
+    "/me/kyc",
+    { schema: submitKycSchema },
+    driversController.submitKyc.bind(driversController),
   );
 
   // PUT /api/v1/drivers/me/availability - Toggle availability

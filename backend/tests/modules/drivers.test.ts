@@ -104,6 +104,48 @@ describe("Drivers Module", () => {
     expect(driver.vehicle?.categoryId).toBe(Number(vehicleCat.categoryId));
   });
 
+  it("POST /api/v1/drivers/me/kyc stores document URLs and onboarding state", async () => {
+    const courier = await createCourier(app);
+
+    const lic = "https://res.cloudinary.com/demo/image/upload/v1/lic.jpg";
+    const reg = "https://res.cloudinary.com/demo/image/upload/v1/reg.jpg";
+    const ins = "https://res.cloudinary.com/demo/image/upload/v1/ins.jpg";
+
+    const kycResponse = await inject(app, {
+      method: "POST",
+      url: "/api/v1/drivers/me/kyc",
+      headers: authHeaders(courier.accessToken),
+      payload: {
+        license: { url: lic },
+        vehicleReg: { url: reg },
+        insurance: { url: ins },
+      },
+    });
+
+    expect(kycResponse.statusCode).toBe(200);
+    const kycBody = kycResponse.json();
+    expect(kycBody.success).toBe(true);
+    expect(kycBody.data.onboarding.status).toBe("pending_review");
+    expect(kycBody.data.onboarding.stepsCompleted).toEqual([
+      "vehicle_details",
+      "documents",
+    ]);
+    expect(typeof kycBody.data.onboarding.submittedAt).toBe("string");
+
+    const client = await createClient(app);
+    const forbidden = await inject(app, {
+      method: "POST",
+      url: "/api/v1/drivers/me/kyc",
+      headers: authHeaders(client.accessToken),
+      payload: {
+        license: { url: lic },
+        vehicleReg: { url: reg },
+        insurance: { url: ins },
+      },
+    });
+    expect(forbidden.statusCode).toBe(403);
+  });
+
   it("PATCH /api/v1/drivers/me/availability toggles availability", async () => {
     const courier = await createCourier(app);
 

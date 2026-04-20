@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../utils/logger.dart';
 import 'auth_service_provider.dart';
 import 'google_auth_provider.dart';
+import 'onboarding_gate_provider.dart';
 import 'storage_provider.dart';
 
 part 'auth_provider.g.dart';
@@ -31,6 +32,16 @@ class Auth extends _$Auth {
       if (user.role != 'courier') {
         await _clearTokens();
         return const AuthState.unauthenticated();
+      }
+
+      if (user.isVerified) {
+        try {
+          final prefs = await ref.read(sharedPreferencesProvider.future);
+          await prefs.remove(kDriverOnboardingStatusKey);
+          ref.invalidate(driverOnboardingStatusProvider);
+        } catch (_) {
+          // Non-fatal
+        }
       }
 
       return AuthState.authenticated(user);
@@ -176,6 +187,13 @@ class Auth extends _$Auth {
       // Continue with local logout
     } finally {
       await _clearTokens();
+
+      try {
+        final prefs = await ref.read(sharedPreferencesProvider.future);
+        await prefs.remove(kDriverOnboardingStatusKey);
+      } catch (_) {
+        // Ignore prefs errors during logout
+      }
 
       try {
         final googleAuth = ref.read(googleAuthProvider.notifier);
