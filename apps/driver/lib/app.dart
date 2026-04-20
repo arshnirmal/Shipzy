@@ -6,7 +6,7 @@ import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/connectivity_service.dart';
 import 'services/notification_service.dart';
-import 'theme/driver_app_theme.dart';
+import 'theme/app_theme.dart';
 import 'utils/app_router.dart';
 import 'utils/logger.dart';
 import 'widgets/dev_theme_switcher.dart';
@@ -54,8 +54,8 @@ class _ShipzyDriverAppState extends ConsumerState<ShipzyDriverApp> {
     return MaterialApp.router(
       title: 'Shipzy Driver',
       debugShowCheckedModeBanner: false,
-      theme: DriverAppTheme.lightTheme,
-      darkTheme: DriverAppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) {

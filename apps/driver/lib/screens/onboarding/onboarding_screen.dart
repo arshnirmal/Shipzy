@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../theme/driver_app_theme.dart';
+import '../../theme/app_palette.dart';
 import '../../utils/app_router.dart';
 import '../../utils/app_routes.dart';
 
@@ -12,7 +12,7 @@ const String _kSkipLabel = 'Skip';
 const String _kNextLabel = 'Continue';
 const String _kGetStartedLabel = 'Get Started';
 
-const double _kPageHorizontalPadding = DriverAppTheme.overlayBreathingMargin;
+const double _kPageHorizontalPadding = AppPalette.overlayBreathingMargin;
 const double _kPrimaryButtonHeight = 56;
 
 enum _OnboardingIllustrationType { schedule, navigation, payouts }
@@ -261,8 +261,8 @@ class _OnboardingPrimaryCta extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final gradient = isDark ? DriverAppTheme.primaryGradientDark : DriverAppTheme.primaryGradientLight;
-    final ctaShadow = isDark ? DriverAppTheme.ambientShadowDark : DriverAppTheme.ambientShadowLight;
+    final gradient = isDark ? AppPalette.primaryGradientDark : AppPalette.primaryGradientLight;
+    final ctaShadow = isDark ? AppPalette.ambientShadowDark : AppPalette.ambientShadowLight;
 
     return DecoratedBox(
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), gradient: gradient, boxShadow: [ctaShadow]),

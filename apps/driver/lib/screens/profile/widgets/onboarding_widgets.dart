@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../models/static/static_vehicle_category.dart';
-import '../../../theme/driver_app_theme.dart';
+import '../../../theme/app_theme.dart';
 
 class OnboardingProgressBar extends StatelessWidget {
   const OnboardingProgressBar({required this.currentStep, required this.totalSteps, super.key});

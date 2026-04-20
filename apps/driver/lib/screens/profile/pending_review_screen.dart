@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../theme/driver_app_theme.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/snackbar_utils.dart';
 
 class PendingReviewScreen extends StatelessWidget {

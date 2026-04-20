@@ -1,7 +1,18 @@
-// lib/utils/auth_widgets.dart
+// lib/screens/auth/widgets/auth_widgets.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../../theme/design_tokens.dart';
+
+/// Label density for [AuthTextField] — matches login/register vs onboarding sections.
+enum AuthFieldLabelDensity {
+  /// `bodyMedium`, on-surface (login / register).
+  standard,
+
+  /// `labelSmall`, on-surface-variant, letter-spacing (vehicle onboarding).
+  section,
+}
 
 /// A divider widget used in authentication screens with text in the middle
 class AuthDivider extends StatelessWidget {
@@ -12,13 +23,13 @@ class AuthDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.28);
+    final dividerColor = theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity);
 
     return Row(
       children: [
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text(
             text,
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
@@ -60,10 +71,10 @@ class SocialButton extends StatelessWidget {
           style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onSurfaceVariant),
         ),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.28)),
-          backgroundColor: theme.colorScheme.surface,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+          backgroundColor: theme.colorScheme.surfaceContainerLowest,
         ),
       ),
     );
@@ -119,6 +130,9 @@ class AuthTextField extends StatelessWidget {
     this.onFieldSubmitted,
     this.inputFormatters,
     this.autovalidateMode,
+    this.textCapitalization = TextCapitalization.none,
+    this.labelDensity = AuthFieldLabelDensity.standard,
+    this.labelGap,
   });
 
   final TextEditingController controller;
@@ -134,25 +148,40 @@ class AuthTextField extends StatelessWidget {
   final void Function(String)? onFieldSubmitted;
   final List<TextInputFormatter>? inputFormatters;
   final AutovalidateMode? autovalidateMode;
+  final TextCapitalization textCapitalization;
+  final AuthFieldLabelDensity labelDensity;
+
+  /// Space between label and field; defaults from [labelDensity].
+  final double? labelGap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final gap = labelGap ?? (labelDensity == AuthFieldLabelDensity.section ? 6.0 : AppSpacing.xs);
+
+    final labelStyle = switch (labelDensity) {
+      AuthFieldLabelDensity.standard => theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: theme.colorScheme.onSurface,
+        ),
+      AuthFieldLabelDensity.section => theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          letterSpacing: 0.8,
+        ),
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onSurface),
-        ),
-        const SizedBox(height: 8),
+        Text(label, style: labelStyle),
+        SizedBox(height: gap),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           obscureText: obscureText,
           enabled: enabled,
+          textCapitalization: textCapitalization,
           onFieldSubmitted: onFieldSubmitted,
           inputFormatters: inputFormatters,
           autovalidateMode: autovalidateMode,
