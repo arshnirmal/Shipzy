@@ -117,7 +117,10 @@ class AuthService {
     }
   }
 
-  /// Get current user profile
+  /// Loads [AppUser] from **`GET /users/me`** (`users.profiles` identity).
+  ///
+  /// Couriers also need **`GET /drivers/me`** for status, nested vehicle,
+  /// onboarding, and KYC (`ApiService` in this app).
   Future<AppUser> getCurrentUser(String accessToken) async {
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(

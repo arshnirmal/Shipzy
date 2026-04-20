@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../utils/logger.dart';
 import 'auth_service_provider.dart';
 import 'google_auth_provider.dart';
+import 'home_provider.dart';
 import 'onboarding_gate_provider.dart';
 import 'storage_provider.dart';
 
@@ -44,6 +45,7 @@ class Auth extends _$Auth {
         }
       }
 
+      _invalidateDriverDashboardCache();
       return AuthState.authenticated(user);
     } catch (e) {
       AppLogger.e('Auth status check failed: $e');
@@ -84,6 +86,7 @@ class Auth extends _$Auth {
       }
 
       state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
+      _invalidateDriverDashboardCache();
 
       return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
@@ -116,6 +119,7 @@ class Auth extends _$Auth {
       final user = response.data.actor.user;
 
       state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
+      _invalidateDriverDashboardCache();
 
       return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
@@ -144,6 +148,7 @@ class Auth extends _$Auth {
       }
 
       state = AsyncData(AuthState.authenticated(user));
+      _invalidateDriverDashboardCache();
 
       return AuthResult.success(user, isNewUser: false);
     } catch (e) {
@@ -187,6 +192,7 @@ class Auth extends _$Auth {
       // Continue with local logout
     } finally {
       await _clearTokens();
+      _invalidateDriverDashboardCache();
 
       try {
         final prefs = await ref.read(sharedPreferencesProvider.future);
@@ -215,6 +221,11 @@ class Auth extends _$Auth {
   Future<void> _clearTokens() async {
     final storage = ref.read(secureStorageProvider);
     await storage.deleteAll();
+  }
+
+  /// Drops cached **`GET /drivers/me`** dashboard data after auth changes.
+  void _invalidateDriverDashboardCache() {
+    ref.invalidate(driverDashboardDataProvider);
   }
 }
 
