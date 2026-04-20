@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
+import bcrypt from "bcrypt";
 import { inject, authHeaders } from "./app.js";
 import { getTokens } from "./auth.js";
+import { getTestPool } from "./db.js";
 
 const unique = (prefix: string): string =>
   `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
@@ -136,6 +138,59 @@ export const createCourier = async (
 
   return {
     user: body.data.actor.user,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    credentials: { email, password },
+  };
+};
+
+/**
+ * Inserts an admin row (register API does not allow admin) and returns login tokens.
+ */
+export const createAdmin = async (
+  app: FastifyInstance,
+  overrides: Record<string, unknown> = {},
+) => {
+  const email = String(overrides.email || `${unique("admin")}@shipzy.test`);
+  const password = String(overrides.password || "TestAdminPass123!");
+  const fullName = String(overrides.fullName || "Test Admin");
+
+  const pool = getTestPool();
+  const hash = await bcrypt.hash(password, 12);
+  const insertResult = await pool.query<{ user_id: number }>(
+    `INSERT INTO users.profiles (role, email, full_name, password_hash, is_verified, is_active)
+     VALUES ($1, $2, $3, $4, TRUE, TRUE)
+     RETURNING user_id`,
+    ["admin", email, fullName, hash],
+  );
+  const insertedUserId = insertResult.rows[0]?.user_id;
+  if (insertedUserId == null) {
+    throw new Error("createAdmin insert returned no user_id");
+  }
+
+  const response = await inject(app, {
+    method: "POST",
+    url: "/api/v1/auth/login",
+    payload: {
+      credentials: { email, password },
+    },
+    headers: {
+      "x-device-id": unique("admin-device"),
+    },
+  });
+
+  if (response.statusCode !== 200) {
+    throw new Error(
+      `createAdmin login failed: ${response.statusCode} ${response.body}`,
+    );
+  }
+
+  const body = response.json();
+  const tokens = getTokens(body);
+
+  return {
+    user: body.data.actor.user,
+    userId: Number(insertedUserId),
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     credentials: { email, password },

@@ -16,6 +16,7 @@
     "test:auth": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/auth.test.js --verbose",
     "test:users": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/users.test.js --verbose",
     "test:drivers": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/drivers.test.js --verbose",
+    "test:admin": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/modules/admin.test.ts --verbose",
     "test:orders": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/orders.test.js --verbose",
     "test:static": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/static.test.js --verbose",
     "test:system": "NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.config.cjs tests/system.test.js --verbose",

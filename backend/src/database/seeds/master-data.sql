@@ -207,3 +207,26 @@ ON CONFLICT (config_key) DO UPDATE SET
   description = EXCLUDED.description,
   is_active = TRUE,
   updated_at = NOW();
+
+-- ---------------------------------------------------------------------------
+-- users.profiles — platform admin (email/password; idempotent)
+-- Default password: ShipzyAdminDev!2026 (bcrypt 12). Change after first login
+-- in any shared or production environment.
+-- ---------------------------------------------------------------------------
+INSERT INTO users.profiles (
+  role,
+  email,
+  full_name,
+  password_hash,
+  is_verified,
+  is_active
+)
+VALUES (
+  'admin',
+  'admin@shipzy.local',
+  'Shipzy Admin',
+  '$2b$12$BmEMVe./4fqC6O8NkrMuE.TCCh0zVHKlqLKskaUBYjbLegtWhuvOS',
+  TRUE,
+  TRUE
+)
+ON CONFLICT (email) DO NOTHING;
