@@ -1,6 +1,7 @@
 // lib/services/dio/interceptors/auth_interceptor.dart
 
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../providers/storage_provider.dart';
@@ -11,12 +12,34 @@ class AuthInterceptor extends Interceptor {
   final Ref ref;
   bool _isRefreshing = false;
 
+  static String _effectiveApiBaseUrl() {
+    final raw = dotenv.env['API_BASE_URL'];
+    if (raw == null || raw.trim().isEmpty) {
+      return 'http://localhost:3000/api/v1';
+    }
+    return raw.trim();
+  }
+
+  /// Only our REST API should receive JWTs. Third-party hosts (e.g. Cloudinary image upload) use the same [Dio] instance and must not get Bearer auth.
+  static bool _isAppApiRequest(RequestOptions options) {
+    final baseUri = Uri.tryParse(_effectiveApiBaseUrl());
+    if (baseUri == null || !baseUri.hasAuthority) {
+      return true;
+    }
+    final uri = options.uri;
+    return uri.host == baseUri.host && uri.port == baseUri.port;
+  }
+
   @override
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     // Skip adding token for auth endpoints
     final authEndpoints = ['/auth/login', '/auth/register', '/auth/google/verify', '/auth/refresh'];
 
     if (authEndpoints.any((endpoint) => options.path.contains(endpoint))) {
+      return handler.next(options);
+    }
+
+    if (!_isAppApiRequest(options)) {
       return handler.next(options);
     }
 
@@ -35,6 +58,9 @@ class AuthInterceptor extends Interceptor {
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     // Handle token refresh on 401 Unauthorized
     if (err.response?.statusCode == 401 && !_isRefreshing) {
+      if (!_isAppApiRequest(err.requestOptions)) {
+        return handler.next(err);
+      }
       // Don't retry auth endpoints
       if (err.requestOptions.path.contains('/auth/')) {
         return handler.next(err);

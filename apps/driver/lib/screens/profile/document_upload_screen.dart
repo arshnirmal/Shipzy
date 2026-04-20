@@ -9,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
 import 'widgets/onboarding_widgets.dart';
 
@@ -33,13 +34,17 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   bool get _allUploaded => _urls.every((u) => u != null);
 
   Future<void> _pickAndUpload(int i) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
+    final picked = await pickImageForDriverUpload(
+      ImagePicker(),
+      source: ImageSource.gallery,
+      use: DriverImageUploadUse.kyc,
+    );
     if (picked == null || !mounted) {
       return;
     }
     setState(() => _uploading[i] = true);
     try {
-      final url = await ref.read(cloudinaryServiceProvider).uploadDocument(picked, folder: 'kyc/${_docs[i].folder}');
+      final url = await ref.read(cloudinaryServiceProvider).uploadDriverKycDocument(picked, documentKey: _docs[i].folder);
       if (mounted) {
         setState(() => _urls[i] = url);
         SnackbarUtils.showSuccess(context, '${_docs[i].title} uploaded');

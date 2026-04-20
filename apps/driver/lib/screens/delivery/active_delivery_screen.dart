@@ -11,6 +11,7 @@ import '../../providers/home_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
+import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
 import '../../widgets/map_widget.dart';
 
@@ -486,14 +487,18 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           Future<void> uploadPhoto() async {
-            final image = await imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80);
+            final image = await pickImageForDriverUpload(
+              imagePicker,
+              source: ImageSource.camera,
+              use: DriverImageUploadUse.deliveryEvidence,
+            );
             if (image == null || !context.mounted) {
               return;
             }
 
             setModalState(() => isUploading = true);
             try {
-              final uploaded = await ref.read(cloudinaryServiceProvider).uploadDeliveryPhoto(image);
+              final uploaded = await ref.read(cloudinaryServiceProvider).uploadUndeliverableEvidencePhoto(image);
               if (context.mounted) {
                 setModalState(() => photoUrl = uploaded);
               }
@@ -604,14 +609,18 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           Future<void> uploadPhoto() async {
-            final image = await imagePicker.pickImage(source: ImageSource.camera, imageQuality: 80);
+            final image = await pickImageForDriverUpload(
+              imagePicker,
+              source: ImageSource.camera,
+              use: DriverImageUploadUse.deliveryEvidence,
+            );
             if (image == null || !context.mounted) {
               return;
             }
 
             setModalState(() => isUploading = true);
             try {
-              final uploaded = await ref.read(cloudinaryServiceProvider).uploadDeliveryPhoto(image);
+              final uploaded = await ref.read(cloudinaryServiceProvider).uploadProofOfDeliveryPhoto(image);
               if (context.mounted) {
                 setModalState(() => photoUrl = uploaded);
               }

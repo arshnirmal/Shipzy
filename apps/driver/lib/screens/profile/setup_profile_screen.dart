@@ -8,6 +8,7 @@ import '../../models/static/static_vehicle_category.dart';
 import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
 import '../../utils/app_routes.dart';
+import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
 import '../auth/widgets/auth_widgets.dart';
 import 'widgets/onboarding_widgets.dart';
@@ -71,7 +72,11 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 800);
+    final picked = await pickImageForDriverUpload(
+      ImagePicker(),
+      source: ImageSource.gallery,
+      use: DriverImageUploadUse.profile,
+    );
     if (picked == null || !mounted) {
       return;
     }
@@ -80,7 +85,7 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
       _photoUploading = true;
     });
     try {
-      final url = await ref.read(cloudinaryServiceProvider).uploadDocument(picked, folder: 'profile');
+      final url = await ref.read(cloudinaryServiceProvider).uploadDriverProfilePhoto(picked);
       if (mounted) {
         setState(() => _photoUrl = url);
       }
