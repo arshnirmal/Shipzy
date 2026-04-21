@@ -25,11 +25,9 @@ class Auth extends _$Auth {
         return const AuthState.unauthenticated();
       }
 
-      // Validate session and load courier context in one round-trip (cached for
-      // [driverDashboardDataProvider] / [driverProfileProvider] — avoids an
-      // extra `GET /drivers/me` after cold start).
-      final dashboard = await ref.read(driverDashboardDataProvider.future);
-      final user = dashboard.profile.toAppUser();
+      // Validate session and load courier profile (cached for [driverProfileProvider]).
+      final profile = await ref.read(driverProfileProvider.future);
+      final user = profile.toAppUser();
 
       if (user.isVerified) {
         try {
@@ -81,7 +79,7 @@ class Auth extends _$Auth {
       }
 
       state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
-      _invalidateDriverDashboardCache();
+      _invalidateCourierCaches();
 
       return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
@@ -114,7 +112,7 @@ class Auth extends _$Auth {
       final user = response.data.actor.user;
 
       state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
-      _invalidateDriverDashboardCache();
+      _invalidateCourierCaches();
 
       return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
@@ -143,7 +141,7 @@ class Auth extends _$Auth {
       }
 
       state = AsyncData(AuthState.authenticated(user));
-      _invalidateDriverDashboardCache();
+      _invalidateCourierCaches();
 
       return AuthResult.success(user, isNewUser: false);
     } catch (e) {
@@ -187,7 +185,7 @@ class Auth extends _$Auth {
       // Continue with local logout
     } finally {
       await _clearTokens();
-      _invalidateDriverDashboardCache();
+      _invalidateCourierCaches();
 
       try {
         final prefs = await ref.read(sharedPreferencesProvider.future);
@@ -218,9 +216,10 @@ class Auth extends _$Auth {
     await storage.deleteAll();
   }
 
-  /// Drops cached **`GET /drivers/me`** dashboard data after auth changes.
-  void _invalidateDriverDashboardCache() {
-    ref.invalidate(driverDashboardDataProvider);
+  /// Drops cached courier profile and active assignment after auth changes.
+  void _invalidateCourierCaches() {
+    ref.invalidate(driverProfileProvider);
+    ref.invalidate(activeOrderProvider);
   }
 }
 

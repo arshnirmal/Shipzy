@@ -8,7 +8,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/active_order.dart';
 import '../models/available_order.dart';
 import '../models/daily_stats.dart';
-import '../models/driver_dashboard_data.dart';
 import '../models/driver_home_state.dart';
 import '../models/driver_profile.dart';
 import '../models/location_meta.dart';
@@ -187,7 +186,6 @@ class DriverHome extends _$DriverHome {
     try {
       await ref.read(apiServiceProvider).acceptOrder(orderId);
       ref.invalidate(activeOrderProvider);
-      ref.invalidate(driverDashboardDataProvider);
       ref.invalidate(driverProfileProvider);
       ref.invalidate(nearbyOrdersProvider);
 
@@ -241,27 +239,18 @@ Future<List<AvailableOrderItem>> nearbyOrders(Ref ref) async {
 }
 
 @riverpod
-Future<DriverDashboardData> driverDashboardData(Ref ref) async {
-  final apiService = ref.read(apiServiceProvider);
+Future<DriverProfile> driverProfile(Ref ref) => ref.read(apiServiceProvider).getDriverProfile();
 
-  final results = await Future.wait([apiService.getDriverProfile(), apiService.getActiveOrder()]);
-
-  final profile = results[0] as DriverProfile;
-  final activeAssignment = results[1] as ActiveAssignment?;
-
-  return DriverDashboardData(profile: profile, activeAssignment: activeAssignment);
-}
-
+/// Active courier assignment from the API. Skips the network when the profile
+/// is not verified (onboarding / pending review), since assignments apply only
+/// to approved couriers.
 @riverpod
 Future<ActiveAssignment?> activeOrder(Ref ref) async {
-  final dashboardData = await ref.watch(driverDashboardDataProvider.future);
-  return dashboardData.activeAssignment;
-}
-
-@riverpod
-Future<DriverProfile> driverProfile(Ref ref) async {
-  final dashboardData = await ref.watch(driverDashboardDataProvider.future);
-  return dashboardData.profile;
+  final profile = await ref.watch(driverProfileProvider.future);
+  if (!profile.isVerified) {
+    return null;
+  }
+  return ref.read(apiServiceProvider).getActiveOrder();
 }
 
 final tripHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {

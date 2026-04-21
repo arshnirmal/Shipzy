@@ -165,7 +165,8 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(driverDashboardDataProvider);
+                  ref.invalidate(driverProfileProvider);
+                  ref.invalidate(activeOrderProvider);
                   final _ = await ref.refresh(driverProfileProvider.future);
                   await _prefillKycFromProfile();
                 },

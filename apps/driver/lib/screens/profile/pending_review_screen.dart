@@ -23,7 +23,8 @@ class PendingReviewScreen extends ConsumerWidget {
   const PendingReviewScreen({super.key});
 
   Future<void> _refreshProfile(WidgetRef ref) async {
-    ref.invalidate(driverDashboardDataProvider);
+    ref.invalidate(driverProfileProvider);
+    ref.invalidate(activeOrderProvider);
     final _ = await ref.refresh(driverProfileProvider.future);
   }
 
@@ -31,7 +32,7 @@ class PendingReviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(driverProfileProvider);
     return profileAsync.when(
-      loading: () => const _PendingReviewLoadingView(),
+      loading: () => const _PendingReviewSkeletonView(),
       error: (_, __) => _PendingReviewScaffold(
         profile: null,
         onSupport: () => _openPendingReviewSupport(context),
@@ -46,44 +47,75 @@ class PendingReviewScreen extends ConsumerWidget {
   }
 }
 
-class _PendingReviewLoadingView extends StatelessWidget {
-  const _PendingReviewLoadingView();
+/// Content-shaped placeholders (Material 3 “loading” pattern) while profile loads.
+class _PendingReviewSkeletonView extends StatelessWidget {
+  const _PendingReviewSkeletonView();
+
+  static Widget _bone(BuildContext context, {required double width, required double height, BorderRadius? radius}) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.85),
+          borderRadius: radius ?? BorderRadius.circular(8),
+        ),
+      );
 
   @override
-  Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Semantics(
-                  label: 'Loading application status',
-                  child: SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
+  Widget build(BuildContext context) => Semantics(
+        label: 'Loading application status',
+        child: Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(gradient: Theme.of(context).primaryGradient),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 28, AppSpacing.lg, 36),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _bone(context, width: 140, height: 32, radius: BorderRadius.circular(20)),
+                          const SizedBox(height: 16),
+                          _bone(context, width: 260, height: 28, radius: BorderRadius.circular(6)),
+                          const SizedBox(height: 10),
+                          _bone(context, width: double.infinity, height: 16, radius: BorderRadius.circular(4)),
+                          const SizedBox(height: 8),
+                          _bone(context, width: 220, height: 16, radius: BorderRadius.circular(4)),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text('Syncing your application…', style: tt.titleMedium, textAlign: TextAlign.center),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Fetching vehicle and verification details.',
-                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _bone(context, width: 120, height: 12, radius: BorderRadius.circular(4)),
+                        const SizedBox(height: 12),
+                        _bone(context, width: double.infinity, height: 88, radius: BorderRadius.circular(12)),
+                        const SizedBox(height: 24),
+                        _bone(context, width: 140, height: 12, radius: BorderRadius.circular(4)),
+                        const SizedBox(height: 14),
+                        _bone(context, width: double.infinity, height: 56, radius: BorderRadius.circular(10)),
+                        const SizedBox(height: 10),
+                        _bone(context, width: double.infinity, height: 56, radius: BorderRadius.circular(10)),
+                        const SizedBox(height: 10),
+                        _bone(context, width: double.infinity, height: 56, radius: BorderRadius.circular(10)),
+                        const SizedBox(height: 20),
+                        _bone(context, width: double.infinity, height: 72, radius: BorderRadius.circular(12)),
+                        const SizedBox(height: 12),
+                        _bone(context, width: double.infinity, height: 56, radius: BorderRadius.circular(12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _PendingReviewScaffold extends StatelessWidget {

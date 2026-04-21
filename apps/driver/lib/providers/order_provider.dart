@@ -14,6 +14,7 @@ import '../services/local_notification_service.dart';
 import '../services/location_queue.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
+import 'home_provider.dart';
 
 part 'order_provider.g.dart';
 
@@ -318,8 +319,7 @@ class Order extends _$Order {
 
   Future<void> _restoreActiveOrderState() async {
     try {
-      final apiService = ref.read(apiServiceProvider);
-      final activeAssignment = await apiService.getActiveOrder();
+      final activeAssignment = await ref.read(activeOrderProvider.future);
       if (_isDisposed || activeAssignment == null) {
         return;
       }
@@ -330,7 +330,9 @@ class Order extends _$Order {
       var waitElapsed = false;
 
       if (status == OrderStatus.navigatingToDropoff) {
-        final attempt = activeAssignment.deliveryAttempt ?? await apiService.getDeliveryAttempt(activeAssignment.assignment.orderId);
+        final attempt =
+            activeAssignment.deliveryAttempt ??
+            await ref.read(apiServiceProvider).getDeliveryAttempt(activeAssignment.assignment.orderId);
         if (_isDisposed) {
           return;
         }

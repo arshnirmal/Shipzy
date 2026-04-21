@@ -20,7 +20,13 @@ class ProfileScreen extends ConsumerWidget {
       body: profileAsync.when(
         data: (profile) => _ProfileBody(profile: profile),
         loading: () => const _ProfileLoadingView(),
-        error: (e, _) => _ProfileErrorView(message: '$e', onRetry: () => ref.invalidate(driverDashboardDataProvider)),
+        error: (e, _) => _ProfileErrorView(
+          message: '$e',
+          onRetry: () {
+            ref.invalidate(driverProfileProvider);
+            ref.invalidate(activeOrderProvider);
+          },
+        ),
       ),
     );
   }
@@ -114,7 +120,8 @@ class _ProfileBody extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(driverDashboardDataProvider);
+        ref.invalidate(driverProfileProvider);
+        ref.invalidate(activeOrderProvider);
         final _ = await ref.refresh(driverProfileProvider.future);
       },
       child: CustomScrollView(

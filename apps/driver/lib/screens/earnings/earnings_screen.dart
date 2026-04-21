@@ -17,7 +17,8 @@ class EarningsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Earnings')),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(driverDashboardDataProvider);
+          ref.invalidate(driverProfileProvider);
+          ref.invalidate(dailyStatsProvider);
           ref.invalidate(tripHistoryProvider);
         },
         child: ListView(
