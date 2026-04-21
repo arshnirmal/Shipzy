@@ -177,6 +177,8 @@ class VehicleCategorySelector extends StatelessWidget {
   final List<StaticVehicleCategory> options;
   final int? selectedCategoryId;
   final ValueChanged<int> onChanged;
+  static const double _cardWidth = 112;
+  static const double _cardHeight = 104;
 
   @override
   Widget build(BuildContext context) {
@@ -198,8 +200,9 @@ class VehicleCategorySelector extends StatelessWidget {
               final isSel = selectedCategoryId == cat.categoryId;
               return Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.xs),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 96, maxWidth: 120),
+                child: SizedBox(
+                  width: _cardWidth,
+                  height: _cardHeight,
                   child: Semantics(
                     button: true,
                     selected: isSel,
@@ -218,6 +221,7 @@ class VehicleCategorySelector extends StatelessWidget {
                             border: isSel ? Border.all(color: cs.primary, width: 2) : null,
                           ),
                           child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(icon, size: 28, color: isSel ? cs.primary : cs.onSurfaceVariant),
                               const SizedBox(height: 6),
