@@ -2,17 +2,13 @@
   "info": {
     "_postman_id": "45ef0c22-6804-4b40-a44a-6ddc7849f9a8",
     "name": "Shipzy Backend API (Docs Synced)",
-    "description": "Generated from backend/docs/api/*.md.\nSet token variables before running protected requests:\n- accessToken (client/general)\n- courierAccessToken\n- businessAccessToken\n- adminAccessToken\n\nBase URL defaults to local backend.",
+    "description": "Synced with backend/docs/api/*.md (system, auth, users, drivers, orders, addresses, static, business, ratings, admin).\n\nSet collection variables before protected requests:\n- accessToken - client/courier email or Google flows; ratings; orders (non-courier actions); addresses\n- courierAccessToken - /drivers/* and courier-only /orders/*\n- businessAccessToken - /business/*\n- adminAccessToken - /admin/*\n- courierUserId - numeric users.profiles.user_id for POST /admin/drivers/:userId/onboarding-review\n\nEach API route uses {{baseUrl}}/api/v1/... (no nested variables).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
       "value": "http://localhost:3000"
-    },
-    {
-      "key": "apiBase",
-      "value": "{{baseUrl}}/api/v1"
     },
     {
       "key": "accessToken",
@@ -53,6 +49,10 @@
     {
       "key": "templateId",
       "value": "9"
+    },
+    {
+      "key": "courierUserId",
+      "value": "42"
     }
   ],
   "auth": {
@@ -74,14 +74,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/health",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -94,14 +87,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/_internal/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/_internal/health",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -114,14 +100,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -144,14 +123,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/auth/google/verify",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/auth/google/verify",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -178,14 +150,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/auth/refresh",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -212,14 +177,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/auth/register",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -246,14 +204,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -280,14 +231,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/auth/register/business",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/auth/register/business",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -309,14 +253,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/auth/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/auth/logout",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -341,14 +278,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/users/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/users/me",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -373,14 +303,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/users/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/users/me",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -409,14 +332,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/users/me/addresses",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/users/me/addresses",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -441,14 +357,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/users/me/addresses",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/users/me/addresses",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -477,14 +386,7 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/users/me/addresses/{{addressId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/users/me/addresses/{{addressId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -495,6 +397,40 @@
                   "type": "string"
                 }
               ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Device Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/users/me/device-token",
+            "description": "See users.md \u2014 deviceType: android | ios | web; deviceInfo optional.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceToken\": \"<fcm-or-provider-token>\",\n  \"deviceType\": \"android\",\n  \"deviceInfo\": {\n    \"appVersion\": \"1.0.0\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
@@ -509,14 +445,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -541,14 +470,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -582,14 +504,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me/availability",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me/availability",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -623,14 +538,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me/location",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me/location",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -659,14 +567,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me/assignments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me/assignments",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -686,19 +587,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me/earnings?period=week",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "period",
-                  "value": "week"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me/earnings?period=week",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -718,15 +607,62 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/drivers/me/rating",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/drivers/me/rating",
             "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit KYC",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/drivers/me/kyc",
+            "description": "See drivers.md \u2014 HTTPS document URLs for license, vehicleReg, insurance.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courierAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"license\": {\n    \"url\": \"https://cdn.example.com/license.pdf\"\n  },\n  \"vehicleReg\": {\n    \"url\": \"https://cdn.example.com/rc.pdf\"\n  },\n  \"insurance\": {\n    \"url\": \"https://cdn.example.com/insurance.pdf\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Trips (History)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/drivers/me/trips?page=1&limit=10",
+            "description": "Optional query: dateFrom, dateTo (ISO). See drivers.md.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -750,14 +686,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/delivery-types",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/delivery-types",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -770,14 +699,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/weight-tiers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/weight-tiers",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -790,14 +712,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/vehicle-categories",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/vehicle-categories",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -810,14 +725,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/package-types",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/package-types",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -830,14 +738,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/payment-methods",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/payment-methods",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -850,14 +751,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/create-order-data",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/create-order-data",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -870,14 +764,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/static/order-statuses",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/static/order-statuses",
             "description": "",
             "auth": {
               "type": "noauth"
@@ -900,14 +787,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/addresses/search",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/addresses/search",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -941,14 +821,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/addresses/retrieve",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/addresses/retrieve",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -982,14 +855,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/addresses/reverse-geocode",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/addresses/reverse-geocode",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1023,14 +889,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/addresses/directions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/addresses/directions",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1064,14 +923,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/addresses/distance",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/addresses/distance",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1110,14 +962,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/ratings/orders/{{orderId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/ratings/orders/{{orderId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1146,14 +991,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/ratings/drivers/{{driverId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/ratings/drivers/{{driverId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1183,14 +1021,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders/calculate-fare",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/calculate-fare",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1224,14 +1055,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1260,35 +1084,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders?page=1&limit=20&status=active&sortBy=createdAt&sortOrder=desc",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "status",
-                  "value": "active"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/orders?page=1&limit=20&status=active&sortBy=createdAt&sortOrder=desc",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1308,31 +1104,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders/available?latitude=12.9716&longitude=77.5946&radius=5&limit=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "latitude",
-                  "value": "12.9716"
-                },
-                {
-                  "key": "longitude",
-                  "value": "77.5946"
-                },
-                {
-                  "key": "radius",
-                  "value": "5"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/orders/available?latitude=12.9716&longitude=77.5946&radius=5&limit=20",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1352,14 +1124,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1384,14 +1149,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/cancel",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/cancel",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1420,14 +1178,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/accept",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/accept",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1452,14 +1203,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1493,14 +1237,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/arrive",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/arrive",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1534,14 +1271,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/undeliverable",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/undeliverable",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1570,14 +1300,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/return",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/return",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1597,14 +1320,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/returned",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/returned",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1629,14 +1345,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/proof-of-delivery",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/proof-of-delivery",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1665,14 +1374,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/orders/{{orderId}}/tracking",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/tracking",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1702,14 +1404,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/business/drafts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/drafts",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1738,27 +1433,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/drafts?page=1&limit=20&state=ready",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "state",
-                  "value": "ready"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/business/drafts?page=1&limit=20&state=ready",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1778,14 +1453,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/drafts/{{draftId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/drafts/{{draftId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1810,14 +1478,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/business/drafts/{{draftId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/drafts/{{draftId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1846,14 +1507,7 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/drafts/{{draftId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/drafts/{{draftId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1873,14 +1527,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/drafts/{{draftId}}/submit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/drafts/{{draftId}}/submit",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1905,14 +1552,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/business/templates",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/templates",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1941,27 +1581,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/templates?page=1&limit=20&isActive=true",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "isActive",
-                  "value": "true"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/business/templates?page=1&limit=20&isActive=true",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -1981,14 +1601,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/templates/{{templateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/templates/{{templateId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2013,14 +1626,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/business/templates/{{templateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/templates/{{templateId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2049,14 +1655,7 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/templates/{{templateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/templates/{{templateId}}",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2076,14 +1675,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/templates/{{templateId}}/draft",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/templates/{{templateId}}/draft",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2108,14 +1700,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/business/orders/bulk",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/orders/bulk",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2149,14 +1734,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{apiBase}}/business/orders/bulk-cancel",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": []
-            },
+            "url": "{{baseUrl}}/api/v1/business/orders/bulk-cancel",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2185,31 +1763,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/orders/export?status=completed&dateFrom=2026-04-01&dateTo=2026-04-16&format=csv",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "completed"
-                },
-                {
-                  "key": "dateFrom",
-                  "value": "2026-04-01"
-                },
-                {
-                  "key": "dateTo",
-                  "value": "2026-04-16"
-                },
-                {
-                  "key": "format",
-                  "value": "csv"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/business/orders/export?status=completed&dateFrom=2026-04-01&dateTo=2026-04-16&format=csv",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2229,23 +1783,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{apiBase}}/business/analytics?dateFrom=2026-04-01T00:00:00.000Z&dateTo=2026-04-16T23:59:59.999Z",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [],
-              "query": [
-                {
-                  "key": "dateFrom",
-                  "value": "2026-04-01T00:00:00.000Z"
-                },
-                {
-                  "key": "dateTo",
-                  "value": "2026-04-16T23:59:59.999Z"
-                }
-              ]
-            },
+            "url": "{{baseUrl}}/api/v1/business/analytics?dateFrom=2026-04-01T00:00:00.000Z&dateTo=2026-04-16T23:59:59.999Z",
             "description": "",
             "auth": {
               "type": "bearer",
@@ -2256,6 +1794,79 @@
                   "type": "string"
                 }
               ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Onboarding Review \u2014 Approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/drivers/{{courierUserId}}/onboarding-review",
+            "description": "admin.md \u2014 path param is users.profiles.user_id (courier). Reject variant requires rejectedReason (3\u20132000 chars).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Onboarding Review \u2014 Reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/drivers/{{courierUserId}}/onboarding-review",
+            "description": "admin.md \u2014 reject requires rejectedReason.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"reject\",\n  \"rejectedReason\": \"Documents unreadable\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": []
