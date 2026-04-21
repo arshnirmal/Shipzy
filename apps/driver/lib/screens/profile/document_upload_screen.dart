@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../providers/home_provider.dart';
 import '../../providers/onboarding_gate_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/design_tokens.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
@@ -24,6 +26,32 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   final _urls = List<String?>.filled(3, null);
   final _uploading = List<bool>.filled(3, false);
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefillKycFromProfile());
+  }
+
+  Future<void> _prefillKycFromProfile() async {
+    try {
+      final profile = await ref.read(driverProfileProvider.future);
+      if (!mounted) {
+        return;
+      }
+      final k = profile.kyc;
+      if (k == null) {
+        return;
+      }
+      setState(() {
+        _urls[0] = k.license?.url;
+        _urls[1] = k.vehicleReg?.url;
+        _urls[2] = k.insurance?.url;
+      });
+    } catch (_) {
+      // Profile unavailable — user uploads fresh
+    }
+  }
 
   static const _docs = [
     (title: 'Driving license', subtitle: 'Tap to upload from gallery', folder: 'license'),
@@ -135,9 +163,16 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                child: Column(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(driverDashboardDataProvider);
+                  final _ = await ref.refresh(driverProfileProvider.future);
+                  await _prefillKycFromProfile();
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
+                  child: Column(
                   children: [
                     DecoratedBox(
                       decoration: BoxDecoration(color: cs.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
@@ -199,6 +234,7 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
                     const SizedBox(height: 24),
                     OnboardingPrimaryButton(label: 'Submit for verification', onPressed: _submitting ? null : _onSubmit, isLoading: _submitting),
                   ],
+                ),
                 ),
               ),
             ),

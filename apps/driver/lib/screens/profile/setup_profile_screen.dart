@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/static/static_vehicle_category.dart';
+import '../../providers/home_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
+import '../../theme/design_tokens.dart';
 import '../../utils/app_routes.dart';
 import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
@@ -38,7 +40,10 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadVehicleCatalog());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadVehicleCatalog();
+      await _prefillFromServerProfile();
+    });
   }
 
   @override
@@ -68,6 +73,49 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
         });
         SnackbarUtils.showError(context, 'Could not load vehicle types. Check connection and retry.');
       }
+    }
+  }
+
+  /// If the courier already saved vehicle details, mirror them in the form (resume / re-entry).
+  Future<void> _prefillFromServerProfile() async {
+    try {
+      final profile = await ref.read(driverProfileProvider.future);
+      if (!mounted) {
+        return;
+      }
+      final v = profile.vehicle;
+      final spec = v?.specification;
+      final catId = v?.category?.id;
+      final combinedModel = spec?.model?.trim();
+      var nextCategoryId = _vehicleCategoryId;
+      var nextPhotoUrl = _photoUrl;
+      if (combinedModel != null && combinedModel.isNotEmpty) {
+        final parts = combinedModel.split(RegExp(r'\s+'));
+        if (parts.length >= 2) {
+          _makeCtrl.text = parts.first;
+          _modelCtrl.text = parts.sublist(1).join(' ');
+        } else {
+          _modelCtrl.text = combinedModel;
+        }
+      }
+      if (spec?.year != null) {
+        _yearCtrl.text = '${spec!.year}';
+      }
+      if (spec?.vehicleNumber != null && spec!.vehicleNumber!.trim().isNotEmpty) {
+        _plateCtrl.text = spec.vehicleNumber!.trim();
+      }
+      if (profile.profilePictureUrl != null && profile.profilePictureUrl!.trim().isNotEmpty) {
+        nextPhotoUrl = profile.profilePictureUrl!.trim();
+      }
+      if (catId != null && _vehicleOptions.any((c) => c.categoryId == catId)) {
+        nextCategoryId = catId;
+      }
+      setState(() {
+        _photoUrl = nextPhotoUrl;
+        _vehicleCategoryId = nextCategoryId;
+      });
+    } catch (_) {
+      // No profile yet — leave fields empty
     }
   }
 
@@ -176,14 +224,19 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Center(
-                        child: ProfilePhotoPicker(imageFile: _photo, isLoading: _photoUploading, onPick: _pickPhoto),
+                        child: ProfilePhotoPicker(
+                          imageFile: _photo,
+                          networkPreviewUrl: _photo == null ? _photoUrl : null,
+                          isLoading: _photoUploading,
+                          onPick: _pickPhoto,
+                        ),
                       ),
                       const SizedBox(height: 28),
                       if (_catalogLoading)

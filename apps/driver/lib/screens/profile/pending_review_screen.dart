@@ -1,21 +1,101 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../models/driver_kyc_submission.dart';
+import '../../models/driver_profile.dart';
+import '../../providers/home_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/design_tokens.dart';
 import '../../utils/snackbar_utils.dart';
 
-class PendingReviewScreen extends StatelessWidget {
+final Uri _supportUri = Uri.parse('mailto:support@shipzy.com?subject=Driver%20verification');
+
+Future<void> _openPendingReviewSupport(BuildContext context) async {
+  if (await canLaunchUrl(_supportUri)) {
+    await launchUrl(_supportUri);
+  } else if (context.mounted) {
+    SnackbarUtils.showInfo(context, 'Could not open email. Contact support at support@shipzy.com');
+  }
+}
+
+class PendingReviewScreen extends ConsumerWidget {
   const PendingReviewScreen({super.key});
 
-  static final _supportUri = Uri.parse('mailto:support@shipzy.com?subject=Driver%20verification');
-
-  Future<void> _openSupport(BuildContext context) async {
-    if (await canLaunchUrl(_supportUri)) {
-      await launchUrl(_supportUri);
-    } else if (context.mounted) {
-      SnackbarUtils.showInfo(context, 'Could not open email. Contact support at support@shipzy.com');
-    }
+  Future<void> _refreshProfile(WidgetRef ref) async {
+    ref.invalidate(driverDashboardDataProvider);
+    final _ = await ref.refresh(driverProfileProvider.future);
   }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(driverProfileProvider);
+    return profileAsync.when(
+      loading: () => const _PendingReviewLoadingView(),
+      error: (_, __) => _PendingReviewScaffold(
+        profile: null,
+        onSupport: () => _openPendingReviewSupport(context),
+        onRefresh: () => _refreshProfile(ref),
+      ),
+      data: (profile) => _PendingReviewScaffold(
+        profile: profile,
+        onSupport: () => _openPendingReviewSupport(context),
+        onRefresh: () => _refreshProfile(ref),
+      ),
+    );
+  }
+}
+
+class _PendingReviewLoadingView extends StatelessWidget {
+  const _PendingReviewLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Semantics(
+                  label: 'Loading application status',
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text('Syncing your application…', style: tt.titleMedium, textAlign: TextAlign.center),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Fetching vehicle and verification details.',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingReviewScaffold extends StatelessWidget {
+  const _PendingReviewScaffold({
+    required this.profile,
+    required this.onSupport,
+    required this.onRefresh,
+  });
+
+  final DriverProfile? profile;
+  final VoidCallback onSupport;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +104,11 @@ class PendingReviewScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
+        child: RefreshIndicator(
+          onRefresh: onRefresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DecoratedBox(
@@ -58,7 +141,7 @@ class PendingReviewScreen extends StatelessWidget {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 28, AppSpacing.lg, 36),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -110,16 +193,25 @@ class PendingReviewScreen extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (profile case final p?) ...[
+                      Text(
+                        'YOUR SUBMISSION',
+                        style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 0.8),
+                      ),
+                      const SizedBox(height: 10),
+                      _SubmissionSummaryCard(profile: p),
+                      const SizedBox(height: 24),
+                    ],
                     Text(
                       'VERIFICATION STEPS',
                       style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 0.8),
                     ),
                     const SizedBox(height: 14),
-                    const _VerificationTimeline(),
+                    _VerificationTimeline(onboarding: profile?.onboarding),
                     const SizedBox(height: 20),
                     DecoratedBox(
                       decoration: BoxDecoration(
@@ -158,7 +250,7 @@ class PendingReviewScreen extends StatelessWidget {
                       color: cs.surface,
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
-                        onTap: () => _openSupport(context),
+                        onTap: onSupport,
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.all(14),
@@ -189,6 +281,7 @@ class PendingReviewScreen extends StatelessWidget {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -196,24 +289,124 @@ class PendingReviewScreen extends StatelessWidget {
   }
 }
 
-class _VerificationTimeline extends StatelessWidget {
-  const _VerificationTimeline();
+class _SubmissionSummaryCard extends StatelessWidget {
+  const _SubmissionSummaryCard({required this.profile});
 
-  static const _steps = [
-    (label: 'Application received', sub: 'Your details have been recorded', done: true, active: false),
-    (label: 'Document review', sub: 'We are verifying your documents', done: false, active: true),
-    (label: 'Background check', sub: 'Standard security verification', done: false, active: false),
-    (label: 'Approval', sub: 'You can start accepting trips', done: false, active: false),
-  ];
+  final DriverProfile profile;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final v = profile.vehicle;
+    final spec = v?.specification;
+    final cat = v?.category;
+    final plate = spec?.vehicleNumber?.trim();
+    final model = spec?.model?.trim();
+    final year = spec?.year;
+    final catName = cat?.name?.trim();
+    final lines = <String>[
+      if (plate != null && plate.isNotEmpty) 'Plate: $plate',
+      if (model != null && model.isNotEmpty) 'Vehicle: $model',
+      if (year != null) 'Year: $year',
+      if (catName != null && catName.isNotEmpty) 'Category: $catName',
+    ];
+    final o = profile.onboarding;
+    final submitted = o?.submittedAt;
+    final stepsDone = o?.stepsCompleted;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.local_shipping_outlined, size: 22, color: cs.primary),
+                const SizedBox(width: 8),
+                Text('Vehicle & documents', style: tt.titleSmall),
+              ],
+            ),
+            if (lines.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Details will appear here once synced from your profile.', style: tt.bodySmall),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(lines.join('\n'), style: tt.bodySmall?.copyWith(height: 1.45)),
+              ),
+            if (submitted != null && submitted.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Submitted ${_formatIsoDate(submitted)}',
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+            if (stepsDone != null && stepsDone.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Steps: ${stepsDone.join(', ')}',
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatIsoDate(String iso) {
+  final parsed = DateTime.tryParse(iso);
+  if (parsed == null) {
+    return iso;
+  }
+  final local = parsed.toLocal();
+  final y = local.year.toString().padLeft(4, '0');
+  final m = local.month.toString().padLeft(2, '0');
+  final d = local.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
+
+class _VerificationTimeline extends StatelessWidget {
+  const _VerificationTimeline({this.onboarding});
+
+  final ProfileOnboardingState? onboarding;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final pending = onboarding?.status == 'pending_review';
+    final steps = <({
+      String label,
+      String sub,
+      bool done,
+      bool active,
+    })>[
+      (label: 'Application received', sub: 'Your details have been recorded', done: true, active: false),
+      (
+        label: 'Document review',
+        sub: pending ? 'We are verifying your uploaded documents' : 'We will verify your documents',
+        done: false,
+        active: pending,
+      ),
+      (label: 'Background check', sub: 'Standard security verification', done: false, active: false),
+      (label: 'Approval', sub: 'You can start accepting trips', done: false, active: false),
+    ];
+
     return Column(
-      children: List.generate(_steps.length, (i) {
-        final s = _steps[i];
-        final isLast = i == _steps.length - 1;
+      children: List.generate(steps.length, (i) {
+        final s = steps[i];
+        final isLast = i == steps.length - 1;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -295,8 +488,17 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _scale = Tween<double>(begin: 0.85, end: 1.15).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final mq = MediaQuery.maybeOf(context);
+      if (mq != null && !mq.disableAnimations) {
+        _ctrl.repeat(reverse: true);
+      }
+    });
   }
 
   @override
@@ -306,12 +508,15 @@ class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderState
   }
 
   @override
-  Widget build(BuildContext context) => ScaleTransition(
-        scale: _scale,
-        child: Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final dot = Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color),
+    );
+    if (MediaQuery.of(context).disableAnimations) {
+      return dot;
+    }
+    return ScaleTransition(scale: _scale, child: dot);
+  }
 }

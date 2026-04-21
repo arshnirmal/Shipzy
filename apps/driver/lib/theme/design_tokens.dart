@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 class AppSpacing {
   AppSpacing._();
 
+  /// Minimum interactive target (Material / WCAG-aligned touch).
+  static const double minTouchTarget = 48;
+
   static const double xxs = 4;
   static const double xs = 8;
   static const double sm = 12;

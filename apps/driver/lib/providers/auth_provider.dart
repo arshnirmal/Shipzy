@@ -2,6 +2,7 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../models/app_user_mapping.dart';
 import '../models/user.dart';
 import '../utils/logger.dart';
 import 'auth_service_provider.dart';
@@ -20,20 +21,15 @@ class Auth extends _$Auth {
   Future<AuthState> _checkAuthStatus() async {
     try {
       final storage = ref.read(secureStorageProvider);
-      final accessToken = await storage.read(key: 'access_token');
-
-      if (accessToken == null) {
+      if (await storage.read(key: 'access_token') == null) {
         return const AuthState.unauthenticated();
       }
 
-      // Validate token by fetching current user
-      final authService = ref.read(authServiceProvider);
-      final user = await authService.getCurrentUser(accessToken);
-
-      if (user.role != 'courier') {
-        await _clearTokens();
-        return const AuthState.unauthenticated();
-      }
+      // Validate session and load courier context in one round-trip (cached for
+      // [driverDashboardDataProvider] / [driverProfileProvider] — avoids an
+      // extra `GET /drivers/me` after cold start).
+      final dashboard = await ref.read(driverDashboardDataProvider.future);
+      final user = dashboard.profile.toAppUser();
 
       if (user.isVerified) {
         try {
@@ -45,7 +41,6 @@ class Auth extends _$Auth {
         }
       }
 
-      _invalidateDriverDashboardCache();
       return AuthState.authenticated(user);
     } catch (e) {
       AppLogger.e('Auth status check failed: $e');
