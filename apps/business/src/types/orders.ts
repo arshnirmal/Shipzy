@@ -139,6 +139,97 @@ export type BulkCancelApiResponse = {
   timestamp: string;
 };
 
+// ============================================================================
+// TRACKING
+// ============================================================================
+
+export type TrackingMilestone = {
+  eventType: string;
+  description: string;
+  location: { lat: number; lng: number } | null;
+  timestamp: string;
+};
+
+export type DriverTrackingLocation = {
+  location: { latitude: number; longitude: number };
+  locationMeta?: {
+    speed?: number | null;
+    bearing?: number | null;
+    accuracy?: number | null;
+  } | null;
+  lastUpdatedAt: string;
+};
+
+export type TrackingData = {
+  order: { orderId: number; status: OrderStatus };
+  driver: DriverTrackingLocation | null;
+  milestones: TrackingMilestone[];
+  attempt?: unknown | null;
+};
+
+export type TrackingResponse = {
+  success: true;
+  message: string;
+  data: TrackingData;
+  timestamp: string;
+};
+
+// ============================================================================
+// RATINGS
+// ============================================================================
+
+export type DriverRatingSummary = {
+  summary: {
+    average: number;
+    total: number;
+  };
+  distribution: Record<string, number>;
+  recent: {
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+  }[];
+  lastUpdated: string;
+};
+
+export type DriverRatingResponse = {
+  success: true;
+  message: string;
+  data: { rating: DriverRatingSummary };
+  timestamp: string;
+};
+
+// ============================================================================
+// CANCEL
+// ============================================================================
+
+export type CancelOrderPayload = {
+  cancellation: {
+    reason: string;
+  };
+};
+
+export type CancelOrderResponse = {
+  success: true;
+  message: string;
+  data: {
+    order: {
+      orderId: number;
+      status: "cancelled";
+      cancelledAt: string;
+      cancellationReason: string;
+    };
+    refund: {
+      initiated: boolean;
+      amount: number;
+      status: string;
+    };
+  };
+  timestamp: string;
+};
+
+// ============================================================================
+
 export const DEFAULT_FILTERS: OrderFilters = {
   search: "",
   status: "all",

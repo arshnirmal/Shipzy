@@ -1,15 +1,26 @@
+"use client";
+
+import { useState } from "react";
 import { useOrder } from "@/hooks/use-order";
 import { OrderTimeline } from "./order-timeline";
 import { OrderStatusBadge } from "./order-status-badge";
 import { PricingTable } from "./pricing-table";
+import { OrderTrackingView } from "./order-tracking-view";
+import { CancelOrderDialog } from "./cancel-order-dialog";
+import { DriverRatingCard } from "./driver-rating-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MapPin, Phone, User, Package, CalendarClock, Ban } from "lucide-react";
+import { MapPin, Phone, User, Package, CalendarClock, Ban, XCircle } from "lucide-react";
 import { format } from "date-fns";
+
+const CANCELLABLE_STATUSES = new Set(["pending", "accepted", "scheduled"]);
+const ACTIVE_STATUSES = new Set(["accepted", "picked_up", "in_transit"]);
 
 export function OrderDetailView({ id }: { id: string }) {
   const { data, isLoading, error } = useOrder(id);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -54,7 +65,27 @@ export function OrderDetailView({ id }: { id: string }) {
              <span className="line-clamp-2">Cancelled: {order.cancellation.reason}</span>
            </div>
         )}
+
+        {/* Cancel button for active orders */}
+        {CANCELLABLE_STATUSES.has(order.status) && (
+          <Button
+            variant="outline"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setCancelOpen(true)}
+          >
+            <XCircle className="mr-2 size-4" />
+            Cancel Order
+          </Button>
+        )}
       </div>
+
+      {/* Live Tracking for active orders */}
+      {ACTIVE_STATUSES.has(order.status) && (
+        <OrderTrackingView
+          orderId={order.identifiers.orderId}
+          orderStatus={order.status}
+        />
+      )}
 
       {/* Timeline */}
       <Card>
@@ -173,8 +204,23 @@ export function OrderDetailView({ id }: { id: string }) {
            </Card>
 
            <PricingTable pricing={order.pricing} />
+
+           {/* Driver Rating — show for delivered orders with a courier */}
+           {order.status === "delivered" && actors.courier && (
+             <DriverRatingCard driverId={actors.courier.userId} />
+           )}
         </div>
       </div>
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        open={cancelOpen}
+        orderId={order.identifiers.orderId}
+        onOpenChange={setCancelOpen}
+        onCancelled={() => {
+          // Refetch will happen automatically via query invalidation
+        }}
+      />
     </div>
   );
 }

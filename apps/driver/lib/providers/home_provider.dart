@@ -224,6 +224,25 @@ class DriverHome extends _$DriverHome {
     _resetIdleTimer();
     ref.invalidate(nearbyOrdersProvider);
   }
+
+  Future<void> updateOrderStatus(int orderId, String status) async {
+    try {
+      await ref.read(apiServiceProvider).updateOrderStatus(orderId, status);
+      ref.invalidate(activeOrderProvider);
+      ref.invalidate(driverProfileProvider);
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to update status: $e');
+    }
+  }
+
+  Future<void> arriveAtLocation(int orderId, double lat, double lng) async {
+    try {
+      await ref.read(apiServiceProvider).arriveAtDelivery(orderId, lat: lat, lng: lng);
+      ref.invalidate(activeOrderProvider);
+    } catch (e) {
+      state = state.copyWith(error: 'Failed to record arrival: $e');
+    }
+  }
 }
 
 @riverpod

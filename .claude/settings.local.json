@@ -9,7 +9,8 @@
       "mcp__lean-ctx__ctx_search",
       "Bash(flutter analyze *)",
       "mcp__lean-ctx__ctx_edit",
-      "mcp__lean-ctx__ctx_outline"
+      "mcp__lean-ctx__ctx_outline",
+      "Skill(scaffold-flutter-screen)"
     ]
   }
 }

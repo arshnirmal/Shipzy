@@ -1,10 +1,18 @@
-import { PagePlaceholder } from "@/components/shared/page-placeholder";
+"use client";
+
+import { TeamList } from "@/components/team/team-list";
 
 export default function TeamPage() {
   return (
-    <PagePlaceholder
-      title="Team"
-      description="Invite and manage operations teammates across your business account."
-    />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          View and manage your business team members.
+        </p>
+      </div>
+
+      <TeamList />
+    </div>
   );
 }

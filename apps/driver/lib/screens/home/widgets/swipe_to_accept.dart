@@ -4,8 +4,8 @@ import '../../../theme/app_theme_extension.dart';
 
 class SwipeToAccept extends StatefulWidget {
   const SwipeToAccept({
-    super.key,
     required this.onAccept,
+    super.key,
     this.text = 'SWIPE TO ACCEPT',
   });
 
@@ -65,7 +65,7 @@ class _SwipeToAcceptState extends State<SwipeToAccept> {
                   child: Text(
                     widget.text,
                     style: theme.textTheme.labelLarge?.copyWith(
-                      letterSpacing: 2.0,
+                      letterSpacing: 2,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -77,7 +77,9 @@ class _SwipeToAcceptState extends State<SwipeToAccept> {
                 top: (_trackHeight - _thumbSize) / 2,
                 child: GestureDetector(
                   onHorizontalDragUpdate: (details) {
-                    if (_accepted) return;
+                    if (_accepted) {
+                      return;
+                    }
                     setState(() {
                       _dragPosition += details.delta.dx;
                       if (_dragPosition < 0) {
@@ -89,7 +91,9 @@ class _SwipeToAcceptState extends State<SwipeToAccept> {
                     });
                   },
                   onHorizontalDragEnd: (details) {
-                    if (_accepted) return;
+                    if (_accepted) {
+                      return;
+                    }
                     if (_dragPosition > maxDragPosition * 0.8) {
                       setState(() {
                         _dragPosition = maxDragPosition;
