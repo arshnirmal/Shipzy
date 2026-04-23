@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/driver_kyc_submission.dart';
 import '../../models/driver_profile.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/design_tokens.dart';
@@ -42,11 +43,13 @@ class PendingReviewScreen extends ConsumerWidget {
         profile: null,
         onSupport: () => _openPendingReviewSupport(context),
         onRefresh: () => _refreshProfile(ref),
+        onGetStarted: () => ref.invalidate(authProvider),
       ),
       data: (profile) => _PendingReviewScaffold(
         profile: profile,
         onSupport: () => _openPendingReviewSupport(context),
         onRefresh: () => _refreshProfile(ref),
+        onGetStarted: () => ref.invalidate(authProvider),
       ),
     );
   }
@@ -202,16 +205,19 @@ class _PendingReviewScaffold extends StatelessWidget {
     required this.profile,
     required this.onSupport,
     required this.onRefresh,
+    required this.onGetStarted,
   });
 
   final DriverProfile? profile;
   final VoidCallback onSupport;
   final Future<void> Function() onRefresh;
+  final VoidCallback onGetStarted;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final isApproved = profile?.onboarding?.status == 'approved' || (profile?.isVerified ?? false);
 
     return Scaffold(
       body: SafeArea(
@@ -276,10 +282,13 @@ class _PendingReviewScaffold extends StatelessWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const _PulsingDot(color: Color(0xFFFFD700)),
+                                    if (isApproved)
+                                      const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16)
+                                    else
+                                      const _PulsingDot(color: Color(0xFFFFD700)),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'UNDER REVIEW',
+                                      isApproved ? 'APPROVED' : 'UNDER REVIEW',
                                       style: tt.labelSmall?.copyWith(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,
@@ -292,7 +301,7 @@ class _PendingReviewScaffold extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'Application submitted',
+                              isApproved ? 'Application Approved' : 'Application submitted',
                               style: tt.headlineMedium?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -301,7 +310,9 @@ class _PendingReviewScaffold extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Our team will verify your documents within 24–48 hours.',
+                              isApproved 
+                                  ? 'Your account has been verified. You can now start accepting trips.'
+                                  : 'Our team will verify your documents within 24–48 hours.',
                               style: tt.bodyMedium?.copyWith(
                                 color: Colors.white.withValues(alpha: 0.9),
                                 height: 1.5,
@@ -340,92 +351,112 @@ class _PendingReviewScaffold extends StatelessWidget {
                       const SizedBox(height: 14),
                       _VerificationTimeline(onboarding: profile?.onboarding),
                       const SizedBox(height: 20),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: cs.surface,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Icons.schedule_outlined,
-                                  color: cs.primary,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Estimated time',
-                                      style: tt.titleSmall,
-                                    ),
-                                    Text(
-                                      '24–48 business hours',
-                                      style: tt.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Material(
-                        color: cs.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InkWell(
-                          onTap: onSupport,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
+                      if (isApproved)
+                        FilledButton(
+                          onPressed: onGetStarted,
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: cs.outlineVariant.withValues(
-                                  alpha: 0.35,
-                                ),
-                              ),
                             ),
+                          ),
+                          child: const Text(
+                            "Let's Get Started",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        )
+                      else ...[
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.mail_outline,
-                                  size: 20,
-                                  color: cs.primary,
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: cs.surface,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.schedule_outlined,
+                                    color: cs.primary,
+                                    size: 24,
+                                  ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('Need help?', style: tt.titleSmall),
                                       Text(
-                                        'Email driver support',
+                                        'Estimated time',
+                                        style: tt.titleSmall,
+                                      ),
+                                      Text(
+                                        '24–48 business hours',
                                         style: tt.bodySmall,
                                       ),
                                     ],
                                   ),
                                 ),
-                                Icon(Icons.chevron_right, color: cs.primary),
                               ],
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Material(
+                          color: cs.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            onTap: onSupport,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: cs.outlineVariant.withValues(
+                                    alpha: 0.35,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.mail_outline,
+                                    size: 20,
+                                    color: cs.primary,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Need help?', style: tt.titleSmall),
+                                        Text(
+                                          'Email driver support',
+                                          style: tt.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Icon(Icons.chevron_right, color: cs.primary),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -545,6 +576,7 @@ class _VerificationTimeline extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final pending = onboarding?.status == 'pending_review';
+    final approved = onboarding?.status == 'approved';
     final steps = <({String label, String sub, bool done, bool active})>[
       (
         label: 'Application received',
@@ -554,22 +586,22 @@ class _VerificationTimeline extends StatelessWidget {
       ),
       (
         label: 'Document review',
-        sub: pending
-            ? 'We are verifying your uploaded documents'
-            : 'We will verify your documents',
-        done: false,
+        sub: approved 
+            ? 'Documents verified successfully' 
+            : (pending ? 'We are verifying your uploaded documents' : 'We will verify your documents'),
+        done: approved,
         active: pending,
       ),
       (
         label: 'Background check',
-        sub: 'Standard security verification',
-        done: false,
-        active: false,
+        sub: approved ? 'Background verification cleared' : 'Standard security verification',
+        done: approved,
+        active: pending,
       ),
       (
         label: 'Approval',
-        sub: 'You can start accepting trips',
-        done: false,
+        sub: approved ? 'You are ready to accept trips!' : 'You can start accepting trips',
+        done: approved,
         active: false,
       ),
     ];
