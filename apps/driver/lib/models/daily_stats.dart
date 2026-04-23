@@ -17,5 +17,6 @@ class DailyStats with _$DailyStats {
     @Default(0.0) double totalEarnings,
   }) = _DailyStats;
 
-  factory DailyStats.fromJson(Map<String, dynamic> json) => _$DailyStatsFromJson(json);
+  factory DailyStats.fromJson(Map<String, dynamic> json) =>
+      _$DailyStatsFromJson(json);
 }

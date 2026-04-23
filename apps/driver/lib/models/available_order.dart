@@ -13,7 +13,8 @@ class AvailableOrderItem with _$AvailableOrderItem {
     required double distanceFromDriverKm,
   }) = _AvailableOrderItem;
 
-  factory AvailableOrderItem.fromJson(Map<String, dynamic> json) => _$AvailableOrderItemFromJson(json);
+  factory AvailableOrderItem.fromJson(Map<String, dynamic> json) =>
+      _$AvailableOrderItemFromJson(json);
 }
 
 /// Mirrors API BaseOrder — the inner order in an available order item
@@ -32,5 +33,6 @@ class AvailableOrder with _$AvailableOrder {
     String? couponCode,
   }) = _AvailableOrder;
 
-  factory AvailableOrder.fromJson(Map<String, dynamic> json) => _$AvailableOrderFromJson(json);
+  factory AvailableOrder.fromJson(Map<String, dynamic> json) =>
+      _$AvailableOrderFromJson(json);
 }

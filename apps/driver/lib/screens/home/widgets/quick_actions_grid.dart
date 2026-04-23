@@ -9,21 +9,56 @@ class QuickActionsGrid extends StatelessWidget {
     children: [
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text('Quick Actions', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+        child: Text(
+          'Quick Actions',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
       ),
       Row(
         children: [
-          Expanded(child: _buildActionCard(context, 'Earnings', Icons.account_balance_wallet, Colors.purple, () {})),
+          Expanded(
+            child: _buildActionCard(
+              context,
+              'Earnings',
+              Icons.account_balance_wallet,
+              Colors.purple,
+              () {},
+            ),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: _buildActionCard(context, 'History', Icons.history, Colors.orange, () {})),
+          Expanded(
+            child: _buildActionCard(
+              context,
+              'History',
+              Icons.history,
+              Colors.orange,
+              () {},
+            ),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: _buildActionCard(context, 'Support', Icons.headset_mic, Colors.blue, () {})),
+          Expanded(
+            child: _buildActionCard(
+              context,
+              'Support',
+              Icons.headset_mic,
+              Colors.blue,
+              () {},
+            ),
+          ),
         ],
       ),
     ],
   );
 
-  Widget _buildActionCard(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionCard(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     final theme = Theme.of(context);
 
     return InkWell(
@@ -40,11 +75,19 @@ class QuickActionsGrid extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 8),
-            Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

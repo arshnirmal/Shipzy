@@ -60,7 +60,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         error: (message) {
           AppLogger.e('Google sign in error: $message');
           if (mounted) {
-            SnackbarUtils.showError(context, AuthErrorParser.parseLoginError(message));
+            SnackbarUtils.showError(
+              context,
+              AuthErrorParser.parseLoginError(message),
+            );
           }
         },
       );
@@ -85,7 +88,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await ref.read(authProvider.notifier).signInWithEmailAndPassword(_emailController.text.trim(), _passwordController.text);
+      final result = await ref
+          .read(authProvider.notifier)
+          .signInWithEmailAndPassword(
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
 
       result.when(
         success: (user, {required bool isNewUser}) {
@@ -99,13 +107,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         error: (message) {
           AppLogger.e('Login error: $message');
           if (mounted) {
-            SnackbarUtils.showError(context, AuthErrorParser.parseLoginError(message));
+            SnackbarUtils.showError(
+              context,
+              AuthErrorParser.parseLoginError(message),
+            );
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'An unexpected error occurred. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -122,7 +136,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: _kHorizontalPadding).copyWith(bottom: _kBlockSpacing),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kHorizontalPadding,
+          ).copyWith(bottom: _kBlockSpacing),
           child: Form(
             key: _formKey,
             child: Column(
@@ -130,11 +146,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: _kTopSpacing),
                 Text(
                   'Welcome Back',
-                  style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w700),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text('Log in to your Shipzy account to continue.', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                Text(
+                  'Log in to your Shipzy account to continue.',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: _kSectionSpacing),
                 AuthTextField(
                   controller: _emailController,
@@ -157,10 +180,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     onPressed: _togglePasswordVisibility,
-                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
                   ),
                   enabled: !_isLoading,
-                  validator: (value) => AuthValidators.validatePassword(value, minLength: 8),
+                  validator: (value) =>
+                      AuthValidators.validatePassword(value, minLength: 8),
                 ),
                 const SizedBox(height: 8),
                 Align(
@@ -170,24 +198,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? null
                         : () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Forgot password feature coming soon!'), behavior: SnackBarBehavior.floating),
+                              const SnackBar(
+                                content: Text(
+                                  'Forgot password feature coming soon!',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                              ),
                             );
                           },
-                    style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     child: Text(
                       'Forgot password?',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: _kBlockSpacing),
-                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Sign in'),
+                AuthLoadingButton(
+                  isLoading: _isLoading,
+                  onPressed: _submit,
+                  text: 'Sign in',
+                ),
                 const SizedBox(height: _kDividerSpacing),
                 const AuthDivider(text: 'or continue with'),
                 const SizedBox(height: _kDividerSpacing),
                 SocialButton(
                   label: 'Continue with Google',
-                  icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
+                  icon: SvgPicture.asset(
+                    'assets/icons/Google.svg',
+                    width: 20,
+                    height: 20,
+                  ),
                   onPressed: _signInWithGoogle,
                   isLoading: _isGoogleSigningIn,
                 ),
@@ -195,13 +243,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Don't have an account?", style: theme.textTheme.bodyMedium),
+                    Text(
+                      "Don't have an account?",
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     TextButton(
-                      onPressed: _isLoading ? null : () => context.push(AppRoutes.register),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      onPressed: _isLoading
+                          ? null
+                          : () => context.push(AppRoutes.register),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                      ),
                       child: Text(
                         'Create account',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

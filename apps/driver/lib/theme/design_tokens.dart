@@ -36,8 +36,10 @@ class AppRadius {
 
   static BorderRadius get radiusLg => BorderRadius.circular(lg);
   static BorderRadius get radiusXl => BorderRadius.circular(xl);
-  static BorderRadius get radiusOnboardingHero => BorderRadius.circular(onboardingHero);
-  static BorderRadius get radiusDarkPrimaryButton => BorderRadius.circular(darkPrimaryButton);
+  static BorderRadius get radiusOnboardingHero =>
+      BorderRadius.circular(onboardingHero);
+  static BorderRadius get radiusDarkPrimaryButton =>
+      BorderRadius.circular(darkPrimaryButton);
 }
 
 class AppDepth {

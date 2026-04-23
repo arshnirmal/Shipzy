@@ -26,11 +26,17 @@ class EarningsScreen extends ConsumerWidget {
           children: [
             statsAsync.when(
               data: (stats) => _EarningsSummary(stats: stats),
-              loading: () => const SizedBox(height: 120, child: Center(child: CircularProgressIndicator())),
+              loading: () => const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              ),
               error: (e, _) => Text('Failed to load earnings: $e'),
             ),
             const SizedBox(height: 24),
-            Text('Trip History', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Trip History',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             tripsAsync.when(
               data: (trips) => trips.isEmpty
@@ -38,7 +44,9 @@ class EarningsScreen extends ConsumerWidget {
                       padding: EdgeInsets.symmetric(vertical: 32),
                       child: Center(child: Text('No trips yet')),
                     )
-                  : Column(children: trips.map((t) => _TripCard(trip: t)).toList()),
+                  : Column(
+                      children: trips.map((t) => _TripCard(trip: t)).toList(),
+                    ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Text('Failed to load trips: $e'),
             ),
@@ -65,11 +73,20 @@ class _EarningsSummary extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                Text("Today's Earnings", style: Theme.of(context).textTheme.labelLarge),
+                Text(
+                  "Today's Earnings",
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
                 const SizedBox(height: 8),
-                Text(fmt.format(stats.earnings), style: Theme.of(context).textTheme.displaySmall),
+                Text(
+                  fmt.format(stats.earnings),
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
                 const SizedBox(height: 4),
-                Text('${stats.trips} deliveries today', style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  '${stats.trips} deliveries today',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ],
             ),
           ),
@@ -77,9 +94,19 @@ class _EarningsSummary extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _StatCard(label: 'This Week', value: fmt.format(stats.weeklyEarnings))),
+            Expanded(
+              child: _StatCard(
+                label: 'This Week',
+                value: fmt.format(stats.weeklyEarnings),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _StatCard(label: 'All Time', value: fmt.format(stats.totalEarnings))),
+            Expanded(
+              child: _StatCard(
+                label: 'All Time',
+                value: fmt.format(stats.totalEarnings),
+              ),
+            ),
           ],
         ),
       ],
@@ -129,7 +156,11 @@ class _TripCard extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: _statusColor(status).withValues(alpha: 0.1),
-          child: Icon(_statusIcon(status), color: _statusColor(status), size: 20),
+          child: Icon(
+            _statusIcon(status),
+            color: _statusColor(status),
+            size: 20,
+          ),
         ),
         title: Text(orderNumber),
         subtitle: Text(address, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -137,8 +168,15 @@ class _TripCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('₹${earnings.toStringAsFixed(2)}', style: Theme.of(context).textTheme.labelLarge),
-            if (completedAt != null) Text(_formatDate(completedAt), style: Theme.of(context).textTheme.labelSmall),
+            Text(
+              '₹${earnings.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            if (completedAt != null)
+              Text(
+                _formatDate(completedAt),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
           ],
         ),
       ),

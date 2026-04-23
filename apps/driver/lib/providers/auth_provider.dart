@@ -75,7 +75,9 @@ class Auth extends _$Auth {
 
       if (user.role != 'courier') {
         await _clearTokens();
-        return const AuthResult.error('This app is for Shipzy couriers only. Please use the Shipzy customer app.');
+        return const AuthResult.error(
+          'This app is for Shipzy couriers only. Please use the Shipzy customer app.',
+        );
       }
 
       state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
@@ -121,10 +123,16 @@ class Auth extends _$Auth {
   }
 
   /// Login
-  Future<AuthResult> signInWithEmailAndPassword(String email, String password) async {
+  Future<AuthResult> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.login(email: email, password: password);
+      final response = await authService.login(
+        email: email,
+        password: password,
+      );
 
       AppLogger.d('Login response: ${response.data.toJson()}');
 
@@ -137,7 +145,9 @@ class Auth extends _$Auth {
 
       if (user.role != 'courier') {
         await _clearTokens();
-        return const AuthResult.error('This app is for Shipzy couriers only. Please use the Shipzy customer app.');
+        return const AuthResult.error(
+          'This app is for Shipzy couriers only. Please use the Shipzy customer app.',
+        );
       }
 
       state = AsyncData(AuthState.authenticated(user));
@@ -162,7 +172,10 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final response = await authService.refreshToken(refreshToken);
 
-      await storage.write(key: 'access_token', value: response.data.authSection.tokens.accessToken);
+      await storage.write(
+        key: 'access_token',
+        value: response.data.authSection.tokens.accessToken,
+      );
 
       return true;
     } catch (e) {
@@ -226,7 +239,8 @@ class Auth extends _$Auth {
 // Auth state classes
 sealed class AuthState {
   const AuthState();
-  const factory AuthState.authenticated(AppUser user, {bool isNewUser}) = Authenticated;
+  const factory AuthState.authenticated(AppUser user, {bool isNewUser}) =
+      Authenticated;
   const factory AuthState.unauthenticated() = Unauthenticated;
 
   T maybeWhen<T>({
@@ -236,7 +250,8 @@ sealed class AuthState {
   }) {
     if (this is Authenticated) {
       final auth = this as Authenticated;
-      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ?? orElse();
+      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ??
+          orElse();
     } else if (this is Unauthenticated) {
       return unauthenticated?.call() ?? orElse();
     } else {
@@ -258,7 +273,8 @@ class Unauthenticated extends AuthState {
 // Auth result
 sealed class AuthResult {
   const AuthResult();
-  const factory AuthResult.success(AppUser user, {required bool isNewUser}) = AuthSuccess;
+  const factory AuthResult.success(AppUser user, {required bool isNewUser}) =
+      AuthSuccess;
   const factory AuthResult.error(String message) = AuthError;
 
   T when<T>({

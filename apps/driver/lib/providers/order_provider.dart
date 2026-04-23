@@ -25,7 +25,8 @@ class Order extends _$Order {
   bool _isLocationSyncInFlight = false;
   var _isDisposed = false;
 
-  ForegroundTaskService get _foregroundTask => ref.read(foregroundTaskServiceProvider);
+  ForegroundTaskService get _foregroundTask =>
+      ref.read(foregroundTaskServiceProvider);
 
   @override
   OrderState build() {
@@ -62,7 +63,14 @@ class Order extends _$Order {
 
   Future<void> acceptOrder(String orderId) async {
     await ref.read(apiServiceProvider).acceptOrder(_parseOrderId(orderId));
-    _setState(state.copyWith(activeOrderId: orderId, status: OrderStatus.accepted, waitUntil: null, waitElapsed: false));
+    _setState(
+      state.copyWith(
+        activeOrderId: orderId,
+        status: OrderStatus.accepted,
+        waitUntil: null,
+        waitElapsed: false,
+      ),
+    );
   }
 
   Future<void> rejectOrder(String orderId) async {
@@ -70,36 +78,88 @@ class Order extends _$Order {
   }
 
   Future<void> startNavigation(String orderId) async {
-    _setState(state.copyWith(activeOrderId: orderId, status: OrderStatus.navigatingToPickup));
+    _setState(
+      state.copyWith(
+        activeOrderId: orderId,
+        status: OrderStatus.navigatingToPickup,
+      ),
+    );
   }
 
   Future<void> arriveAtPickup(String orderId) async {
-    _setState(state.copyWith(activeOrderId: orderId, status: OrderStatus.arrivedAtPickup));
+    _setState(
+      state.copyWith(
+        activeOrderId: orderId,
+        status: OrderStatus.arrivedAtPickup,
+      ),
+    );
   }
 
   Future<void> confirmPickup(String orderId) async {
-    await ref.read(apiServiceProvider).updateOrderStatus(_parseOrderId(orderId), AssignmentOrderStatus.pickedUp);
-    _setState(state.copyWith(activeOrderId: orderId, status: OrderStatus.pickedUp));
+    await ref
+        .read(apiServiceProvider)
+        .updateOrderStatus(
+          _parseOrderId(orderId),
+          AssignmentOrderStatus.pickedUp,
+        );
+    _setState(
+      state.copyWith(activeOrderId: orderId, status: OrderStatus.pickedUp),
+    );
   }
 
   Future<void> startDropoffNavigation(String orderId) async {
-    await ref.read(apiServiceProvider).updateOrderStatus(_parseOrderId(orderId), AssignmentOrderStatus.inTransit);
-    _setState(state.copyWith(activeOrderId: orderId, status: OrderStatus.navigatingToDropoff));
+    await ref
+        .read(apiServiceProvider)
+        .updateOrderStatus(
+          _parseOrderId(orderId),
+          AssignmentOrderStatus.inTransit,
+        );
+    _setState(
+      state.copyWith(
+        activeOrderId: orderId,
+        status: OrderStatus.navigatingToDropoff,
+      ),
+    );
   }
 
   Future<void> arriveAtDelivery(String orderId) async {
-    final position = await ref.read(locationServiceProvider.notifier).getCurrentLocation();
-    final result = await ref.read(apiServiceProvider).arriveAtDelivery(_parseOrderId(orderId), lat: position.latitude, lng: position.longitude);
+    final position = await ref
+        .read(locationServiceProvider.notifier)
+        .getCurrentLocation();
+    final result = await ref
+        .read(apiServiceProvider)
+        .arriveAtDelivery(
+          _parseOrderId(orderId),
+          lat: position.latitude,
+          lng: position.longitude,
+        );
 
     final waitElapsed = DateTime.now().isAfter(result.waitUntil);
-    _setState(state.copyWith(activeOrderId: orderId, status: OrderStatus.arrivedAtDropoff, waitUntil: result.waitUntil, waitElapsed: waitElapsed));
+    _setState(
+      state.copyWith(
+        activeOrderId: orderId,
+        status: OrderStatus.arrivedAtDropoff,
+        waitUntil: result.waitUntil,
+        waitElapsed: waitElapsed,
+      ),
+    );
 
     _startWaitTimer();
   }
 
-  Future<void> submitUndeliverable(String orderId, {required String note, String? photoUrl}) async {
+  Future<void> submitUndeliverable(
+    String orderId, {
+    required String note,
+    String? photoUrl,
+  }) async {
     try {
-      await ref.read(apiServiceProvider).markUndeliverable(_parseOrderId(orderId), driverNote: note, photoUrl: photoUrl);
+      await ref
+          .read(apiServiceProvider)
+          .markUndeliverable(
+            _parseOrderId(orderId),
+            driverNote: note,
+            photoUrl: photoUrl,
+          );
       _waitTimer?.cancel();
       _setState(state.copyWith(status: OrderStatus.undeliverable));
     } on RetryAfterException catch (e) {
@@ -121,7 +181,14 @@ class Order extends _$Order {
   Future<void> confirmReturned(String orderId) async {
     await ref.read(apiServiceProvider).confirmReturned(_parseOrderId(orderId));
     _waitTimer?.cancel();
-    _setState(state.copyWith(status: OrderStatus.completed, activeOrderId: null, waitUntil: null, waitElapsed: false));
+    _setState(
+      state.copyWith(
+        status: OrderStatus.completed,
+        activeOrderId: null,
+        waitUntil: null,
+        waitElapsed: false,
+      ),
+    );
   }
 
   Future<void> submitProofOfDelivery(
@@ -143,9 +210,20 @@ class Order extends _$Order {
   }
 
   Future<void> completeDelivery(String orderId) async {
-    await ref.read(apiServiceProvider).updateOrderStatus(_parseOrderId(orderId), AssignmentOrderStatus.delivered);
+    await ref
+        .read(apiServiceProvider)
+        .updateOrderStatus(
+          _parseOrderId(orderId),
+          AssignmentOrderStatus.delivered,
+        );
     _waitTimer?.cancel();
-    _setState(state.copyWith(status: OrderStatus.completed, waitUntil: null, waitElapsed: false));
+    _setState(
+      state.copyWith(
+        status: OrderStatus.completed,
+        waitUntil: null,
+        waitElapsed: false,
+      ),
+    );
   }
 
   void closeActiveOrderFlow() {
@@ -167,7 +245,9 @@ class Order extends _$Order {
 
     if (DateTime.now().isAfter(waitUntil)) {
       _setState(state.copyWith(waitElapsed: true));
-      unawaited(ref.read(localNotificationServiceProvider).showWaitTimerElapsed());
+      unawaited(
+        ref.read(localNotificationServiceProvider).showWaitTimerElapsed(),
+      );
       return;
     }
 
@@ -181,7 +261,9 @@ class Order extends _$Order {
       if (DateTime.now().isAfter(currentWaitUntil)) {
         timer.cancel();
         _setState(state.copyWith(waitElapsed: true));
-        unawaited(ref.read(localNotificationServiceProvider).showWaitTimerElapsed());
+        unawaited(
+          ref.read(localNotificationServiceProvider).showWaitTimerElapsed(),
+        );
       }
     });
   }
@@ -246,7 +328,11 @@ class Order extends _$Order {
       final apiService = ref.read(apiServiceProvider);
 
       try {
-        await apiService.updateDriverLocation(latitude: position.latitude, longitude: position.longitude, locationMeta: meta);
+        await apiService.updateDriverLocation(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          locationMeta: meta,
+        );
         await _drainQueue(apiService);
       } catch (_) {
         await _enqueuePosition(position.latitude, position.longitude, meta);
@@ -272,7 +358,11 @@ class Order extends _$Order {
         await apiService.updateDriverLocation(
           latitude: entry.latitude,
           longitude: entry.longitude,
-          locationMeta: LocationMeta(speed: entry.speed, bearing: entry.bearing, accuracy: entry.accuracy),
+          locationMeta: LocationMeta(
+            speed: entry.speed,
+            bearing: entry.bearing,
+            accuracy: entry.accuracy,
+          ),
         );
         await queue.clear();
       } catch (_) {
@@ -283,10 +373,20 @@ class Order extends _$Order {
     }
   }
 
-  Future<void> _enqueuePosition(double latitude, double longitude, LocationMeta meta) async {
+  Future<void> _enqueuePosition(
+    double latitude,
+    double longitude,
+    LocationMeta meta,
+  ) async {
     try {
       final queue = await ref.read(locationQueueProvider.future);
-      await queue.enqueue(latitude: latitude, longitude: longitude, speed: meta.speed, bearing: meta.bearing, accuracy: meta.accuracy);
+      await queue.enqueue(
+        latitude: latitude,
+        longitude: longitude,
+        speed: meta.speed,
+        bearing: meta.bearing,
+        accuracy: meta.accuracy,
+      );
     } catch (_) {
       // Queue unavailable — skip enqueue
     }
@@ -298,10 +398,16 @@ class Order extends _$Order {
     final accuracy = position.accuracy;
 
     final speedKmph = speed.isFinite && speed >= 0 ? speed * 3.6 : null;
-    final bearing = heading.isFinite && heading >= 0 && heading <= 360 ? heading : null;
+    final bearing = heading.isFinite && heading >= 0 && heading <= 360
+        ? heading
+        : null;
     final safeAccuracy = accuracy.isFinite && accuracy >= 0 ? accuracy : null;
 
-    return LocationMeta(speed: speedKmph, bearing: bearing, accuracy: safeAccuracy);
+    return LocationMeta(
+      speed: speedKmph,
+      bearing: bearing,
+      accuracy: safeAccuracy,
+    );
   }
 
   void _stopLocationTimer() {
@@ -325,31 +431,47 @@ class Order extends _$Order {
       }
 
       final orderId = activeAssignment.assignment.orderId.toString();
-      var status = _statusFromAssignment(activeAssignment.assignmentStatus.order);
+      var status = _statusFromAssignment(
+        activeAssignment.assignmentStatus.order,
+      );
       DateTime? waitUntil;
       var waitElapsed = false;
 
       if (status == OrderStatus.navigatingToDropoff) {
         final attempt =
             activeAssignment.deliveryAttempt ??
-            await ref.read(apiServiceProvider).getDeliveryAttempt(activeAssignment.assignment.orderId);
+            await ref
+                .read(apiServiceProvider)
+                .getDeliveryAttempt(activeAssignment.assignment.orderId);
         if (_isDisposed) {
           return;
         }
 
         if (attempt?.arrivedAt != null) {
           status = OrderStatus.arrivedAtDropoff;
-          final arriveResult = await _recoverArriveResult(activeAssignment.assignment.orderId, attempt!);
+          final arriveResult = await _recoverArriveResult(
+            activeAssignment.assignment.orderId,
+            attempt!,
+          );
           if (_isDisposed) {
             return;
           }
 
-          waitUntil = arriveResult?.waitUntil ?? attempt.arrivedAt.add(const Duration(minutes: 5));
+          waitUntil =
+              arriveResult?.waitUntil ??
+              attempt.arrivedAt.add(const Duration(minutes: 5));
           waitElapsed = DateTime.now().isAfter(waitUntil);
         }
       }
 
-      _setState(state.copyWith(activeOrderId: orderId, status: status, waitUntil: waitUntil, waitElapsed: waitElapsed));
+      _setState(
+        state.copyWith(
+          activeOrderId: orderId,
+          status: status,
+          waitUntil: waitUntil,
+          waitElapsed: waitElapsed,
+        ),
+      );
 
       if (status == OrderStatus.arrivedAtDropoff && waitUntil != null) {
         _startWaitTimer();
@@ -359,15 +481,28 @@ class Order extends _$Order {
     }
   }
 
-  Future<ArriveResult?> _recoverArriveResult(int orderId, DeliveryAttempt attempt) async {
+  Future<ArriveResult?> _recoverArriveResult(
+    int orderId,
+    DeliveryAttempt attempt,
+  ) async {
     try {
       final gps = attempt.gps;
       if (gps != null) {
-        return await ref.read(apiServiceProvider).arriveAtDelivery(orderId, lat: gps.latitude, lng: gps.longitude);
+        return await ref
+            .read(apiServiceProvider)
+            .arriveAtDelivery(orderId, lat: gps.latitude, lng: gps.longitude);
       }
 
-      final position = await ref.read(locationServiceProvider.notifier).getCurrentLocation();
-      return await ref.read(apiServiceProvider).arriveAtDelivery(orderId, lat: position.latitude, lng: position.longitude);
+      final position = await ref
+          .read(locationServiceProvider.notifier)
+          .getCurrentLocation();
+      return await ref
+          .read(apiServiceProvider)
+          .arriveAtDelivery(
+            orderId,
+            lat: position.latitude,
+            lng: position.longitude,
+          );
     } catch (_) {
       return null;
     }
@@ -398,8 +533,10 @@ class Order extends _$Order {
 enum OrderStatus {
   /// No active order.
   idle,
+
   /// FCM new-order sheet visible; driver hasn't accepted yet.
   incoming,
+
   /// Driver accepted; navigating to pickup address.
   accepted,
   navigatingToPickup,
@@ -410,17 +547,25 @@ enum OrderStatus {
   delivered,
   undeliverable,
   returning,
+
   /// Driver arrived back at pickup point for return handback.
   atOrigin,
   returned,
+
   /// Terminal: PoD submitted or return confirmed. UI shows completion screen.
   completed,
+
   /// FCM cancel received while order was active. UI shows blocking modal.
   cancelledByCustomer,
 }
 
 class OrderState {
-  const OrderState({this.activeOrderId, this.status = OrderStatus.idle, this.waitUntil, this.waitElapsed = false});
+  const OrderState({
+    this.activeOrderId,
+    this.status = OrderStatus.idle,
+    this.waitUntil,
+    this.waitElapsed = false,
+  });
 
   final String? activeOrderId;
   final OrderStatus status;
@@ -429,8 +574,15 @@ class OrderState {
 
   static const Object _sentinel = Object();
 
-  OrderState copyWith({Object? activeOrderId = _sentinel, OrderStatus? status, Object? waitUntil = _sentinel, bool? waitElapsed}) => OrderState(
-    activeOrderId: activeOrderId == _sentinel ? this.activeOrderId : activeOrderId as String?,
+  OrderState copyWith({
+    Object? activeOrderId = _sentinel,
+    OrderStatus? status,
+    Object? waitUntil = _sentinel,
+    bool? waitElapsed,
+  }) => OrderState(
+    activeOrderId: activeOrderId == _sentinel
+        ? this.activeOrderId
+        : activeOrderId as String?,
     status: status ?? this.status,
     waitUntil: waitUntil == _sentinel ? this.waitUntil : waitUntil as DateTime?,
     waitElapsed: waitElapsed ?? this.waitElapsed,

@@ -15,12 +15,17 @@ class DeliveryAttempt with _$DeliveryAttempt {
     DeliveryGps? gps,
   }) = _DeliveryAttempt;
 
-  factory DeliveryAttempt.fromJson(Map<String, dynamic> json) => _$DeliveryAttemptFromJson(json);
+  factory DeliveryAttempt.fromJson(Map<String, dynamic> json) =>
+      _$DeliveryAttemptFromJson(json);
 }
 
 @freezed
 class DeliveryGps with _$DeliveryGps {
-  const factory DeliveryGps({required double latitude, required double longitude}) = _DeliveryGps;
+  const factory DeliveryGps({
+    required double latitude,
+    required double longitude,
+  }) = _DeliveryGps;
 
-  factory DeliveryGps.fromJson(Map<String, dynamic> json) => _$DeliveryGpsFromJson(json);
+  factory DeliveryGps.fromJson(Map<String, dynamic> json) =>
+      _$DeliveryGpsFromJson(json);
 }

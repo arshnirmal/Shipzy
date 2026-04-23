@@ -5,7 +5,12 @@ part 'arrive_result.g.dart';
 
 @freezed
 class ArriveResult with _$ArriveResult {
-  const factory ArriveResult({required DateTime arrivedAt, required DateTime waitUntil, required int waitMinutes}) = _ArriveResult;
+  const factory ArriveResult({
+    required DateTime arrivedAt,
+    required DateTime waitUntil,
+    required int waitMinutes,
+  }) = _ArriveResult;
 
-  factory ArriveResult.fromJson(Map<String, dynamic> json) => _$ArriveResultFromJson(json);
+  factory ArriveResult.fromJson(Map<String, dynamic> json) =>
+      _$ArriveResultFromJson(json);
 }

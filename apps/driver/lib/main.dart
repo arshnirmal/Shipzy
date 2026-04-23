@@ -28,7 +28,10 @@ Future<void> main() async {
       await Firebase.initializeApp();
 
       // Set preferred orientations
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
 
       // Set system UI overlay
       SystemChrome.setSystemUIOverlayStyle(
@@ -50,7 +53,11 @@ Future<void> main() async {
       runApp(const ProviderScope(child: ShipzyDriverApp()));
     },
     (error, stackTrace) {
-      AppLogger.e('Uncaught Async Error: $error', error: error, stackTrace: stackTrace);
+      AppLogger.e(
+        'Uncaught Async Error: $error',
+        error: error,
+        stackTrace: stackTrace,
+      );
     },
   );
 }
@@ -60,7 +67,11 @@ Future<void> main() async {
 void _setupErrorHandling() {
   // Catch Flutter framework errors
   FlutterError.onError = (FlutterErrorDetails details) {
-    AppLogger.e('Flutter Error: ${details.exception}', error: details.exception, stackTrace: details.stack);
+    AppLogger.e(
+      'Flutter Error: ${details.exception}',
+      error: details.exception,
+      stackTrace: details.stack,
+    );
     // Also print to console for immediate visibility
     FlutterError.dumpErrorToConsole(details);
   };

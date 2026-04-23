@@ -49,5 +49,6 @@ class AppRoutes {
   /// Route for an active delivery flow.
   static const String activeDelivery = '/active-delivery/:orderId';
 
-  static String activeDeliveryPath(String orderId) => '/active-delivery/$orderId';
+  static String activeDeliveryPath(String orderId) =>
+      '/active-delivery/$orderId';
 }

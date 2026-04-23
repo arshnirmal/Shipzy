@@ -24,7 +24,10 @@ class AuthService {
   }
 
   /// Google OAuth authentication
-  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'courier'}) async {
+  Future<GoogleAuthResponse> verifyGoogleToken(
+    String idToken, {
+    String role = 'courier',
+  }) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -37,7 +40,9 @@ class AuthService {
       );
 
       if (response.data?['success'] != true) {
-        throw Exception(response.data?['message'] ?? 'Google authentication failed');
+        throw Exception(
+          response.data?['message'] ?? 'Google authentication failed',
+        );
       }
 
       return GoogleAuthResponse.fromJson(response.data!);
@@ -59,7 +64,11 @@ class AuthService {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/register',
         data: {
-          'identity': {'fullName': fullName, 'role': role, 'phoneNumber': phoneNumber},
+          'identity': {
+            'fullName': fullName,
+            'role': role,
+            'phoneNumber': phoneNumber,
+          },
           'credentials': {'email': email, 'password': password},
         },
         options: Options(headers: {'X-Device-Id': deviceId}),
@@ -76,7 +85,10 @@ class AuthService {
   }
 
   /// User login
-  Future<LoginResponse> login({required String email, required String password}) async {
+  Future<LoginResponse> login({
+    required String email,
+    required String password,
+  }) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -129,10 +141,14 @@ class AuthService {
       );
 
       if (response.data?['success'] != true) {
-        throw Exception(response.data?['message'] ?? 'Failed to get user profile');
+        throw Exception(
+          response.data?['message'] ?? 'Failed to get user profile',
+        );
       }
 
-      return AppUser.fromJson(response.data!['data']['profile'] as Map<String, dynamic>);
+      return AppUser.fromJson(
+        response.data!['data']['profile'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw mapDioException(e, 'Get current user');
     }
@@ -141,7 +157,9 @@ class AuthService {
   /// Logout user — auth header is added by the interceptor
   Future<void> logout(String accessToken) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>('/auth/logout');
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/auth/logout',
+      );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Logout failed');

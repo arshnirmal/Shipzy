@@ -51,13 +51,15 @@ class AuthValidators {
 class AuthErrorParser {
   /// Parses login error messages.
   static String parseLoginError(String error) {
-    if (error.contains('Invalid credentials') || error.contains('Invalid email or password')) {
+    if (error.contains('Invalid credentials') ||
+        error.contains('Invalid email or password')) {
       return 'Invalid email or password. Please try again.';
     }
     if (error.contains('User not found')) {
       return 'No account found with this email.';
     }
-    if (error.contains('Network error') || error.contains('Connection timeout')) {
+    if (error.contains('Network error') ||
+        error.contains('Connection timeout')) {
       return 'Network error. Please check your connection.';
     }
     if (error.contains('Server not responding')) {
@@ -68,13 +70,15 @@ class AuthErrorParser {
 
   /// Parses registration error messages.
   static String parseRegisterError(String error) {
-    if (error.contains('Email already exists') || error.contains('already registered')) {
+    if (error.contains('Email already exists') ||
+        error.contains('already registered')) {
       return 'An account with this email already exists.';
     }
     if (error.contains('Phone number already exists')) {
       return 'This phone number is already registered.';
     }
-    if (error.contains('Network error') || error.contains('Connection timeout')) {
+    if (error.contains('Network error') ||
+        error.contains('Connection timeout')) {
       return 'Network error. Please check your connection.';
     }
     if (error.contains('Server not responding')) {

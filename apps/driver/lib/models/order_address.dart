@@ -23,5 +23,6 @@ class OrderAddress with _$OrderAddress {
     String? howToReach,
   }) = _OrderAddress;
 
-  factory OrderAddress.fromJson(Map<String, dynamic> json) => _$OrderAddressFromJson(json);
+  factory OrderAddress.fromJson(Map<String, dynamic> json) =>
+      _$OrderAddressFromJson(json);
 }

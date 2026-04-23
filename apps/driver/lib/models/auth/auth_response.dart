@@ -20,7 +20,9 @@ int _expiresInFromJson(dynamic value) {
       return direct;
     }
 
-    final durationMatch = RegExp(r'^(\d+)\s*(ms|s|m|h|d|w)$').firstMatch(normalized);
+    final durationMatch = RegExp(
+      r'^(\d+)\s*(ms|s|m|h|d|w)$',
+    ).firstMatch(normalized);
     if (durationMatch != null) {
       final amount = int.parse(durationMatch.group(1)!);
       final unit = durationMatch.group(2)!;
@@ -55,35 +57,55 @@ int _expiresInToJson(int value) => value;
 /// Login API Response
 @freezed
 abstract class LoginResponse with _$LoginResponse {
-  const factory LoginResponse({required bool success, required String message, required AuthData data, required String timestamp}) = _LoginResponse;
+  const factory LoginResponse({
+    required bool success,
+    required String message,
+    required AuthData data,
+    required String timestamp,
+  }) = _LoginResponse;
 
-  factory LoginResponse.fromJson(Map<String, dynamic> json) => _$LoginResponseFromJson(json);
+  factory LoginResponse.fromJson(Map<String, dynamic> json) =>
+      _$LoginResponseFromJson(json);
 }
 
 /// Register API Response
 @freezed
 abstract class RegisterResponse with _$RegisterResponse {
-  const factory RegisterResponse({required bool success, required String message, required AuthData data, required String timestamp}) =
-      _RegisterResponse;
+  const factory RegisterResponse({
+    required bool success,
+    required String message,
+    required AuthData data,
+    required String timestamp,
+  }) = _RegisterResponse;
 
-  factory RegisterResponse.fromJson(Map<String, dynamic> json) => _$RegisterResponseFromJson(json);
+  factory RegisterResponse.fromJson(Map<String, dynamic> json) =>
+      _$RegisterResponseFromJson(json);
 }
 
 /// Google Auth API Response
 @freezed
 abstract class GoogleAuthResponse with _$GoogleAuthResponse {
-  const factory GoogleAuthResponse({required bool success, required String message, required AuthData data, required String timestamp}) =
-      _GoogleAuthResponse;
+  const factory GoogleAuthResponse({
+    required bool success,
+    required String message,
+    required AuthData data,
+    required String timestamp,
+  }) = _GoogleAuthResponse;
 
-  factory GoogleAuthResponse.fromJson(Map<String, dynamic> json) => _$GoogleAuthResponseFromJson(json);
+  factory GoogleAuthResponse.fromJson(Map<String, dynamic> json) =>
+      _$GoogleAuthResponseFromJson(json);
 }
 
 /// Auth data — mirrors API { actor: { user }, auth: { tokens, session } }
 @freezed
 abstract class AuthData with _$AuthData {
-  const factory AuthData({required AuthActor actor, @JsonKey(name: 'auth') required AuthSectionData authSection}) = _AuthData;
+  const factory AuthData({
+    required AuthActor actor,
+    @JsonKey(name: 'auth') required AuthSectionData authSection,
+  }) = _AuthData;
 
-  factory AuthData.fromJson(Map<String, dynamic> json) => _$AuthDataFromJson(json);
+  factory AuthData.fromJson(Map<String, dynamic> json) =>
+      _$AuthDataFromJson(json);
 }
 
 /// Actor block — mirrors API { actor: { user } }
@@ -91,23 +113,32 @@ abstract class AuthData with _$AuthData {
 abstract class AuthActor with _$AuthActor {
   const factory AuthActor({required AppUser user}) = _AuthActor;
 
-  factory AuthActor.fromJson(Map<String, dynamic> json) => _$AuthActorFromJson(json);
+  factory AuthActor.fromJson(Map<String, dynamic> json) =>
+      _$AuthActorFromJson(json);
 }
 
 /// Auth section — mirrors API { auth: { tokens, session } }
 @freezed
 abstract class AuthSectionData with _$AuthSectionData {
-  const factory AuthSectionData({required AuthTokens tokens, required AuthSession session}) = _AuthSectionData;
+  const factory AuthSectionData({
+    required AuthTokens tokens,
+    required AuthSession session,
+  }) = _AuthSectionData;
 
-  factory AuthSectionData.fromJson(Map<String, dynamic> json) => _$AuthSectionDataFromJson(json);
+  factory AuthSectionData.fromJson(Map<String, dynamic> json) =>
+      _$AuthSectionDataFromJson(json);
 }
 
 /// Session metadata
 @freezed
 abstract class AuthSession with _$AuthSession {
-  const factory AuthSession({required String method, @Default(false) bool isNewUser}) = _AuthSession;
+  const factory AuthSession({
+    required String method,
+    @Default(false) bool isNewUser,
+  }) = _AuthSession;
 
-  factory AuthSession.fromJson(Map<String, dynamic> json) => _$AuthSessionFromJson(json);
+  factory AuthSession.fromJson(Map<String, dynamic> json) =>
+      _$AuthSessionFromJson(json);
 }
 
 /// Token data
@@ -116,18 +147,29 @@ abstract class AuthTokens with _$AuthTokens {
   const factory AuthTokens({
     @JsonKey(name: 'accessToken') required String accessToken,
     @JsonKey(name: 'refreshToken') required String refreshToken,
-    @JsonKey(name: 'expiresIn', fromJson: _expiresInFromJson, toJson: _expiresInToJson) required int expiresIn,
+    @JsonKey(
+      name: 'expiresIn',
+      fromJson: _expiresInFromJson,
+      toJson: _expiresInToJson,
+    )
+    required int expiresIn,
     @JsonKey(name: 'tokenType') @Default('Bearer') String tokenType,
   }) = _AuthTokens;
 
-  factory AuthTokens.fromJson(Map<String, dynamic> json) => _$AuthTokensFromJson(json);
+  factory AuthTokens.fromJson(Map<String, dynamic> json) =>
+      _$AuthTokensFromJson(json);
 }
 
 /// Refresh token response — same AuthData wrapper as login/register
 @freezed
 abstract class RefreshTokenResponse with _$RefreshTokenResponse {
-  const factory RefreshTokenResponse({required bool success, required String message, required AuthData data, required String timestamp}) =
-      _RefreshTokenResponse;
+  const factory RefreshTokenResponse({
+    required bool success,
+    required String message,
+    required AuthData data,
+    required String timestamp,
+  }) = _RefreshTokenResponse;
 
-  factory RefreshTokenResponse.fromJson(Map<String, dynamic> json) => _$RefreshTokenResponseFromJson(json);
+  factory RefreshTokenResponse.fromJson(Map<String, dynamic> json) =>
+      _$RefreshTokenResponseFromJson(json);
 }

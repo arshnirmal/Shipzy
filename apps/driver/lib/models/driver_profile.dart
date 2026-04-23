@@ -15,7 +15,8 @@ class DriverKycDocument with _$DriverKycDocument {
     String? verifiedAt,
   }) = _DriverKycDocument;
 
-  factory DriverKycDocument.fromJson(Map<String, dynamic> json) => _$DriverKycDocumentFromJson(json);
+  factory DriverKycDocument.fromJson(Map<String, dynamic> json) =>
+      _$DriverKycDocumentFromJson(json);
 }
 
 /// Mirrors API `driver.kyc` from `GET /drivers/me`.
@@ -27,7 +28,8 @@ class DriverKycInfo with _$DriverKycInfo {
     DriverKycDocument? vehicleReg,
   }) = _DriverKycInfo;
 
-  factory DriverKycInfo.fromJson(Map<String, dynamic> json) => _$DriverKycInfoFromJson(json);
+  factory DriverKycInfo.fromJson(Map<String, dynamic> json) =>
+      _$DriverKycInfoFromJson(json);
 }
 
 /// Mirrors API BaseDriver (BaseDriverCore + earnings + rating)
@@ -52,7 +54,8 @@ class DriverProfile with _$DriverProfile {
     String? updatedAt,
   }) = _DriverProfile;
 
-  factory DriverProfile.fromJson(Map<String, dynamic> json) => _$DriverProfileFromJson(json);
+  factory DriverProfile.fromJson(Map<String, dynamic> json) =>
+      _$DriverProfileFromJson(json);
 }
 
 /// Mirrors API BaseDriverCore.status
@@ -67,15 +70,20 @@ class DriverStatusInfo with _$DriverStatusInfo {
     String? lastLocationUpdate,
   }) = _DriverStatusInfo;
 
-  factory DriverStatusInfo.fromJson(Map<String, dynamic> json) => _$DriverStatusInfoFromJson(json);
+  factory DriverStatusInfo.fromJson(Map<String, dynamic> json) =>
+      _$DriverStatusInfoFromJson(json);
 }
 
 /// Mirrors API Coordinates schema
 @freezed
 class DriverCoordinates with _$DriverCoordinates {
-  const factory DriverCoordinates({required double latitude, required double longitude}) = _DriverCoordinates;
+  const factory DriverCoordinates({
+    required double latitude,
+    required double longitude,
+  }) = _DriverCoordinates;
 
-  factory DriverCoordinates.fromJson(Map<String, dynamic> json) => _$DriverCoordinatesFromJson(json);
+  factory DriverCoordinates.fromJson(Map<String, dynamic> json) =>
+      _$DriverCoordinatesFromJson(json);
 }
 
 /// Mirrors API `driver.vehicle.category`.
@@ -87,7 +95,8 @@ class DriverVehicleCategory with _$DriverVehicleCategory {
     double? maxWeightKg,
   }) = _DriverVehicleCategory;
 
-  factory DriverVehicleCategory.fromJson(Map<String, dynamic> json) => _$DriverVehicleCategoryFromJson(json);
+  factory DriverVehicleCategory.fromJson(Map<String, dynamic> json) =>
+      _$DriverVehicleCategoryFromJson(json);
 }
 
 /// Mirrors API `driver.vehicle.specification`.
@@ -99,7 +108,8 @@ class DriverVehicleSpecification with _$DriverVehicleSpecification {
     int? year,
   }) = _DriverVehicleSpecification;
 
-  factory DriverVehicleSpecification.fromJson(Map<String, dynamic> json) => _$DriverVehicleSpecificationFromJson(json);
+  factory DriverVehicleSpecification.fromJson(Map<String, dynamic> json) =>
+      _$DriverVehicleSpecificationFromJson(json);
 }
 
 /// Mirrors API BaseDriverCore.vehicle (nested category + specification).
@@ -112,7 +122,8 @@ class DriverVehicle with _$DriverVehicle {
     DriverVehicleSpecification? specification,
   }) = _DriverVehicle;
 
-  factory DriverVehicle.fromJson(Map<String, dynamic> json) => _$DriverVehicleFromJson(json);
+  factory DriverVehicle.fromJson(Map<String, dynamic> json) =>
+      _$DriverVehicleFromJson(json);
 }
 
 /// Mirrors API BaseDriver.earnings
@@ -127,7 +138,8 @@ class DriverEarnings with _$DriverEarnings {
     @Default(0.0) double totalDistanceKm,
   }) = _DriverEarnings;
 
-  factory DriverEarnings.fromJson(Map<String, dynamic> json) => _$DriverEarningsFromJson(json);
+  factory DriverEarnings.fromJson(Map<String, dynamic> json) =>
+      _$DriverEarningsFromJson(json);
 }
 
 /// Mirrors API BaseDriver.rating
@@ -138,5 +150,6 @@ class DriverRatingSummary with _$DriverRatingSummary {
     @Default(0) int totalRatings,
   }) = _DriverRatingSummary;
 
-  factory DriverRatingSummary.fromJson(Map<String, dynamic> json) => _$DriverRatingSummaryFromJson(json);
+  factory DriverRatingSummary.fromJson(Map<String, dynamic> json) =>
+      _$DriverRatingSummaryFromJson(json);
 }

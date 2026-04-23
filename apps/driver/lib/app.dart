@@ -60,7 +60,9 @@ class _ShipzyDriverAppState extends ConsumerState<ShipzyDriverApp> {
       routerConfig: router,
       builder: (context, child) {
         final Widget mediaQueryWrappedChild = MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.noScaling),
           child: child ?? const SizedBox.shrink(),
         );
 
@@ -72,7 +74,10 @@ class _ShipzyDriverAppState extends ConsumerState<ShipzyDriverApp> {
         );
 
         if (kDebugMode) {
-          result = Stack(fit: StackFit.expand, children: [result, const DevThemeSwitcher()]);
+          result = Stack(
+            fit: StackFit.expand,
+            children: [result, const DevThemeSwitcher()],
+          );
         }
 
         return result;

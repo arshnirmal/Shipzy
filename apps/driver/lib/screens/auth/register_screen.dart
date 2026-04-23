@@ -59,13 +59,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           if (!mounted) {
             return;
           }
-          SnackbarUtils.showSuccess(context, 'Welcome to Shipzy, ${user.fullName}');
+          SnackbarUtils.showSuccess(
+            context,
+            'Welcome to Shipzy, ${user.fullName}',
+          );
           context.go(AppRoutes.splash);
         },
         error: (message) {
           AppLogger.e('Google sign in error: $message');
           if (mounted) {
-            SnackbarUtils.showError(context, AuthErrorParser.parseRegisterError(message));
+            SnackbarUtils.showError(
+              context,
+              AuthErrorParser.parseRegisterError(message),
+            );
           }
         },
       );
@@ -105,20 +111,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             return;
           }
           FocusScope.of(context).unfocus();
-          SnackbarUtils.showSuccess(context, 'Welcome to Shipzy, ${user.fullName}!');
+          SnackbarUtils.showSuccess(
+            context,
+            'Welcome to Shipzy, ${user.fullName}!',
+          );
           context.go(AppRoutes.splash);
         },
         error: (message) {
           AppLogger.e('Register error: $message');
           if (mounted) {
-            SnackbarUtils.showError(context, AuthErrorParser.parseRegisterError(message));
+            SnackbarUtils.showError(
+              context,
+              AuthErrorParser.parseRegisterError(message),
+            );
           }
         },
       );
     } catch (e) {
       AppLogger.e('Register error: $e');
       if (mounted) {
-        SnackbarUtils.showError(context, 'An unexpected error occurred. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'An unexpected error occurred. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -135,7 +150,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: _kHorizontalPadding).copyWith(bottom: _kBlockSpacing),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kHorizontalPadding,
+          ).copyWith(bottom: _kBlockSpacing),
           child: Form(
             key: _formKey,
             child: Column(
@@ -143,11 +160,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: _kTopSpacing),
                 Text(
                   'Create Account',
-                  style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w700),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text('Create your Shipzy account to start delivering.', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                Text(
+                  'Create your Shipzy account to start delivering.',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: _kSectionSpacing),
                 AuthTextField(
                   controller: _fullNameController,
@@ -191,19 +215,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     onPressed: _togglePasswordVisibility,
-                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
                   ),
                   enabled: !_isLoading,
-                  validator: (value) => AuthValidators.validatePassword(value, minLength: 8),
+                  validator: (value) =>
+                      AuthValidators.validatePassword(value, minLength: 8),
                 ),
                 const SizedBox(height: _kBlockSpacing),
-                AuthLoadingButton(isLoading: _isLoading, onPressed: _submit, text: 'Create account'),
+                AuthLoadingButton(
+                  isLoading: _isLoading,
+                  onPressed: _submit,
+                  text: 'Create account',
+                ),
                 const SizedBox(height: _kDividerSpacing),
                 const AuthDivider(text: 'or continue with'),
                 const SizedBox(height: _kDividerSpacing),
                 SocialButton(
                   label: 'Continue with Google',
-                  icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
+                  icon: SvgPicture.asset(
+                    'assets/icons/Google.svg',
+                    width: 20,
+                    height: 20,
+                  ),
                   onPressed: _signInWithGoogle,
                   isLoading: _isGoogleSigningIn,
                 ),
@@ -211,13 +248,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have an account?', style: theme.textTheme.bodyMedium),
+                    Text(
+                      'Already have an account?',
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.pop(),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                      ),
                       child: Text(
                         'Sign in',
-                        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

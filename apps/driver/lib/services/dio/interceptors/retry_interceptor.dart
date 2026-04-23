@@ -12,12 +12,16 @@ class RetryInterceptor extends Interceptor {
   static const _maxAttempts = 3;
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
     final statusCode = err.response?.statusCode;
     final options = err.requestOptions;
     final attempt = (options.extra['_retryAttempt'] as int?) ?? 0;
 
-    final retriable = err.type == DioExceptionType.connectionError ||
+    final retriable =
+        err.type == DioExceptionType.connectionError ||
         err.type == DioExceptionType.connectionTimeout ||
         err.type == DioExceptionType.receiveTimeout ||
         (statusCode != null && statusCode >= 500);
@@ -27,7 +31,9 @@ class RetryInterceptor extends Interceptor {
     }
 
     final delayMs = 500 * (1 << attempt); // 500, 1000, 2000 ms
-    AppLogger.d('Retry ${attempt + 1}/$_maxAttempts after ${delayMs}ms — ${options.method} ${options.path}');
+    AppLogger.d(
+      'Retry ${attempt + 1}/$_maxAttempts after ${delayMs}ms — ${options.method} ${options.path}',
+    );
     await Future<void>.delayed(Duration(milliseconds: delayMs));
 
     options.extra['_retryAttempt'] = attempt + 1;

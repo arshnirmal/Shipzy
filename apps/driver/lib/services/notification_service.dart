@@ -14,7 +14,9 @@ part 'notification_service.g.dart';
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Background handler runs in a separate Dart isolate.
   // Keep lightweight — no provider access, no UI.
-  AppLogger.d('FCM background message: ${message.messageId} type=${message.data['type']}');
+  AppLogger.d(
+    'FCM background message: ${message.messageId} type=${message.data['type']}',
+  );
 }
 
 @riverpod
@@ -47,7 +49,9 @@ class NotificationService {
         AppLogger.w('FCM token is null — skipping registration');
         return;
       }
-      await _ref.read(apiServiceProvider).registerDeviceToken(deviceToken: token);
+      await _ref
+          .read(apiServiceProvider)
+          .registerDeviceToken(deviceToken: token);
       AppLogger.d('FCM token registered');
     } catch (e) {
       // Non-fatal — app works without push, token registration retried on next launch.
@@ -64,7 +68,9 @@ class NotificationService {
   void _listenTokenRefresh() {
     _fcm.onTokenRefresh.listen((newToken) async {
       try {
-        await _ref.read(apiServiceProvider).registerDeviceToken(deviceToken: newToken);
+        await _ref
+            .read(apiServiceProvider)
+            .registerDeviceToken(deviceToken: newToken);
         AppLogger.d('FCM token refreshed and re-registered');
       } catch (e) {
         AppLogger.w('FCM token refresh registration failed: $e');

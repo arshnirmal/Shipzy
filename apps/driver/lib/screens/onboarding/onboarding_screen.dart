@@ -31,17 +31,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _OnboardingPageData(
       type: _OnboardingIllustrationType.schedule,
       title: 'Earn on Your Terms',
-      subtitle: 'Choose when and where you want to work. Be your own boss with flexible schedules.',
+      subtitle:
+          'Choose when and where you want to work. Be your own boss with flexible schedules.',
     ),
     _OnboardingPageData(
       type: _OnboardingIllustrationType.navigation,
       title: 'Seamless Navigation',
-      subtitle: 'Our smart routing helps you find the fastest paths and delivery points with ease.',
+      subtitle:
+          'Our smart routing helps you find the fastest paths and delivery points with ease.',
     ),
     _OnboardingPageData(
       type: _OnboardingIllustrationType.payouts,
       title: 'Instant Payouts',
-      subtitle: 'Get paid daily. Track your earnings in real-time and withdraw whenever you need.',
+      subtitle:
+          'Get paid daily. Track your earnings in real-time and withdraw whenever you need.',
     ),
   ];
 
@@ -55,7 +58,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _onNext() {
     if (_currentPageIndex < _pages.length - 1) {
-      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     } else {
       _finishOnboarding();
     }
@@ -83,14 +89,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _OnboardingTopBar(showSkip: _currentPageIndex < _pages.length - 1, onSkip: _finishOnboarding),
+            _OnboardingTopBar(
+              showSkip: _currentPageIndex < _pages.length - 1,
+              onSkip: _finishOnboarding,
+            ),
             Expanded(
               child: Semantics(
-                label: 'Onboarding step ${_currentPageIndex + 1} of ${_pages.length}',
+                label:
+                    'Onboarding step ${_currentPageIndex + 1} of ${_pages.length}',
                 child: PageView.builder(
                   controller: _pageController,
                   itemCount: _pages.length,
-                  onPageChanged: (value) => setState(() => _currentPageIndex = value),
+                  onPageChanged: (value) =>
+                      setState(() => _currentPageIndex = value),
                   itemBuilder: (context, index) {
                     final page = _pages[index];
                     return _OnboardingPageBody(page: page);
@@ -99,11 +110,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(_kPageHorizontalPadding, 16, _kPageHorizontalPadding, 24),
+              padding: const EdgeInsets.fromLTRB(
+                _kPageHorizontalPadding,
+                16,
+                _kPageHorizontalPadding,
+                24,
+              ),
               child: _OnboardingBottomActions(
                 pageCount: _pages.length,
                 currentIndex: _currentPageIndex,
-                primaryLabel: _currentPageIndex == _pages.length - 1 ? _kGetStartedLabel : _kNextLabel,
+                primaryLabel: _currentPageIndex == _pages.length - 1
+                    ? _kGetStartedLabel
+                    : _kNextLabel,
                 showNextArrow: _currentPageIndex < _pages.length - 1,
                 onPrimary: _onNext,
                 activeDotColor: colorScheme.primary,
@@ -118,7 +136,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _OnboardingPageData {
-  const _OnboardingPageData({required this.type, required this.title, required this.subtitle});
+  const _OnboardingPageData({
+    required this.type,
+    required this.title,
+    required this.subtitle,
+  });
 
   final _OnboardingIllustrationType type;
   final String title;
@@ -133,7 +155,10 @@ class _OnboardingTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: _kPageHorizontalPadding, vertical: 8),
+    padding: const EdgeInsets.symmetric(
+      horizontal: _kPageHorizontalPadding,
+      vertical: 8,
+    ),
     child: Row(
       children: [
         const Spacer(),
@@ -169,7 +194,10 @@ class _OnboardingPageBody extends StatelessWidget {
         children: [
           SizedBox(
             width: illustrationSize,
-            child: AspectRatio(aspectRatio: 1, child: _OnboardingHeroIllustration(type: page.type)),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: _OnboardingHeroIllustration(type: page.type),
+            ),
           ),
           SizedBox(height: isCompact ? 28 : 36),
           Text(
@@ -177,7 +205,11 @@ class _OnboardingPageBody extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.headlineMedium?.copyWith(color: colorScheme.onSurface, fontWeight: FontWeight.w700, height: 1.2),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -185,7 +217,10 @@ class _OnboardingPageBody extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 5,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.45),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.45,
+            ),
           ),
         ],
       ),
@@ -217,15 +252,29 @@ class _OnboardingBottomActions extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      _OnboardingProgressDots(pageCount: pageCount, currentIndex: currentIndex, activeColor: activeDotColor, inactiveColor: inactiveDotColor),
+      _OnboardingProgressDots(
+        pageCount: pageCount,
+        currentIndex: currentIndex,
+        activeColor: activeDotColor,
+        inactiveColor: inactiveDotColor,
+      ),
       const SizedBox(height: 20),
-      _OnboardingPrimaryCta(label: primaryLabel, showArrow: showNextArrow, onPressed: onPrimary),
+      _OnboardingPrimaryCta(
+        label: primaryLabel,
+        showArrow: showNextArrow,
+        onPressed: onPrimary,
+      ),
     ],
   );
 }
 
 class _OnboardingProgressDots extends StatelessWidget {
-  const _OnboardingProgressDots({required this.pageCount, required this.currentIndex, required this.activeColor, required this.inactiveColor});
+  const _OnboardingProgressDots({
+    required this.pageCount,
+    required this.currentIndex,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
 
   final int pageCount;
   final int currentIndex;
@@ -243,14 +292,21 @@ class _OnboardingProgressDots extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         width: isActive ? 30 : 10,
         height: 10,
-        decoration: BoxDecoration(color: isActive ? activeColor : inactiveColor, borderRadius: BorderRadius.circular(99)),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor : inactiveColor,
+          borderRadius: BorderRadius.circular(99),
+        ),
       );
     }),
   );
 }
 
 class _OnboardingPrimaryCta extends StatelessWidget {
-  const _OnboardingPrimaryCta({required this.label, required this.onPressed, this.showArrow = false});
+  const _OnboardingPrimaryCta({
+    required this.label,
+    required this.onPressed,
+    this.showArrow = false,
+  });
 
   final String label;
   final VoidCallback onPressed;
@@ -261,11 +317,19 @@ class _OnboardingPrimaryCta extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final gradient = isDark ? AppPalette.primaryGradientDark : AppPalette.primaryGradientLight;
-    final ctaShadow = isDark ? AppPalette.ambientShadowDark : AppPalette.ambientShadowLight;
+    final gradient = isDark
+        ? AppPalette.primaryGradientDark
+        : AppPalette.primaryGradientLight;
+    final ctaShadow = isDark
+        ? AppPalette.ambientShadowDark
+        : AppPalette.ambientShadowLight;
 
     return DecoratedBox(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), gradient: gradient, boxShadow: [ctaShadow]),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: gradient,
+        boxShadow: [ctaShadow],
+      ),
       child: SizedBox(
         width: double.infinity,
         height: _kPrimaryButtonHeight,
@@ -283,9 +347,19 @@ class _OnboardingPrimaryCta extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.w700),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    if (showArrow) ...[const SizedBox(width: 6), Icon(Icons.arrow_forward_rounded, color: colorScheme.onPrimary, size: 18)],
+                    if (showArrow) ...[
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: colorScheme.onPrimary,
+                        size: 18,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -322,13 +396,17 @@ class _ScheduleIllustration extends StatefulWidget {
   State<_ScheduleIllustration> createState() => _ScheduleIllustrationState();
 }
 
-class _ScheduleIllustrationState extends State<_ScheduleIllustration> with SingleTickerProviderStateMixin {
+class _ScheduleIllustrationState extends State<_ScheduleIllustration>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..forward();
   }
 
   @override
@@ -371,7 +449,13 @@ class _ScheduleIllustrationState extends State<_ScheduleIllustration> with Singl
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(32),
-              boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 24, offset: const Offset(0, 12))],
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.1),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -379,9 +463,11 @@ class _ScheduleIllustrationState extends State<_ScheduleIllustration> with Singl
               children: [
                 Text(
                   'OFFLINE   ON DUTY',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant, letterSpacing: 0.6, fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Stack(
@@ -389,17 +475,32 @@ class _ScheduleIllustrationState extends State<_ScheduleIllustration> with Singl
                   children: [
                     Container(
                       height: 14,
-                      decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(999)),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
                     Align(
-                      alignment: Alignment.lerp(Alignment.centerLeft, Alignment.centerRight, toggleProgress.value)!,
+                      alignment: Alignment.lerp(
+                        Alignment.centerLeft,
+                        Alignment.centerRight,
+                        toggleProgress.value,
+                      )!,
                       child: Container(
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
                           color: colorScheme.primary,
                           shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.28), blurRadius: 12, offset: const Offset(0, 4))],
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.primary.withValues(
+                                alpha: 0.28,
+                              ),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -444,16 +545,21 @@ class _NavigationIllustration extends StatefulWidget {
   const _NavigationIllustration();
 
   @override
-  State<_NavigationIllustration> createState() => _NavigationIllustrationState();
+  State<_NavigationIllustration> createState() =>
+      _NavigationIllustrationState();
 }
 
-class _NavigationIllustrationState extends State<_NavigationIllustration> with SingleTickerProviderStateMixin {
+class _NavigationIllustrationState extends State<_NavigationIllustration>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 820))..forward();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 820),
+    )..forward();
   }
 
   @override
@@ -496,21 +602,36 @@ class _NavigationIllustrationState extends State<_NavigationIllustration> with S
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(28),
               color: colorScheme.surfaceContainerHigh,
-              boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 10))],
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: CustomPaint(
-              painter: _RoutePainter(color: colorScheme.primary, progress: pathProgress.value),
+              painter: _RoutePainter(
+                color: colorScheme.primary,
+                progress: pathProgress.value,
+              ),
             ),
           ),
           Positioned(
             left: 54,
             top: 118,
-            child: _MapPin(color: colorScheme.primary, icon: Icons.inventory_2_rounded),
+            child: _MapPin(
+              color: colorScheme.primary,
+              icon: Icons.inventory_2_rounded,
+            ),
           ),
           Positioned(
             right: 54,
             top: 58,
-            child: _MapPin(color: colorScheme.tertiary, icon: Icons.home_rounded),
+            child: _MapPin(
+              color: colorScheme.tertiary,
+              icon: Icons.home_rounded,
+            ),
           ),
           Positioned(
             top: 22 + etaSlide.value,
@@ -537,13 +658,17 @@ class _PayoutIllustration extends StatefulWidget {
   State<_PayoutIllustration> createState() => _PayoutIllustrationState();
 }
 
-class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTickerProviderStateMixin {
+class _PayoutIllustrationState extends State<_PayoutIllustration>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..forward();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
   }
 
   @override
@@ -561,8 +686,20 @@ class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTic
     );
     final pulse =
         TweenSequence<double>([
-          TweenSequenceItem(tween: Tween<double>(begin: 1, end: 1.04).chain(CurveTween(curve: Curves.easeOut)), weight: 50),
-          TweenSequenceItem(tween: Tween<double>(begin: 1.04, end: 1).chain(CurveTween(curve: Curves.easeInOut)), weight: 50),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1,
+              end: 1.04,
+            ).chain(CurveTween(curve: Curves.easeOut)),
+            weight: 50,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.04,
+              end: 1,
+            ).chain(CurveTween(curve: Curves.easeInOut)),
+            weight: 50,
+          ),
         ]).animate(
           CurvedAnimation(
             parent: _controller,
@@ -584,7 +721,10 @@ class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTic
                 gradient: LinearGradient(
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
-                  colors: [colorScheme.primary.withValues(alpha: 0.12), colorScheme.primaryContainer.withValues(alpha: 0.06)],
+                  colors: [
+                    colorScheme.primary.withValues(alpha: 0.12),
+                    colorScheme.primaryContainer.withValues(alpha: 0.06),
+                  ],
                 ),
               ),
               child: const SizedBox(width: 280, height: 280),
@@ -595,20 +735,39 @@ class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTic
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 color: colorScheme.surfaceContainerHigh,
-                boxShadow: [BoxShadow(color: colorScheme.shadow.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 12))],
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.shadow.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Today', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  Text(
+                    'Today',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     '\$${amount.toString()}',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text('16 deliveries  8h online', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  Text(
+                    '16 deliveries  8h online',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 14),
                   Center(
                     child: Transform.scale(
@@ -618,12 +777,21 @@ class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTic
                         height: 40,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
-                          gradient: LinearGradient(colors: [colorScheme.primary, colorScheme.primaryContainer]),
+                          gradient: LinearGradient(
+                            colors: [
+                              colorScheme.primary,
+                              colorScheme.primaryContainer,
+                            ],
+                          ),
                         ),
                         child: Center(
                           child: Text(
                             'Withdraw',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: colorScheme.onPrimary, fontWeight: FontWeight.w700),
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: colorScheme.onPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
                         ),
                       ),
@@ -650,7 +818,12 @@ class _PayoutIllustrationState extends State<_PayoutIllustration> with SingleTic
 }
 
 class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.text, required this.backgroundColor, required this.foregroundColor});
+  const _InfoChip({
+    required this.icon,
+    required this.text,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
 
   final IconData icon;
   final String text;
@@ -663,7 +836,13 @@ class _InfoChip extends StatelessWidget {
     decoration: BoxDecoration(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(999),
-      boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4))],
+      boxShadow: [
+        BoxShadow(
+          color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -672,7 +851,11 @@ class _InfoChip extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: foregroundColor, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: foregroundColor,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
         ),
       ],
     ),
@@ -714,11 +897,16 @@ class _ConcentricBackgroundPainter extends CustomPainter {
       ..strokeWidth = 1.5
       ..color = color.withValues(alpha: 0.12);
     canvas.drawCircle(center, size.width * 0.35, ringPaint);
-    canvas.drawCircle(center, size.width * 0.46, ringPaint..color = color.withValues(alpha: 0.08));
+    canvas.drawCircle(
+      center,
+      size.width * 0.46,
+      ringPaint..color = color.withValues(alpha: 0.08),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _ConcentricBackgroundPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _ConcentricBackgroundPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _DottedBackdropPainter extends CustomPainter {
@@ -737,12 +925,16 @@ class _DottedBackdropPainter extends CustomPainter {
     }
 
     final vignettePaint = Paint()
-      ..shader = RadialGradient(radius: 0.9, colors: [Colors.transparent, color.withValues(alpha: 0.06)]).createShader(Offset.zero & size);
+      ..shader = RadialGradient(
+        radius: 0.9,
+        colors: [Colors.transparent, color.withValues(alpha: 0.06)],
+      ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, vignettePaint);
   }
 
   @override
-  bool shouldRepaint(covariant _DottedBackdropPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _DottedBackdropPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _RoutePainter extends CustomPainter {
@@ -755,7 +947,14 @@ class _RoutePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final path = Path()
       ..moveTo(size.width * 0.2, size.height * 0.78)
-      ..cubicTo(size.width * 0.38, size.height * 0.22, size.width * 0.64, size.height * 0.9, size.width * 0.82, size.height * 0.25);
+      ..cubicTo(
+        size.width * 0.38,
+        size.height * 0.22,
+        size.width * 0.64,
+        size.height * 0.9,
+        size.width * 0.82,
+        size.height * 0.25,
+      );
 
     final dashedPaint = Paint()
       ..color = color.withValues(alpha: 0.34)
@@ -780,7 +979,9 @@ class _RoutePainter extends CustomPainter {
         distance += dashLength + gapLength;
       }
 
-      final visibleLength = (metric.length * progress).clamp(0, metric.length).toDouble();
+      final visibleLength = (metric.length * progress)
+          .clamp(0, metric.length)
+          .toDouble();
       canvas.drawPath(metric.extractPath(0, visibleLength), activePaint);
       final tangent = metric.getTangentForOffset(visibleLength);
       if (tangent != null) {
@@ -790,5 +991,6 @@ class _RoutePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RoutePainter oldDelegate) => oldDelegate.color != color || oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _RoutePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.progress != progress;
 }

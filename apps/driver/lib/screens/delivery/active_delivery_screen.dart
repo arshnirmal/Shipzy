@@ -21,7 +21,8 @@ class ActiveDeliveryScreen extends ConsumerStatefulWidget {
   final String orderId;
 
   @override
-  ConsumerState<ActiveDeliveryScreen> createState() => _ActiveDeliveryScreenState();
+  ConsumerState<ActiveDeliveryScreen> createState() =>
+      _ActiveDeliveryScreenState();
 }
 
 class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
@@ -42,13 +43,17 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     final notifier = ref.read(orderProvider.notifier);
     final assignment = ref.watch(activeOrderProvider).valueOrNull;
 
-    final contactAddress = _isPrePickupPhase(orderState.status) ? assignment?.routing.pickup : assignment?.routing.delivery;
+    final contactAddress = _isPrePickupPhase(orderState.status)
+        ? assignment?.routing.pickup
+        : assignment?.routing.delivery;
 
     ref.listen<OrderState>(orderProvider, (previous, next) {
       _syncCountdownTicker(next);
 
       // Trigger PoD sheet on both completed (fresh flow) and delivered (app-kill recovery).
-      final justFinished = (next.status == OrderStatus.completed || next.status == OrderStatus.delivered) &&
+      final justFinished =
+          (next.status == OrderStatus.completed ||
+              next.status == OrderStatus.delivered) &&
           previous?.status != OrderStatus.completed &&
           previous?.status != OrderStatus.delivered;
       if (justFinished && !_hasOpenedPodSheet) {
@@ -73,9 +78,14 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('Cancel Delivery?'),
-                content: const Text('Are you sure you want to cancel this delivery? This may affect your rating.'),
+                content: const Text(
+                  'Are you sure you want to cancel this delivery? This may affect your rating.',
+                ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('No')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('No'),
+                  ),
                   TextButton(
                     onPressed: () {
                       Navigator.pop(context);
@@ -96,13 +106,24 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, -5))],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(_getStatusText(orderState.status), style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  _getStatusText(orderState.status),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 if (orderState.status == OrderStatus.arrivedAtDropoff) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -232,7 +253,12 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     }
   }
 
-  Widget _buildActions(BuildContext context, OrderState state, Order notifier, Duration remaining) {
+  Widget _buildActions(
+    BuildContext context,
+    OrderState state,
+    Order notifier,
+    Duration remaining,
+  ) {
     switch (state.status) {
       case OrderStatus.arrivedAtDropoff:
         return Column(
@@ -244,15 +270,22 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                   : () => _runAction(() async {
                       await notifier.completeDelivery(widget.orderId);
                     }),
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+              ),
               child: Text(_getPrimaryActionText(state.status)),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _isActionInProgress || !state.waitElapsed
                   ? null
-                  : () => _showUndeliverableBottomSheet(waitUntil: state.waitUntil, remaining: remaining),
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                  : () => _showUndeliverableBottomSheet(
+                      waitUntil: state.waitUntil,
+                      remaining: remaining,
+                    ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('Mark Undeliverable'),
             ),
           ],
@@ -262,8 +295,12 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ElevatedButton(
-              onPressed: _isActionInProgress ? null : _showProofOfDeliveryBottomSheet,
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+              onPressed: _isActionInProgress
+                  ? null
+                  : _showProofOfDeliveryBottomSheet,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('Add Proof of Delivery (Optional)'),
             ),
             const SizedBox(height: 12),
@@ -274,7 +311,9 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                       notifier.closeActiveOrderFlow();
                       context.go('/home');
                     },
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('Done'),
             ),
           ],
@@ -333,7 +372,9 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                 notifier.closeActiveOrderFlow();
                 context.go('/home');
               },
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
+              ),
               child: const Text('Go Home'),
             ),
           ],
@@ -346,7 +387,9 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       case OrderStatus.pickedUp:
       case OrderStatus.navigatingToDropoff:
         return ElevatedButton(
-          onPressed: _isActionInProgress ? null : () => _handlePrimaryAction(state.status, notifier),
+          onPressed: _isActionInProgress
+              ? null
+              : () => _handlePrimaryAction(state.status, notifier),
           style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
           child: Text(_getPrimaryActionText(state.status)),
         );
@@ -427,7 +470,11 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   }
 
   Future<void> _launchNavigation(double lat, double lng) async {
-    final geoUri = Uri(scheme: 'geo', path: '$lat,$lng', queryParameters: {'q': '$lat,$lng'});
+    final geoUri = Uri(
+      scheme: 'geo',
+      path: '$lat,$lng',
+      queryParameters: {'q': '$lat,$lng'},
+    );
     if (await canLaunchUrl(geoUri)) {
       await launchUrl(geoUri);
       return;
@@ -439,7 +486,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
   }
 
   void _syncCountdownTicker(OrderState state) {
-    final shouldRun = state.status == OrderStatus.arrivedAtDropoff && state.waitUntil != null && !state.waitElapsed;
+    final shouldRun =
+        state.status == OrderStatus.arrivedAtDropoff &&
+        state.waitUntil != null &&
+        !state.waitElapsed;
     if (!shouldRun) {
       _countdownTicker?.cancel();
       _countdownTicker = null;
@@ -474,7 +524,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     return '$minutes:$seconds';
   }
 
-  Future<void> _showUndeliverableBottomSheet({required DateTime? waitUntil, required Duration remaining}) async {
+  Future<void> _showUndeliverableBottomSheet({
+    required DateTime? waitUntil,
+    required Duration remaining,
+  }) async {
     final noteController = TextEditingController();
     final imagePicker = ImagePicker();
     String? photoUrl;
@@ -498,7 +551,9 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
 
             setModalState(() => isUploading = true);
             try {
-              final uploaded = await ref.read(cloudinaryServiceProvider).uploadUndeliverableEvidencePhoto(image);
+              final uploaded = await ref
+                  .read(cloudinaryServiceProvider)
+                  .uploadUndeliverableEvidencePhoto(image);
               if (context.mounted) {
                 setModalState(() => photoUrl = uploaded);
               }
@@ -522,18 +577,30 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
 
             setModalState(() => isSubmitting = true);
             try {
-              await ref.read(orderProvider.notifier).submitUndeliverable(widget.orderId, note: note, photoUrl: photoUrl);
+              await ref
+                  .read(orderProvider.notifier)
+                  .submitUndeliverable(
+                    widget.orderId,
+                    note: note,
+                    photoUrl: photoUrl,
+                  );
               if (context.mounted) {
                 Navigator.pop(context);
                 SnackbarUtils.showSuccess(context, 'Marked as undeliverable');
               }
             } on RetryAfterException catch (e) {
               if (context.mounted) {
-                SnackbarUtils.showInfo(context, 'Wait period not elapsed. Retry after ${e.retryAfter.toLocal()}.');
+                SnackbarUtils.showInfo(
+                  context,
+                  'Wait period not elapsed. Retry after ${e.retryAfter.toLocal()}.',
+                );
               }
             } catch (e) {
               if (context.mounted) {
-                SnackbarUtils.showError(context, 'Failed to mark undeliverable: $e');
+                SnackbarUtils.showError(
+                  context,
+                  'Failed to mark undeliverable: $e',
+                );
               }
             } finally {
               if (context.mounted) {
@@ -543,44 +610,74 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
           }
 
           return Padding(
-            padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Mark Undeliverable', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Mark Undeliverable',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 8),
                   Text(
-                    waitUntil == null ? 'Provide details before starting return.' : 'Remaining wait: ${_formatDuration(remaining)}',
+                    waitUntil == null
+                        ? 'Provide details before starting return.'
+                        : 'Remaining wait: ${_formatDuration(remaining)}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: noteController,
                     maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Driver Note *', hintText: 'Recipient unavailable, no response at door, etc.'),
+                    decoration: const InputDecoration(
+                      labelText: 'Driver Note *',
+                      hintText:
+                          'Recipient unavailable, no response at door, etc.',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: isUploading || isSubmitting ? null : uploadPhoto,
                     icon: isUploading
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.add_a_photo_outlined),
-                    label: Text(photoUrl == null ? 'Add Photo' : 'Retake Photo'),
+                    label: Text(
+                      photoUrl == null ? 'Add Photo' : 'Retake Photo',
+                    ),
                   ),
                   if (photoUrl != null) ...[
                     const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(photoUrl!, height: 120, fit: BoxFit.cover),
+                      child: Image.network(
+                        photoUrl!,
+                        height: 120,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: isSubmitting || isUploading ? null : submitUndeliverable,
+                    onPressed: isSubmitting || isUploading
+                        ? null
+                        : submitUndeliverable,
                     child: isSubmitting
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Text('Submit Undeliverable'),
                   ),
                 ],
@@ -620,7 +717,9 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
 
             setModalState(() => isUploading = true);
             try {
-              final uploaded = await ref.read(cloudinaryServiceProvider).uploadProofOfDeliveryPhoto(image);
+              final uploaded = await ref
+                  .read(cloudinaryServiceProvider)
+                  .uploadProofOfDeliveryPhoto(image);
               if (context.mounted) {
                 setModalState(() => photoUrl = uploaded);
               }
@@ -642,18 +741,31 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                   .read(orderProvider.notifier)
                   .submitProofOfDelivery(
                     widget.orderId,
-                    recipientName: recipientNameController.text.trim().isEmpty ? null : recipientNameController.text.trim(),
+                    recipientName: recipientNameController.text.trim().isEmpty
+                        ? null
+                        : recipientNameController.text.trim(),
                     photoUrl: photoUrl,
-                    recipientSignatureUrl: signatureUrlController.text.trim().isEmpty ? null : signatureUrlController.text.trim(),
-                    deliveryNotes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+                    recipientSignatureUrl:
+                        signatureUrlController.text.trim().isEmpty
+                        ? null
+                        : signatureUrlController.text.trim(),
+                    deliveryNotes: notesController.text.trim().isEmpty
+                        ? null
+                        : notesController.text.trim(),
                   );
               if (context.mounted) {
                 Navigator.pop(context);
-                SnackbarUtils.showSuccess(context, 'Proof of delivery submitted');
+                SnackbarUtils.showSuccess(
+                  context,
+                  'Proof of delivery submitted',
+                );
               }
             } catch (e) {
               if (context.mounted) {
-                SnackbarUtils.showError(context, 'Failed to submit proof of delivery: $e');
+                SnackbarUtils.showError(
+                  context,
+                  'Failed to submit proof of delivery: $e',
+                );
               }
             } finally {
               if (context.mounted) {
@@ -663,43 +775,69 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
           }
 
           return Padding(
-            padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Proof of Delivery (Optional)', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Proof of Delivery (Optional)',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: recipientNameController,
-                    decoration: const InputDecoration(labelText: 'Recipient Name'),
+                    decoration: const InputDecoration(
+                      labelText: 'Recipient Name',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: isUploading || isSubmitting ? null : uploadPhoto,
                     icon: isUploading
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.camera_alt_outlined),
-                    label: Text(photoUrl == null ? 'Add Delivery Photo' : 'Retake Delivery Photo'),
+                    label: Text(
+                      photoUrl == null
+                          ? 'Add Delivery Photo'
+                          : 'Retake Delivery Photo',
+                    ),
                   ),
                   if (photoUrl != null) ...[
                     const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(photoUrl!, height: 120, fit: BoxFit.cover),
+                      child: Image.network(
+                        photoUrl!,
+                        height: 120,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 12),
                   TextField(
                     controller: signatureUrlController,
-                    decoration: const InputDecoration(labelText: 'Recipient Signature URL'),
+                    decoration: const InputDecoration(
+                      labelText: 'Recipient Signature URL',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: notesController,
                     maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Delivery Notes'),
+                    decoration: const InputDecoration(
+                      labelText: 'Delivery Notes',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -710,7 +848,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                               ? null
                               : () {
                                   Navigator.pop(context);
-                                  SnackbarUtils.showInfo(context, 'Skipped proof of delivery');
+                                  SnackbarUtils.showInfo(
+                                    context,
+                                    'Skipped proof of delivery',
+                                  );
                                 },
                           child: const Text('Skip'),
                         ),
@@ -718,9 +859,17 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: isSubmitting || isUploading ? null : submitProof,
+                          onPressed: isSubmitting || isUploading
+                              ? null
+                              : submitProof,
                           child: isSubmitting
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Text('Submit'),
                         ),
                       ),

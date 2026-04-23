@@ -5,7 +5,12 @@ part 'location_meta.g.dart';
 
 @freezed
 class LocationMeta with _$LocationMeta {
-  const factory LocationMeta({double? speed, double? bearing, double? accuracy}) = _LocationMeta;
+  const factory LocationMeta({
+    double? speed,
+    double? bearing,
+    double? accuracy,
+  }) = _LocationMeta;
 
-  factory LocationMeta.fromJson(Map<String, dynamic> json) => _$LocationMetaFromJson(json);
+  factory LocationMeta.fromJson(Map<String, dynamic> json) =>
+      _$LocationMetaFromJson(json);
 }

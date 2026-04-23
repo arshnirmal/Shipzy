@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../models/driver_home_state.dart';
 
 class MiniStatusBanner extends StatelessWidget {
-  const MiniStatusBanner({required this.status, required this.onToggle, super.key, this.isLoading = false});
+  const MiniStatusBanner({
+    required this.status,
+    required this.onToggle,
+    super.key,
+    this.isLoading = false,
+  });
 
   final DriverStatus status;
   final VoidCallback onToggle;
@@ -20,7 +25,9 @@ class MiniStatusBanner extends StatelessWidget {
 
     final containerColor = isOnline
         ? (isDark ? Colors.green.withValues(alpha: 0.1) : Colors.green.shade50)
-        : (isDark ? theme.colorScheme.surfaceContainerHighest : Colors.grey.shade50);
+        : (isDark
+              ? theme.colorScheme.surfaceContainerHighest
+              : Colors.grey.shade50);
 
     final borderColor = isOnline
         ? (isDark ? Colors.green.withValues(alpha: 0.3) : Colors.green.shade200)
@@ -39,7 +46,11 @@ class MiniStatusBanner extends StatelessWidget {
           // Status indicator
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            child: Icon(isOnline ? Icons.circle : Icons.circle_outlined, color: isOnline ? onlineColor : offlineColor, size: 16),
+            child: Icon(
+              isOnline ? Icons.circle : Icons.circle_outlined,
+              color: isOnline ? onlineColor : offlineColor,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 8),
 
@@ -47,7 +58,10 @@ class MiniStatusBanner extends StatelessWidget {
           Expanded(
             child: Text(
               isOnline ? 'ONLINE • AVAILABLE' : 'OFFLINE',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: isOnline ? onlineColor : offlineColor),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isOnline ? onlineColor : offlineColor,
+              ),
             ),
           ),
 
@@ -60,15 +74,28 @@ class MiniStatusBanner extends StatelessWidget {
                 backgroundColor: isOnline ? offlineColor : onlineColor,
                 foregroundColor: theme.colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: isLoading
                   ? SizedBox(
                       height: 16,
                       width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.onPrimary)),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.colorScheme.onPrimary,
+                        ),
+                      ),
                     )
-                  : Text(isOnline ? 'OFFLINE' : 'ONLINE', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  : Text(
+                      isOnline ? 'OFFLINE' : 'ONLINE',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],

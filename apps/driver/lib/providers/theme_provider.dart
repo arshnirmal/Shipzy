@@ -5,11 +5,12 @@ import 'storage_provider.dart';
 
 const String _kDevThemeModeKey = 'dev_theme_mode';
 
-final StateNotifierProvider<ThemeModeController, ThemeMode> themeModeProvider = StateNotifierProvider<ThemeModeController, ThemeMode>((Ref ref) {
-  final controller = ThemeModeController(ref);
-  ref.onDispose(controller.dispose);
-  return controller;
-});
+final StateNotifierProvider<ThemeModeController, ThemeMode> themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>((Ref ref) {
+      final controller = ThemeModeController(ref);
+      ref.onDispose(controller.dispose);
+      return controller;
+    });
 
 class ThemeModeController extends StateNotifier<ThemeMode> {
   ThemeModeController(this._ref) : super(ThemeMode.system) {

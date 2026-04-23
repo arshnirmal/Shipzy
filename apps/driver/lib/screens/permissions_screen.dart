@@ -25,20 +25,41 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Spacer(),
-              Icon(Icons.shield_outlined, size: 56, color: theme.colorScheme.primary),
+              Icon(
+                Icons.shield_outlined,
+                size: 56,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(height: 24),
-              Text('Enable permissions', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Enable permissions',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 12),
               Text(
                 'Shipzy Driver needs these to receive orders, track deliveries, and capture proof of delivery.',
                 style: theme.textTheme.bodyLarge,
               ),
               const SizedBox(height: 32),
-              const _PermissionRow(icon: Icons.my_location_rounded, title: 'Location (always on)', description: 'Required to appear online and track deliveries.'),
+              const _PermissionRow(
+                icon: Icons.my_location_rounded,
+                title: 'Location (always on)',
+                description: 'Required to appear online and track deliveries.',
+              ),
               const SizedBox(height: 20),
-              const _PermissionRow(icon: Icons.notifications_outlined, title: 'Notifications', description: 'Required to receive new order alerts.'),
+              const _PermissionRow(
+                icon: Icons.notifications_outlined,
+                title: 'Notifications',
+                description: 'Required to receive new order alerts.',
+              ),
               const SizedBox(height: 20),
-              const _PermissionRow(icon: Icons.camera_alt_outlined, title: 'Camera', description: 'Required for proof-of-delivery photos.'),
+              const _PermissionRow(
+                icon: Icons.camera_alt_outlined,
+                title: 'Camera',
+                description: 'Required for proof-of-delivery photos.',
+              ),
               const Spacer(),
               SizedBox(
                 width: double.infinity,
@@ -48,7 +69,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   child: _isRequesting
                       ? const SizedBox.square(
                           dimension: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Grant permissions'),
                 ),
@@ -109,9 +133,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Permissions required'),
-        content: const Text('Some permissions were denied. Please enable them in device Settings to use Shipzy Driver.'),
+        content: const Text(
+          'Some permissions were denied. Please enable them in device Settings to use Shipzy Driver.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -126,7 +155,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 }
 
 class _PermissionRow extends StatelessWidget {
-  const _PermissionRow({required this.icon, required this.title, required this.description});
+  const _PermissionRow({
+    required this.icon,
+    required this.title,
+    required this.description,
+  });
 
   final IconData icon;
   final String title;
@@ -144,7 +177,12 @@ class _PermissionRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 2),
               Text(description, style: theme.textTheme.bodySmall),
             ],

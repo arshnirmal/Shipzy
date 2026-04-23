@@ -25,7 +25,9 @@ part 'app_router.g.dart';
 
 const String _kHasSeenOnboardingKey = 'has_seen_onboarding';
 
-final FutureProvider<bool> onboardingSeenProvider = FutureProvider<bool>((Ref ref) async {
+final FutureProvider<bool> onboardingSeenProvider = FutureProvider<bool>((
+  Ref ref,
+) async {
   final sharedPreferences = await ref.watch(sharedPreferencesProvider.future);
   return sharedPreferences.getBool(_kHasSeenOnboardingKey) ?? false;
 });
@@ -42,11 +44,14 @@ GoRouter router(Ref ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
 
-      if (authState.isLoading || onboardingSeenState.isLoading || driverOnboardingStatus.isLoading) {
+      if (authState.isLoading ||
+          onboardingSeenState.isLoading ||
+          driverOnboardingStatus.isLoading) {
         return location == AppRoutes.splash ? null : AppRoutes.splash;
       }
 
-      if (authState.valueOrNull == null || onboardingSeenState.valueOrNull == null) {
+      if (authState.valueOrNull == null ||
+          onboardingSeenState.valueOrNull == null) {
         return location == AppRoutes.splash ? null : AppRoutes.splash;
       }
 
@@ -63,42 +68,64 @@ GoRouter router(Ref ref) {
       final isVerified = authData is Authenticated && authData.user.isVerified;
 
       final isOnSplash = location == AppRoutes.splash;
-      final isAuthRoute = location == AppRoutes.login || location == AppRoutes.register;
+      final isAuthRoute =
+          location == AppRoutes.login || location == AppRoutes.register;
       final isProfileOnboardingRoute =
-          location == AppRoutes.setupProfile || location == AppRoutes.documentUpload;
+          location == AppRoutes.setupProfile ||
+          location == AppRoutes.documentUpload;
       final isPendingReviewRoute = location == AppRoutes.pendingReview;
-      final isMainRoute = location == AppRoutes.home ||
+      final isMainRoute =
+          location == AppRoutes.home ||
           location == AppRoutes.orders ||
           location == AppRoutes.earnings ||
           location == AppRoutes.profile;
 
-      final kycLocalPending = driverOnboardingStatus.valueOrNull == kDriverOnboardingPendingReview;
+      final kycLocalPending =
+          driverOnboardingStatus.valueOrNull == kDriverOnboardingPendingReview;
 
       if (isOnboardingRoute) {
-        if (!isAuthenticated) return AppRoutes.login;
-        if (isVerified) return AppRoutes.home;
-        if (kycLocalPending) return AppRoutes.pendingReview;
-        if (isNewUser) return AppRoutes.setupProfile;
+        if (!isAuthenticated) {
+          return AppRoutes.login;
+        }
+        if (isVerified) {
+          return AppRoutes.home;
+        }
+        if (kycLocalPending) {
+          return AppRoutes.pendingReview;
+        }
+        if (isNewUser) {
+          return AppRoutes.setupProfile;
+        }
         return AppRoutes.pendingReview;
       }
 
       if (!isAuthenticated) {
-        if (isMainRoute || isProfileOnboardingRoute || isOnSplash || isPendingReviewRoute) {
+        if (isMainRoute ||
+            isProfileOnboardingRoute ||
+            isOnSplash ||
+            isPendingReviewRoute) {
           return AppRoutes.login;
         }
         return null;
       }
 
       if (isVerified) {
-        if (isAuthRoute || isOnSplash || isProfileOnboardingRoute || isPendingReviewRoute) {
+        if (isAuthRoute ||
+            isOnSplash ||
+            isProfileOnboardingRoute ||
+            isPendingReviewRoute) {
           return AppRoutes.home;
         }
         return null;
       }
 
       if (kycLocalPending) {
-        if (isPendingReviewRoute) return null;
-        if (isProfileOnboardingRoute) return AppRoutes.pendingReview;
+        if (isPendingReviewRoute) {
+          return null;
+        }
+        if (isProfileOnboardingRoute) {
+          return AppRoutes.pendingReview;
+        }
         return AppRoutes.pendingReview;
       }
 
@@ -106,37 +133,97 @@ GoRouter router(Ref ref) {
         return isProfileOnboardingRoute ? null : AppRoutes.setupProfile;
       }
 
-      if (isProfileOnboardingRoute || isPendingReviewRoute) return null;
+      if (isProfileOnboardingRoute || isPendingReviewRoute) {
+        return null;
+      }
       return AppRoutes.setupProfile;
     },
     routes: [
-      GoRoute(path: AppRoutes.splash, name: 'splash', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: AppRoutes.login, name: 'login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: AppRoutes.register, name: 'register', builder: (context, state) => const RegisterScreen()),
-      GoRoute(path: AppRoutes.onboarding, name: 'onboarding', builder: (context, state) => const OnboardingScreen()),
-      GoRoute(path: AppRoutes.setupProfile, name: 'setupProfile', builder: (context, state) => const SetupProfileScreen()),
-      GoRoute(path: AppRoutes.documentUpload, name: 'documentUpload', builder: (context, state) => const DocumentUploadScreen()),
-      GoRoute(path: AppRoutes.pendingReview, name: 'pendingReview', builder: (context, state) => const PendingReviewScreen()),
-      GoRoute(path: AppRoutes.permissions, name: 'permissions', builder: (context, state) => const PermissionsScreen()),
+      GoRoute(
+        path: AppRoutes.splash,
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.login,
+        name: 'login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        name: 'register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.setupProfile,
+        name: 'setupProfile',
+        builder: (context, state) => const SetupProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.documentUpload,
+        name: 'documentUpload',
+        builder: (context, state) => const DocumentUploadScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.pendingReview,
+        name: 'pendingReview',
+        builder: (context, state) => const PendingReviewScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.permissions,
+        name: 'permissions',
+        builder: (context, state) => const PermissionsScreen(),
+      ),
       GoRoute(
         path: AppRoutes.activeDelivery,
         name: 'activeDelivery',
-        builder: (context, state) => ActiveDeliveryScreen(orderId: state.pathParameters['orderId']!),
+        builder: (context, state) =>
+            ActiveDeliveryScreen(orderId: state.pathParameters['orderId']!),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => DashboardScreen(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) =>
+            DashboardScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.home, name: 'home', builder: (context, state) => const HomeScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.home,
+                name: 'home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.orders, name: 'orders', builder: (context, state) => const OrdersListScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.orders,
+                name: 'orders',
+                builder: (context, state) => const OrdersListScreen(),
+              ),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.earnings, name: 'earnings', builder: (context, state) => const EarningsScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.earnings,
+                name: 'earnings',
+                builder: (context, state) => const EarningsScreen(),
+              ),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: AppRoutes.profile, name: 'profile', builder: (context, state) => const ProfileScreen())],
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                name: 'profile',
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
           ),
         ],
       ),

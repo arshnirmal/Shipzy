@@ -50,11 +50,18 @@ class _ProfileLoadingView extends StatelessWidget {
               child: SizedBox(
                 width: 36,
                 height: 36,
-                child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: cs.primary,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text('Loading your profile…', style: tt.titleMedium, textAlign: TextAlign.center),
+            Text(
+              'Loading your profile…',
+              style: tt.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Fetching courier details and status.',
@@ -84,9 +91,17 @@ class _ProfileErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off_outlined, size: 56, color: cs.onSurfaceVariant),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 56,
+              color: cs.onSurfaceVariant,
+            ),
             const SizedBox(height: AppSpacing.md),
-            Text('Couldn’t load profile', style: tt.titleLarge, textAlign: TextAlign.center),
+            Text(
+              'Couldn’t load profile',
+              style: tt.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               message,
@@ -138,62 +153,84 @@ class _ProfileBody extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 40,
-                        backgroundImage: profile.profilePictureUrl != null ? NetworkImage(profile.profilePictureUrl!) : null,
-                        child: profile.profilePictureUrl == null ? Icon(Icons.person, size: 40, color: cs.onPrimaryContainer) : null,
+                        backgroundImage: profile.profilePictureUrl != null
+                            ? NetworkImage(profile.profilePictureUrl!)
+                            : null,
+                        child: profile.profilePictureUrl == null
+                            ? Icon(
+                                Icons.person,
+                                size: 40,
+                                color: cs.onPrimaryContainer,
+                              )
+                            : null,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text(profile.fullName, style: Theme.of(context).textTheme.titleLarge),
-                      if (profile.email != null) Text(profile.email!, style: Theme.of(context).textTheme.bodyMedium),
-                      if (profile.phoneNumber != null) Text(profile.phoneNumber!, style: Theme.of(context).textTheme.bodyMedium),
+                      Text(
+                        profile.fullName,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      if (profile.email != null)
+                        Text(
+                          profile.email!,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      if (profile.phoneNumber != null)
+                        Text(
+                          profile.phoneNumber!,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-        if (profile.isVerified)
-          SliverToBoxAdapter(
-            child: ListTile(
-              leading: Icon(Icons.verified, color: cs.primary),
-              title: const Text('Verified driver'),
-            ),
-          )
-        else
-          SliverToBoxAdapter(
-            child: ListTile(
-              leading: Icon(Icons.hourglass_top_outlined, color: cs.tertiary),
-              title: const Text('Verification in progress'),
-              subtitle: Text(
-                _unverifiedSubtitle(profile),
-                style: Theme.of(context).textTheme.bodySmall,
+          if (profile.isVerified)
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: Icon(Icons.verified, color: cs.primary),
+                title: const Text('Verified driver'),
+              ),
+            )
+          else
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: Icon(Icons.hourglass_top_outlined, color: cs.tertiary),
+                title: const Text('Verification in progress'),
+                subtitle: Text(
+                  _unverifiedSubtitle(profile),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ),
-          ),
-        if (rating != null && rating.totalRatings > 0)
+          if (rating != null && rating.totalRatings > 0)
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: const Icon(Icons.star_outline),
+                title: Text('${rating.averageRating.toStringAsFixed(1)} / 5.0'),
+                subtitle: Text('${rating.totalRatings} ratings'),
+              ),
+            ),
+          if (_vehicleRowVisible(vehicle))
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: const Icon(Icons.directions_car_outlined),
+                title: Text(_vehicleListTitle(vehicle!)),
+                subtitle: _vehicleListSubtitle(vehicle),
+              ),
+            ),
+          ..._verificationSectionSlivers(context, profile),
+          const SliverToBoxAdapter(child: Divider(height: 1)),
           SliverToBoxAdapter(
             child: ListTile(
-              leading: const Icon(Icons.star_outline),
-              title: Text('${rating.averageRating.toStringAsFixed(1)} / 5.0'),
-              subtitle: Text('${rating.totalRatings} ratings'),
+              leading: Icon(Icons.logout, color: cs.error),
+              title: Text(
+                'Log out',
+                style: TextStyle(color: cs.error, fontWeight: FontWeight.w600),
+              ),
+              onTap: () => ref.read(authProvider.notifier).signOut(),
             ),
           ),
-        if (_vehicleRowVisible(vehicle))
-          SliverToBoxAdapter(
-            child: ListTile(
-              leading: const Icon(Icons.directions_car_outlined),
-              title: Text(_vehicleListTitle(vehicle!)),
-              subtitle: _vehicleListSubtitle(vehicle),
-            ),
-          ),
-        ..._verificationSectionSlivers(context, profile),
-        const SliverToBoxAdapter(child: Divider(height: 1)),
-        SliverToBoxAdapter(
-          child: ListTile(
-            leading: Icon(Icons.logout, color: cs.error),
-            title: Text('Log out', style: TextStyle(color: cs.error, fontWeight: FontWeight.w600)),
-            onTap: () => ref.read(authProvider.notifier).signOut(),
-          ),
-        ),
         ],
       ),
     );
@@ -206,7 +243,8 @@ bool _vehicleRowVisible(DriverVehicle? vehicle) {
   }
   final spec = vehicle.specification;
   final cat = vehicle.category;
-  final hasSpec = (spec?.model?.trim().isNotEmpty ?? false) ||
+  final hasSpec =
+      (spec?.model?.trim().isNotEmpty ?? false) ||
       (spec?.vehicleNumber?.trim().isNotEmpty ?? false) ||
       (spec?.year != null);
   final hasCat = (cat?.name?.trim().isNotEmpty ?? false) || (cat?.id != null);
@@ -282,8 +320,10 @@ String _formatIsoDate(String? iso) {
 String _onboardingSubtitle(ProfileOnboardingState o) {
   final lines = <String>[
     if (o.stepsCompleted.isNotEmpty) 'Steps: ${o.stepsCompleted.join(', ')}',
-    if (o.submittedAt != null && o.submittedAt!.isNotEmpty) 'Submitted: ${_formatIsoDate(o.submittedAt)}',
-    if (o.approvedAt != null && o.approvedAt!.isNotEmpty) 'Approved: ${_formatIsoDate(o.approvedAt)}',
+    if (o.submittedAt != null && o.submittedAt!.isNotEmpty)
+      'Submitted: ${_formatIsoDate(o.submittedAt)}',
+    if (o.approvedAt != null && o.approvedAt!.isNotEmpty)
+      'Approved: ${_formatIsoDate(o.approvedAt)}',
   ];
   return lines.isEmpty ? '—' : lines.join('\n');
 }
@@ -310,13 +350,16 @@ Future<void> _openDocumentUrl(BuildContext context, String url) async {
   }
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not open link')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Could not open link')));
   }
 }
 
-List<Widget> _verificationSectionSlivers(BuildContext context, DriverProfile profile) {
+List<Widget> _verificationSectionSlivers(
+  BuildContext context,
+  DriverProfile profile,
+) {
   final o = profile.onboarding;
   final kyc = profile.kyc;
   final showForUnverified = !profile.isVerified;
@@ -329,10 +372,17 @@ List<Widget> _verificationSectionSlivers(BuildContext context, DriverProfile pro
     const SliverToBoxAdapter(child: Divider(height: 1)),
     SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
+          0,
+        ),
         child: Text(
           'Verification',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
     ),
@@ -341,7 +391,9 @@ List<Widget> _verificationSectionSlivers(BuildContext context, DriverProfile pro
         leading: const Icon(Icons.fact_check_outlined),
         title: Text(_onboardingStatusLabel(o?.status)),
         subtitle: o == null
-            ? const Text('Submit documents from the onboarding flow when prompted.')
+            ? const Text(
+                'Submit documents from the onboarding flow when prompted.',
+              )
             : Text(_onboardingSubtitle(o)),
       ),
     ),
@@ -358,7 +410,10 @@ List<Widget> _verificationSectionSlivers(BuildContext context, DriverProfile pro
             borderRadius: BorderRadius.circular(AppSpacing.sm),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Text(rejectedReason, style: Theme.of(context).textTheme.bodyMedium),
+              child: Text(
+                rejectedReason,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
           ),
         ),

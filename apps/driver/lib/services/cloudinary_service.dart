@@ -9,7 +9,8 @@ import '../providers/dio_provider.dart';
 part 'cloudinary_service.g.dart';
 
 @riverpod
-CloudinaryService cloudinaryService(Ref ref) => CloudinaryService(ref.read(dioProvider));
+CloudinaryService cloudinaryService(Ref ref) =>
+    CloudinaryService(ref.read(dioProvider));
 
 /// Cloudinary asset paths are rooted at [kShipzyRoot]; driver app uses [kDriverRoot] below that.
 const String kShipzyRoot = 'shipzy';
@@ -27,8 +28,10 @@ class CloudinaryService {
       _uploadUnsigned(imageFile, folder: '$kDriverRoot/profile');
 
   /// KYC stills (license, registration, insurance). [documentKey] is a short slug, e.g. `license`.
-  Future<String> uploadDriverKycDocument(XFile imageFile, {required String documentKey}) =>
-      _uploadUnsigned(imageFile, folder: '$kDriverRoot/kyc/$documentKey');
+  Future<String> uploadDriverKycDocument(
+    XFile imageFile, {
+    required String documentKey,
+  }) => _uploadUnsigned(imageFile, folder: '$kDriverRoot/kyc/$documentKey');
 
   /// Optional photo attached to proof-of-delivery.
   Future<String> uploadProofOfDeliveryPhoto(XFile imageFile) =>
@@ -38,11 +41,17 @@ class CloudinaryService {
   Future<String> uploadUndeliverableEvidencePhoto(XFile imageFile) =>
       _uploadUnsigned(imageFile, folder: '$kDriverRoot/delivery/undeliverable');
 
-  Future<String> _uploadUnsigned(XFile imageFile, {required String folder}) async {
+  Future<String> _uploadUnsigned(
+    XFile imageFile, {
+    required String folder,
+  }) async {
     final cloudName = dotenv.env['CLOUDINARY_CLOUD_NAME'];
     final uploadPreset = dotenv.env['CLOUDINARY_UPLOAD_PRESET'];
 
-    if (cloudName == null || cloudName.isEmpty || uploadPreset == null || uploadPreset.isEmpty) {
+    if (cloudName == null ||
+        cloudName.isEmpty ||
+        uploadPreset == null ||
+        uploadPreset.isEmpty) {
       throw Exception('Cloudinary environment variables are not configured');
     }
 

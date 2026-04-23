@@ -57,7 +57,9 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
 
   Future<void> _loadVehicleCatalog() async {
     try {
-      final rows = await ref.read(apiServiceProvider).getVehicleCategoryCatalog();
+      final rows = await ref
+          .read(apiServiceProvider)
+          .getVehicleCategoryCatalog();
       if (!mounted) {
         return;
       }
@@ -71,7 +73,10 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
           _vehicleOptions = [];
           _catalogLoading = false;
         });
-        SnackbarUtils.showError(context, 'Could not load vehicle types. Check connection and retry.');
+        SnackbarUtils.showError(
+          context,
+          'Could not load vehicle types. Check connection and retry.',
+        );
       }
     }
   }
@@ -101,10 +106,12 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
       if (spec?.year != null) {
         _yearCtrl.text = '${spec!.year}';
       }
-      if (spec?.vehicleNumber != null && spec!.vehicleNumber!.trim().isNotEmpty) {
+      if (spec?.vehicleNumber != null &&
+          spec!.vehicleNumber!.trim().isNotEmpty) {
         _plateCtrl.text = spec.vehicleNumber!.trim();
       }
-      if (profile.profilePictureUrl != null && profile.profilePictureUrl!.trim().isNotEmpty) {
+      if (profile.profilePictureUrl != null &&
+          profile.profilePictureUrl!.trim().isNotEmpty) {
         nextPhotoUrl = profile.profilePictureUrl!.trim();
       }
       if (catId != null && _vehicleOptions.any((c) => c.categoryId == catId)) {
@@ -133,13 +140,18 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
       _photoUploading = true;
     });
     try {
-      final url = await ref.read(cloudinaryServiceProvider).uploadDriverProfilePhoto(picked);
+      final url = await ref
+          .read(cloudinaryServiceProvider)
+          .uploadDriverProfilePhoto(picked);
       if (mounted) {
         setState(() => _photoUrl = url);
       }
     } catch (_) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'Photo upload failed. You can retry or continue without a photo.');
+        SnackbarUtils.showError(
+          context,
+          'Photo upload failed. You can retry or continue without a photo.',
+        );
         setState(() => _photo = null);
       }
     } finally {
@@ -174,7 +186,10 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
       }
     } catch (_) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'Failed to save vehicle details. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'Failed to save vehicle details. Please try again.',
+        );
       }
     } finally {
       if (mounted) {
@@ -201,14 +216,29 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text('STEP 1 OF 2', style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 0.8)),
+                        child: Text(
+                          'STEP 1 OF 2',
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Text(
                           '1/2',
-                          style: tt.labelSmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w700),
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -224,7 +254,12 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -241,15 +276,22 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                       const SizedBox(height: 28),
                       if (_catalogLoading)
                         const Center(
-                          child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: CircularProgressIndicator(),
+                          ),
                         )
                       else if (_vehicleOptions.isEmpty)
-                        Text('No vehicle categories available.', style: tt.bodyMedium?.copyWith(color: cs.error))
+                        Text(
+                          'No vehicle categories available.',
+                          style: tt.bodyMedium?.copyWith(color: cs.error),
+                        )
                       else
                         VehicleCategorySelector(
                           options: _vehicleOptions,
                           selectedCategoryId: _vehicleCategoryId,
-                          onChanged: (id) => setState(() => _vehicleCategoryId = id),
+                          onChanged: (id) =>
+                              setState(() => _vehicleCategoryId = id),
                         ),
                       const SizedBox(height: 20),
                       AuthTextField(
@@ -258,7 +300,9 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                         hintText: 'e.g. Honda, Maruti',
                         labelDensity: AuthFieldLabelDensity.section,
                         textCapitalization: TextCapitalization.words,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Vehicle make is required' : null,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Vehicle make is required'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       AuthTextField(
@@ -267,7 +311,9 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                         hintText: 'e.g. Activa, Swift',
                         labelDensity: AuthFieldLabelDensity.section,
                         textCapitalization: TextCapitalization.words,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Vehicle model is required' : null,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Vehicle model is required'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -302,10 +348,14 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                               labelDensity: AuthFieldLabelDensity.section,
                               textCapitalization: TextCapitalization.characters,
                               inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                                FilteringTextInputFormatter.allow(
+                                  RegExp('[A-Za-z0-9]'),
+                                ),
                                 LengthLimitingTextInputFormatter(12),
                               ],
-                              validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Required'
+                                  : null,
                             ),
                           ),
                         ],
@@ -313,7 +363,13 @@ class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
                       const SizedBox(height: 32),
                       OnboardingPrimaryButton(
                         label: 'Continue',
-                        onPressed: (_submitting || _photoUploading || _catalogLoading || _vehicleOptions.isEmpty) ? null : _onContinue,
+                        onPressed:
+                            (_submitting ||
+                                _photoUploading ||
+                                _catalogLoading ||
+                                _vehicleOptions.isEmpty)
+                            ? null
+                            : _onContinue,
                         isLoading: _submitting,
                       ),
                     ],

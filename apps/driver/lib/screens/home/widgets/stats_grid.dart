@@ -15,7 +15,12 @@ class StatsGrid extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Today's Summary", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            "Today's Summary",
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
@@ -26,9 +31,21 @@ class StatsGrid extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Expanded(child: _buildStatItem(context, '💰 Earnings', '₹${stats.earnings.toStringAsFixed(0)}')),
+                Expanded(
+                  child: _buildStatItem(
+                    context,
+                    '💰 Earnings',
+                    '₹${stats.earnings.toStringAsFixed(0)}',
+                  ),
+                ),
                 Container(width: 1, height: 40, color: theme.dividerColor),
-                Expanded(child: _buildStatItem(context, '📦 Deliveries', stats.trips.toString())),
+                Expanded(
+                  child: _buildStatItem(
+                    context,
+                    '📦 Deliveries',
+                    stats.trips.toString(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -41,9 +58,19 @@ class StatsGrid extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(
       children: [
-        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodySmall?.color)),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.textTheme.bodySmall?.color,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }

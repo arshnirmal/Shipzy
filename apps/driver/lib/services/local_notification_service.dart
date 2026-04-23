@@ -7,10 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../utils/logger.dart';
 
-final localNotificationServiceProvider = Provider<LocalNotificationService>((ref) => LocalNotificationService());
+final localNotificationServiceProvider = Provider<LocalNotificationService>(
+  (ref) => LocalNotificationService(),
+);
 
 class LocalNotificationService {
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
   static const _channelId = 'shipzy_driver_local';
@@ -24,10 +27,16 @@ class LocalNotificationService {
     if (_initialized) {
       return;
     }
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _plugin.initialize(const InitializationSettings(android: androidSettings));
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    await _plugin.initialize(
+      const InitializationSettings(android: androidSettings),
+    );
     await _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(
           const AndroidNotificationChannel(
             _channelId,
@@ -40,26 +49,31 @@ class LocalNotificationService {
   }
 
   Future<void> showWaitTimerElapsed() => _show(
-        id: _idWaitElapsed,
-        title: 'Wait time elapsed',
-        body: 'You can mark the delivery as undeliverable if the customer is unavailable.',
-      );
+    id: _idWaitElapsed,
+    title: 'Wait time elapsed',
+    body:
+        'You can mark the delivery as undeliverable if the customer is unavailable.',
+  );
 
   Future<void> showIdleDutyPrompt() => _show(
-        id: _idIdlePrompt,
-        title: 'Still on duty?',
-        body: "You've been online with no activity for 30 minutes.",
-      );
+    id: _idIdlePrompt,
+    title: 'Still on duty?',
+    body: "You've been online with no activity for 30 minutes.",
+  );
 
   Future<void> showLowBatteryWarning(int level) => _show(
-        id: _idLowBattery,
-        title: 'Low battery: $level%',
-        body: 'Charge your device soon to keep receiving deliveries.',
-      );
+    id: _idLowBattery,
+    title: 'Low battery: $level%',
+    body: 'Charge your device soon to keep receiving deliveries.',
+  );
 
   Future<void> cancel(int id) async => _plugin.cancel(id);
 
-  Future<void> _show({required int id, required String title, required String body}) async {
+  Future<void> _show({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
     if (!_initialized) {
       await initialize();
     }

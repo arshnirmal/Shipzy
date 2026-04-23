@@ -23,7 +23,9 @@ class AuthDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity);
+    final dividerColor = theme.colorScheme.outlineVariant.withValues(
+      alpha: AppDepth.ghostBorderOpacity,
+    );
 
     return Row(
       children: [
@@ -32,7 +34,10 @@ class AuthDivider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text(
             text,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
@@ -43,7 +48,13 @@ class AuthDivider extends StatelessWidget {
 
 /// A social login button widget used in authentication screens
 class SocialButton extends StatelessWidget {
-  const SocialButton({required this.label, required this.icon, required this.onPressed, this.isLoading = false, super.key});
+  const SocialButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.isLoading = false,
+    super.key,
+  });
 
   final String label;
   final Widget icon;
@@ -63,17 +74,32 @@ class SocialButton extends StatelessWidget {
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary)),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.primary,
+                  ),
+                ),
               )
             : icon,
         label: Text(
           label,
-          style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onSurfaceVariant),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 14,
+          ),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
-          side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(
+              alpha: AppDepth.ghostBorderOpacity,
+            ),
+          ),
           backgroundColor: theme.colorScheme.surfaceContainerLowest,
         ),
       ),
@@ -83,7 +109,12 @@ class SocialButton extends StatelessWidget {
 
 /// A reusable loading button widget for authentication screens
 class AuthLoadingButton extends StatelessWidget {
-  const AuthLoadingButton({required this.isLoading, required this.onPressed, required this.text, super.key});
+  const AuthLoadingButton({
+    required this.isLoading,
+    required this.onPressed,
+    required this.text,
+    super.key,
+  });
 
   final bool isLoading;
   final VoidCallback? onPressed;
@@ -102,11 +133,19 @@ class AuthLoadingButton extends StatelessWidget {
             ? SizedBox(
                 height: 24,
                 width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.onPrimary)),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.onPrimary,
+                  ),
+                ),
               )
             : Text(
                 text,
-                style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700, color: theme.colorScheme.onPrimary),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onPrimary,
+                ),
               ),
       ),
     );
@@ -157,17 +196,19 @@ class AuthTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gap = labelGap ?? (labelDensity == AuthFieldLabelDensity.section ? 6.0 : AppSpacing.xs);
+    final gap =
+        labelGap ??
+        (labelDensity == AuthFieldLabelDensity.section ? 6.0 : AppSpacing.xs);
 
     final labelStyle = switch (labelDensity) {
       AuthFieldLabelDensity.standard => theme.textTheme.bodyMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: theme.colorScheme.onSurface,
-        ),
+        fontWeight: FontWeight.w700,
+        color: theme.colorScheme.onSurface,
+      ),
       AuthFieldLabelDensity.section => theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-          letterSpacing: 0.8,
-        ),
+        color: theme.colorScheme.onSurfaceVariant,
+        letterSpacing: 0.8,
+      ),
     };
 
     return Column(
@@ -185,19 +226,25 @@ class AuthTextField extends StatelessWidget {
           onFieldSubmitted: onFieldSubmitted,
           inputFormatters: inputFormatters,
           autovalidateMode: autovalidateMode,
-          style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: hintText,
             prefixIcon: prefixIcon == null
                 ? null
                 : IconTheme.merge(
-                    data: IconThemeData(color: theme.colorScheme.onSurfaceVariant),
+                    data: IconThemeData(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     child: prefixIcon!,
                   ),
             suffixIcon: suffixIcon == null
                 ? null
                 : IconTheme.merge(
-                    data: IconThemeData(color: theme.colorScheme.onSurfaceVariant),
+                    data: IconThemeData(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     child: suffixIcon!,
                   ),
           ),

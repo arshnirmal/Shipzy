@@ -9,11 +9,7 @@ import 'package:image_picker/image_picker.dart';
 /// - **Profile:** Small UI avatars; cap ~800px to limit bytes without visible loss.
 /// - **KYC:** Reviewers/OCR need legible text; ~2K max edge is a common cap before diminishing returns.
 /// - **Delivery evidence:** Context photos; ~1.6K edge balances detail vs uplink on cellular.
-enum DriverImageUploadUse {
-  profile,
-  kyc,
-  deliveryEvidence,
-}
+enum DriverImageUploadUse { profile, kyc, deliveryEvidence }
 
 Future<XFile?> pickImageForDriverUpload(
   ImagePicker picker, {

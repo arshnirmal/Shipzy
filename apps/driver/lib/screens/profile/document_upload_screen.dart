@@ -19,7 +19,8 @@ class DocumentUploadScreen extends ConsumerStatefulWidget {
   const DocumentUploadScreen({super.key});
 
   @override
-  ConsumerState<DocumentUploadScreen> createState() => _DocumentUploadScreenState();
+  ConsumerState<DocumentUploadScreen> createState() =>
+      _DocumentUploadScreenState();
 }
 
 class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
@@ -30,7 +31,9 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _prefillKycFromProfile());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _prefillKycFromProfile(),
+    );
   }
 
   Future<void> _prefillKycFromProfile() async {
@@ -54,9 +57,21 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   }
 
   static const _docs = [
-    (title: 'Driving license', subtitle: 'Tap to upload from gallery', folder: 'license'),
-    (title: 'Vehicle registration', subtitle: 'Tap to upload from gallery', folder: 'vehicle_reg'),
-    (title: 'Insurance', subtitle: 'Tap to upload from gallery', folder: 'insurance'),
+    (
+      title: 'Driving license',
+      subtitle: 'Tap to upload from gallery',
+      folder: 'license',
+    ),
+    (
+      title: 'Vehicle registration',
+      subtitle: 'Tap to upload from gallery',
+      folder: 'vehicle_reg',
+    ),
+    (
+      title: 'Insurance',
+      subtitle: 'Tap to upload from gallery',
+      folder: 'insurance',
+    ),
   ];
 
   bool get _allUploaded => _urls.every((u) => u != null);
@@ -72,7 +87,9 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
     }
     setState(() => _uploading[i] = true);
     try {
-      final url = await ref.read(cloudinaryServiceProvider).uploadDriverKycDocument(picked, documentKey: _docs[i].folder);
+      final url = await ref
+          .read(cloudinaryServiceProvider)
+          .uploadDriverKycDocument(picked, documentKey: _docs[i].folder);
       if (mounted) {
         setState(() => _urls[i] = url);
         SnackbarUtils.showSuccess(context, '${_docs[i].title} uploaded');
@@ -90,28 +107,47 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
 
   Future<void> _onSubmit() async {
     if (!_allUploaded) {
-      SnackbarUtils.showError(context, 'Please upload all 3 documents to continue');
+      SnackbarUtils.showError(
+        context,
+        'Please upload all 3 documents to continue',
+      );
       return;
     }
     setState(() => _submitting = true);
     try {
-      await ref.read(apiServiceProvider).submitKycDocuments(licenseUrl: _urls[0]!, vehicleRegUrl: _urls[1]!, insuranceUrl: _urls[2]!);
+      await ref
+          .read(apiServiceProvider)
+          .submitKycDocuments(
+            licenseUrl: _urls[0]!,
+            vehicleRegUrl: _urls[1]!,
+            insuranceUrl: _urls[2]!,
+          );
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(kDriverOnboardingStatusKey, kDriverOnboardingPendingReview);
+      await prefs.setString(
+        kDriverOnboardingStatusKey,
+        kDriverOnboardingPendingReview,
+      );
       ref.invalidate(driverOnboardingStatusProvider);
       if (mounted) {
         await _showSuccessAndNavigate();
       }
     } catch (_) {
       if (mounted) {
-        SnackbarUtils.showError(context, 'Submission failed. Please try again.');
+        SnackbarUtils.showError(
+          context,
+          'Submission failed. Please try again.',
+        );
         setState(() => _submitting = false);
       }
     }
   }
 
   Future<void> _showSuccessAndNavigate() async {
-    await showDialog<void>(context: context, barrierDismissible: false, builder: (_) => const _SuccessOverlay());
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _SuccessOverlay(),
+    );
     if (mounted) {
       context.go(AppRoutes.pendingReview);
     }
@@ -137,18 +173,35 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
                       IconButton.filledTonal(
                         onPressed: () => context.pop(),
                         icon: const Icon(Icons.arrow_back, size: 20),
-                        style: IconButton.styleFrom(visualDensity: VisualDensity.compact),
+                        style: IconButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text('STEP 2 OF 2', style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 0.8)),
+                        child: Text(
+                          'STEP 2 OF 2',
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Text(
                           '2/2',
-                          style: tt.labelSmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w700),
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -172,70 +225,101 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                  ),
                   child: Column(
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(color: cs.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 20,
+                                color: cs.primary,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Upload clear, well-lit photos. Documents must be valid and fully legible.',
+                                  style: tt.bodySmall?.copyWith(height: 1.5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ...List.generate(
+                        _docs.length,
+                        (i) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: DocUploadCard(
+                            title: _docs[i].title,
+                            subtitle: _docs[i].subtitle,
+                            isUploaded: _urls[i] != null,
+                            isLoading: _uploading[i],
+                            onTap: () => _pickAndUpload(i),
+                            index: i,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _allUploaded
+                              ? cs.tertiaryContainer.withValues(alpha: 0.3)
+                              : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.info_outline, size: 20, color: cs.primary),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Upload clear, well-lit photos. Documents must be valid and fully legible.',
-                                style: tt.bodySmall?.copyWith(height: 1.5),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _allUploaded
+                                    ? cs.tertiary
+                                    : cs.surfaceContainerHighest,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$uploadedCount of ${_docs.length} documents uploaded',
+                              style: tt.labelMedium?.copyWith(
+                                color: _allUploaded
+                                    ? cs.tertiary
+                                    : cs.onSurfaceVariant,
+                                letterSpacing: 0.3,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    ...List.generate(
-                      _docs.length,
-                      (i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: DocUploadCard(
-                          title: _docs[i].title,
-                          subtitle: _docs[i].subtitle,
-                          isUploaded: _urls[i] != null,
-                          isLoading: _uploading[i],
-                          onTap: () => _pickAndUpload(i),
-                          index: i,
-                        ),
+                      const SizedBox(height: 24),
+                      OnboardingPrimaryButton(
+                        label: 'Submit for verification',
+                        onPressed: _submitting ? null : _onSubmit,
+                        isLoading: _submitting,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _allUploaded ? cs.tertiaryContainer.withValues(alpha: 0.3) : cs.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: _allUploaded ? cs.tertiary : cs.surfaceContainerHighest),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$uploadedCount of ${_docs.length} documents uploaded',
-                            style: tt.labelMedium?.copyWith(color: _allUploaded ? cs.tertiary : cs.onSurfaceVariant, letterSpacing: 0.3),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    OnboardingPrimaryButton(label: 'Submit for verification', onPressed: _submitting ? null : _onSubmit, isLoading: _submitting),
-                  ],
-                ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -253,7 +337,8 @@ class _SuccessOverlay extends StatefulWidget {
   State<_SuccessOverlay> createState() => _SuccessOverlayState();
 }
 
-class _SuccessOverlayState extends State<_SuccessOverlay> with SingleTickerProviderStateMixin {
+class _SuccessOverlayState extends State<_SuccessOverlay>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
   late final Animation<double> _fade;
@@ -261,7 +346,10 @@ class _SuccessOverlayState extends State<_SuccessOverlay> with SingleTickerProvi
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _fade = CurvedAnimation(
       parent: _ctrl,
@@ -298,11 +386,21 @@ class _SuccessOverlayState extends State<_SuccessOverlay> with SingleTickerProvi
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: Theme.of(context).primaryGradient,
-                boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.4), blurRadius: 24, spreadRadius: 4)],
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.4),
+                    blurRadius: 24,
+                    spreadRadius: 4,
+                  ),
+                ],
               ),
               child: FadeTransition(
                 opacity: _fade,
-                child: const Icon(Icons.check_rounded, color: Colors.white, size: 44),
+                child: const Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: 44,
+                ),
               ),
             ),
           ),
@@ -311,7 +409,10 @@ class _SuccessOverlayState extends State<_SuccessOverlay> with SingleTickerProvi
             opacity: _fade,
             child: Text(
               'Documents submitted',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],

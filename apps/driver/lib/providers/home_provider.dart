@@ -77,20 +77,33 @@ class DriverHome extends _$DriverHome {
   Future<void> toggleStatus() async {
     state = state.copyWith(isLoading: true);
     try {
-      final newStatus = state.status == DriverStatus.offline ? DriverStatus.online : DriverStatus.offline;
+      final newStatus = state.status == DriverStatus.offline
+          ? DriverStatus.online
+          : DriverStatus.offline;
       final isGoingOnline = newStatus == DriverStatus.online;
 
       // Fetch current location when going online/offline
       Position? currentPosition;
       Map<String, double>? location;
       try {
-        currentPosition = await ref.read(locationServiceProvider.notifier).getCurrentLocation();
-        location = {'latitude': currentPosition.latitude, 'longitude': currentPosition.longitude};
+        currentPosition = await ref
+            .read(locationServiceProvider.notifier)
+            .getCurrentLocation();
+        location = {
+          'latitude': currentPosition.latitude,
+          'longitude': currentPosition.longitude,
+        };
       } catch (e) {
         // If location fails, continue without it (graceful degradation)
       }
 
-      await ref.read(apiServiceProvider).updateDriverAvailability(isAvailable: isGoingOnline, isOnline: isGoingOnline, location: location);
+      await ref
+          .read(apiServiceProvider)
+          .updateDriverAvailability(
+            isAvailable: isGoingOnline,
+            isOnline: isGoingOnline,
+            location: location,
+          );
 
       if (currentPosition != null) {
         await ref
@@ -126,7 +139,9 @@ class DriverHome extends _$DriverHome {
   void _startIdleTimer() {
     _idleTimer?.cancel();
     _idleTimer = Timer(const Duration(minutes: 30), () {
-      unawaited(ref.read(localNotificationServiceProvider).showIdleDutyPrompt());
+      unawaited(
+        ref.read(localNotificationServiceProvider).showIdleDutyPrompt(),
+      );
     });
   }
 
@@ -145,7 +160,10 @@ class DriverHome extends _$DriverHome {
     if (_batteryTimer != null) {
       return;
     }
-    _batteryTimer = Timer.periodic(const Duration(minutes: 2), (_) => unawaited(_checkBattery()));
+    _batteryTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) => unawaited(_checkBattery()),
+    );
     unawaited(_checkBattery());
   }
 
@@ -156,7 +174,8 @@ class DriverHome extends _$DriverHome {
       final batteryState = await _battery.batteryState;
 
       // Skip warnings when plugged in
-      if (batteryState == BatteryState.charging || batteryState == BatteryState.full) {
+      if (batteryState == BatteryState.charging ||
+          batteryState == BatteryState.full) {
         _lowBatteryWarningShown = false;
         _criticalBatteryHandled = false;
         return;
@@ -169,10 +188,14 @@ class DriverHome extends _$DriverHome {
         if (state.status != DriverStatus.offline) {
           await toggleStatus();
         }
-        await ref.read(localNotificationServiceProvider).showLowBatteryWarning(level);
+        await ref
+            .read(localNotificationServiceProvider)
+            .showLowBatteryWarning(level);
       } else if (level < 15 && !_lowBatteryWarningShown) {
         _lowBatteryWarningShown = true;
-        await ref.read(localNotificationServiceProvider).showLowBatteryWarning(level);
+        await ref
+            .read(localNotificationServiceProvider)
+            .showLowBatteryWarning(level);
       } else if (level >= 15) {
         _lowBatteryWarningShown = false;
         _criticalBatteryHandled = false;
@@ -232,14 +255,20 @@ Future<List<AvailableOrderItem>> nearbyOrders(Ref ref) async {
   final locationService = ref.read(locationServiceProvider.notifier);
   try {
     final position = await locationService.getCurrentLocation();
-    return ref.read(apiServiceProvider).getAvailableOrders(latitude: position.latitude, longitude: position.longitude);
+    return ref
+        .read(apiServiceProvider)
+        .getAvailableOrders(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
   } catch (e) {
     return [];
   }
 }
 
 @riverpod
-Future<DriverProfile> driverProfile(Ref ref) => ref.read(apiServiceProvider).getDriverProfile();
+Future<DriverProfile> driverProfile(Ref ref) =>
+    ref.read(apiServiceProvider).getDriverProfile();
 
 /// Active courier assignment from the API. Skips the network when the profile
 /// is not verified (onboarding / pending review), since assignments apply only
@@ -253,14 +282,15 @@ Future<ActiveAssignment?> activeOrder(Ref ref) async {
   return ref.read(apiServiceProvider).getActiveOrder();
 }
 
-final tripHistoryProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final data = await ref.read(apiServiceProvider).getTripHistory();
-  final trips = data['trips'];
-  if (trips is List) {
-    return trips.cast<Map<String, dynamic>>();
-  }
-  return [];
-});
+final tripHistoryProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final data = await ref.read(apiServiceProvider).getTripHistory();
+      final trips = data['trips'];
+      if (trips is List) {
+        return trips.cast<Map<String, dynamic>>();
+      }
+      return [];
+    });
 
 LocationMeta _buildLocationMeta(Position position) {
   final speed = position.speed;
@@ -268,8 +298,14 @@ LocationMeta _buildLocationMeta(Position position) {
   final accuracy = position.accuracy;
 
   final speedKmph = speed.isFinite && speed >= 0 ? speed * 3.6 : null;
-  final bearing = heading.isFinite && heading >= 0 && heading <= 360 ? heading : null;
+  final bearing = heading.isFinite && heading >= 0 && heading <= 360
+      ? heading
+      : null;
   final safeAccuracy = accuracy.isFinite && accuracy >= 0 ? accuracy : null;
 
-  return LocationMeta(speed: speedKmph, bearing: bearing, accuracy: safeAccuracy);
+  return LocationMeta(
+    speed: speedKmph,
+    bearing: bearing,
+    accuracy: safeAccuracy,
+  );
 }

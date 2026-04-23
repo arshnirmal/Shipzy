@@ -36,12 +36,17 @@ class ApiService {
   void _ensureSuccess(Response<dynamic> response, String fallbackMessage) {
     final payload = response.data;
     if (payload is! Map<String, dynamic> || payload['success'] != true) {
-      final message = payload is Map<String, dynamic> ? payload['message'] as String? : null;
+      final message = payload is Map<String, dynamic>
+          ? payload['message'] as String?
+          : null;
       throw Exception(message ?? fallbackMessage);
     }
   }
 
-  Map<String, dynamic> _extractDataMap(Response<dynamic> response, String fallbackMessage) {
+  Map<String, dynamic> _extractDataMap(
+    Response<dynamic> response,
+    String fallbackMessage,
+  ) {
     _ensureSuccess(response, fallbackMessage);
     final payload = response.data;
     if (payload is! Map<String, dynamic>) {
@@ -56,21 +61,35 @@ class ApiService {
     throw Exception(fallbackMessage);
   }
 
-  Future<void> updateDriverAvailability({required bool isAvailable, bool? isOnline, Map<String, double>? location}) async {
+  Future<void> updateDriverAvailability({
+    required bool isAvailable,
+    bool? isOnline,
+    Map<String, double>? location,
+  }) async {
     final response = await _dio.patch(
       '/drivers/me/availability',
       data: {
-        'availability': {'isAvailable': isAvailable, 'isOnline': isOnline ?? isAvailable},
+        'availability': {
+          'isAvailable': isAvailable,
+          'isOnline': isOnline ?? isAvailable,
+        },
         if (location != null)
           'tracking': {
-            'currentLocation': {'latitude': location['latitude'], 'longitude': location['longitude']},
+            'currentLocation': {
+              'latitude': location['latitude'],
+              'longitude': location['longitude'],
+            },
           },
       },
     );
     _ensureSuccess(response, 'Failed to update availability');
   }
 
-  Future<void> updateDriverLocation({required double latitude, required double longitude, LocationMeta? locationMeta}) async {
+  Future<void> updateDriverLocation({
+    required double latitude,
+    required double longitude,
+    LocationMeta? locationMeta,
+  }) async {
     final response = await _dio.patch(
       '/drivers/me/location',
       data: {
@@ -86,7 +105,9 @@ class ApiService {
   Future<DriverProfile> getDriverProfile() async {
     final response = await _dio.get('/drivers/me');
     _ensureSuccess(response, 'Failed to fetch driver profile');
-    return DriverProfile.fromJson(response.data['data']['driver'] as Map<String, dynamic>);
+    return DriverProfile.fromJson(
+      response.data['data']['driver'] as Map<String, dynamic>,
+    );
   }
 
   /// Active vehicle categories from `GET /static/vehicle-categories` (canonical DB list).
@@ -144,11 +165,24 @@ class ApiService {
     return DriverKycSubmissionResult.fromJson(data);
   }
 
-  Future<List<AvailableOrderItem>> getAvailableOrders({required double latitude, required double longitude, int radius = 10}) async {
-    final response = await _dio.get('/orders/available', queryParameters: {'latitude': latitude, 'longitude': longitude, 'radius': radius});
+  Future<List<AvailableOrderItem>> getAvailableOrders({
+    required double latitude,
+    required double longitude,
+    int radius = 10,
+  }) async {
+    final response = await _dio.get(
+      '/orders/available',
+      queryParameters: {
+        'latitude': latitude,
+        'longitude': longitude,
+        'radius': radius,
+      },
+    );
     _ensureSuccess(response, 'Failed to fetch available orders');
     final rawList = response.data['data'] as List;
-    return rawList.map((e) => AvailableOrderItem.fromJson(e as Map<String, dynamic>)).toList();
+    return rawList
+        .map((e) => AvailableOrderItem.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<ActiveAssignment?> getActiveOrder() async {
@@ -176,7 +210,11 @@ class ApiService {
     _ensureSuccess(response, 'Failed to update order status');
   }
 
-  Future<ArriveResult> arriveAtDelivery(int orderId, {required double lat, required double lng}) async {
+  Future<ArriveResult> arriveAtDelivery(
+    int orderId, {
+    required double lat,
+    required double lng,
+  }) async {
     final response = await _dio.post(
       '/orders/$orderId/arrive',
       data: {
@@ -184,7 +222,10 @@ class ApiService {
       },
     );
 
-    final data = _extractDataMap(response, 'Failed to mark arrival at delivery');
+    final data = _extractDataMap(
+      response,
+      'Failed to mark arrival at delivery',
+    );
     final payload = data['arrive'];
     if (payload is Map<String, dynamic>) {
       return ArriveResult.fromJson(payload);
@@ -193,16 +234,25 @@ class ApiService {
     return ArriveResult.fromJson(data);
   }
 
-  Future<void> markUndeliverable(int orderId, {required String driverNote, String? photoUrl}) async {
+  Future<void> markUndeliverable(
+    int orderId, {
+    required String driverNote,
+    String? photoUrl,
+  }) async {
     try {
       final response = await _dio.post(
         '/orders/$orderId/undeliverable',
-        data: {'driverNote': driverNote, if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl},
+        data: {
+          'driverNote': driverNote,
+          if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
+        },
       );
       _ensureSuccess(response, 'Failed to mark order undeliverable');
     } on DioException catch (e) {
       final data = e.response?.data;
-      final retryAfterRaw = data is Map<String, dynamic> ? data['retryAfter'] : null;
+      final retryAfterRaw = data is Map<String, dynamic>
+          ? data['retryAfter']
+          : null;
       if (e.response?.statusCode == 400 && retryAfterRaw is String) {
         final retryAfter = DateTime.tryParse(retryAfterRaw);
         if (retryAfter != null) {
@@ -233,14 +283,20 @@ class ApiService {
     final response = await _dio.post(
       '/orders/$orderId/proof-of-delivery',
       data: {
-        if (recipientName != null && recipientName.isNotEmpty) 'recipientName': recipientName,
+        if (recipientName != null && recipientName.isNotEmpty)
+          'recipientName': recipientName,
         if (photoUrl != null && photoUrl.isNotEmpty) 'photoUrl': photoUrl,
-        if (recipientSignatureUrl != null && recipientSignatureUrl.isNotEmpty) 'recipientSignatureUrl': recipientSignatureUrl,
-        if (deliveryNotes != null && deliveryNotes.isNotEmpty) 'deliveryNotes': deliveryNotes,
+        if (recipientSignatureUrl != null && recipientSignatureUrl.isNotEmpty)
+          'recipientSignatureUrl': recipientSignatureUrl,
+        if (deliveryNotes != null && deliveryNotes.isNotEmpty)
+          'deliveryNotes': deliveryNotes,
       },
     );
 
-    final data = _extractDataMap(response, 'Failed to submit proof of delivery');
+    final data = _extractDataMap(
+      response,
+      'Failed to submit proof of delivery',
+    );
     final proof = data['proof'];
     if (proof is Map<String, dynamic>) {
       return ProofOfDeliveryResult.fromJson(proof);
@@ -267,13 +323,20 @@ class ApiService {
   Future<DriverRatingStats> getDriverRatingStats() async {
     final response = await _dio.get('/drivers/me/rating');
     _ensureSuccess(response, 'Failed to fetch driver rating');
-    return DriverRatingStats.fromJson(response.data['data']['rating'] as Map<String, dynamic>);
+    return DriverRatingStats.fromJson(
+      response.data['data']['rating'] as Map<String, dynamic>,
+    );
   }
 
   Future<EarningsSummary> getDetailedEarnings(String period) async {
-    final response = await _dio.get('/drivers/me/earnings', queryParameters: {'period': period});
+    final response = await _dio.get(
+      '/drivers/me/earnings',
+      queryParameters: {'period': period},
+    );
     _ensureSuccess(response, 'Failed to fetch earnings');
-    return EarningsSummary.fromJson(response.data['data']['earnings'] as Map<String, dynamic>);
+    return EarningsSummary.fromJson(
+      response.data['data']['earnings'] as Map<String, dynamic>,
+    );
   }
 
   Future<void> registerDeviceToken({

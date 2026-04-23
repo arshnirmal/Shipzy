@@ -40,15 +40,23 @@ class _DevThemeSwitcherState extends ConsumerState<DevThemeSwitcher> {
         onPanUpdate: (details) {
           setState(() {
             _position = Offset(
-              (_position.dx + details.delta.dx).clamp(0, size.width - buttonSize),
-              (_position.dy + details.delta.dy).clamp(0, size.height - buttonSize),
+              (_position.dx + details.delta.dx).clamp(
+                0,
+                size.width - buttonSize,
+              ),
+              (_position.dy + details.delta.dy).clamp(
+                0,
+                size.height - buttonSize,
+              ),
             );
           });
         },
         child: FloatingActionButton.small(
           heroTag: 'dev_theme_switcher',
           backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.85),
-          onPressed: () => ref.read(themeModeProvider.notifier).setThemeMode(_nextMode(themeMode)),
+          onPressed: () => ref
+              .read(themeModeProvider.notifier)
+              .setThemeMode(_nextMode(themeMode)),
           child: Icon(_iconForMode(themeMode), size: 18),
         ),
       ),

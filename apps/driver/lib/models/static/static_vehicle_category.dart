@@ -19,12 +19,14 @@ class StaticVehicleCategory with _$StaticVehicleCategory {
   const factory StaticVehicleCategory({
     @JsonKey(name: 'categoryId') required int categoryId,
     required String name,
-    @JsonKey(name: 'maxWeightKg', fromJson: _maxWeightKgFromJson) required double maxWeightKg,
+    @JsonKey(name: 'maxWeightKg', fromJson: _maxWeightKgFromJson)
+    required double maxWeightKg,
     String? displayName,
     String? description,
     String? iconUrl,
     @JsonKey(name: 'isActive') @Default(true) bool isActive,
   }) = _StaticVehicleCategory;
 
-  factory StaticVehicleCategory.fromJson(Map<String, dynamic> json) => _$StaticVehicleCategoryFromJson(json);
+  factory StaticVehicleCategory.fromJson(Map<String, dynamic> json) =>
+      _$StaticVehicleCategoryFromJson(json);
 }

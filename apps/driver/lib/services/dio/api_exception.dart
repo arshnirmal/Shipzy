@@ -3,7 +3,12 @@ import 'package:dio/dio.dart';
 import '../../models/api_error.dart';
 
 class ApiException implements Exception {
-  ApiException({required this.operation, required this.message, this.statusCode, this.errors});
+  ApiException({
+    required this.operation,
+    required this.message,
+    this.statusCode,
+    this.errors,
+  });
 
   final String operation;
   final String message;
@@ -30,18 +35,35 @@ ApiException mapDioException(DioException exception, String operation) {
       'timestamp': data['timestamp'],
     });
 
-    return ApiException(operation: operation, message: parsed.message, statusCode: statusCode, errors: parsed.errors);
+    return ApiException(
+      operation: operation,
+      message: parsed.message,
+      statusCode: statusCode,
+      errors: parsed.errors,
+    );
   }
 
   if (exception.type == DioExceptionType.connectionTimeout ||
       exception.type == DioExceptionType.sendTimeout ||
       exception.type == DioExceptionType.receiveTimeout) {
-    return ApiException(operation: operation, message: 'Connection timeout', statusCode: statusCode);
+    return ApiException(
+      operation: operation,
+      message: 'Connection timeout',
+      statusCode: statusCode,
+    );
   }
 
   if (exception.type == DioExceptionType.connectionError) {
-    return ApiException(operation: operation, message: 'No internet connection', statusCode: statusCode);
+    return ApiException(
+      operation: operation,
+      message: 'No internet connection',
+      statusCode: statusCode,
+    );
   }
 
-  return ApiException(operation: operation, message: exception.message ?? 'Unexpected network error', statusCode: statusCode);
+  return ApiException(
+    operation: operation,
+    message: exception.message ?? 'Unexpected network error',
+    statusCode: statusCode,
+  );
 }

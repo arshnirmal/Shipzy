@@ -18,7 +18,12 @@ class RecentActivitySection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text('Recent Activity', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          child: Text(
+            'Recent Activity',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -30,11 +35,29 @@ class RecentActivitySection extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _buildActivityRow(context, '📊 Yesterday\'s Earnings', '₹${stats.totalEarnings.toStringAsFixed(0)}'), // Using total as placeholder
-              const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
-              _buildActivityRow(context, '🏆 Weekly Target', '${stats.weeklyTrips}/$weeklyTarget deliveries'),
-              const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider()),
-              _buildActivityRow(context, '⭐ Current Rating', '${stats.averageRating.toStringAsFixed(1)} (${stats.totalTrips} trips)'),
+              _buildActivityRow(
+                context,
+                '📊 Yesterday\'s Earnings',
+                '₹${stats.totalEarnings.toStringAsFixed(0)}',
+              ), // Using total as placeholder
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(),
+              ),
+              _buildActivityRow(
+                context,
+                '🏆 Weekly Target',
+                '${stats.weeklyTrips}/$weeklyTarget deliveries',
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(),
+              ),
+              _buildActivityRow(
+                context,
+                '⭐ Current Rating',
+                '${stats.averageRating.toStringAsFixed(1)} (${stats.totalTrips} trips)',
+              ),
             ],
           ),
         ),
@@ -48,7 +71,12 @@ class RecentActivitySection extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: theme.textTheme.bodyMedium),
-        Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }

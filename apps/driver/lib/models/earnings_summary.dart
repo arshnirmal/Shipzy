@@ -13,15 +13,18 @@ class EarningsSummary with _$EarningsSummary {
     required EarningsActivityData activity,
   }) = _EarningsSummary;
 
-  factory EarningsSummary.fromJson(Map<String, dynamic> json) => _$EarningsSummaryFromJson(json);
+  factory EarningsSummary.fromJson(Map<String, dynamic> json) =>
+      _$EarningsSummaryFromJson(json);
 }
 
 /// Mirrors API scope block { period }
 @freezed
 class EarningsScopeData with _$EarningsScopeData {
-  const factory EarningsScopeData({required String period}) = _EarningsScopeData;
+  const factory EarningsScopeData({required String period}) =
+      _EarningsScopeData;
 
-  factory EarningsScopeData.fromJson(Map<String, dynamic> json) => _$EarningsScopeDataFromJson(json);
+  factory EarningsScopeData.fromJson(Map<String, dynamic> json) =>
+      _$EarningsScopeDataFromJson(json);
 }
 
 /// Mirrors API deliveries block
@@ -34,7 +37,8 @@ class EarningsDeliveriesData with _$EarningsDeliveriesData {
     @Default(0) int thisMonth,
   }) = _EarningsDeliveriesData;
 
-  factory EarningsDeliveriesData.fromJson(Map<String, dynamic> json) => _$EarningsDeliveriesDataFromJson(json);
+  factory EarningsDeliveriesData.fromJson(Map<String, dynamic> json) =>
+      _$EarningsDeliveriesDataFromJson(json);
 }
 
 /// Mirrors API earnings block
@@ -48,13 +52,16 @@ class EarningsAmountData with _$EarningsAmountData {
     @Default(0.0) double averageOrderValue,
   }) = _EarningsAmountData;
 
-  factory EarningsAmountData.fromJson(Map<String, dynamic> json) => _$EarningsAmountDataFromJson(json);
+  factory EarningsAmountData.fromJson(Map<String, dynamic> json) =>
+      _$EarningsAmountDataFromJson(json);
 }
 
 /// Mirrors API activity block { totalDistanceKm }
 @freezed
 class EarningsActivityData with _$EarningsActivityData {
-  const factory EarningsActivityData({@Default(0.0) double totalDistanceKm}) = _EarningsActivityData;
+  const factory EarningsActivityData({@Default(0.0) double totalDistanceKm}) =
+      _EarningsActivityData;
 
-  factory EarningsActivityData.fromJson(Map<String, dynamic> json) => _$EarningsActivityDataFromJson(json);
+  factory EarningsActivityData.fromJson(Map<String, dynamic> json) =>
+      _$EarningsActivityDataFromJson(json);
 }

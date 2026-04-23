@@ -65,7 +65,11 @@ class LocationQueue {
   // Removes entries older than 15 minutes — plan §9 offline queue bounds.
   Future<void> _evictStale() async {
     final cutoff = DateTime.now().subtract(const Duration(minutes: 15));
-    await _db?.delete('location_queue', where: 'timestamp < ?', whereArgs: [cutoff.toIso8601String()]);
+    await _db?.delete(
+      'location_queue',
+      where: 'timestamp < ?',
+      whereArgs: [cutoff.toIso8601String()],
+    );
   }
 
   Future<void> enqueue({
@@ -91,22 +95,16 @@ class LocationQueue {
   }
 
   Future<List<LocationQueueEntry>> peek(int limit) async {
-    final rows = await _db?.query(
-          'location_queue',
-          orderBy: 'id ASC',
-          limit: limit,
-        ) ??
+    final rows =
+        await _db?.query('location_queue', orderBy: 'id ASC', limit: limit) ??
         [];
     return rows.map(_fromRow).toList();
   }
 
   // Returns the most-recent entries (newest first) — used for flush-one-on-reconnect drain.
   Future<List<LocationQueueEntry>> peekLatest(int limit) async {
-    final rows = await _db?.query(
-          'location_queue',
-          orderBy: 'id DESC',
-          limit: limit,
-        ) ??
+    final rows =
+        await _db?.query('location_queue', orderBy: 'id DESC', limit: limit) ??
         [];
     return rows.map(_fromRow).toList();
   }
@@ -120,17 +118,19 @@ class LocationQueue {
   }
 
   Future<int> count() async {
-    final result = await _db?.rawQuery('SELECT COUNT(*) as c FROM location_queue');
+    final result = await _db?.rawQuery(
+      'SELECT COUNT(*) as c FROM location_queue',
+    );
     return (result?.first['c'] as int?) ?? 0;
   }
 
   LocationQueueEntry _fromRow(Map<String, dynamic> row) => LocationQueueEntry(
-        id: row['id'] as int,
-        latitude: row['latitude'] as double,
-        longitude: row['longitude'] as double,
-        speed: row['speed'] as double?,
-        bearing: row['bearing'] as double?,
-        accuracy: row['accuracy'] as double?,
-        timestamp: DateTime.parse(row['timestamp'] as String),
-      );
+    id: row['id'] as int,
+    latitude: row['latitude'] as double,
+    longitude: row['longitude'] as double,
+    speed: row['speed'] as double?,
+    bearing: row['bearing'] as double?,
+    accuracy: row['accuracy'] as double?,
+    timestamp: DateTime.parse(row['timestamp'] as String),
+  );
 }

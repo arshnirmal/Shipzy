@@ -13,7 +13,8 @@ class DriverRatingStats with _$DriverRatingStats {
     required String lastUpdated,
   }) = _DriverRatingStats;
 
-  factory DriverRatingStats.fromJson(Map<String, dynamic> json) => _$DriverRatingStatsFromJson(json);
+  factory DriverRatingStats.fromJson(Map<String, dynamic> json) =>
+      _$DriverRatingStatsFromJson(json);
 }
 
 /// Mirrors API ratingDistribution { 1, 2, 3, 4, 5 }
@@ -27,5 +28,6 @@ class DriverRatingDistribution with _$DriverRatingDistribution {
     @JsonKey(name: '5') @Default(0) int five,
   }) = _DriverRatingDistribution;
 
-  factory DriverRatingDistribution.fromJson(Map<String, dynamic> json) => _$DriverRatingDistributionFromJson(json);
+  factory DriverRatingDistribution.fromJson(Map<String, dynamic> json) =>
+      _$DriverRatingDistributionFromJson(json);
 }

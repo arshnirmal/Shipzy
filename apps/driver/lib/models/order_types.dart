@@ -19,9 +19,14 @@ abstract final class AssignmentOrderStatus {
 /// Mirrors API identifiers block { orderId, orderUuid, orderNumber? }
 @freezed
 class OrderIdentifiers with _$OrderIdentifiers {
-  const factory OrderIdentifiers({required int orderId, required String orderUuid, String? orderNumber}) = _OrderIdentifiers;
+  const factory OrderIdentifiers({
+    required int orderId,
+    required String orderUuid,
+    String? orderNumber,
+  }) = _OrderIdentifiers;
 
-  factory OrderIdentifiers.fromJson(Map<String, dynamic> json) => _$OrderIdentifiersFromJson(json);
+  factory OrderIdentifiers.fromJson(Map<String, dynamic> json) =>
+      _$OrderIdentifiersFromJson(json);
 }
 
 /// Mirrors API OrderFulfillment schema
@@ -35,24 +40,34 @@ class OrderFulfillment with _$OrderFulfillment {
     int? paymentMethodId,
   }) = _OrderFulfillment;
 
-  factory OrderFulfillment.fromJson(Map<String, dynamic> json) => _$OrderFulfillmentFromJson(json);
+  factory OrderFulfillment.fromJson(Map<String, dynamic> json) =>
+      _$OrderFulfillmentFromJson(json);
 }
 
 /// Mirrors API locations block { pickup, delivery }
 @freezed
 class OrderLocations with _$OrderLocations {
-  const factory OrderLocations({required OrderAddress pickup, required OrderAddress delivery}) = _OrderLocations;
+  const factory OrderLocations({
+    required OrderAddress pickup,
+    required OrderAddress delivery,
+  }) = _OrderLocations;
 
-  factory OrderLocations.fromJson(Map<String, dynamic> json) => _$OrderLocationsFromJson(json);
+  factory OrderLocations.fromJson(Map<String, dynamic> json) =>
+      _$OrderLocationsFromJson(json);
 }
 
 /// Mirrors API OrderPackage schema
 @freezed
 class OrderPackage with _$OrderPackage {
-  const factory OrderPackage({String? description, String? specialInstructions, double? declaredValue, @Default(false) bool notifyRecipientSms}) =
-      _OrderPackage;
+  const factory OrderPackage({
+    String? description,
+    String? specialInstructions,
+    double? declaredValue,
+    @Default(false) bool notifyRecipientSms,
+  }) = _OrderPackage;
 
-  factory OrderPackage.fromJson(Map<String, dynamic> json) => _$OrderPackageFromJson(json);
+  factory OrderPackage.fromJson(Map<String, dynamic> json) =>
+      _$OrderPackageFromJson(json);
 }
 
 /// Mirrors API FareBreakdown schema
@@ -71,16 +86,22 @@ class FareBreakdown with _$FareBreakdown {
     String? currency,
   }) = _FareBreakdown;
 
-  factory FareBreakdown.fromJson(Map<String, dynamic> json) => _$FareBreakdownFromJson(json);
+  factory FareBreakdown.fromJson(Map<String, dynamic> json) =>
+      _$FareBreakdownFromJson(json);
 }
 
 /// Mirrors API metrics block
 @freezed
 class OrderMetrics with _$OrderMetrics {
-  const factory OrderMetrics({required double totalPrice, double? estimatedDistanceKm, double? actualDistanceKm, int? actualDurationMins}) =
-      _OrderMetrics;
+  const factory OrderMetrics({
+    required double totalPrice,
+    double? estimatedDistanceKm,
+    double? actualDistanceKm,
+    int? actualDurationMins,
+  }) = _OrderMetrics;
 
-  factory OrderMetrics.fromJson(Map<String, dynamic> json) => _$OrderMetricsFromJson(json);
+  factory OrderMetrics.fromJson(Map<String, dynamic> json) =>
+      _$OrderMetricsFromJson(json);
 }
 
 /// Mirrors API timeline block
@@ -95,13 +116,16 @@ class OrderTimeline with _$OrderTimeline {
     String? cancelledAt,
   }) = _OrderTimeline;
 
-  factory OrderTimeline.fromJson(Map<String, dynamic> json) => _$OrderTimelineFromJson(json);
+  factory OrderTimeline.fromJson(Map<String, dynamic> json) =>
+      _$OrderTimelineFromJson(json);
 }
 
 /// Mirrors API OrderSchedule schema
 @freezed
 class OrderSchedule with _$OrderSchedule {
-  const factory OrderSchedule({String? pickupAt, String? deliveryAt}) = _OrderSchedule;
+  const factory OrderSchedule({String? pickupAt, String? deliveryAt}) =
+      _OrderSchedule;
 
-  factory OrderSchedule.fromJson(Map<String, dynamic> json) => _$OrderScheduleFromJson(json);
+  factory OrderSchedule.fromJson(Map<String, dynamic> json) =>
+      _$OrderScheduleFromJson(json);
 }

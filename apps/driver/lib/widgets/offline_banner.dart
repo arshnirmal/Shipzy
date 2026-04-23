@@ -21,17 +21,26 @@ class OfflineBanner extends ConsumerWidget {
               child: Container(
                 width: double.infinity,
                 color: const Color(0xFF323232),
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 6,
+                  horizontal: 16,
+                ),
                 child: SafeArea(
                   bottom: false,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 14),
+                      const Icon(
+                        Icons.wifi_off_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'No internet connection',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.white),
                       ),
                     ],
                   ),

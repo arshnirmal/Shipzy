@@ -93,11 +93,11 @@ abstract final class AppTheme {
         elevation: 0,
         minimumSize: const Size.fromHeight(56),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
         ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -106,11 +106,11 @@ abstract final class AppTheme {
         side: const BorderSide(color: AppPalette.lightPrimary, width: 1.5),
         minimumSize: const Size.fromHeight(56),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
         ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     inputDecorationTheme: _lightInputDecoration(_lightScheme),
@@ -121,7 +121,10 @@ abstract final class AppTheme {
       type: BottomNavigationBarType.fixed,
       elevation: 0,
       selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      unselectedLabelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: AppPalette.lightPrimary,
@@ -135,7 +138,10 @@ abstract final class AppTheme {
       backgroundColor: AppPalette.lightSurfaceContainerHighest,
       selectedColor: const Color.fromRGBO(70, 72, 212, 0.12),
       labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 6,
+      ),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
       side: BorderSide.none,
     ),
@@ -174,12 +180,14 @@ abstract final class AppTheme {
         foregroundColor: AppPalette.darkOnPrimaryContainer,
         elevation: 0,
         minimumSize: const Size.fromHeight(56),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusDarkPrimaryButton),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.radiusDarkPrimaryButton,
         ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -187,12 +195,14 @@ abstract final class AppTheme {
         foregroundColor: AppPalette.darkPrimary,
         side: const BorderSide(color: AppPalette.darkPrimary, width: 1.5),
         minimumSize: const Size.fromHeight(56),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusDarkPrimaryButton),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.radiusDarkPrimaryButton,
         ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     inputDecorationTheme: _darkInputDecoration(_darkScheme),
@@ -203,7 +213,10 @@ abstract final class AppTheme {
       type: BottomNavigationBarType.fixed,
       elevation: 0,
       selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      unselectedLabelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+      ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: AppPalette.darkPrimaryContainer,
@@ -221,7 +234,10 @@ abstract final class AppTheme {
         fontWeight: FontWeight.w500,
         color: AppPalette.darkOnSurface,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 6,
+      ),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
       side: BorderSide.none,
     ),
@@ -230,7 +246,9 @@ abstract final class AppTheme {
 
   /// Light: `surface_container_high` → `surface_container_highest` on focus; bottom bar indicator (Design-System-Light §5).
   static InputDecorationTheme _lightInputDecoration(ColorScheme scheme) {
-    final ghost = scheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity);
+    final ghost = scheme.outlineVariant.withValues(
+      alpha: AppDepth.ghostBorderOpacity,
+    );
     final borderRadius = BorderRadius.circular(AppRadius.lg);
     return InputDecorationTheme(
       filled: true,
@@ -240,9 +258,14 @@ abstract final class AppTheme {
         }
         return AppPalette.lightSurfaceContainerHigh;
       }),
-      hintStyle: TextStyle(color: scheme.onSurfaceVariant.withValues(alpha: 0.75)),
+      hintStyle: TextStyle(
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+      ),
       labelStyle: WidgetStateTextStyle.resolveWith((states) {
-        final base = TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500);
+        final base = TextStyle(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        );
         if (states.contains(WidgetState.error)) {
           return base.copyWith(color: scheme.error);
         }
@@ -252,7 +275,11 @@ abstract final class AppTheme {
         return base;
       }),
       floatingLabelStyle: WidgetStateTextStyle.resolveWith((states) {
-        final base = TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500, fontSize: 12);
+        final base = TextStyle(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        );
         if (states.contains(WidgetState.error)) {
           return base.copyWith(color: scheme.error);
         }
@@ -261,7 +288,10 @@ abstract final class AppTheme {
         }
         return base;
       }),
-      border: UnderlineInputBorder(borderRadius: borderRadius, borderSide: BorderSide.none),
+      border: UnderlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: BorderSide.none,
+      ),
       enabledBorder: UnderlineInputBorder(
         borderRadius: borderRadius,
         borderSide: BorderSide(color: ghost),
@@ -278,20 +308,32 @@ abstract final class AppTheme {
         borderRadius: borderRadius,
         borderSide: BorderSide(color: scheme.error, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 14,
+      ),
     );
   }
 
   /// Dark: minimalist `surface_container_highest` fill; bottom bar → primary on focus. Avoid heavy red fills (Design-System-Dark §5–6).
   static InputDecorationTheme _darkInputDecoration(ColorScheme scheme) {
-    final bar = scheme.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity);
+    final bar = scheme.outlineVariant.withValues(
+      alpha: AppDepth.ghostBorderOpacity,
+    );
     final borderRadius = BorderRadius.circular(AppRadius.lg);
     return InputDecorationTheme(
       filled: true,
-      fillColor: WidgetStateColor.resolveWith((_) => AppPalette.darkSurfaceContainerHighest),
-      hintStyle: TextStyle(color: scheme.onSurfaceVariant.withValues(alpha: 0.8)),
+      fillColor: WidgetStateColor.resolveWith(
+        (_) => AppPalette.darkSurfaceContainerHighest,
+      ),
+      hintStyle: TextStyle(
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+      ),
       labelStyle: WidgetStateTextStyle.resolveWith((states) {
-        final base = TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500);
+        final base = TextStyle(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        );
         if (states.contains(WidgetState.error)) {
           return base.copyWith(color: scheme.error);
         }
@@ -301,7 +343,11 @@ abstract final class AppTheme {
         return base;
       }),
       floatingLabelStyle: WidgetStateTextStyle.resolveWith((states) {
-        final base = TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500, fontSize: 12);
+        final base = TextStyle(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
+        );
         if (states.contains(WidgetState.error)) {
           return base.copyWith(color: scheme.error);
         }
@@ -310,7 +356,10 @@ abstract final class AppTheme {
         }
         return base;
       }),
-      border: UnderlineInputBorder(borderRadius: borderRadius, borderSide: BorderSide.none),
+      border: UnderlineInputBorder(
+        borderRadius: borderRadius,
+        borderSide: BorderSide.none,
+      ),
       enabledBorder: UnderlineInputBorder(
         borderRadius: borderRadius,
         borderSide: BorderSide(color: bar, width: 2),
@@ -321,13 +370,19 @@ abstract final class AppTheme {
       ),
       errorBorder: UnderlineInputBorder(
         borderRadius: borderRadius,
-        borderSide: BorderSide(color: scheme.error.withValues(alpha: 0.85), width: 2),
+        borderSide: BorderSide(
+          color: scheme.error.withValues(alpha: 0.85),
+          width: 2,
+        ),
       ),
       focusedErrorBorder: UnderlineInputBorder(
         borderRadius: borderRadius,
         borderSide: BorderSide(color: scheme.error, width: 2),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 14,
+      ),
     );
   }
 }
@@ -348,18 +403,23 @@ extension AppThemeData on ThemeData {
 
   double get overlayBreathingMargin => _ext.overlayBreathingMargin;
 
-  Color get onlineColor => _isDark ? AppPalette.onlineDark : AppPalette.onlineLight;
+  Color get onlineColor =>
+      _isDark ? AppPalette.onlineDark : AppPalette.onlineLight;
 
-  Color get onlineBgColor => _isDark ? AppPalette.onlineBgDark : AppPalette.onlineBgLight;
+  Color get onlineBgColor =>
+      _isDark ? AppPalette.onlineBgDark : AppPalette.onlineBgLight;
 
   Color get busyColor => _isDark ? AppPalette.busyDark : AppPalette.busyLight;
 
-  Color get offlineColor => _isDark ? AppPalette.offlineDark : AppPalette.offlineLight;
+  Color get offlineColor =>
+      _isDark ? AppPalette.offlineDark : AppPalette.offlineLight;
 
-  Color get pausedColor => _isDark ? AppPalette.pausedDark : AppPalette.pausedLight;
+  Color get pausedColor =>
+      _isDark ? AppPalette.pausedDark : AppPalette.pausedLight;
 
-  Color get earningsColor =>
-      _isDark ? AppPalette.earningsPositiveDark : AppPalette.earningsPositiveLight;
+  Color get earningsColor => _isDark
+      ? AppPalette.earningsPositiveDark
+      : AppPalette.earningsPositiveLight;
 
   Color get pendingPayoutColor =>
       _isDark ? AppPalette.pendingPayoutDark : AppPalette.pendingPayoutLight;

@@ -17,7 +17,10 @@ Dio dio(Ref ref) {
       baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000/api/v1',
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     ),
   );
 
@@ -27,7 +30,11 @@ Dio dio(Ref ref) {
     RetryInterceptor(dio),
     AuthInterceptor(ref),
     ErrorInterceptor(ref),
-    PrettyDioLogger(requestHeader: true, requestBody: true, responseHeader: true),
+    PrettyDioLogger(
+      requestHeader: true,
+      requestBody: true,
+      responseHeader: true,
+    ),
   ]);
 
   return dio;

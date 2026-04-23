@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Shipzy — Driver Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:#0f0e1a;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 30% 20%,rgba(70,72,212,.18) 0%,transparent 70%),
+             radial-gradient(ellipse 50% 50% at 80% 80%,rgba(96,99,238,.12) 0%,transparent 60%);
+  pointer-events:none;
+}
+@keyframes radarPulse{0%{transform:scale(.7);opacity:.7}100%{transform:scale(2.2);opacity:0}}
+@keyframes radarDot{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes floatUp{0%{opacity:0;transform:translateY(16px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-8px)}}
+@keyframes statusPop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel">
+
+/* ─── Design System ───────────────────────────────────────── */
+const DS = {
+  primary:'#4648d4', primaryGrad:'linear-gradient(135deg,#4648d4 0%,#6063ee 100%)',
+  primaryLight:'#e8e8ff', primaryMid:'#c0c1ff',
+  surface:'#fcf8ff', surfaceLow:'#f5f2fe', surfaceHigh:'#e4e1ed', surfaceHighest:'#d9d6e8',
+  onSurface:'#1b1b23', onSurfaceVar:'#605d72',
+  tertiary:'#006c49', tertiaryBg:'#d6f5e8',
+  tertiaryAlt:'#00a86b',
+  error:'#ba1a1a', errorBg:'#ffdad6',
+  orange:'#e07b39', orangeBg:'#fff0e6',
+  outline:'rgba(96,93,114,0.12)',
+};
+
+/* ─── Sample Data ─────────────────────────────────────────── */
+const DRIVER = {
+  fullName:'Rohit Kumar', firstName:'Rohit',
+  rating:4.8, totalRatings:12,
+  earnings:{ today:340, thisWeek:3140 },
+  status:{ totalDeliveriesToday:3 },
+  vehicle:{ category:'Two-wheeler', spec:'Activa • KA01AB1234 • 2022' },
+};
+
+const ORDER = {
+  orderNumber:'ORD-1024',
+  earnings: 134.05,
+  distanceKm: 9.2,
+  pickup:{ area:'Koramangala', address:'12, 80 Feet Rd, Koramangala 4th Block' },
+  delivery:{ area:'Indiranagar', address:'42, 100 Feet Rd, Indiranagar' },
+  package:{ type:'Documents', weight:'~0.5 kg' },
+  customer:{ name:'Priya Sharma', phone:'+91 98765 43210' },
+};
+
+/* ─── Icons ───────────────────────────────────────────────── */
+const Ico = {
+  Home:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" fill={c} fillOpacity=".15" stroke={c} strokeWidth="1.75" strokeLinejoin="round"/>
+      <path d="M9 21V12h6v9" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Earnings:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="1.75"/>
+      <path d="M12 7v1m0 8v1M9.5 9.5A2.5 2.5 0 0112 8c1.38 0 2.5.9 2.5 2s-1.12 2-2.5 2-2.5.9-2.5 2 1.12 2 2.5 2a2.5 2.5 0 002.5-1.5" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Trips:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+      <rect x="9" y="3" width="6" height="4" rx="1" stroke={c} strokeWidth="1.75"/>
+      <path d="M9 12h6M9 16h4" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Profile:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="8" r="4" stroke={c} strokeWidth="1.75"/>
+      <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Bell:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Star:({c='currentColor',sz=14})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={c}>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>),
+  Pin:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill={c} fillOpacity=".2" stroke={c} strokeWidth="1.75"/>
+      <circle cx="12" cy="9" r="2.5" fill={c}/>
+    </svg>),
+  Nav:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={c} fillOpacity=".15">
+      <path d="M3 11l19-9-9 19-2-8-8-2z" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" fill={c} fillOpacity=".2"/>
+    </svg>),
+  Phone:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Route:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="6" cy="19" r="3" stroke={c} strokeWidth="1.75"/>
+      <path d="M9 19h2a2 2 0 002-2V7a2 2 0 012-2h2" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+      <circle cx="18" cy="5" r="3" stroke={c} strokeWidth="1.75"/>
+    </svg>),
+  Pkg:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0L12 11M4 7l8 4m0 0v10" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Check:({c='#fff',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M5 12l4 4L19 7" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  ChevR:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M9 6l6 6-6 6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  ArrowR:({sz=20,c='currentColor'})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M5 12h14M14 7l5 5-5 5" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+};
+
+/* ─── Abstract City Map SVG ───────────────────────────────── */
+function CityMap({isOnline=false}){
+  const roadColor = isOnline ? '#dde1ff' : '#e5e5e5';
+  const blockA = isOnline ? '#eeefff' : '#f0f0f0';
+  const blockB = isOnline ? '#e8e9fb' : '#ebebeb';
+  const parkColor = isOnline ? '#d6f5e8' : '#e5e5e5';
+  const waterColor = isOnline ? '#dde8ff' : '#e8e8e8';
+  return (
+    <svg width="390" height="520" viewBox="0 0 390 520" style={{position:'absolute',top:0,left:0,transition:'all 0.6s ease'}}>
+      {/* blocks */}
+      <rect x="0" y="0" width="390" height="520" fill={isOnline?'#f4f5ff':'#f2f2f2'} />
+      {/* roads - horizontals */}
+      {[40,90,140,190,240,290,340,390,440].map(y=>(
+        <rect key={y} x="0" y={y-5} width="390" height="10" fill={roadColor}/>
+      ))}
+      {/* roads - verticals */}
+      {[50,110,170,230,290,350].map(x=>(
+        <rect key={x} x={x-5} y="0" width="10" height="520" fill={roadColor}/>
+      ))}
+      {/* diagonal road */}
+      <line x1="0" y1="100" x2="390" y2="380" stroke={roadColor} strokeWidth="8"/>
+      <line x1="0" y1="300" x2="200" y2="520" stroke={roadColor} strokeWidth="6"/>
+      {/* city blocks */}
+      <rect x="55" y="45" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="115" y="45" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="175" y="45" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="235" y="45" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="295" y="45" width="55" height="40" rx="3" fill={blockA}/>
+      <rect x="55" y="95" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="115" y="95" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="175" y="95" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="235" y="95" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="295" y="95" width="55" height="40" rx="3" fill={blockB}/>
+      <rect x="55" y="145" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="115" y="145" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="235" y="145" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="295" y="145" width="55" height="40" rx="3" fill={blockB}/>
+      <rect x="55" y="195" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="115" y="195" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="175" y="195" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="295" y="195" width="55" height="40" rx="3" fill={blockA}/>
+      <rect x="55" y="245" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="115" y="245" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="175" y="245" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="235" y="245" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="295" y="245" width="55" height="40" rx="3" fill={blockA}/>
+      <rect x="55" y="295" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="175" y="295" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="235" y="295" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="295" y="295" width="55" height="40" rx="3" fill={blockA}/>
+      {/* park */}
+      <rect x="55" y="345" width="110" height="40" rx="4" fill={parkColor}/>
+      <rect x="175" y="345" width="110" height="40" rx="4" fill={blockB}/>
+      <rect x="295" y="345" width="55" height="40" rx="4" fill={blockA}/>
+      {/* water */}
+      <rect x="55" y="395" width="170" height="40" rx="4" fill={waterColor}/>
+      <rect x="235" y="395" width="55" height="40" rx="4" fill={blockA}/>
+      <rect x="295" y="395" width="55" height="40" rx="4" fill={blockB}/>
+      {/* bottom blocks */}
+      <rect x="55" y="445" width="50" height="40" rx="3" fill={blockA}/>
+      <rect x="115" y="445" width="50" height="40" rx="3" fill={blockB}/>
+      <rect x="175" y="445" width="110" height="40" rx="3" fill={blockA}/>
+      <rect x="295" y="445" width="55" height="40" rx="3" fill={blockB}/>
+      {/* offline overlay */}
+      {!isOnline && <rect x="0" y="0" width="390" height="520" fill="rgba(240,240,245,0.55)"/>}
+    </svg>
+  );
+}
+
+/* ─── Radar Animation ─────────────────────────────────────── */
+function RadarPulse(){
+  return (
+    <div style={{position:'absolute',left:'50%',top:'42%',transform:'translate(-50%,-50%)',pointerEvents:'none'}}>
+      {[0,1,2].map(i=>(
+        <div key={i} style={{
+          position:'absolute',left:'50%',top:'50%',
+          width:80,height:80,borderRadius:40,
+          border:`2px solid ${DS.primary}`,
+          transform:'translate(-50%,-50%) scale(0.7)',
+          animation:`radarPulse 2.2s ease-out ${i*0.7}s infinite`,
+          opacity:0,
+        }}/>
+      ))}
+      <div style={{
+        position:'relative',zIndex:1,
+        width:18,height:18,borderRadius:9,
+        background:DS.primary,
+        boxShadow:`0 0 0 4px ${DS.primaryLight}`,
+        animation:'radarDot 2s ease-in-out infinite',
+      }}/>
+    </div>
+  );
+}
+
+/* ─── Driver Avatar ───────────────────────────────────────── */
+function Avatar({size=40}){
+  return (
+    <div style={{
+      width:size,height:size,borderRadius:size/2,
+      background:`linear-gradient(135deg,${DS.primary} 0%,#6063ee 100%)`,
+      display:'flex',alignItems:'center',justifyContent:'center',
+      boxShadow:`0 2px 8px rgba(70,72,212,0.35)`,
+      flexShrink:0,
+    }}>
+      <svg width={size*.55} height={size*.55} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="4" fill="rgba(255,255,255,0.9)"/>
+        <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" fill="rgba(255,255,255,0.7)"/>
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Glassmorphic Header ─────────────────────────────────── */
+function Header({hasNotif=true}){
+  return (
+    <div style={{
+      position:'absolute',top:0,left:0,right:0,zIndex:20,
+      padding:'12px 20px 14px',
+      background:'rgba(252,248,255,0.88)',
+      backdropFilter:'blur(20px)',
+      WebkitBackdropFilter:'blur(20px)',
+    }}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <Avatar size={44}/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,color:DS.onSurfaceVar,fontWeight:500}}>Good morning 👋</div>
+          <div style={{fontSize:16,fontWeight:800,color:DS.onSurface,letterSpacing:'-0.02em'}}>Rohit Kumar</div>
+        </div>
+        {/* Rating */}
+        <div style={{
+          display:'flex',alignItems:'center',gap:4,
+          background:DS.surfaceLow,borderRadius:20,padding:'6px 10px',
+        }}>
+          <Ico.Star c="#f5a623" sz={13}/>
+          <span style={{fontSize:13,fontWeight:700,color:DS.onSurface}}>4.8</span>
+        </div>
+        {/* Bell */}
+        <div style={{position:'relative',cursor:'pointer'}}>
+          <div style={{
+            width:40,height:40,borderRadius:10,
+            background:DS.surfaceLow,
+            display:'flex',alignItems:'center',justifyContent:'center',
+          }}>
+            <Ico.Bell c={DS.onSurface} sz={20}/>
+          </div>
+          {hasNotif && <div style={{
+            position:'absolute',top:6,right:6,width:8,height:8,
+            borderRadius:4,background:DS.error,
+            border:`2px solid ${DS.surface}`,
+          }}/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Stats Banner ────────────────────────────────────────── */
+function StatsBanner({isOnline}){
+  return (
+    <div style={{
+      position:'absolute',top:82,left:16,right:16,zIndex:20,
+      background:'rgba(252,248,255,0.92)',
+      backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+      borderRadius:16,padding:'14px 18px',
+      boxShadow:`0 4px 20px rgba(70,72,212,0.1)`,
+      animation:'slideDown 0.4s ease',
+    }}>
+      <div style={{display:'flex',alignItems:'center',gap:0}}>
+        {/* Earnings */}
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:3}}>Today's Earnings</div>
+          <div style={{fontSize:22,fontWeight:800,color:DS.onSurface,letterSpacing:'-0.02em'}}>
+            <span style={{fontSize:13,fontWeight:700,verticalAlign:'top',marginTop:4,display:'inline-block'}}>₹</span>340.00
+          </div>
+        </div>
+        {/* divider */}
+        <div style={{width:1,height:38,background:DS.surfaceHigh,margin:'0 16px'}}/>
+        {/* Trips */}
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:3}}>Trips Today</div>
+          <div style={{fontSize:22,fontWeight:800,color:DS.onSurface,letterSpacing:'-0.02em'}}>3</div>
+        </div>
+        {/* divider */}
+        <div style={{width:1,height:38,background:DS.surfaceHigh,margin:'0 16px'}}/>
+        {/* Status */}
+        <div style={{flex:1}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.07em',color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:3}}>Status</div>
+          <div style={{display:'flex',alignItems:'center',gap:5}}>
+            <div style={{
+              width:7,height:7,borderRadius:3.5,
+              background: isOnline ? DS.tertiaryAlt : DS.onSurfaceVar,
+              animation: isOnline ? 'blink 2s ease infinite' : 'none',
+            }}/>
+            <div style={{fontSize:13,fontWeight:700,color: isOnline ? DS.tertiary : DS.onSurfaceVar}}>{isOnline?'Online':'Offline'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Online Toggle Button ────────────────────────────────── */
+function OnlineToggle({isOnline, onToggle}){
+  return (
+    <div style={{
+      position:'absolute',bottom:84,left:'50%',transform:'translateX(-50%)',
+      zIndex:30,
+    }}>
+      <button onClick={onToggle} style={{
+        display:'flex',alignItems:'center',gap:10,
+        background: isOnline ? DS.surface : DS.primaryGrad,
+        border: isOnline ? `2px solid ${DS.surfaceHigh}` : 'none',
+        borderRadius:32,padding:'14px 28px',
+        cursor:'pointer',
+        boxShadow: isOnline
+          ? `0 4px 16px rgba(0,0,0,0.12)`
+          : `0 8px 28px rgba(70,72,212,0.45)`,
+        transition:'all 0.3s ease',
+        minWidth:180,justifyContent:'center',
+        fontFamily:'Plus Jakarta Sans,sans-serif',
+      }}>
+        <div style={{
+          width:10,height:10,borderRadius:5,
+          background: isOnline ? DS.tertiaryAlt : 'rgba(255,255,255,0.6)',
+          animation: isOnline ? 'blink 2s ease infinite' : 'none',
+          flexShrink:0,
+        }}/>
+        <span style={{
+          fontSize:15,fontWeight:800,letterSpacing:'0.02em',
+          color: isOnline ? DS.onSurfaceVar : '#fff',
+        }}>{isOnline ? 'Go Offline' : 'Go Online'}</span>
+      </button>
+    </div>
+  );
+}
+
+/* ─── Searching Pill ──────────────────────────────────────── */
+function SearchingPill(){
+  return (
+    <div style={{
+      position:'absolute',bottom:148,left:'50%',transform:'translateX(-50%)',
+      zIndex:25,
+      background:'rgba(252,248,255,0.92)',
+      backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',
+      borderRadius:24,padding:'9px 18px',
+      boxShadow:`0 4px 16px rgba(70,72,212,0.15)`,
+      display:'flex',alignItems:'center',gap:8,
+      animation:'slideUp 0.3s ease',
+      whiteSpace:'nowrap',
+    }}>
+      <div style={{
+        width:14,height:14,borderRadius:7,
+        border:`2px solid ${DS.primaryLight}`,
+        borderTopColor:DS.primary,
+        animation:'spin 0.8s linear infinite',
+        flexShrink:0,
+      }}/>
+      <span style={{fontSize:12,fontWeight:700,color:DS.onSurface,letterSpacing:'0.04em'}}>Searching for nearby orders…</span>
+    </div>
+  );
+}
+
+/* ─── Swipe to Accept ─────────────────────────────────────── */
+function SwipeAccept({onAccept}){
+  const trackRef = React.useRef(null);
+  const [pos, setPos] = React.useState(0);
+  const [done, setDone] = React.useState(false);
+  const dragging = React.useRef(false);
+  const startX = React.useRef(0);
+  const THUMB = 56, PADDING = 4;
+
+  const getTrackWidth = () => (trackRef.current ? trackRef.current.offsetWidth : 300);
+
+  const onPointerDown = (e) => {
+    dragging.current = true;
+    startX.current = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    e.preventDefault();
+  };
+  const onPointerMove = React.useCallback((e) => {
+    if(!dragging.current) return;
+    const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const delta = x - startX.current;
+    const max = getTrackWidth() - THUMB - PADDING*2;
+    setPos(Math.max(0, Math.min(delta, max)));
+  }, []);
+  const onPointerUp = React.useCallback(() => {
+    if(!dragging.current) return;
+    dragging.current = false;
+    const max = getTrackWidth() - THUMB - PADDING*2;
+    if(pos > max*0.75){
+      setPos(max); setDone(true);
+      setTimeout(()=>onAccept(), 400);
+    } else { setPos(0); }
+  }, [pos, onAccept]);
+
+  React.useEffect(()=>{
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchmove', onPointerMove, {passive:true});
+    window.addEventListener('touchend', onPointerUp);
+    return ()=>{
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+    };
+  }, [onPointerMove, onPointerUp]);
+
+  const max = 300 - THUMB - PADDING*2;
+  const pct = pos/max;
+
+  return (
+    <div ref={trackRef} style={{
+      position:'relative',height:56+PADDING*2,borderRadius:32,
+      background: done ? DS.tertiary : DS.primaryLight,
+      overflow:'hidden',
+      transition:'background 0.3s',
+      userSelect:'none',
+    }}>
+      {/* fill */}
+      <div style={{
+        position:'absolute',top:0,left:0,bottom:0,
+        width:THUMB+PADDING+pos,
+        background:DS.primaryGrad,borderRadius:32,
+        transition: dragging.current ? 'none' : 'width 0.3s ease',
+      }}/>
+      {/* label */}
+      <div style={{
+        position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',
+        fontSize:14,fontWeight:700,letterSpacing:'0.03em',
+        color: pct > 0.4 ? 'rgba(255,255,255,0.4)' : DS.primary,
+        transition:'color 0.2s',
+        pointerEvents:'none',
+      }}>
+        {done ? <Ico.Check c="#fff" sz={22}/> : 'Swipe to Accept →'}
+      </div>
+      {/* thumb */}
+      {!done && (
+        <div
+          onMouseDown={onPointerDown}
+          onTouchStart={onPointerDown}
+          style={{
+            position:'absolute',top:PADDING,left:PADDING+pos,
+            width:THUMB,height:THUMB,borderRadius:28,
+            background:'#fff',
+            boxShadow:`0 2px 12px rgba(70,72,212,0.3)`,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            cursor:'grab',
+            transition: dragging.current ? 'none' : 'left 0.3s ease',
+            zIndex:2,
+          }}
+        >
+          <Ico.ArrowR sz={22} c={DS.primary}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Incoming Request Card ───────────────────────────────── */
+function RequestCard({onAccept, onDecline}){
+  return (
+    <div style={{
+      position:'absolute',bottom:70,left:0,right:0,zIndex:40,
+      animation:'slideUp 0.4s cubic-bezier(0.34,1.3,0.64,1)',
+    }}>
+      {/* scrim */}
+      <div style={{
+        position:'absolute',bottom:'100%',left:0,right:0,height:200,
+        background:'linear-gradient(to top,rgba(252,248,255,0.6),transparent)',
+        pointerEvents:'none',
+      }}/>
+      <div style={{
+        margin:'0 12px',
+        background:DS.surface,
+        borderRadius:'20px 20px 0 0',
+        padding:'6px 0 0',
+        boxShadow:`0 -8px 40px rgba(70,72,212,0.2)`,
+        overflow:'hidden',
+      }}>
+        {/* drag handle */}
+        <div style={{display:'flex',justifyContent:'center',paddingBottom:12}}>
+          <div style={{width:36,height:4,borderRadius:2,background:DS.surfaceHigh}}/>
+        </div>
+        <div style={{padding:'0 20px 20px'}}>
+          {/* header row */}
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.07em',color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:4}}>New Delivery Request</div>
+              <div style={{fontSize:13,fontWeight:600,color:DS.onSurfaceVar}}>{ORDER.orderNumber}</div>
+            </div>
+            {/* Earnings pill */}
+            <div style={{
+              background:DS.primaryGrad,borderRadius:12,
+              padding:'8px 16px',textAlign:'right',
+              boxShadow:`0 4px 12px rgba(70,72,212,0.35)`,
+            }}>
+              <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.75)',letterSpacing:'0.05em'}}>YOU EARN</div>
+              <div style={{fontSize:20,fontWeight:800,color:'#fff'}}>₹134</div>
+            </div>
+          </div>
+
+          {/* Metrics row */}
+          <div style={{
+            display:'flex',gap:8,marginBottom:16,
+          }}>
+            {[
+              {label:'Distance',value:`${ORDER.distanceKm} km`},
+              {label:'Package',value:ORDER.package.type},
+              {label:'Weight',value:ORDER.package.weight},
+            ].map(({label,value})=>(
+              <div key={label} style={{
+                flex:1,background:DS.surfaceLow,borderRadius:10,
+                padding:'8px 10px',textAlign:'center',
+              }}>
+                <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.05em',color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:2}}>{label}</div>
+                <div style={{fontSize:13,fontWeight:700,color:DS.onSurface}}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Route */}
+          <div style={{
+            background:DS.surfaceLow,borderRadius:12,padding:'12px 14px',marginBottom:16,
+          }}>
+            <div style={{display:'flex',gap:10,marginBottom:8}}>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:3}}>
+                <div style={{width:10,height:10,borderRadius:5,background:DS.primary,flexShrink:0}}/>
+                <div style={{width:1.5,height:24,background:DS.surfaceHigh,margin:'3px 0'}}/>
+                <div style={{width:10,height:10,borderRadius:2,background:DS.error,flexShrink:0}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.04em',color:DS.onSurfaceVar,textTransform:'uppercase'}}>PICKUP</div>
+                  <div style={{fontSize:14,fontWeight:700,color:DS.onSurface}}>{ORDER.pickup.area}</div>
+                  <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:1}}>{ORDER.pickup.address}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.04em',color:DS.onSurfaceVar,textTransform:'uppercase'}}>DROP</div>
+                  <div style={{fontSize:14,fontWeight:700,color:DS.onSurface}}>{ORDER.delivery.area}</div>
+                  <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:1}}>{ORDER.delivery.address}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Swipe */}
+          <SwipeAccept onAccept={onAccept}/>
+
+          {/* Decline */}
+          <button onClick={onDecline} style={{
+            width:'100%',marginTop:10,padding:'12px',
+            background:'transparent',border:'none',cursor:'pointer',
+            fontSize:13,fontWeight:700,color:DS.onSurfaceVar,
+            fontFamily:'Plus Jakarta Sans,sans-serif',letterSpacing:'0.02em',
+          }}>Decline</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Active Trip Card ────────────────────────────────────── */
+function ActiveTripCard({phase, onNext}){
+  const isPickup = phase === 'pickup';
+  const accentColor = isPickup ? DS.primary : DS.error;
+  const accentBg = isPickup ? DS.primaryLight : DS.errorBg;
+  const nextLabel = isPickup ? 'Arrived at Pickup' : 'Complete Delivery';
+  const nextGrad = isPickup ? DS.primaryGrad : `linear-gradient(135deg,#ba1a1a,#e05555)`;
+  const stepLabel = isPickup ? 'HEAD TO PICKUP' : 'HEAD TO DROP';
+
+  return (
+    <div style={{
+      position:'absolute',bottom:70,left:0,right:0,zIndex:40,
+      animation:'slideUp 0.4s cubic-bezier(0.34,1.2,0.64,1)',
+    }}>
+      <div style={{
+        margin:'0 12px',
+        background:DS.surface,
+        borderRadius:'20px 20px 0 0',
+        boxShadow:`0 -8px 40px rgba(0,0,0,0.12)`,
+        overflow:'hidden',
+      }}>
+        {/* colored top bar */}
+        <div style={{
+          background: isPickup ? DS.primaryGrad : `linear-gradient(135deg,#ba1a1a,#e05555)`,
+          padding:'12px 20px',
+          display:'flex',alignItems:'center',justifyContent:'space-between',
+        }}>
+          <div>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.08em',color:'rgba(255,255,255,0.75)',marginBottom:2}}>{stepLabel}</div>
+            <div style={{fontSize:15,fontWeight:800,color:'#fff'}}>{isPickup ? ORDER.pickup.area : ORDER.delivery.area}</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.8)',fontWeight:500,marginTop:1}}>{isPickup ? ORDER.pickup.address : ORDER.delivery.address}</div>
+          </div>
+          {/* Navigate CTA */}
+          <button style={{
+            background:'rgba(255,255,255,0.2)',
+            border:'none',borderRadius:12,
+            padding:'10px 14px',cursor:'pointer',
+            display:'flex',flexDirection:'column',
+            alignItems:'center',gap:3,
+          }}>
+            <Ico.Nav c="#fff" sz={20}/>
+            <span style={{fontSize:9,fontWeight:700,color:'#fff',letterSpacing:'0.05em'}}>NAVIGATE</span>
+          </button>
+        </div>
+
+        <div style={{padding:'14px 20px 18px'}}>
+          {/* Order info row */}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+            <div style={{
+              width:36,height:36,borderRadius:10,
+              background:accentBg,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              flexShrink:0,
+            }}>
+              <Ico.Pkg c={accentColor} sz={16}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:DS.onSurface}}>{ORDER.orderNumber} · {ORDER.package.type}</div>
+              <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500}}>{ORDER.package.weight} · {ORDER.distanceKm} km total</div>
+            </div>
+            <div style={{fontSize:15,fontWeight:800,color:DS.primary}}>₹134</div>
+          </div>
+
+          {/* Customer row */}
+          <div style={{
+            display:'flex',alignItems:'center',gap:10,
+            background:DS.surfaceLow,borderRadius:12,
+            padding:'10px 14px',marginBottom:14,
+          }}>
+            <Avatar size={34}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:DS.onSurface}}>{ORDER.customer.name}</div>
+              <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500}}>{ORDER.customer.phone}</div>
+            </div>
+            <button style={{
+              width:36,height:36,borderRadius:18,
+              background:DS.tertiary,border:'none',cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow:`0 3px 10px rgba(0,108,73,0.35)`,
+            }}>
+              <Ico.Phone c="#fff" sz={15}/>
+            </button>
+          </div>
+
+          {/* Primary Action */}
+          <button onClick={onNext} style={{
+            width:'100%',height:54,borderRadius:12,
+            background:nextGrad,
+            border:'none',cursor:'pointer',
+            fontSize:15,fontWeight:800,color:'#fff',
+            letterSpacing:'0.02em',
+            boxShadow:`0 6px 20px rgba(70,72,212,0.35)`,
+            fontFamily:'Plus Jakarta Sans,sans-serif',
+            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+          }}>
+            <Ico.Check c="#fff" sz={18}/>
+            {nextLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Bottom Nav ──────────────────────────────────────────── */
+function BottomNav({active='home'}){
+  const tabs = [
+    {id:'home', label:'Home', Icon:Ico.Home},
+    {id:'earnings', label:'Earnings', Icon:Ico.Earnings},
+    {id:'trips', label:'Trips', Icon:Ico.Trips},
+    {id:'profile', label:'Profile', Icon:Ico.Profile},
+  ];
+  return (
+    <div style={{
+      position:'absolute',bottom:0,left:0,right:0,zIndex:50,
+      background:'rgba(252,248,255,0.96)',
+      backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',
+      borderTop:`1px solid ${DS.surfaceHigh}`,
+      display:'flex',height:70,paddingBottom:8,
+    }}>
+      {tabs.map(({id,label,Icon})=>{
+        const isActive = id===active;
+        return (
+          <div key={id} style={{
+            flex:1,display:'flex',flexDirection:'column',
+            alignItems:'center',justifyContent:'center',gap:3,
+            cursor:isActive?'default':'pointer',paddingTop:8,
+          }}>
+            <Icon c={isActive ? DS.primary : DS.onSurfaceVar} sz={22}/>
+            <span style={{
+              fontSize:10,fontWeight: isActive ? 700 : 500,
+              color: isActive ? DS.primary : DS.onSurfaceVar,
+              letterSpacing:'0.03em',
+            }}>{label}</span>
+            {isActive && <div style={{width:4,height:4,borderRadius:2,background:DS.primary,marginTop:0}}/>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Snackbar ────────────────────────────────────────────── */
+function Snack({msg}){
+  return msg ? (
+    <div style={{
+      position:'absolute',bottom:84,left:16,right:16,zIndex:60,
+      background:DS.onSurface,color:DS.surface,
+      borderRadius:10,padding:'12px 16px',
+      fontSize:13,fontWeight:600,
+      animation:'floatUp 2.5s ease forwards',
+    }}>{msg}</div>
+  ) : null;
+}
+
+/* ─── State Label Chip ────────────────────────────────────── */
+function StateChip({label,color,onNext,onPrev,stateIdx,total}){
+  return (
+    <div style={{
+      position:'absolute',top:0,left:0,right:0,zIndex:100,
+      display:'flex',alignItems:'center',justifyContent:'space-between',
+      padding:'6px 8px',
+      background:'rgba(27,27,35,0.85)',
+      backdropFilter:'blur(8px)',
+    }}>
+      <button onClick={onPrev} disabled={stateIdx===0} style={{
+        width:28,height:28,borderRadius:6,border:'none',
+        background:stateIdx===0?'transparent':'rgba(255,255,255,0.15)',
+        color:'#fff',fontSize:14,cursor:stateIdx===0?'default':'pointer',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        opacity:stateIdx===0?0.3:1,
+      }}>‹</button>
+      <div style={{display:'flex',alignItems:'center',gap:7}}>
+        <div style={{width:6,height:6,borderRadius:3,background:color}}/>
+        <span style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.85)',letterSpacing:'0.06em'}}>{label}</span>
+        <span style={{fontSize:10,color:'rgba(255,255,255,0.4)',fontWeight:500}}>{stateIdx+1}/{total}</span>
+      </div>
+      <button onClick={onNext} disabled={stateIdx===total-1} style={{
+        width:28,height:28,borderRadius:6,border:'none',
+        background:stateIdx===total-1?'transparent':'rgba(255,255,255,0.15)',
+        color:'#fff',fontSize:14,cursor:stateIdx===total-1?'default':'pointer',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        opacity:stateIdx===total-1?0.3:1,
+      }}>›</button>
+    </div>
+  );
+}
+
+/* ─── Main App ────────────────────────────────────────────── */
+const STATES = [
+  {key:'offline',  label:'OFFLINE',        color:'#9c9ca8'},
+  {key:'searching',label:'ONLINE — SEARCHING', color:'#00a86b'},
+  {key:'request',  label:'INCOMING REQUEST',color:'#4648d4'},
+  {key:'pickup',   label:'ACTIVE — TO PICKUP', color:'#4648d4'},
+  {key:'drop',     label:'ACTIVE — TO DROP', color:'#ba1a1a'},
+];
+
+function App(){
+  const stored = ()=>{ try{ return parseInt(localStorage.getItem('shipzy_home_state')||'0'); }catch{return 0;} };
+  const [si, setSi] = React.useState(stored);
+  const [snack, setSnack] = React.useState(null);
+  const snackT = React.useRef(null);
+
+  const goState = (i) => {
+    setSi(i);
+    localStorage.setItem('shipzy_home_state', i);
+  };
+
+  const showSnack = (msg) => {
+    if(snackT.current) clearTimeout(snackT.current);
+    setSnack(msg);
+    snackT.current = setTimeout(()=>setSnack(null), 2500);
+  };
+
+  const state = STATES[si].key;
+  const isOnline = state !== 'offline';
+
+  const handleToggle = () => {
+    if(state==='offline') goState(1);
+    else { goState(0); showSnack('You are now Offline'); }
+  };
+
+  return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+      <AndroidDevice width={390} height={844} dark={false}>
+        <div style={{
+          height:'100%',position:'relative',overflow:'hidden',
+          fontFamily:'Plus Jakarta Sans,sans-serif',
+          background:DS.surface,
+        }}>
+          {/* State nav chip (dev tool) */}
+          <StateChip
+            label={STATES[si].label} color={STATES[si].color}
+            stateIdx={si} total={STATES.length}
+            onNext={()=>goState(Math.min(si+1,STATES.length-1))}
+            onPrev={()=>goState(Math.max(si-1,0))}
+          />
+
+          {/* Map background */}
+          <div style={{position:'absolute',top:28,left:0,right:0,bottom:0}}>
+            <CityMap isOnline={isOnline}/>
+            {(state==='searching') && <RadarPulse/>}
+          </div>
+
+          {/* Header */}
+          <div style={{paddingTop:28}}>
+            <Header/>
+          </div>
+
+          {/* Stats Banner */}
+          <div style={{paddingTop:28}}>
+            <StatsBanner isOnline={isOnline}/>
+          </div>
+
+          {/* Offline overlay text */}
+          {state==='offline' && (
+            <div style={{
+              position:'absolute',top:'44%',left:0,right:0,
+              display:'flex',flexDirection:'column',alignItems:'center',
+              gap:8,animation:'fadeIn 0.4s ease',
+            }}>
+              <div style={{
+                fontSize:13,fontWeight:700,color:DS.onSurfaceVar,
+                letterSpacing:'0.04em',
+                background:'rgba(252,248,255,0.88)',
+                backdropFilter:'blur(12px)',
+                borderRadius:20,padding:'8px 18px',
+              }}>You're currently offline</div>
+            </div>
+          )}
+
+          {/* Request Card */}
+          {state==='request' && (
+            <RequestCard
+              onAccept={()=>goState(3)}
+              onDecline={()=>{goState(1); showSnack('Order declined');}}
+            />
+          )}
+
+          {/* Active Trip Cards */}
+          {state==='pickup' && <ActiveTripCard phase="pickup" onNext={()=>goState(4)}/>}
+          {state==='drop' && <ActiveTripCard phase="drop" onNext={()=>{goState(1); showSnack('Delivery completed! ₹134 earned 🎉');}}/>}
+
+          {/* Online toggle — hide during active order */}
+          {(state==='offline'||state==='searching') && (
+            <OnlineToggle isOnline={isOnline} onToggle={handleToggle}/>
+          )}
+
+          {/* Searching pill */}
+          {state==='searching' && <SearchingPill/>}
+
+          {/* Simulate incoming */}
+          {state==='searching' && (
+            <button onClick={()=>goState(2)} style={{
+              position:'absolute',bottom:156,right:16,zIndex:25,
+              background:DS.surface,border:`1.5px solid ${DS.surfaceHigh}`,
+              borderRadius:10,padding:'8px 12px',cursor:'pointer',
+              fontSize:10,fontWeight:700,color:DS.primary,
+              letterSpacing:'0.05em',
+              boxShadow:`0 2px 8px rgba(70,72,212,0.15)`,
+              fontFamily:'Plus Jakarta Sans,sans-serif',
+            }}>SIM ORDER ↑</button>
+          )}
+
+          {/* Snackbar */}
+          <Snack msg={snack}/>
+
+          {/* Bottom Nav */}
+          <BottomNav active="home"/>
+        </div>
+      </AndroidDevice>
+
+      {/* Footer label */}
+      <div style={{
+        position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
+        background:'rgba(255,255,255,0.07)',backdropFilter:'blur(12px)',
+        borderRadius:20,padding:'8px 20px',
+        fontSize:11,fontWeight:600,color:'rgba(255,255,255,0.45)',
+        letterSpacing:'0.05em',border:'1px solid rgba(255,255,255,0.1)',
+        whiteSpace:'nowrap',
+      }}>
+        SHIPZY · DRIVER HOME · Use ‹ › to switch states
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<div id="root"></div>
+</body>
+</html>
