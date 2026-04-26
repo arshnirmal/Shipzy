@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Shipzy — Trips History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:#0f0e1a;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 30% 20%,rgba(70,72,212,.18) 0%,transparent 70%),
+             radial-gradient(ellipse 50% 50% at 80% 80%,rgba(96,99,238,.12) 0%,transparent 60%);
+  pointer-events:none;
+}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes slideDown{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+
+/* hide scrollbars in scroll containers */
+.scroll-area::-webkit-scrollbar{width:0;display:none;}
+.scroll-area{scrollbar-width:none;}
+</style>
+</head>
+<body>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel">
+
+/* ─── Design System ───────────────────────────────────────── */
+const DS = {
+  primary:'#4648d4',
+  primaryContainer:'#6063ee',
+  primaryGrad:'linear-gradient(135deg,#4648d4 0%,#6063ee 100%)',
+  primaryLight:'#e8e8ff',
+  surface:'#fcf8ff',
+  surfaceLow:'#f5f2fe',
+  surfaceHigh:'#e4e1ed',
+  surfaceHighest:'#d9d6e8',
+  onSurface:'#1b1b23',
+  onSurfaceVar:'#605d72',
+  tertiary:'#006c49',
+  tertiaryBg:'#d6f5e8',
+  error:'#ba1a1a',
+  errorBg:'#ffdad6',
+  amber:'#a5651b',
+  amberBg:'#ffeacc',
+  ghostLine:'rgba(96,93,114,0.12)',
+};
+
+/* ─── Mock Trips Data ─────────────────────────────────────── */
+const TRIPS = [
+  { id:1024, orderNumber:'ORD-1024', status:'delivered',
+    pickupArea:'Church Street', dropArea:'Koramangala',
+    pickupAddr:'Hard Rock Cafe, Church St', dropAddr:'4th Block, Koramangala',
+    distanceKm:9.2, netEarning:94.20, baseFare:30, distanceFee:55.20, tip:9,
+    package:'Documents', weight:'~0.5 kg', vehicle:'Two-wheeler',
+    customerName:'Priya Sharma', customerPhone:'+91 98765 43210',
+    assignedAt:'10:14 AM', pickedUpAt:'10:32 AM', deliveredAt:'10:58 AM',
+    dateGroup:'today', dateLabel:'Today, Apr 26',
+  },
+  { id:1023, orderNumber:'ORD-1023', status:'delivered',
+    pickupArea:'Indiranagar', dropArea:'Whitefield',
+    pickupAddr:'12, 100 Feet Rd', dropAddr:'Phoenix Marketcity, Whitefield',
+    distanceKm:14.1, netEarning:142.50, baseFare:30, distanceFee:106.50, tip:6,
+    package:'Small parcel', weight:'~2 kg', vehicle:'Two-wheeler',
+    customerName:'Arjun Mehta', customerPhone:'+91 99830 11122',
+    assignedAt:'8:42 AM', pickedUpAt:'9:01 AM', deliveredAt:'9:48 AM',
+    dateGroup:'today', dateLabel:'Today, Apr 26',
+  },
+  { id:1022, orderNumber:'ORD-1022', status:'delivered',
+    pickupArea:'HSR Layout', dropArea:'BTM Layout',
+    pickupAddr:'27th Main Rd, HSR Sector 2', dropAddr:'2nd Stage, BTM',
+    distanceKm:5.4, netEarning:68.00, baseFare:30, distanceFee:32.40, tip:5,
+    package:'Food', weight:'~1 kg', vehicle:'Two-wheeler',
+    customerName:'Neha Iyer', customerPhone:'+91 90080 76543',
+    assignedAt:'Yesterday 7:18 PM', pickedUpAt:'Yesterday 7:32 PM', deliveredAt:'Yesterday 7:51 PM',
+    dateGroup:'yesterday', dateLabel:'Yesterday, Apr 25',
+  },
+  { id:1021, orderNumber:'ORD-1021', status:'cancelled',
+    pickupArea:'MG Road', dropArea:'JP Nagar',
+    pickupAddr:'Brigade Rd', dropAddr:'7th Phase, JP Nagar',
+    distanceKm:11.6, netEarning:0, baseFare:0, distanceFee:0, tip:0,
+    package:'Documents', weight:'~0.3 kg', vehicle:'Two-wheeler',
+    customerName:'Rahul Verma', customerPhone:'+91 98456 11000',
+    assignedAt:'Yesterday 4:08 PM', pickedUpAt:null, deliveredAt:null, cancelledAt:'Yesterday 4:14 PM',
+    cancellationReason:'Customer cancelled before pickup',
+    dateGroup:'yesterday', dateLabel:'Yesterday, Apr 25',
+  },
+  { id:1020, orderNumber:'ORD-1020', status:'delivered',
+    pickupArea:'Jayanagar', dropArea:'Banashankari',
+    pickupAddr:'4th Block, Jayanagar', dropAddr:'2nd Stage, Banashankari',
+    distanceKm:6.8, netEarning:78.40, baseFare:30, distanceFee:40.80, tip:7.6,
+    package:'Documents', weight:'~0.5 kg', vehicle:'Two-wheeler',
+    customerName:'Sanjana Rao', customerPhone:'+91 97400 89234',
+    assignedAt:'Apr 24, 2:18 PM', pickedUpAt:'Apr 24, 2:34 PM', deliveredAt:'Apr 24, 2:55 PM',
+    dateGroup:'week', dateLabel:'This Week',
+  },
+  { id:1019, orderNumber:'ORD-1019', status:'returned',
+    pickupArea:'Electronic City', dropArea:'Hebbal',
+    pickupAddr:'Phase 1, EC', dropAddr:'Outer Ring Rd, Hebbal',
+    distanceKm:24.3, netEarning:48.00, baseFare:30, distanceFee:18.00, tip:0,
+    package:'Small parcel', weight:'~1.5 kg', vehicle:'Two-wheeler',
+    customerName:'Karan Kapoor', customerPhone:'+91 99020 33445',
+    assignedAt:'Apr 23, 11:02 AM', pickedUpAt:'Apr 23, 11:34 AM', deliveredAt:null, returnedAt:'Apr 23, 12:48 PM',
+    cancellationReason:'Recipient unavailable; returned to sender',
+    dateGroup:'week', dateLabel:'This Week',
+  },
+  { id:1018, orderNumber:'ORD-1018', status:'delivered',
+    pickupArea:'Marathahalli', dropArea:'Bellandur',
+    pickupAddr:'Outer Ring Rd, Marathahalli', dropAddr:'Bellandur Lake',
+    distanceKm:4.9, netEarning:62.30, baseFare:30, distanceFee:29.40, tip:2.9,
+    package:'Food', weight:'~0.8 kg', vehicle:'Two-wheeler',
+    customerName:'Aditi Banerjee', customerPhone:'+91 98112 87654',
+    assignedAt:'Apr 22, 8:18 PM', pickedUpAt:'Apr 22, 8:31 PM', deliveredAt:'Apr 22, 8:48 PM',
+    dateGroup:'earlier', dateLabel:'Earlier',
+  },
+];
+
+/* ─── Icons ───────────────────────────────────────────────── */
+const Ico = {
+  Back:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M19 12H5M10 7l-5 5 5 5" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Filter:({c='currentColor',sz=20})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M3 6h18M6 12h12M10 18h4" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Search:({c='currentColor',sz=20})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="11" cy="11" r="7" stroke={c} strokeWidth="1.75"/>
+      <path d="M20 20l-3.5-3.5" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  ChevR:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M9 6l6 6-6 6" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Close:({c='currentColor',sz=20})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M6 18L18 6" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Check:({c='#fff',sz=14})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M5 12l4 4L19 7" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Phone:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 14.92v2z" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Pkg:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m16 0L12 11M4 7l8 4m0 0v10" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Help:({c='currentColor',sz=16})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="1.75"/>
+      <path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5M12 17h.01" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Refresh:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M3 12a9 9 0 0115.5-6.36L21 8M21 4v4h-4M21 12a9 9 0 01-15.5 6.36L3 16M3 20v-4h4" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Empty:({sz=88})=>(
+    <svg width={sz} height={sz} viewBox="0 0 88 88" fill="none">
+      <circle cx="44" cy="44" r="40" fill="#f5f2fe"/>
+      <rect x="22" y="28" width="44" height="36" rx="6" fill="#fff"/>
+      <rect x="28" y="36" width="22" height="3" rx="1.5" fill="#d9d6e8"/>
+      <rect x="28" y="44" width="32" height="3" rx="1.5" fill="#e4e1ed"/>
+      <rect x="28" y="52" width="18" height="3" rx="1.5" fill="#e4e1ed"/>
+      <circle cx="60" cy="62" r="14" fill="#4648d4"/>
+      <path d="M55 62l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+};
+
+/* ─── Status Config ───────────────────────────────────────── */
+const STATUS = {
+  delivered: { label:'Delivered',  bar:DS.tertiary, bg:DS.tertiaryBg, fg:DS.tertiary },
+  cancelled: { label:'Cancelled',  bar:DS.error,    bg:DS.errorBg,    fg:DS.error },
+  returned:  { label:'Returned',   bar:DS.amber,    bg:DS.amberBg,    fg:DS.amber },
+};
+
+/* ─── Currency Formatter ──────────────────────────────────── */
+const fmtINR = (n) => '₹'+n.toLocaleString('en-IN',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
+
+/* ─── Header ──────────────────────────────────────────────── */
+function Header({onBack, hasFilters, onFilter}){
+  return (
+    <div style={{
+      padding:'8px 16px 4px',background:DS.surface,
+      display:'flex',alignItems:'center',gap:8,
+    }}>
+      <button onClick={onBack} style={{
+        width:40,height:40,borderRadius:10,border:'none',
+        background:DS.surfaceLow,cursor:'pointer',
+        display:'flex',alignItems:'center',justifyContent:'center',
+      }}>
+        <Ico.Back c={DS.onSurface} sz={20}/>
+      </button>
+      <div style={{flex:1}}>
+        <h1 style={{
+          fontSize:22,fontWeight:800,color:DS.onSurface,
+          letterSpacing:'-0.02em',lineHeight:1.1,
+        }}>Trips</h1>
+      </div>
+      <button onClick={onFilter} style={{
+        position:'relative',width:40,height:40,borderRadius:10,border:'none',
+        background: hasFilters ? DS.primaryLight : DS.surfaceLow,
+        cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+      }}>
+        <Ico.Filter c={hasFilters?DS.primary:DS.onSurface} sz={18}/>
+        {hasFilters && <div style={{
+          position:'absolute',top:8,right:8,width:7,height:7,borderRadius:4,
+          background:DS.primary,border:`2px solid ${DS.primaryLight}`,
+        }}/>}
+      </button>
+    </div>
+  );
+}
+
+/* ─── Progress Ring ───────────────────────────────────────── */
+function ProgressRing({earned, goal, size=72}){
+  const R = (size-8)/2;
+  const circ = 2*Math.PI*R;
+  const pct = Math.min(earned/goal, 1);
+  const offset = circ*(1-pct);
+  // color: green when done, amber when close (>70%), white otherwise
+  const strokeColor = pct>=1 ? '#89f8c3' : pct>=0.7 ? '#ffd77a' : 'rgba(255,255,255,0.9)';
+  return (
+    <div style={{position:'relative',width:size,height:size,flexShrink:0}}>
+      <svg width={size} height={size} style={{transform:'rotate(-90deg)'}}>
+        {/* track */}
+        <circle cx={size/2} cy={size/2} r={R}
+          fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5"/>
+        {/* progress */}
+        <circle cx={size/2} cy={size/2} r={R}
+          fill="none" stroke={strokeColor} strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          style={{transition:'stroke-dashoffset 0.6s ease, stroke 0.4s ease'}}
+        />
+      </svg>
+      {/* centre text */}
+      <div style={{
+        position:'absolute',inset:0,
+        display:'flex',flexDirection:'column',
+        alignItems:'center',justifyContent:'center',
+        gap:0,
+      }}>
+        <div style={{fontSize:13,fontWeight:800,color:'#fff',lineHeight:1,letterSpacing:'-0.02em'}}>
+          {Math.round(pct*100)}%
+        </div>
+        <div style={{fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.6)',letterSpacing:'0.04em',textTransform:'uppercase',marginTop:1}}>goal</div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Summary Header (Editorial Stats) ────────────────────── */
+function SummaryHeader(){
+  // Daily goal data
+  const todayEarned = 340;
+  const dailyGoal   = 500;
+
+  // This-week vs last-week delta
+  const thisWeek = 3140;
+  const lastWeek = 2800;
+  const delta    = thisWeek - lastWeek;
+  const deltaPct = Math.round((delta/lastWeek)*100);
+  const deltaUp  = delta >= 0;
+
+  const subStats = [
+    {label:'Trips',       value:'18'},
+    {label:'Distance',    value:'124 km'},
+    {label:'Avg / Trip',  value:'₹174'},
+  ];
+
+  return (
+    <div style={{
+      margin:'8px 16px 20px',
+      background:DS.primaryGrad,
+      borderRadius:16,padding:'18px 20px',
+      position:'relative',overflow:'hidden',
+      boxShadow:`0 12px 28px rgba(70,72,212,0.25)`,
+    }}>
+      {/* decorative circles */}
+      <div style={{position:'absolute',top:-40,right:-30,width:130,height:130,borderRadius:65,background:'rgba(255,255,255,0.06)'}}/>
+      <div style={{position:'absolute',bottom:-24,right:64,width:64,height:64,borderRadius:32,background:'rgba(255,255,255,0.04)'}}/>
+
+      {/* period label */}
+      <div style={{
+        fontSize:10,fontWeight:700,letterSpacing:'0.1em',
+        color:'rgba(255,255,255,0.65)',marginBottom:10,textTransform:'uppercase',
+        position:'relative',
+      }}>This Week · Apr 20 – 26</div>
+
+      {/* top row: big earning + progress ring */}
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:12,position:'relative'}}>
+        <div>
+          {/* earnings */}
+          <div style={{
+            fontSize:36,fontWeight:800,color:'#fff',
+            letterSpacing:'-0.03em',lineHeight:1,
+          }}>
+            <span style={{fontSize:18,fontWeight:700,verticalAlign:'top',marginTop:7,display:'inline-block',marginRight:1}}>₹</span>3,140
+          </div>
+          {/* delta vs last week */}
+          <div style={{
+            display:'inline-flex',alignItems:'center',gap:4,
+            marginTop:6,
+            background: deltaUp ? 'rgba(137,248,195,0.18)' : 'rgba(255,180,171,0.18)',
+            borderRadius:20,padding:'3px 9px',
+          }}>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path
+                d={deltaUp ? 'M5 8V2M2 5l3-3 3 3' : 'M5 2v6M2 5l3 3 3-3'}
+                stroke={deltaUp ? '#89f8c3' : '#ffb4ab'}
+                strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+              />
+            </svg>
+            <span style={{
+              fontSize:11,fontWeight:800,
+              color: deltaUp ? '#89f8c3' : '#ffb4ab',
+              letterSpacing:'0.02em',
+            }}>
+              {deltaUp ? '+' : ''}{deltaPct}% vs last week
+            </span>
+          </div>
+        </div>
+
+        {/* daily goal ring */}
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5}}>
+          <ProgressRing earned={todayEarned} goal={dailyGoal} size={72}/>
+          <div style={{
+            fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.55)',
+            letterSpacing:'0.05em',textTransform:'uppercase',textAlign:'center',
+          }}>
+            ₹{todayEarned} / ₹{dailyGoal}<br/>today's goal
+          </div>
+        </div>
+      </div>
+
+      {/* sub stats row */}
+      <div style={{
+        display:'flex',gap:0,position:'relative',
+        background:'rgba(255,255,255,0.11)',borderRadius:10,padding:'10px 4px',
+        backdropFilter:'blur(8px)',
+      }}>
+        {subStats.map((s,i,arr)=>(
+          <React.Fragment key={s.label}>
+            <div style={{flex:1,textAlign:'center'}}>
+              <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.6)',letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:2}}>{s.label}</div>
+              <div style={{fontSize:14,fontWeight:800,color:'#fff'}}>{s.value}</div>
+            </div>
+            {i<arr.length-1 && <div style={{width:1,background:'rgba(255,255,255,0.15)'}}/>}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Filter Chips Row ────────────────────────────────────── */
+function FilterChips({active, onChange, counts}){
+  const filters = [
+    {id:'all', label:'All'},
+    {id:'delivered', label:'Delivered'},
+    {id:'returned', label:'Returned'},
+    {id:'cancelled', label:'Cancelled'},
+  ];
+  return (
+    <div style={{
+      padding:'0 16px 12px',
+      display:'flex',gap:8,overflowX:'auto',
+    }} className="scroll-area">
+      {filters.map(f=>{
+        const sel = active===f.id;
+        return (
+          <button key={f.id} onClick={()=>onChange(f.id)} style={{
+            display:'flex',alignItems:'center',gap:6,
+            background: sel ? DS.primary : DS.surfaceLow,
+            border:'none',borderRadius:20,
+            padding:'8px 14px',cursor:'pointer',
+            fontSize:13,fontWeight:700,
+            color: sel ? '#fff' : DS.onSurface,
+            letterSpacing:'0.01em',whiteSpace:'nowrap',
+            transition:'all 0.2s',flexShrink:0,
+            fontFamily:'Plus Jakarta Sans,sans-serif',
+            boxShadow: sel ? `0 4px 12px rgba(70,72,212,0.3)` : 'none',
+          }}>
+            {f.label}
+            {counts[f.id]!==undefined && (
+              <span style={{
+                fontSize:11,fontWeight:700,
+                color: sel?'rgba(255,255,255,0.7)':DS.onSurfaceVar,
+              }}>{counts[f.id]}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Package Icon Chip ───────────────────────────────────── */
+const PKG_ICON = {
+  'Documents': (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>),
+  'Food': (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+      <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 2v4M10 2v4M14 2v4"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  'Small parcel': (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
+      <path d="M20 7l-8-4-8 4m16 0v10l-8 4-8-4V7m8 4v10M12 11l8-4"
+        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+};
+
+/* ─── Earning color by performance (avg = ₹174) ───────────── */
+const AVG_EARNING = 174;
+function earningColor(net){
+  if(net <= 0)            return DS.onSurfaceVar;
+  if(net >= AVG_EARNING * 1.15) return DS.tertiary;      // ≥15% above avg → green
+  if(net >= AVG_EARNING * 0.85) return DS.primary;       // within ±15% → indigo
+  return DS.amber;                                        // below → amber
+}
+
+/* ─── Trip Card ───────────────────────────────────────────── */
+function TripCard({trip, onTap, idx}){
+  const cfg     = STATUS[trip.status];
+  const eColor  = earningColor(trip.netEarning);
+  const pkgIcon = PKG_ICON[trip.package] || PKG_ICON['Small parcel'];
+  const hasTip  = trip.tip > 0;
+
+  // Clock-only — strip day prefix, keep only "HH:MM AM/PM"
+  const rawTime = trip.deliveredAt || trip.cancelledAt || trip.returnedAt || '';
+  const timeTokens = rawTime.trim().split(' ');
+  const timeStr = timeTokens.length >= 2 ? timeTokens.slice(-2).join(' ') : rawTime;
+
+  // Round earning for compact display on card (show decimals only if < ₹10)
+  const earningDisplay = trip.netEarning <= 0
+    ? '—'
+    : trip.netEarning < 10
+      ? fmtINR(trip.netEarning)
+      : '₹' + Math.round(trip.netEarning);
+
+  const [pressed, setPressed] = React.useState(false);
+
+  return (
+    <div
+      onClick={onTap}
+      onMouseDown={()=>setPressed(true)}
+      onMouseUp={()=>setPressed(false)}
+      onMouseLeave={()=>setPressed(false)}
+      onTouchStart={()=>setPressed(true)}
+      onTouchEnd={()=>setPressed(false)}
+      style={{
+        position:'relative',
+        background:DS.surface,
+        borderRadius:14,
+        marginBottom:10,
+        padding:'13px 14px 13px 18px',
+        cursor:'pointer',
+        transform: pressed?'scale(0.985)':'scale(1)',
+        transition:'transform 0.15s ease',
+        animation:`fadeSlideUp 0.35s ease ${Math.min(idx*0.04,0.4)}s both`,
+        boxShadow:`0 1px 0 ${DS.ghostLine}`,
+      }}
+    >
+      {/* left accent bar — contained to card body */}
+      <div style={{
+        position:'absolute',left:0,top:12,bottom:12,width:3,
+        background:cfg.bar,borderRadius:2,
+      }}/>
+
+      {/* ── Row 1: Bold route  |  Color-coded earning ── */}
+      <div style={{
+        display:'flex',alignItems:'center',
+        justifyContent:'space-between',gap:10,marginBottom:5,
+      }}>
+        {/* Route — single line, truncate with ellipsis */}
+        <div style={{
+          flex:1,minWidth:0,
+          fontSize:15,fontWeight:800,color:DS.onSurface,
+          letterSpacing:'-0.02em',lineHeight:1.25,
+          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+        }}>
+          {trip.pickupArea}
+          <span style={{opacity:0.35,margin:'0 5px',fontWeight:400}}>→</span>
+          {trip.dropArea}
+        </div>
+
+        {/* Earning */}
+        <div style={{
+          fontSize:17,fontWeight:800,color:eColor,
+          letterSpacing:'-0.02em',flexShrink:0,
+        }}>{earningDisplay}</div>
+      </div>
+
+      {/* ── Row 2: order # · status pill · spacer · time ── */}
+      <div style={{
+        display:'flex',alignItems:'center',gap:6,marginBottom:9,
+      }}>
+        <span style={{
+          fontSize:11,fontWeight:600,color:DS.onSurfaceVar,
+          letterSpacing:'0.01em',flexShrink:0,
+        }}>{trip.orderNumber}</span>
+
+        <div style={{
+          fontSize:9,fontWeight:700,letterSpacing:'0.07em',
+          color:cfg.fg,background:cfg.bg,
+          padding:'2px 7px',borderRadius:4,textTransform:'uppercase',flexShrink:0,
+        }}>{cfg.label}</div>
+
+        <div style={{flex:1}}/>
+
+        {timeStr && (
+          <span style={{
+            fontSize:11,fontWeight:700,color:DS.onSurfaceVar,
+            letterSpacing:'0.01em',flexShrink:0,whiteSpace:'nowrap',
+          }}>{timeStr}</span>
+        )}
+      </div>
+
+      {/* ── Row 3: compact chips ── */}
+      <div style={{display:'flex',alignItems:'center',gap:5}}>
+        {/* distance */}
+        <div style={{
+          display:'flex',alignItems:'center',gap:3,
+          background:DS.surfaceLow,borderRadius:5,padding:'3px 7px',flexShrink:0,
+        }}>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none">
+            <circle cx="5" cy="12" r="2" fill={DS.onSurfaceVar}/>
+            <circle cx="19" cy="12" r="2" fill={DS.onSurfaceVar}/>
+            <path d="M7 12h10" stroke={DS.onSurfaceVar} strokeWidth="2"
+              strokeLinecap="round" strokeDasharray="3 2"/>
+          </svg>
+          <span style={{fontSize:10,fontWeight:700,color:DS.onSurface,whiteSpace:'nowrap'}}>
+            {trip.distanceKm} km
+          </span>
+        </div>
+
+        {/* package */}
+        <div style={{
+          display:'flex',alignItems:'center',gap:3,
+          background:DS.surfaceLow,borderRadius:5,padding:'3px 7px',
+          color:DS.onSurfaceVar,flexShrink:0,
+        }}>
+          {pkgIcon}
+          <span style={{fontSize:10,fontWeight:700,color:DS.onSurface,whiteSpace:'nowrap'}}>
+            {trip.package}
+          </span>
+        </div>
+
+        {/* tip — only when tip > 0 */}
+        {hasTip && (
+          <div style={{
+            display:'flex',alignItems:'center',gap:3,
+            background:DS.amberBg,borderRadius:5,padding:'3px 7px',flexShrink:0,
+          }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill={DS.amber}>
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span style={{fontSize:10,fontWeight:800,color:DS.amber,whiteSpace:'nowrap'}}>
+              +₹{trip.tip % 1 ? trip.tip.toFixed(1) : trip.tip} tip
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Date Group Header ───────────────────────────────────── */
+function GroupHeader({label, count}){
+  return (
+    <div style={{
+      display:'flex',alignItems:'center',gap:8,
+      padding:'14px 4px 10px',
+    }}>
+      <div style={{
+        fontSize:10,fontWeight:800,color:DS.onSurfaceVar,
+        letterSpacing:'0.06em',textTransform:'uppercase',
+        whiteSpace:'nowrap',flexShrink:0,
+      }}>{label}</div>
+      <div style={{flex:1,height:1,background:DS.ghostLine,minWidth:8}}/>
+      <div style={{
+        fontSize:10,fontWeight:700,color:DS.onSurfaceVar,
+        background:DS.surfaceLow,padding:'2px 8px',borderRadius:10,
+        flexShrink:0,
+      }}>{count}</div>
+    </div>
+  );
+}
+
+/* ─── Skeleton Card ───────────────────────────────────────── */
+function SkeletonCard(){
+  const sh = {
+    background:`linear-gradient(90deg,${DS.surfaceLow} 0%,${DS.surfaceHigh} 50%,${DS.surfaceLow} 100%)`,
+    backgroundSize:'400px 100%',
+    animation:'shimmer 1.4s linear infinite',
+    borderRadius:6,
+  };
+  return (
+    <div style={{
+      background:DS.surface,borderRadius:14,
+      padding:'14px 16px 14px 18px',marginBottom:10,
+      position:'relative',overflow:'hidden',
+      boxShadow:`0 1px 0 ${DS.ghostLine}`,
+    }}>
+      <div style={{position:'absolute',left:0,top:14,bottom:14,width:3,background:DS.surfaceHigh}}/>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+        <div style={{...sh, width:64, height:12}}/>
+        <div style={{...sh, width:54, height:10}}/>
+        <div style={{flex:1}}/>
+        <div style={{...sh, width:50, height:16}}/>
+      </div>
+      <div style={{...sh, width:'70%', height:12, marginBottom:8}}/>
+      <div style={{...sh, width:'50%', height:10}}/>
+    </div>
+  );
+}
+
+/* ─── Empty State ─────────────────────────────────────────── */
+function EmptyState({filter}){
+  const messages = {
+    all:        {h:'No trips yet',           s:'Completed deliveries will appear here.'},
+    delivered:  {h:'No delivered trips',     s:'Delivered orders will show up here.'},
+    cancelled:  {h:'No cancelled trips',     s:'Cancelled orders will appear here.'},
+    returned:   {h:'No returned trips',      s:'Returned deliveries will appear here.'},
+  };
+  const m = messages[filter] || messages.all;
+  return (
+    <div style={{
+      display:'flex',flexDirection:'column',alignItems:'center',
+      padding:'48px 24px',textAlign:'center',
+      animation:'fadeSlideUp 0.4s ease',
+    }}>
+      <Ico.Empty sz={96}/>
+      <div style={{
+        fontSize:18,fontWeight:800,color:DS.onSurface,
+        letterSpacing:'-0.02em',marginTop:18,marginBottom:6,
+      }}>{m.h}</div>
+      <div style={{fontSize:13,fontWeight:500,color:DS.onSurfaceVar,maxWidth:240,lineHeight:1.5}}>{m.s}</div>
+    </div>
+  );
+}
+
+/* ─── Pull-to-refresh indicator ───────────────────────────── */
+function PullIndicator({pull,refreshing}){
+  const r = Math.min(pull/80, 1);
+  const visible = pull>0 || refreshing;
+  return (
+    <div style={{
+      position:'absolute',top:Math.min(pull*0.5, 32)-30,left:'50%',
+      transform:`translateX(-50%)`,
+      opacity: visible?1:0,
+      transition: refreshing?'none':'opacity 0.2s',
+      zIndex:5,
+    }}>
+      <div style={{
+        width:34,height:34,borderRadius:17,
+        background:DS.surface,boxShadow:`0 4px 12px rgba(70,72,212,0.18)`,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        transform: refreshing?'rotate(0)':`rotate(${r*360}deg)`,
+        animation: refreshing ? 'spin 0.7s linear infinite' : 'none',
+      }}>
+        <Ico.Refresh c={DS.primary} sz={18}/>
+      </div>
+    </div>
+  );
+}
+
+/* ─── List Screen ─────────────────────────────────────────── */
+function ListScreen({onTripTap, onFilter, filter, dateRange}){
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [pull, setPull] = React.useState(0);
+  const [loading, setLoading] = React.useState(true);
+  const startY = React.useRef(0);
+  const scrollRef = React.useRef(null);
+
+  React.useEffect(()=>{
+    const t = setTimeout(()=>setLoading(false), 900);
+    return ()=>clearTimeout(t);
+  },[]);
+
+  // Filter
+  const filtered = TRIPS.filter(t => filter==='all' || t.status===filter);
+  const counts = {
+    all: TRIPS.length,
+    delivered: TRIPS.filter(t=>t.status==='delivered').length,
+    cancelled: TRIPS.filter(t=>t.status==='cancelled').length,
+    returned: TRIPS.filter(t=>t.status==='returned').length,
+  };
+
+  // Group by date
+  const grouped = filtered.reduce((acc,t)=>{
+    if(!acc[t.dateGroup]) acc[t.dateGroup] = {label:t.dateLabel, items:[]};
+    acc[t.dateGroup].items.push(t);
+    return acc;
+  }, {});
+  const groupOrder = ['today','yesterday','week','earlier'];
+
+  // pull to refresh
+  const onTouchStart = (e) => {
+    if(scrollRef.current?.scrollTop===0) startY.current = e.touches[0].clientY;
+  };
+  const onTouchMove = (e) => {
+    if(refreshing) return;
+    if(scrollRef.current?.scrollTop===0 && startY.current){
+      const delta = e.touches[0].clientY - startY.current;
+      if(delta>0) setPull(Math.min(delta, 100));
+    }
+  };
+  const onTouchEnd = () => {
+    if(pull>=80){
+      setRefreshing(true);
+      setPull(60);
+      setTimeout(()=>{ setRefreshing(false); setPull(0);}, 1100);
+    } else {
+      setPull(0);
+    }
+    startY.current = 0;
+  };
+
+  // dev simulate refresh button
+  const simRefresh = () => {
+    setRefreshing(true); setPull(60);
+    setTimeout(()=>{ setRefreshing(false); setPull(0);}, 1100);
+  };
+
+  const hasResults = filtered.length>0;
+
+  return (
+    <div style={{
+      height:'100%',display:'flex',flexDirection:'column',
+      background:DS.surface,position:'relative',
+    }}>
+      <Header onBack={()=>{}} hasFilters={dateRange!=='week'} onFilter={onFilter}/>
+
+      <div
+        ref={scrollRef}
+        className="scroll-area"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{
+          flex:1,overflow:'auto',position:'relative',
+          paddingBottom:24,
+        }}
+      >
+        <PullIndicator pull={pull} refreshing={refreshing}/>
+
+        <div style={{
+          transform:`translateY(${refreshing?40:pull*0.5}px)`,
+          transition: refreshing?'transform 0.25s':(pull>0?'none':'transform 0.25s'),
+        }}>
+          <SummaryHeader/>
+          <FilterChips active={filter} onChange={onFilter} counts={counts}/>
+
+          <div style={{padding:'0 16px'}}>
+            {loading ? (
+              <>
+                <GroupHeader label="Loading…" count={'·'}/>
+                {[0,1,2].map(i=><SkeletonCard key={i}/>)}
+              </>
+            ) : !hasResults ? (
+              <EmptyState filter={filter}/>
+            ) : (
+              groupOrder.map(g=>{
+                if(!grouped[g]) return null;
+                return (
+                  <div key={g}>
+                    <GroupHeader label={grouped[g].label} count={grouped[g].items.length}/>
+                    {grouped[g].items.map((t,i)=>(
+                      <TripCard key={t.id} trip={t} idx={i} onTap={()=>onTripTap(t)}/>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* dev refresh button — pinned to header area, not over list */}
+      <button onClick={simRefresh} style={{
+        position:'absolute',top:10,right:64,zIndex:10,
+        background:DS.surfaceLow,border:`1px solid ${DS.surfaceHigh}`,
+        borderRadius:8,padding:'5px 9px',cursor:'pointer',
+        fontSize:9,fontWeight:700,color:DS.primary,letterSpacing:'0.04em',
+        fontFamily:'Plus Jakarta Sans,sans-serif',
+      }}>↓ REFRESH</button>
+    </div>
+  );
+}
+
+/* ─── Filter Bottom Sheet ─────────────────────────────────── */
+function FilterSheet({open, onClose, dateRange, onDateRange, onClear}){
+  const [localRange, setLocalRange] = React.useState(dateRange);
+  React.useEffect(()=>{ if(open) setLocalRange(dateRange); }, [open, dateRange]);
+  if(!open) return null;
+  const ranges = [
+    {id:'today', label:'Today'},
+    {id:'7days', label:'Last 7 days'},
+    {id:'week',  label:'This week'},
+    {id:'30days',label:'Last 30 days'},
+    {id:'month', label:'This month'},
+    {id:'custom',label:'Custom range…'},
+  ];
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position:'absolute',inset:0,
+        background:'rgba(27,27,35,0.45)',
+        backdropFilter:'blur(2px)',
+        zIndex:200,animation:'scrimIn 0.25s ease',
+      }}/>
+      <div style={{
+        position:'absolute',bottom:0,left:0,right:0,zIndex:201,
+        background:DS.surface,
+        borderRadius:'20px 20px 0 0',
+        animation:'slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1)',
+        boxShadow:'0 -8px 32px rgba(0,0,0,0.18)',
+      }}>
+        <div style={{display:'flex',justifyContent:'center',padding:'10px 0 4px'}}>
+          <div style={{width:36,height:4,borderRadius:2,background:DS.surfaceHigh}}/>
+        </div>
+        <div style={{padding:'8px 20px 24px'}}>
+          {/* sheet header */}
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+            <div style={{flex:1,fontSize:18,fontWeight:800,color:DS.onSurface,letterSpacing:'-0.02em'}}>Filters</div>
+            <button onClick={onClose} style={{
+              width:32,height:32,borderRadius:8,border:'none',
+              background:DS.surfaceLow,cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'center',
+            }}>
+              <Ico.Close c={DS.onSurface} sz={16}/>
+            </button>
+          </div>
+
+          {/* Date Range */}
+          <div style={{
+            fontSize:10,fontWeight:800,letterSpacing:'0.08em',
+            color:DS.onSurfaceVar,textTransform:'uppercase',
+            marginTop:18,marginBottom:10,
+          }}>Date Range</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+            {ranges.map(r=>{
+              const sel = localRange===r.id;
+              return (
+                <button key={r.id} onClick={()=>setLocalRange(r.id)} style={{
+                  background: sel ? DS.primary : DS.surfaceLow,
+                  border:'none',borderRadius:20,
+                  padding:'9px 14px',cursor:'pointer',
+                  fontSize:13,fontWeight:700,
+                  color: sel ? '#fff' : DS.onSurface,
+                  fontFamily:'Plus Jakarta Sans,sans-serif',
+                  letterSpacing:'0.01em',
+                  transition:'all 0.2s',
+                  display:'flex',alignItems:'center',gap:6,
+                }}>
+                  {sel && <Ico.Check c="#fff" sz={12}/>}
+                  {r.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Note */}
+          <div style={{
+            marginTop:18,padding:'10px 12px',
+            background:DS.surfaceLow,borderRadius:10,
+            fontSize:11,fontWeight:500,color:DS.onSurfaceVar,
+            lineHeight:1.5,
+          }}>
+            <strong style={{color:DS.onSurface}}>Status filters</strong> are available as chips above the list.
+          </div>
+
+          {/* CTA */}
+          <div style={{display:'flex',gap:10,marginTop:20}}>
+            <button onClick={()=>{ onClear(); onClose(); }} style={{
+              flex:1,height:52,borderRadius:12,border:'none',
+              background:DS.surfaceLow,
+              fontSize:14,fontWeight:700,color:DS.onSurface,
+              cursor:'pointer',fontFamily:'Plus Jakarta Sans,sans-serif',
+            }}>Clear all</button>
+            <button onClick={()=>{ onDateRange(localRange); onClose(); }} style={{
+              flex:2,height:52,borderRadius:12,border:'none',
+              background:DS.primaryGrad,
+              fontSize:14,fontWeight:800,color:'#fff',
+              cursor:'pointer',fontFamily:'Plus Jakarta Sans,sans-serif',
+              letterSpacing:'0.02em',
+              boxShadow:`0 6px 18px rgba(70,72,212,0.35)`,
+            }}>Apply Filters</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─── Detail Screen ───────────────────────────────────────── */
+function DetailScreen({trip, onBack, onShowSnack}){
+  const cfg = STATUS[trip.status];
+  const sub = trip.baseFare + trip.distanceFee;
+
+  // timeline
+  const timelineSteps = [
+    { label:'Order Assigned',  time:trip.assignedAt,  done:true },
+    { label:'Picked Up',
+      time:trip.pickedUpAt,
+      done: !!trip.pickedUpAt,
+      skipped: trip.status==='cancelled' && !trip.pickedUpAt,
+    },
+    { label: trip.status==='cancelled' ? 'Cancelled'
+            : trip.status==='returned' ? 'Returned'
+            : 'Delivered',
+      time: trip.deliveredAt || trip.cancelledAt || trip.returnedAt,
+      done:true,
+      isFinal:true,
+    },
+  ];
+
+  return (
+    <div style={{
+      height:'100%',display:'flex',flexDirection:'column',
+      background:DS.surfaceLow,position:'relative',
+      animation:'fadeIn 0.25s ease',
+    }}>
+      {/* sticky header */}
+      <div style={{
+        padding:'8px 16px 4px',background:DS.surface,
+        display:'flex',alignItems:'center',gap:8,
+      }}>
+        <button onClick={onBack} style={{
+          width:40,height:40,borderRadius:10,border:'none',
+          background:DS.surfaceLow,cursor:'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',
+        }}>
+          <Ico.Back c={DS.onSurface} sz={20}/>
+        </button>
+        <div style={{flex:1,fontSize:13,fontWeight:700,color:DS.onSurfaceVar,letterSpacing:'0.02em'}}>Trip Details</div>
+      </div>
+
+      <div className="scroll-area" style={{flex:1,overflow:'auto',paddingBottom:24}}>
+        {/* Hero earning card */}
+        <div style={{
+          margin:'8px 16px 16px',
+          background:DS.surface,
+          borderRadius:16,padding:'18px 20px',
+          boxShadow:`0 1px 0 ${DS.ghostLine}`,
+        }}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+            <div style={{
+              fontSize:14,fontWeight:800,color:DS.onSurface,
+            }}>{trip.orderNumber}</div>
+            <div style={{
+              fontSize:9,fontWeight:700,letterSpacing:'0.07em',
+              color:cfg.fg,background:cfg.bg,
+              padding:'3px 8px',borderRadius:4,textTransform:'uppercase',
+            }}>{cfg.label}</div>
+          </div>
+          <div style={{fontSize:11,fontWeight:600,color:DS.onSurfaceVar,letterSpacing:'0.02em',marginBottom:14}}>
+            {trip.deliveredAt || trip.cancelledAt || trip.returnedAt}
+          </div>
+          {/* Big earnings */}
+          {trip.netEarning>0 ? (
+            <>
+              <div style={{
+                fontSize:11,fontWeight:700,letterSpacing:'0.08em',
+                color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:2,
+              }}>Net Earning</div>
+              <div style={{
+                fontSize:36,fontWeight:800,color:DS.primary,
+                letterSpacing:'-0.03em',lineHeight:1,
+              }}>
+                <span style={{fontSize:18,fontWeight:700,verticalAlign:'top',marginTop:6,display:'inline-block',marginRight:1}}>₹</span>
+                {trip.netEarning.toFixed(2)}
+              </div>
+            </>
+          ) : (
+            <div style={{
+              padding:'10px 14px',background:cfg.bg,borderRadius:10,
+              fontSize:12,fontWeight:600,color:cfg.fg,
+            }}>{trip.cancellationReason || 'No earnings recorded'}</div>
+          )}
+        </div>
+
+        {/* Route */}
+        <div style={{
+          margin:'0 16px 12px',background:DS.surface,
+          borderRadius:16,padding:'16px 20px',
+          boxShadow:`0 1px 0 ${DS.ghostLine}`,
+        }}>
+          <div style={{
+            fontSize:10,fontWeight:800,letterSpacing:'0.08em',
+            color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:12,
+          }}>Route · {trip.distanceKm} km</div>
+          <div style={{display:'flex',gap:12}}>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',paddingTop:5}}>
+              <div style={{width:11,height:11,borderRadius:6,background:DS.primary,boxShadow:`0 0 0 3px ${DS.primaryLight}`}}/>
+              <div style={{flex:1,width:1.5,background:`repeating-linear-gradient(to bottom,${DS.surfaceHigh} 0 4px,transparent 4px 8px)`,minHeight:32,margin:'4px 0'}}/>
+              <div style={{width:11,height:11,borderRadius:2,background:DS.error,boxShadow:`0 0 0 3px ${DS.errorBg}`}}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{marginBottom:18}}>
+                <div style={{fontSize:10,fontWeight:700,color:DS.onSurfaceVar,letterSpacing:'0.06em',textTransform:'uppercase'}}>PICKUP</div>
+                <div style={{fontSize:14,fontWeight:800,color:DS.onSurface,marginTop:1,letterSpacing:'-0.01em'}}>{trip.pickupArea}</div>
+                <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:2,lineHeight:1.4}}>{trip.pickupAddr}</div>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:DS.onSurfaceVar,letterSpacing:'0.06em',textTransform:'uppercase'}}>DROP</div>
+                <div style={{fontSize:14,fontWeight:800,color:DS.onSurface,marginTop:1,letterSpacing:'-0.01em'}}>{trip.dropArea}</div>
+                <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:2,lineHeight:1.4}}>{trip.dropAddr}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer */}
+        <div style={{
+          margin:'0 16px 12px',background:DS.surface,
+          borderRadius:16,padding:'16px 20px',
+          boxShadow:`0 1px 0 ${DS.ghostLine}`,
+          display:'flex',alignItems:'center',gap:14,
+        }}>
+          <div style={{
+            width:44,height:44,borderRadius:22,
+            background:DS.primaryGrad,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            color:'#fff',fontWeight:800,fontSize:14,letterSpacing:'-0.01em',
+            flexShrink:0,
+          }}>
+            {trip.customerName.split(' ').map(n=>n[0]).join('').slice(0,2)}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:700,color:DS.onSurfaceVar,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:2}}>Customer</div>
+            <div style={{fontSize:14,fontWeight:800,color:DS.onSurface}}>{trip.customerName}</div>
+            <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:1}}>{trip.customerPhone}</div>
+          </div>
+          <button onClick={()=>onShowSnack('Calling customer (demo)')} style={{
+            width:42,height:42,borderRadius:21,border:'none',
+            background:DS.tertiary,cursor:'pointer',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            boxShadow:`0 4px 12px rgba(0,108,73,0.35)`,
+          }}>
+            <Ico.Phone c="#fff" sz={16}/>
+          </button>
+        </div>
+
+        {/* Package */}
+        <div style={{
+          margin:'0 16px 12px',background:DS.surface,
+          borderRadius:16,padding:'16px 20px',
+          boxShadow:`0 1px 0 ${DS.ghostLine}`,
+          display:'flex',alignItems:'center',gap:14,
+        }}>
+          <div style={{
+            width:44,height:44,borderRadius:10,
+            background:DS.primaryLight,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            flexShrink:0,
+          }}>
+            <Ico.Pkg c={DS.primary} sz={20}/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:700,color:DS.onSurfaceVar,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:2}}>Package</div>
+            <div style={{fontSize:14,fontWeight:800,color:DS.onSurface}}>{trip.package}</div>
+            <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:1}}>{trip.weight} · {trip.vehicle}</div>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div style={{
+          margin:'0 16px 12px',background:DS.surface,
+          borderRadius:16,padding:'18px 20px',
+          boxShadow:`0 1px 0 ${DS.ghostLine}`,
+        }}>
+          <div style={{
+            fontSize:10,fontWeight:800,letterSpacing:'0.08em',
+            color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:14,
+          }}>Timeline</div>
+          {timelineSteps.map((step,i,arr)=>{
+            const isLast = i===arr.length-1;
+            const finalCfg = step.isFinal ? cfg : null;
+            const dotBg = step.skipped ? DS.surfaceHigh
+                        : finalCfg ? finalCfg.bar
+                        : step.done ? DS.primary
+                        : DS.surfaceHigh;
+            return (
+              <div key={i} style={{display:'flex',gap:14}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+                  <div style={{
+                    width:22,height:22,borderRadius:11,
+                    background: dotBg,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    flexShrink:0,
+                    boxShadow: step.done && !step.skipped ? `0 0 0 3px ${
+                      finalCfg ? finalCfg.bg : DS.primaryLight
+                    }` : 'none',
+                  }}>
+                    {step.done && !step.skipped && <Ico.Check c="#fff" sz={11}/>}
+                  </div>
+                  {!isLast && (
+                    <div style={{
+                      width:1.5,flex:1,minHeight:30,
+                      background: step.done&&!step.skipped ? DS.primaryLight : DS.surfaceHigh,
+                      margin:'2px 0',
+                    }}/>
+                  )}
+                </div>
+                <div style={{paddingBottom:isLast?0:18,flex:1}}>
+                  <div style={{
+                    fontSize:13,fontWeight:800,
+                    color: step.skipped ? DS.onSurfaceVar : DS.onSurface,
+                    textDecoration: step.skipped?'line-through':'none',
+                    letterSpacing:'-0.01em',
+                  }}>{step.label}</div>
+                  <div style={{fontSize:11,color:DS.onSurfaceVar,fontWeight:500,marginTop:2}}>
+                    {step.skipped ? 'Skipped' : (step.time || '—')}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {trip.cancellationReason && (
+            <div style={{
+              marginTop:6,padding:'10px 12px',
+              background:cfg.bg,borderRadius:10,
+              fontSize:12,fontWeight:600,color:cfg.fg,lineHeight:1.45,
+            }}>
+              <strong style={{fontWeight:800}}>Reason: </strong>{trip.cancellationReason}
+            </div>
+          )}
+        </div>
+
+        {/* Earnings breakdown */}
+        {trip.netEarning>0 && (
+          <div style={{
+            margin:'0 16px 12px',background:DS.surface,
+            borderRadius:16,padding:'18px 20px',
+            boxShadow:`0 1px 0 ${DS.ghostLine}`,
+          }}>
+            <div style={{
+              fontSize:10,fontWeight:800,letterSpacing:'0.08em',
+              color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:12,
+            }}>Earnings Breakdown</div>
+            {[
+              {label:'Base fare', value:trip.baseFare},
+              {label:`Distance · ${trip.distanceKm} km`, value:trip.distanceFee},
+              {label:'Tip', value:trip.tip},
+            ].map(row=>(
+              <div key={row.label} style={{
+                display:'flex',justifyContent:'space-between',alignItems:'center',
+                padding:'10px 0',
+              }}>
+                <div style={{fontSize:13,fontWeight:600,color:DS.onSurface}}>{row.label}</div>
+                <div style={{fontSize:14,fontWeight:700,color:DS.onSurface}}>{fmtINR(row.value)}</div>
+              </div>
+            ))}
+            <div style={{height:1,background:DS.ghostLine,margin:'8px 0'}}/>
+            <div style={{
+              display:'flex',justifyContent:'space-between',alignItems:'center',
+              padding:'10px 0 0',
+            }}>
+              <div style={{fontSize:13,fontWeight:800,color:DS.onSurface,letterSpacing:'0.02em'}}>Net Earning</div>
+              <div style={{fontSize:18,fontWeight:800,color:DS.primary,letterSpacing:'-0.02em'}}>{fmtINR(trip.netEarning)}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Help button */}
+        <div style={{margin:'8px 16px 0'}}>
+          <button onClick={()=>onShowSnack('Help request sent (demo)')} style={{
+            width:'100%',height:54,borderRadius:14,border:'none',
+            background:DS.surface,
+            display:'flex',alignItems:'center',justifyContent:'center',gap:10,
+            fontSize:14,fontWeight:800,color:DS.onSurface,
+            letterSpacing:'0.01em',cursor:'pointer',
+            fontFamily:'Plus Jakarta Sans,sans-serif',
+            boxShadow:`0 1px 0 ${DS.ghostLine}`,
+          }}>
+            <Ico.Help c={DS.primary} sz={18}/>
+            Report an issue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Snackbar ────────────────────────────────────────────── */
+function Snack({msg}){
+  return msg ? (
+    <div style={{
+      position:'absolute',bottom:24,left:16,right:16,zIndex:300,
+      background:DS.onSurface,color:DS.surface,
+      borderRadius:10,padding:'12px 16px',
+      fontSize:13,fontWeight:600,
+      animation:'fadeSlideUp 0.25s ease',
+    }}>{msg}</div>
+  ) : null;
+}
+
+/* ─── App ─────────────────────────────────────────────────── */
+function App(){
+  const [screen, setScreen] = React.useState('list');  // list | detail
+  const [activeTrip, setActiveTrip] = React.useState(null);
+  const [filter, setFilter] = React.useState('all');
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [dateRange, setDateRange] = React.useState('week');
+  const [snack, setSnack] = React.useState(null);
+  const snackT = React.useRef(null);
+
+  const showSnack = (msg) => {
+    if(snackT.current) clearTimeout(snackT.current);
+    setSnack(msg);
+    snackT.current = setTimeout(()=>setSnack(null), 2200);
+  };
+
+  return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+      <AndroidDevice width={390} height={844} dark={false}>
+        <div style={{
+          height:'100%',position:'relative',overflow:'hidden',
+          fontFamily:'Plus Jakarta Sans,sans-serif',
+          background:DS.surface,
+        }}>
+          {screen==='list' && (
+            <ListScreen
+              filter={filter}
+              dateRange={dateRange}
+              onFilter={(id)=>{
+                if(['all','delivered','cancelled','returned'].includes(id)){
+                  setFilter(id);
+                } else {
+                  setSheetOpen(true);
+                }
+              }}
+              onTripTap={(t)=>{ setActiveTrip(t); setScreen('detail'); }}
+            />
+          )}
+          {screen==='detail' && activeTrip && (
+            <DetailScreen
+              trip={activeTrip}
+              onBack={()=>setScreen('list')}
+              onShowSnack={showSnack}
+            />
+          )}
+          {/* Filter Sheet */}
+          <FilterSheet
+            open={sheetOpen}
+            onClose={()=>setSheetOpen(false)}
+            dateRange={dateRange}
+            onDateRange={(r)=>{ setDateRange(r); showSnack(`Showing trips: ${r}`); }}
+            onClear={()=>{ setDateRange('week'); setFilter('all'); showSnack('Filters cleared'); }}
+          />
+          {/* Filter trigger button (additional FAB-style) – removed; handled via header */}
+          <Snack msg={snack}/>
+        </div>
+      </AndroidDevice>
+
+      <div style={{
+        position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
+        background:'rgba(255,255,255,0.07)',backdropFilter:'blur(12px)',
+        borderRadius:20,padding:'8px 20px',
+        fontSize:11,fontWeight:600,color:'rgba(255,255,255,0.45)',
+        letterSpacing:'0.05em',border:'1px solid rgba(255,255,255,0.1)',
+        whiteSpace:'nowrap',
+      }}>
+        SHIPZY · TRIPS HISTORY · Tap a trip · Tap filter ⚲ for date sheet
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<div id="root"></div>
+</body>
+</html>

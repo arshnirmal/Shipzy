@@ -51,4 +51,6 @@ class AppRoutes {
 
   static String activeDeliveryPath(String orderId) =>
       '/active-delivery/$orderId';
+
+  static String tripDetailPath(int orderId) => '/orders/$orderId';
 }

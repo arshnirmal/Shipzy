@@ -357,7 +357,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getTripHistory({
     int page = 1,
-    int limit = 20,
+    int limit = 100,
     String? dateFrom,
     String? dateTo,
   }) async {
@@ -371,6 +371,14 @@ class ApiService {
       },
     );
     _ensureSuccess(response, 'Failed to fetch trip history');
+    return response.data['data'] as Map<String, dynamic>;
+  }
+
+  /// Fetch full order details from GET /orders/:id.
+  /// Returns data map with 'order' and 'actors' keys.
+  Future<Map<String, dynamic>> getOrderById(int orderId) async {
+    final response = await _dio.get('/orders/$orderId');
+    _ensureSuccess(response, 'Failed to fetch order details');
     return response.data['data'] as Map<String, dynamic>;
   }
 }
