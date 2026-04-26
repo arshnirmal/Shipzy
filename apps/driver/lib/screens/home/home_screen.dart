@@ -171,9 +171,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // ── App bar — opaque, above the map ───────────────────────
         const DriverHomeHeader(),
 
-        // ── Daily stats — below header, above map ─────────────────
-        if (!hasActiveTrip) const DailyStatsBanner(),
-
         // ── Map + overlays fill remaining screen ──────────────────
         Expanded(
           child: Stack(
@@ -191,6 +188,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     : mapbox.MapboxStyles.LIGHT,
                 onMapCreated: _onMapCreated,
               ),
+
+              // Daily stats — floats just below the app bar over the map
+              if (!hasActiveTrip)
+                const Positioned(
+                  top: 8,
+                  left: 0,
+                  right: 0,
+                  child: DailyStatsBanner(),
+                ),
 
               // Scrim — softens the map edge above the bottom card.
               // Rendered behind the cards so the gradient shows only on
