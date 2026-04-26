@@ -1,0 +1,10 @@
+[build]
+  command = "pnpm --filter business run build"
+  publish = "apps/business/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
