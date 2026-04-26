@@ -1,33 +1,20 @@
 import type { AuthUser } from "@/types/auth";
-
-const USER_KEY = "shipzy_business_user";
+import { localStore, StorageKeys } from "@/lib/storage";
 
 export function isBrowser() {
   return typeof window !== "undefined";
 }
 
 export function getStoredUser(): AuthUser | null {
-  if (!isBrowser()) return null;
-
-  const rawUser = window.localStorage.getItem(USER_KEY);
-  if (!rawUser) return null;
-
-  try {
-    return JSON.parse(rawUser) as AuthUser;
-  } catch {
-    window.localStorage.removeItem(USER_KEY);
-    return null;
-  }
+  return localStore.get<AuthUser>(StorageKeys.USER_PROFILE);
 }
 
 export function setStoredUser(user: AuthUser) {
-  if (!isBrowser()) return;
-  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStore.set(StorageKeys.USER_PROFILE, user);
 }
 
 export function clearStoredUser() {
-  if (!isBrowser()) return;
-  window.localStorage.removeItem(USER_KEY);
+  localStore.remove(StorageKeys.USER_PROFILE);
 }
 
 /**

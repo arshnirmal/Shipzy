@@ -39,13 +39,22 @@ type AuthProviderProps = {
 
 export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const router = useRouter();
+  
+  // Initialize with null, hydrate on client
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Only rely on stored user. Tokens are securely managed by Next.js HttpOnly cookies.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsHydrated(true);
+    // On the very first client render, safely grab from storage without a cascade loop
     const storedUser = getStoredUser();
-    setUser(storedUser || null);
+    if (storedUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUser(storedUser);
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(false);
   }, []);
 
@@ -117,6 +126,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     }),
     [isLoading, signIn, signOut, signUp, user],
   );
+
+  // Prevent rendering children during SSR mismatch frame
+  if (!isHydrated) return null;
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -1,4 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { get, set, del } from "idb-keyval";
 import { isRetryable } from "@/lib/api";
 
 export function createQueryClient() {
@@ -7,6 +9,8 @@ export function createQueryClient() {
       queries: {
         // Keep cached data fresh for 30 s; background refetch after that.
         staleTime: 30_000,
+        // Cache data survives in IndexedDB for 24 hours
+        gcTime: 1000 * 60 * 60 * 24,
 
         // Smart retry: never retry deterministic failures (4xx), back off on
         // transient ones (network drop, 5xx) up to 3 times.
@@ -39,3 +43,22 @@ export function createQueryClient() {
     },
   });
 }
+
+/**
+ * Persister configured to use IndexedDB for highly performant,
+ * asynchronous storage of the React Query cache.
+ */
+export const asyncStoragePersister = createAsyncStoragePersister({
+  storage: {
+    getItem: async (key) => {
+      const val = await get(key);
+      return val === undefined ? null : val;
+    },
+    setItem: async (key, value) => {
+      await set(key, value);
+    },
+    removeItem: async (key) => {
+      await del(key);
+    },
+  },
+});
