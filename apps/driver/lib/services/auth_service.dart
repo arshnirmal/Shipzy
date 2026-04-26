@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../models/auth/auth_response.dart';
 import '../models/user.dart';
 import 'dio/api_client.dart';
+import 'dio/api_exception.dart';
 
 class AuthService {
   AuthService(this._apiClient);
@@ -23,22 +24,30 @@ class AuthService {
   }
 
   /// Google OAuth authentication
-  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'courier'}) async {
+  Future<GoogleAuthResponse> verifyGoogleToken(
+    String idToken, {
+    String role = 'courier',
+  }) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/google/verify',
-        data: {'idToken': idToken, 'role': role},
+        data: {
+          'provider': {'idToken': idToken},
+          'identity': {'role': role},
+        },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
 
       if (response.data?['success'] != true) {
-        throw Exception(response.data?['message'] ?? 'Google authentication failed');
+        throw Exception(
+          response.data?['message'] ?? 'Google authentication failed',
+        );
       }
 
       return GoogleAuthResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Google authentication');
+      throw mapDioException(e, 'Google authentication');
     }
   }
 
@@ -54,7 +63,14 @@ class AuthService {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/register',
-        data: {'fullName': fullName, 'email': email, 'password': password, 'role': role, 'phoneNumber': phoneNumber},
+        data: {
+          'identity': {
+            'fullName': fullName,
+            'role': role,
+            'phoneNumber': phoneNumber,
+          },
+          'credentials': {'email': email, 'password': password},
+        },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
 
@@ -64,17 +80,22 @@ class AuthService {
 
       return RegisterResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Registration');
+      throw mapDioException(e, 'Registration');
     }
   }
 
   /// User login
-  Future<LoginResponse> login({required String email, required String password}) async {
+  Future<LoginResponse> login({
+    required String email,
+    required String password,
+  }) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/login',
-        data: {'email': email, 'password': password},
+        data: {
+          'credentials': {'email': email, 'password': password},
+        },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
 
@@ -84,14 +105,19 @@ class AuthService {
 
       return LoginResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Login');
+      throw mapDioException(e, 'Login');
     }
   }
 
   /// Refresh access token
   Future<RefreshTokenResponse> refreshToken(String refreshToken) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refreshToken});
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: {
+          'tokens': {'refreshToken': refreshToken},
+        },
+      );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Token refresh failed');
@@ -99,55 +125,47 @@ class AuthService {
 
       return RefreshTokenResponse.fromJson(response.data!);
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Token refresh');
+      throw mapDioException(e, 'Token refresh');
     }
   }
 
-  /// Get current user profile
+  /// Loads [AppUser] from **`GET /users/me`** (`users.profiles` identity).
+  ///
+  /// Couriers also need **`GET /drivers/me`** for status, nested vehicle,
+  /// onboarding, and KYC (`ApiService` in this app).
   Future<AppUser> getCurrentUser(String accessToken) async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>('/users/me', options: Options(headers: {'Authorization': 'Bearer $accessToken'}));
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/users/me',
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
 
       if (response.data?['success'] != true) {
-        throw Exception(response.data?['message'] ?? 'Failed to get user profile');
+        throw Exception(
+          response.data?['message'] ?? 'Failed to get user profile',
+        );
       }
 
-      return AppUser.fromJson(response.data!['data'] as Map<String, dynamic>);
+      return AppUser.fromJson(
+        response.data!['data']['profile'] as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Get current user');
+      throw mapDioException(e, 'Get current user');
     }
   }
 
-  /// Logout user
+  /// Logout user — auth header is added by the interceptor
   Future<void> logout(String accessToken) async {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/logout',
-        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Logout failed');
       }
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Logout');
-    }
-  }
-
-  /// Handle Dio errors
-  Exception _handleDioError(DioException e, String operation) {
-    if (e.response != null) {
-      final data = e.response!.data;
-      final message = data is Map<String, dynamic> ? data['message'] ?? data['error'] : 'Unknown error';
-      return Exception('$operation failed: $message');
-    } else if (e.type == DioExceptionType.connectionTimeout) {
-      return Exception('$operation failed: Connection timeout');
-    } else if (e.type == DioExceptionType.receiveTimeout) {
-      return Exception('$operation failed: Server not responding');
-    } else if (e.type == DioExceptionType.connectionError) {
-      return Exception('$operation failed: No internet connection');
-    } else {
-      return Exception('$operation failed: ${e.message}');
+      throw mapDioException(e, 'Logout');
     }
   }
 }

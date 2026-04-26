@@ -26,6 +26,12 @@ class AppRoutes {
   /// Route for document upload.
   static const String documentUpload = '/document-upload';
 
+  /// Route while KYC is submitted and awaiting admin verification.
+  static const String pendingReview = '/pending-review';
+
+  /// Route for the permissions gate screen.
+  static const String permissions = '/permissions';
+
   // ============ MAIN APP ROUTES ============
 
   /// Route for the home screen.
@@ -40,11 +46,9 @@ class AppRoutes {
   /// Route for the profile screen.
   static const String profile = '/profile';
 
-  // ============ ORDER ROUTES ============
+  /// Route for an active delivery flow.
+  static const String activeDelivery = '/active-delivery/:orderId';
 
-  /// Route for viewing order details (with orderId parameter).
-  static String orderDetails(String orderId) => '/order-details/$orderId';
-
-  /// Route for active delivery screen (with orderId parameter).
-  static String activeDelivery(String orderId) => '/active-delivery/$orderId';
+  static String activeDeliveryPath(String orderId) =>
+      '/active-delivery/$orderId';
 }

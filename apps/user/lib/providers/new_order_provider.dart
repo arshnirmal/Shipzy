@@ -5,6 +5,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/orders/calculate_fare.dart';
 import '../models/orders/create_order.dart';
 import '../models/orders/create_order_data.dart';
+import '../models/orders/fare_breakdown.dart';
+import '../models/orders/order.dart';
 import 'order_service_provider.dart';
 
 part 'new_order_provider.g.dart';
@@ -102,14 +104,14 @@ class NewOrderState {
   final String? specialInstructions;
 
   // Fare calculation
-  final FareData? fareData;
+  final FareResponseData? fareData;
   final bool isCalculatingFare;
   final String? fareError;
 
   // Order creation
   final bool isCreatingOrder;
   final String? createOrderError;
-  final CreatedOrderData? createdOrder;
+  final Order? createdOrder;
 
   NewOrderState copyWith({
     CreateOrderData? createOrderData,
@@ -149,12 +151,12 @@ class NewOrderState {
     String? packageDescription,
     double? declaredValue,
     String? specialInstructions,
-    FareData? fareData,
+    FareResponseData? fareData,
     bool? isCalculatingFare,
     String? fareError,
     bool? isCreatingOrder,
     String? createOrderError,
-    CreatedOrderData? createdOrder,
+    Order? createdOrder,
   }) => NewOrderState(
     createOrderData: createOrderData ?? this.createOrderData,
     isLoadingData: isLoadingData ?? this.isLoadingData,
@@ -232,7 +234,7 @@ class NewOrderState {
   }
 
   /// Get total fare (already includes all charges from API)
-  double get totalFare => fareData?.totalPrice ?? 0.0;
+  double get totalFare => fareData?.pricing.totalPrice ?? 0.0;
 }
 
 @riverpod
@@ -252,7 +254,7 @@ class NewOrder extends _$NewOrder {
       final orderService = ref.read(orderServiceProvider);
       final response = await orderService.getCreateOrderData();
 
-      state = state.copyWith(createOrderData: response.data, isLoadingData: false);
+      state = state.copyWith(createOrderData: response.data.createOrder, isLoadingData: false);
     } catch (e) {
       state = state.copyWith(isLoadingData: false, dataError: e.toString());
     }
@@ -381,11 +383,16 @@ class NewOrder extends _$NewOrder {
     try {
       final orderService = ref.read(orderServiceProvider);
       final request = CalculateFareRequest(
-        deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
-        vehicleCategoryId: state.selectedVehicle!.categoryId,
-        weightTierId: weightTier.tierId,
-        pickup: Coordinate(latitude: state.pickupLatitude!, longitude: state.pickupLongitude!),
-        drop: Coordinate(latitude: state.deliveryLatitude!, longitude: state.deliveryLongitude!),
+        fulfillment: CalculateFareFulfillment(
+          deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
+          vehicleCategoryId: state.selectedVehicle!.categoryId,
+          weightTierId: weightTier.tierId,
+          packageTypeId: state.selectedPackageType?.packageTypeId,
+        ),
+        locations: CalculateFareLocations(
+          pickup: OrderCoordinate(latitude: state.pickupLatitude!, longitude: state.pickupLongitude!),
+          delivery: OrderCoordinate(latitude: state.deliveryLatitude!, longitude: state.deliveryLongitude!),
+        ),
       );
 
       final response = await orderService.calculateFare(request);
@@ -458,58 +465,64 @@ class NewOrder extends _$NewOrder {
     try {
       final orderService = ref.read(orderServiceProvider);
       final request = CreateOrderRequest(
-        deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
-        vehicleCategoryId: state.selectedVehicle!.categoryId,
-        weightTierId: weightTier.tierId,
-        paymentMethodId: state.selectedPaymentMethod!.methodId,
-        pickup: CreateOrderPickup(
-          fullAddress: state.pickupAddress!,
-          latitude: state.pickupLatitude!,
-          longitude: state.pickupLongitude!,
-          city: state.pickupCity ?? 'Unknown',
-          state: state.pickupState ?? 'Unknown',
-          postalCode: state.pickupPostalCode ?? '000000',
-          contactName: state.pickupContactName!,
-          contactPhone: state.pickupContactPhone!,
-          howToReach: state.pickupHowToReach,
-          building: state.pickupBuilding,
-          floor: state.pickupFloor,
-          flatNumber: state.pickupFlat,
+        fulfillment: CreateOrderFulfillment(
+          deliveryTypeId: state.selectedDeliveryType!.deliveryTypeId,
+          vehicleCategoryId: state.selectedVehicle!.categoryId,
+          weightTierId: weightTier.tierId,
+          paymentMethodId: state.selectedPaymentMethod!.methodId,
+          packageTypeId: state.selectedPackageType?.packageTypeId,
         ),
-        delivery: CreateOrderDelivery(
-          fullAddress: state.deliveryAddress!,
-          latitude: state.deliveryLatitude!,
-          longitude: state.deliveryLongitude!,
-          city: state.deliveryCity ?? 'Unknown',
-          state: state.deliveryState ?? 'Unknown',
-          postalCode: state.deliveryPostalCode ?? '000000',
-          contactName: state.deliveryContactName!,
-          contactPhone: state.deliveryContactPhone!,
-          howToReach: state.deliveryHowToReach,
-          building: state.deliveryBuilding,
-          floor: state.deliveryFloor,
-          flatNumber: state.deliveryFlat,
+        locations: CreateOrderLocations(
+          pickup: CreateOrderContactLocation(
+            fullAddress: state.pickupAddress!,
+            latitude: state.pickupLatitude!,
+            longitude: state.pickupLongitude!,
+            city: state.pickupCity ?? 'Unknown',
+            state: state.pickupState ?? 'Unknown',
+            postalCode: state.pickupPostalCode ?? '000000',
+            contactName: state.pickupContactName!,
+            contactPhone: state.pickupContactPhone!,
+            howToReach: state.pickupHowToReach,
+            building: state.pickupBuilding,
+            floor: state.pickupFloor,
+            flatNumber: state.pickupFlat,
+          ),
+          delivery: CreateOrderContactLocation(
+            fullAddress: state.deliveryAddress!,
+            latitude: state.deliveryLatitude!,
+            longitude: state.deliveryLongitude!,
+            city: state.deliveryCity ?? 'Unknown',
+            state: state.deliveryState ?? 'Unknown',
+            postalCode: state.deliveryPostalCode ?? '000000',
+            contactName: state.deliveryContactName!,
+            contactPhone: state.deliveryContactPhone!,
+            howToReach: state.deliveryHowToReach,
+            building: state.deliveryBuilding,
+            floor: state.deliveryFloor,
+            flatNumber: state.deliveryFlat,
+          ),
         ),
-        fareBreakdown: FareBreakdown(
-          basePrice: state.fareData!.basePrice,
-          distanceKm: state.fareData!.distanceKm,
-          distancePrice: state.fareData!.distancePrice,
-          weightSurcharge: state.fareData!.weightSurcharge,
-          platformFee: state.fareData!.platformFee,
-          specialHandlingFee: state.fareData!.specialHandlingFee,
-          subtotalBeforeTax: state.fareData!.subtotalBeforeTax,
-          gstAmount: state.fareData!.gstAmount,
-          totalPrice: state.fareData!.totalPrice,
-          currency: state.fareData!.currency,
+        package: CreateOrderPackage(
+          description: state.packageDescription,
+          specialInstructions: state.specialInstructions,
+          declaredValue: state.declaredValue,
         ),
-        packageTypeId: state.selectedPackageType?.packageTypeId,
-        packageDescription: state.packageDescription,
-        specialInstructions: state.specialInstructions,
-        declaredValue: state.declaredValue,
+        pricing: FareBreakdown(
+          basePrice: state.fareData!.pricing.basePrice,
+          distanceKm: state.fareData!.pricing.distanceKm,
+          distancePrice: state.fareData!.pricing.distancePrice,
+          weightSurcharge: state.fareData!.pricing.weightSurcharge,
+          platformFee: state.fareData!.pricing.platformFee,
+          specialHandlingFee: state.fareData!.pricing.specialHandlingFee,
+          subtotalBeforeTax: state.fareData!.pricing.subtotalBeforeTax,
+          gstAmount: state.fareData!.pricing.gstAmount,
+          totalPrice: state.fareData!.pricing.totalPrice,
+          currency: state.fareData!.pricing.currency,
+        ),
       );
 
       final response = await orderService.createOrder(request);
-      state = state.copyWith(createdOrder: response.data, isCreatingOrder: false);
+      state = state.copyWith(createdOrder: response.data.order, isCreatingOrder: false);
     } catch (e) {
       state = state.copyWith(isCreatingOrder: false, createOrderError: e.toString());
     }

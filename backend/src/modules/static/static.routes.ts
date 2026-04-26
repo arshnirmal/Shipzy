@@ -11,7 +11,7 @@ import {
   getOrderStatusesSchema,
 } from "./static.schema.js";
 
-async function staticRoutes(fastify: FastifyInstance, options: any) {
+async function staticRoutes(fastify: FastifyInstance, _options: unknown) {
   // Public routes - no authentication required for static data
 
   // GET /api/v1/static/delivery-types

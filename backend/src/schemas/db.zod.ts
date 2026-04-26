@@ -1,4 +1,13 @@
 import { z } from "zod";
+import {
+  AssignmentTimelineJSONBZ,
+  KycJSONBZ,
+  OnboardingJSONBZ,
+  OrderLocationJSONBZ,
+  OrderPackageJSONBZ,
+  OrderPricingJSONBZ,
+  OrderSnapshotJSONBZ,
+} from "../database/schema/types.js";
 
 // ============================================================================
 // DB ROW SCHEMAS - Internal camelCase row shapes
@@ -34,6 +43,31 @@ export const RequestUserZ = z.object({
 });
 export type RequestUser = z.infer<typeof RequestUserZ>;
 
+export const PricingConfigRowDbZ = z.object({
+  configKey: z.string(),
+  configValue: z.union([z.number(), z.string()]),
+});
+export type PricingConfigRowDb = z.infer<typeof PricingConfigRowDbZ>;
+
+export const PackageHandlingFeeDbZ = z.object({
+  specialHandlingFee: z.union([z.number(), z.string()]),
+});
+export type PackageHandlingFeeDb = z.infer<typeof PackageHandlingFeeDbZ>;
+
+/** JSONB from Postgres: object, stringified JSON, or null. */
+const pgJsonb = <S extends z.ZodTypeAny>(schema: S) =>
+  z.preprocess((raw: unknown) => {
+    if (raw == null || raw === "") return null;
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw) as unknown;
+      } catch {
+        return null;
+      }
+    }
+    return raw;
+  }, schema.nullable());
+
 export const CourierDbZ = z.object({
   courierId: z.number().int().positive(),
   userId: z.number().int().positive(),
@@ -50,6 +84,8 @@ export const CourierDbZ = z.object({
   currentLongitude: z.union([z.number(), z.string()]).nullable().optional(),
   lastLocationUpdate: z.date().nullable().optional(),
   totalDeliveriesToday: z.number().int().nonnegative(),
+  avgRating: z.union([z.number(), z.string()]).nullable().optional(),
+  totalRatings: z.number().int().nonnegative().optional(),
   vehicleId: z.number().int().positive().nullable().optional(),
   vehicleNumber: z.string().nullable().optional(),
   vehicleModel: z.string().nullable().optional(),
@@ -61,6 +97,8 @@ export const CourierDbZ = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   roleName: z.string().optional(),
+  onboarding: pgJsonb(OnboardingJSONBZ).optional(),
+  kyc: pgJsonb(KycJSONBZ).optional(),
 });
 export type CourierDb = z.infer<typeof CourierDbZ>;
 
@@ -101,57 +139,48 @@ export const CourierAssignmentDbZ = z
     orderUuid: z.string().uuid().nullable().optional(),
     orderNumber: z.string().nullable().optional(),
     orderStatus: z.string().nullable().optional(),
-    assignmentStatusId: z.number().int().nullable().optional(),
     assignmentStatus: z.string().nullable().optional(),
-    vehicleCategory: z.string().nullable().optional(),
-    vehicleCategoryDisplay: z.string().nullable().optional(),
-    packageType: z.string().nullable().optional(),
-    weightTierId: z.number().int().nullable().optional(),
-    weightTierName: z.string().nullable().optional(),
-    weightTierMin: z.union([z.number(), z.string()]).nullable().optional(),
-    weightTierMax: z.union([z.number(), z.string()]).nullable().optional(),
-    pickupAddress: z.string().nullable().optional(),
-    pickupBuilding: z.string().nullable().optional(),
-    pickupLandmark: z.string().nullable().optional(),
-    pickupCity: z.string().nullable().optional(),
-    pickupState: z.string().nullable().optional(),
-    pickupPostalCode: z.string().nullable().optional(),
-    pickupLatitude: z.union([z.number(), z.string()]).nullable().optional(),
-    pickupLongitude: z.union([z.number(), z.string()]).nullable().optional(),
-    pickupContactName: z.string().nullable().optional(),
-    pickupContactPhone: z.string().nullable().optional(),
-    deliveryAddress: z.string().nullable().optional(),
-    deliveryBuilding: z.string().nullable().optional(),
-    deliveryLandmark: z.string().nullable().optional(),
-    deliveryCity: z.string().nullable().optional(),
-    deliveryState: z.string().nullable().optional(),
-    deliveryPostalCode: z.string().nullable().optional(),
-    deliveryLatitude: z.union([z.number(), z.string()]).nullable().optional(),
-    deliveryLongitude: z.union([z.number(), z.string()]).nullable().optional(),
-    deliveryContactName: z.string().nullable().optional(),
-    deliveryContactPhone: z.string().nullable().optional(),
-    packageDescription: z.string().nullable().optional(),
-    specialInstructions: z.string().nullable().optional(),
-    declaredValue: z.union([z.number(), z.string()]).nullable().optional(),
+
+    // Whole JSONB location objects
+    pickup: OrderLocationJSONBZ.nullable().optional(),
+    delivery: OrderLocationJSONBZ.nullable().optional(),
+
+    // JSONB value objects
+    pricing: OrderPricingJSONBZ.nullable().optional(),
+    snapshot: OrderSnapshotJSONBZ.nullable().optional(),
+    package: OrderPackageJSONBZ.nullable().optional(),
+    timeline: AssignmentTimelineJSONBZ.nullable().optional(),
+
+    totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
     estimatedDistanceKm: z
       .union([z.number(), z.string()])
       .nullable()
       .optional(),
     actualDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
-    deliveryType: z.string().nullable().optional(),
-    basePrice: z.union([z.number(), z.string()]).nullable().optional(),
-    distancePrice: z.union([z.number(), z.string()]).nullable().optional(),
-    weightSurcharge: z.union([z.number(), z.string()]).nullable().optional(),
-    platformFee: z.union([z.number(), z.string()]).nullable().optional(),
-    specialHandlingFee: z.union([z.number(), z.string()]).nullable().optional(),
-    gstAmount: z.union([z.number(), z.string()]).nullable().optional(),
-    subtotalBeforeTax: z.union([z.number(), z.string()]).nullable().optional(),
-    totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
     assignedAt: z.date().nullable().optional(),
-    acceptedAt: z.date().nullable().optional(),
   })
   .passthrough();
 export type CourierAssignmentDb = z.infer<typeof CourierAssignmentDbZ>;
+
+export const TripHistoryRowDbZ = z.object({
+  assignmentId: z.number().int().positive(),
+  orderId: z.number().int().positive(),
+  orderUuid: z.string().uuid().nullable().optional(),
+  orderNumber: z.string().nullable().optional(),
+  orderStatus: z.string(),
+  assignmentStatus: z.string(),
+  pickup: OrderLocationJSONBZ.nullable().optional(),
+  delivery: OrderLocationJSONBZ.nullable().optional(),
+  actualDistanceKm: z.union([z.number(), z.string()]).nullable().optional(),
+  totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
+  netEarning: z.union([z.number(), z.string()]),
+  snapshot: OrderSnapshotJSONBZ.nullable().optional(),
+  assignedAt: z.date().nullable().optional(),
+  deliveredAt: z.date().nullable().optional(),
+  cancelledAt: z.date().nullable().optional(),
+  totalCount: z.union([z.number(), z.string()]),
+});
+export type TripHistoryRowDb = z.infer<typeof TripHistoryRowDbZ>;
 
 // ============================================================================
 // TRACKING
@@ -173,7 +202,9 @@ export const AddTrackingEventResultDbZ = z.object({
   eventId: z.number().int().positive(),
   timestamp: z.date(),
 });
-export type AddTrackingEventResultDb = z.infer<typeof AddTrackingEventResultDbZ>;
+export type AddTrackingEventResultDb = z.infer<
+  typeof AddTrackingEventResultDbZ
+>;
 
 export const TrackingCountDbZ = z.object({
   totalEvents: z.union([z.number(), z.string()]),
@@ -224,19 +255,25 @@ export const MarkPaymentCompletedResultDbZ = z.object({
   transactionId: z.number().int().positive(),
   paymentCompletedAt: z.date(),
 });
-export type MarkPaymentCompletedResultDb = z.infer<typeof MarkPaymentCompletedResultDbZ>;
+export type MarkPaymentCompletedResultDb = z.infer<
+  typeof MarkPaymentCompletedResultDbZ
+>;
 
 export const MarkPaymentFailedResultDbZ = z.object({
   transactionId: z.number().int().positive(),
   paymentFailedAt: z.date(),
 });
-export type MarkPaymentFailedResultDb = z.infer<typeof MarkPaymentFailedResultDbZ>;
+export type MarkPaymentFailedResultDb = z.infer<
+  typeof MarkPaymentFailedResultDbZ
+>;
 
 export const MarkRefundProcessedResultDbZ = z.object({
   refundId: z.number().int().positive(),
   processedAt: z.date(),
 });
-export type MarkRefundProcessedResultDb = z.infer<typeof MarkRefundProcessedResultDbZ>;
+export type MarkRefundProcessedResultDb = z.infer<
+  typeof MarkRefundProcessedResultDbZ
+>;
 
 // ============================================================================
 // NOTIFICATIONS
@@ -268,19 +305,25 @@ export const QueueNotificationResultDbZ = z.object({
   notificationId: z.number().int().positive(),
   createdAt: z.date(),
 });
-export type QueueNotificationResultDb = z.infer<typeof QueueNotificationResultDbZ>;
+export type QueueNotificationResultDb = z.infer<
+  typeof QueueNotificationResultDbZ
+>;
 
 export const MarkNotificationSentResultDbZ = z.object({
   notificationId: z.number().int().positive(),
   sentAt: z.date(),
 });
-export type MarkNotificationSentResultDb = z.infer<typeof MarkNotificationSentResultDbZ>;
+export type MarkNotificationSentResultDb = z.infer<
+  typeof MarkNotificationSentResultDbZ
+>;
 
 export const MarkNotificationFailedResultDbZ = z.object({
   notificationId: z.number().int().positive(),
   retryCount: z.number().int().nonnegative(),
 });
-export type MarkNotificationFailedResultDb = z.infer<typeof MarkNotificationFailedResultDbZ>;
+export type MarkNotificationFailedResultDb = z.infer<
+  typeof MarkNotificationFailedResultDbZ
+>;
 
 export const SaveFcmTokenResultDbZ = z.object({
   tokenId: z.number().int().positive(),
@@ -291,7 +334,9 @@ export type SaveFcmTokenResultDb = z.infer<typeof SaveFcmTokenResultDbZ>;
 export const DeactivateFcmTokenResultDbZ = z.object({
   tokenId: z.number().int().positive(),
 });
-export type DeactivateFcmTokenResultDb = z.infer<typeof DeactivateFcmTokenResultDbZ>;
+export type DeactivateFcmTokenResultDb = z.infer<
+  typeof DeactivateFcmTokenResultDbZ
+>;
 
 // ============================================================================
 // SESSIONS
@@ -359,3 +404,93 @@ export const SaveAddressResultDbZ = z.object({
   createdAt: z.date(),
 });
 export type SaveAddressResultDb = z.infer<typeof SaveAddressResultDbZ>;
+
+// ============================================================================
+// STATIC DATA
+// ============================================================================
+
+export const StaticWeightTierDbZ = z.object({
+  tierId: z.number().int().positive(),
+  name: z.string(),
+  minWeightKg: z.union([z.number(), z.string()]),
+  maxWeightKg: z.union([z.number(), z.string()]),
+  additionalCharge: z.union([z.number(), z.string()]),
+});
+export type StaticWeightTierDb = z.infer<typeof StaticWeightTierDbZ>;
+
+export const StaticSupportedVehicleDbZ = z.object({
+  categoryId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  maxWeightKg: z.union([z.number(), z.string()]),
+  iconUrl: z.string().nullable().optional(),
+  weightTiers: z.array(StaticWeightTierDbZ),
+});
+export type StaticSupportedVehicleDb = z.infer<
+  typeof StaticSupportedVehicleDbZ
+>;
+
+export const StaticDeliveryTypeDbZ = z.object({
+  deliveryTypeId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  baseRate: z.union([z.number(), z.string()]),
+  perKmRate: z.union([z.number(), z.string()]),
+  sortOrder: z.union([z.number(), z.string()]),
+  isActive: z.boolean(),
+  supportedVehicles: z.array(StaticSupportedVehicleDbZ),
+});
+export type StaticDeliveryTypeDb = z.infer<typeof StaticDeliveryTypeDbZ>;
+
+export const StaticDeliveryTypeMasterDbZ = z.object({
+  deliveryTypeId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  baseRate: z.union([z.number(), z.string()]),
+  perKmRate: z.union([z.number(), z.string()]),
+  sortOrder: z.union([z.number(), z.string()]),
+  isActive: z.boolean(),
+});
+export type StaticDeliveryTypeMasterDb = z.infer<
+  typeof StaticDeliveryTypeMasterDbZ
+>;
+
+export const StaticVehicleCategoryDbZ = z.object({
+  categoryId: z.number().int().positive(),
+  name: z.string(),
+  displayName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  maxWeightKg: z.union([z.number(), z.string()]),
+  iconUrl: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
+export type StaticVehicleCategoryDb = z.infer<typeof StaticVehicleCategoryDbZ>;
+
+export const StaticPackageTypeDbZ = z.object({
+  packageTypeId: z.number().int().positive(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+});
+export type StaticPackageTypeDb = z.infer<typeof StaticPackageTypeDbZ>;
+
+export const StaticPaymentMethodDbZ = z.object({
+  methodId: z.number().int().positive(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  isActive: z.boolean(),
+});
+export type StaticPaymentMethodDb = z.infer<typeof StaticPaymentMethodDbZ>;
+
+export const StaticStatusRowDbZ = z.object({
+  name: z.string(),
+});
+export type StaticStatusRowDb = z.infer<typeof StaticStatusRowDbZ>;
+
+export const StaticCreateOrderDataDbZ = z.object({
+  deliveryTypes: z.array(StaticDeliveryTypeDbZ),
+  packageTypes: z.array(StaticPackageTypeDbZ),
+  paymentMethods: z.array(StaticPaymentMethodDbZ),
+});
+export type StaticCreateOrderDataDb = z.infer<typeof StaticCreateOrderDataDbZ>;

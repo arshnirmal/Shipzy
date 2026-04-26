@@ -38,15 +38,26 @@ class StatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Greeting
-            if (driverName != null) Text('👋 Good Morning, $driverName!', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            if (driverName != null)
+              Text(
+                '👋 Good Morning, $driverName!',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             const SizedBox(height: 8),
             const Divider(),
             const SizedBox(height: 16),
 
             // Status Text
             Text(
-              isOnline ? 'You are currently ONLINE\nWaiting for orders...' : 'You are currently OFFLINE\nGo online to start receiving orders',
-              style: theme.textTheme.bodyLarge?.copyWith(color: theme.textTheme.bodyMedium?.color, height: 1.5),
+              isOnline
+                  ? 'You are currently ONLINE\nWaiting for orders...'
+                  : 'You are currently OFFLINE\nGo online to start receiving orders',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.textTheme.bodyMedium?.color,
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -57,23 +68,42 @@ class StatusCard extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: isLoading ? null : onToggle,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isOnline ? theme.colorScheme.error : theme.colorScheme.primary,
+                  backgroundColor: isOnline
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: isLoading
                     ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(isOnline ? Icons.power_settings_new : Icons.play_circle_fill),
+                          Icon(
+                            isOnline
+                                ? Icons.power_settings_new
+                                : Icons.play_circle_fill,
+                          ),
                           const SizedBox(width: 12),
-                          Text(isOnline ? 'GO OFFLINE' : 'GO ONLINE', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text(
+                            isOnline ? 'GO OFFLINE' : 'GO ONLINE',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
               ),

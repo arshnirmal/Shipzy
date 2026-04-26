@@ -43,7 +43,7 @@ export const paymentTransactions = paymentsSchema.table(
       .notNull()
       .references(() => paymentMethods.methodId),
     status: paymentStatusEnum("status").notNull(),
-    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    amount: numeric("amount", { precision: 10, scale: 2, mode: "number" }).notNull(),
     currency: varchar("currency", { length: 10 }).default("INR").notNull(),
     externalTransactionId: varchar("external_transaction_id", { length: 255 }),
     paymentGateway: varchar("payment_gateway", { length: 50 }),
@@ -64,6 +64,10 @@ export const paymentTransactions = paymentsSchema.table(
   },
   (table) => [
     check("payments_transactions_amount_non_negative_chk", sql`${table.amount} >= 0`),
+    check(
+      "chk_payment_status_timestamp",
+      sql`(${table.status} <> 'completed' OR ${table.paymentCompletedAt} IS NOT NULL) AND (${table.status} <> 'failed' OR ${table.paymentFailedAt} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -80,7 +84,7 @@ export const refunds = paymentsSchema.table(
     orderId: integer("order_id")
       .notNull()
       .references(() => orderRequests.orderId, { onDelete: "cascade" }),
-    refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }).notNull(),
+    refundAmount: numeric("refund_amount", { precision: 10, scale: 2, mode: "number" }).notNull(),
     refundReason: text("refund_reason").notNull(),
     refundStatus: refundStatusEnum("refund_status").notNull(),
     externalRefundId: varchar("external_refund_id", { length: 255 }),
@@ -94,5 +98,9 @@ export const refunds = paymentsSchema.table(
   },
   (table) => [
     check("payments_refunds_amount_non_negative_chk", sql`${table.refundAmount} >= 0`),
+    check(
+      "chk_refund_status_timestamp",
+      sql`${table.refundStatus} NOT IN ('completed', 'failed') OR ${table.processedAt} IS NOT NULL`,
+    ),
   ],
 );

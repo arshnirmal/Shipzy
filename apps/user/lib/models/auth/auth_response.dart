@@ -81,9 +81,30 @@ abstract class GoogleAuthResponse with _$GoogleAuthResponse {
 /// Auth data (user + tokens)
 @freezed
 abstract class AuthData with _$AuthData {
-  const factory AuthData({required AppUser user, required AuthTokens tokens, @Default(false) bool isNewUser}) = _AuthData;
+  const factory AuthData({required AuthActor actor, @JsonKey(name: 'auth') required AuthSectionData authSection}) = _AuthData;
 
   factory AuthData.fromJson(Map<String, dynamic> json) => _$AuthDataFromJson(json);
+}
+
+@freezed
+abstract class AuthActor with _$AuthActor {
+  const factory AuthActor({required AppUser user}) = _AuthActor;
+
+  factory AuthActor.fromJson(Map<String, dynamic> json) => _$AuthActorFromJson(json);
+}
+
+@freezed
+abstract class AuthSectionData with _$AuthSectionData {
+  const factory AuthSectionData({required AuthTokens tokens, required AuthSession session}) = _AuthSectionData;
+
+  factory AuthSectionData.fromJson(Map<String, dynamic> json) => _$AuthSectionDataFromJson(json);
+}
+
+@freezed
+abstract class AuthSession with _$AuthSession {
+  const factory AuthSession({required String method, @Default(false) bool isNewUser}) = _AuthSession;
+
+  factory AuthSession.fromJson(Map<String, dynamic> json) => _$AuthSessionFromJson(json);
 }
 
 /// Token data
@@ -102,21 +123,8 @@ abstract class AuthTokens with _$AuthTokens {
 /// Refresh token response
 @freezed
 abstract class RefreshTokenResponse with _$RefreshTokenResponse {
-  const factory RefreshTokenResponse({required bool success, required String message, required RefreshTokenData data, required String timestamp}) =
+  const factory RefreshTokenResponse({required bool success, required String message, required AuthData data, required String timestamp}) =
       _RefreshTokenResponse;
 
   factory RefreshTokenResponse.fromJson(Map<String, dynamic> json) => _$RefreshTokenResponseFromJson(json);
-}
-
-/// Refresh token data
-@freezed
-abstract class RefreshTokenData with _$RefreshTokenData {
-  const factory RefreshTokenData({
-    required String accessToken,
-    required String refreshToken,
-    @JsonKey(fromJson: _expiresInFromJson, toJson: _expiresInToJson) required int expiresIn,
-    @Default('Bearer') String tokenType,
-  }) = _RefreshTokenData;
-
-  factory RefreshTokenData.fromJson(Map<String, dynamic> json) => _$RefreshTokenDataFromJson(json);
 }

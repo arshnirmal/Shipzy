@@ -1,7 +1,18 @@
-// lib/utils/auth_widgets.dart
+// lib/screens/auth/widgets/auth_widgets.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../../theme/design_tokens.dart';
+
+/// Label density for [AuthTextField] — matches login/register vs onboarding sections.
+enum AuthFieldLabelDensity {
+  /// `bodyMedium`, on-surface (login / register).
+  standard,
+
+  /// `labelSmall`, on-surface-variant, letter-spacing (vehicle onboarding).
+  section,
+}
 
 /// A divider widget used in authentication screens with text in the middle
 class AuthDivider extends StatelessWidget {
@@ -12,16 +23,21 @@ class AuthDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dividerColor = theme.colorScheme.outline.withValues(alpha: 0.2);
+    final dividerColor = theme.colorScheme.outlineVariant.withValues(
+      alpha: AppDepth.ghostBorderOpacity,
+    );
 
     return Row(
       children: [
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text(
             text,
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
         Expanded(child: Divider(color: dividerColor, thickness: 1)),
@@ -32,28 +48,60 @@ class AuthDivider extends StatelessWidget {
 
 /// A social login button widget used in authentication screens
 class SocialButton extends StatelessWidget {
-  const SocialButton({required this.label, required this.icon, required this.onPressed, super.key});
+  const SocialButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.isLoading = false,
+    super.key,
+  });
 
   final String label;
   final Widget icon;
   final VoidCallback? onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: icon,
-      label: Text(
-        label,
-        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurface),
-      ),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
-        backgroundColor: theme.colorScheme.surface,
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.primary,
+                  ),
+                ),
+              )
+            : icon,
+        label: Text(
+          label,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 14,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(
+              alpha: AppDepth.ghostBorderOpacity,
+            ),
+          ),
+          backgroundColor: theme.colorScheme.surfaceContainerLowest,
+        ),
       ),
     );
   }
@@ -61,7 +109,12 @@ class SocialButton extends StatelessWidget {
 
 /// A reusable loading button widget for authentication screens
 class AuthLoadingButton extends StatelessWidget {
-  const AuthLoadingButton({required this.isLoading, required this.onPressed, required this.text, super.key});
+  const AuthLoadingButton({
+    required this.isLoading,
+    required this.onPressed,
+    required this.text,
+    super.key,
+  });
 
   final bool isLoading;
   final VoidCallback? onPressed;
@@ -77,14 +130,22 @@ class AuthLoadingButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 24,
                 width: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    theme.colorScheme.onPrimary,
+                  ),
+                ),
               )
             : Text(
                 text,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onPrimary,
+                ),
               ),
       ),
     );
@@ -108,6 +169,9 @@ class AuthTextField extends StatelessWidget {
     this.onFieldSubmitted,
     this.inputFormatters,
     this.autovalidateMode,
+    this.textCapitalization = TextCapitalization.none,
+    this.labelDensity = AuthFieldLabelDensity.standard,
+    this.labelGap,
   });
 
   final TextEditingController controller;
@@ -123,34 +187,66 @@ class AuthTextField extends StatelessWidget {
   final void Function(String)? onFieldSubmitted;
   final List<TextInputFormatter>? inputFormatters;
   final AutovalidateMode? autovalidateMode;
+  final TextCapitalization textCapitalization;
+  final AuthFieldLabelDensity labelDensity;
+
+  /// Space between label and field; defaults from [labelDensity].
+  final double? labelGap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final gap =
+        labelGap ??
+        (labelDensity == AuthFieldLabelDensity.section ? 6.0 : AppSpacing.xs);
+
+    final labelStyle = switch (labelDensity) {
+      AuthFieldLabelDensity.standard => theme.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: theme.colorScheme.onSurface,
+      ),
+      AuthFieldLabelDensity.section => theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        letterSpacing: 0.8,
+      ),
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 8),
+        Text(label, style: labelStyle),
+        SizedBox(height: gap),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           obscureText: obscureText,
           enabled: enabled,
+          textCapitalization: textCapitalization,
           onFieldSubmitted: onFieldSubmitted,
           inputFormatters: inputFormatters,
           autovalidateMode: autovalidateMode,
-          style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
-            prefixIcon: prefixIcon,
-            suffixIcon: suffixIcon,
+            prefixIcon: prefixIcon == null
+                ? null
+                : IconTheme.merge(
+                    data: IconThemeData(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    child: prefixIcon!,
+                  ),
+            suffixIcon: suffixIcon == null
+                ? null
+                : IconTheme.merge(
+                    data: IconThemeData(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    child: suffixIcon!,
+                  ),
           ),
           validator: validator,
         ),

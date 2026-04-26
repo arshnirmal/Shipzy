@@ -1,64 +1,115 @@
 // services/backend/src/modules/drivers/drivers.schema.ts
 import { FastifySchema } from "fastify";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
+  ActiveAssignmentsResponseZ,
+  DriverAvailabilityResponseZ,
+  DriverEarningsSummaryResponseZ,
+  DriverLocationResponseZ,
+  DriverProfileMutationResponseZ,
+  EarningsPeriodQueryZ,
+  DriverProfileResponseZ,
+  DriverRatingResponseZ,
   UpdateDriverProfileRequestZ,
   UpdateAvailabilityRequestZ,
   UpdateLocationRequestZ,
-  DriverProfileResponseZ,
+  TripHistoryQueryZ,
+  TripHistoryResponseZ,
+  SubmitKycRequestZ,
+  SubmitKycResponseZ,
 } from "./drivers.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-const _UpdateDriverProfileJson = zodToJsonSchema(
-  UpdateDriverProfileRequestZ as any,
-  "UpdateDriverProfile",
+const UpdateDriverProfileJson = toJsonSchema(UpdateDriverProfileRequestZ);
+const UpdateAvailabilityJson = toJsonSchema(UpdateAvailabilityRequestZ);
+const UpdateLocationJson = toJsonSchema(UpdateLocationRequestZ);
+const DriverProfileResponseJson = toJsonSchema(DriverProfileResponseZ);
+const DriverProfileMutationResponseJson = toJsonSchema(
+  DriverProfileMutationResponseZ,
 );
-const UpdateDriverProfileJson =
-  (_UpdateDriverProfileJson.definitions &&
-    (_UpdateDriverProfileJson.definitions as any).UpdateDriverProfile) ||
-  _UpdateDriverProfileJson;
-const _UpdateAvailabilityJson = zodToJsonSchema(
-  UpdateAvailabilityRequestZ as any,
-  "UpdateAvailability",
+const DriverAvailabilityResponseJson = toJsonSchema(
+  DriverAvailabilityResponseZ,
 );
-const UpdateAvailabilityJson =
-  (_UpdateAvailabilityJson.definitions &&
-    (_UpdateAvailabilityJson.definitions as any).UpdateAvailability) ||
-  _UpdateAvailabilityJson;
-const _UpdateLocationJson = zodToJsonSchema(
-  UpdateLocationRequestZ as any,
-  "UpdateLocation",
+const DriverLocationResponseJson = toJsonSchema(DriverLocationResponseZ);
+const ActiveAssignmentsResponseJson = toJsonSchema(ActiveAssignmentsResponseZ);
+const DriverEarningsSummaryResponseJson = toJsonSchema(
+  DriverEarningsSummaryResponseZ,
 );
-const UpdateLocationJson =
-  (_UpdateLocationJson.definitions &&
-    (_UpdateLocationJson.definitions as any).UpdateLocation) ||
-  _UpdateLocationJson;
-const _DriverProfileResponseJson = zodToJsonSchema(
-  DriverProfileResponseZ as any,
-  "DriverProfileResponse",
-);
-const DriverProfileResponseJson =
-  (_DriverProfileResponseJson.definitions &&
-    (_DriverProfileResponseJson.definitions as any).DriverProfileResponse) ||
-  _DriverProfileResponseJson;
+const DriverRatingResponseJson = toJsonSchema(DriverRatingResponseZ);
+const EarningsPeriodQueryJson = toJsonSchema(EarningsPeriodQueryZ);
+const TripHistoryQueryJson = toJsonSchema(TripHistoryQueryZ);
+const TripHistoryResponseJson = toJsonSchema(TripHistoryResponseZ);
+const SubmitKycRequestJson = toJsonSchema(SubmitKycRequestZ);
+const SubmitKycResponseJson = toJsonSchema(SubmitKycResponseZ);
+
+export const submitKycSchema: FastifySchema = {
+  body: SubmitKycRequestJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(SubmitKycResponseJson),
+  },
+};
+
+export const getDriverProfileSchema: FastifySchema = {
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DriverProfileResponseJson),
+  },
+};
 
 export const updateDriverProfileSchema: FastifySchema = {
   body: UpdateDriverProfileJson,
   response: {
-    200: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-        data: DriverProfileResponseJson,
-      },
-    },
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DriverProfileMutationResponseJson),
   },
 };
 
 export const updateAvailabilitySchema: FastifySchema = {
   body: UpdateAvailabilityJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DriverAvailabilityResponseJson),
+  },
 };
 
 export const updateLocationSchema: FastifySchema = {
   body: UpdateLocationJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DriverLocationResponseJson),
+  },
+};
+
+export const getActiveAssignmentsSchema: FastifySchema = {
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(ActiveAssignmentsResponseJson),
+  },
+};
+
+export const getEarningsSchema: FastifySchema = {
+  querystring: EarningsPeriodQueryJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DriverEarningsSummaryResponseJson),
+  },
+};
+
+export const getDriverRatingSchema: FastifySchema = {
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DriverRatingResponseJson),
+  },
+};
+
+export const getTripHistorySchema: FastifySchema = {
+  querystring: TripHistoryQueryJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(TripHistoryResponseJson),
+  },
 };

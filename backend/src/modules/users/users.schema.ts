@@ -1,128 +1,76 @@
 // services/backend/src/modules/users/users.schema.ts
 import { FastifySchema } from "fastify";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import {
   UpdateProfileRequestZ,
   SaveAddressRequestZ,
   DeleteAddressParamsZ,
   UserProfileResponseZ,
-  SavedAddressResponseZ,
-  AddressesArrayResponseZ,
+  SaveAddressResponseZ,
+  DeleteAddressResponseZ,
+  UserAddressesResponseZ,
+  RegisterDeviceTokenRequestZ,
+  RegisterDeviceTokenResponseZ,
 } from "./users.zod.js";
+import {
+  COMMON_ERROR_RESPONSES,
+  successEnvelope,
+  toJsonSchema,
+} from "../../schemas/response.schema.js";
 
-const _UpdateProfileJson = zodToJsonSchema(
-  UpdateProfileRequestZ as any,
-  "UpdateProfile",
+const UpdateProfileJson = toJsonSchema(UpdateProfileRequestZ);
+const SaveAddressJson = toJsonSchema(SaveAddressRequestZ);
+const DeleteAddressParamsJson = toJsonSchema(DeleteAddressParamsZ);
+const UserResponseJson = toJsonSchema(UserProfileResponseZ);
+const SaveAddressResponseJson = toJsonSchema(SaveAddressResponseZ);
+const DeleteAddressResponseJson = toJsonSchema(DeleteAddressResponseZ);
+const UserAddressesResponseJson = toJsonSchema(UserAddressesResponseZ);
+const RegisterDeviceTokenJson = toJsonSchema(RegisterDeviceTokenRequestZ);
+const RegisterDeviceTokenResponseJson = toJsonSchema(
+  RegisterDeviceTokenResponseZ,
 );
-const UpdateProfileJson =
-  (_UpdateProfileJson.definitions &&
-    (_UpdateProfileJson.definitions as any).UpdateProfile) ||
-  _UpdateProfileJson;
-const _SaveAddressJson = zodToJsonSchema(
-  SaveAddressRequestZ as any,
-  "SaveAddress",
-);
-const SaveAddressJson =
-  (_SaveAddressJson.definitions &&
-    (_SaveAddressJson.definitions as any).SaveAddress) ||
-  _SaveAddressJson;
-const _DeleteAddressParamsJson = zodToJsonSchema(
-  DeleteAddressParamsZ as any,
-  "DeleteAddressParams",
-);
-const DeleteAddressParamsJson =
-  (_DeleteAddressParamsJson.definitions &&
-    (_DeleteAddressParamsJson.definitions as any).DeleteAddressParams) ||
-  _DeleteAddressParamsJson;
-const _UserResponseJson = zodToJsonSchema(
-  UserProfileResponseZ as any,
-  "UserResponse",
-);
-const UserResponseJson =
-  (_UserResponseJson.definitions &&
-    (_UserResponseJson.definitions as any).UserResponse) ||
-  _UserResponseJson;
-const _AddressResponseJson = zodToJsonSchema(
-  SavedAddressResponseZ as any,
-  "AddressResponse",
-);
-const AddressResponseJson =
-  (_AddressResponseJson.definitions &&
-    (_AddressResponseJson.definitions as any).AddressResponse) ||
-  _AddressResponseJson;
-const _AddressesArrayJson = zodToJsonSchema(
-  AddressesArrayResponseZ as any,
-  "AddressesArray",
-);
-const AddressesArrayJson =
-  (_AddressesArrayJson.definitions &&
-    (_AddressesArrayJson.definitions as any).AddressesArray) ||
-  _AddressesArrayJson;
 
 export const updateProfileSchema: FastifySchema = {
   body: UpdateProfileJson,
   response: {
-    200: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-        data: UserResponseJson,
-      },
-    },
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(UserResponseJson),
   },
 };
 
 export const saveAddressSchema: FastifySchema = {
   body: SaveAddressJson,
   response: {
-    201: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-        data: AddressResponseJson,
-      },
-    },
+    ...COMMON_ERROR_RESPONSES,
+    201: successEnvelope(SaveAddressResponseJson),
   },
 };
 
 export const deleteAddressSchema: FastifySchema = {
   params: DeleteAddressParamsJson,
   response: {
-    200: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-        data: { type: "object" },
-      },
-    },
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(DeleteAddressResponseJson),
   },
 };
 
 export const getAddressesSchema: FastifySchema = {
   response: {
-    200: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-        data: AddressesArrayJson,
-      },
-    },
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(UserAddressesResponseJson),
   },
 };
 
 export const getCurrentUserSchema: FastifySchema = {
   response: {
-    200: {
-      type: "object",
-      properties: {
-        success: { type: "boolean" },
-        message: { type: "string" },
-        data: UserResponseJson,
-      },
-    },
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(UserResponseJson),
+  },
+};
+
+export const registerDeviceTokenSchema: FastifySchema = {
+  body: RegisterDeviceTokenJson,
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(RegisterDeviceTokenResponseJson),
   },
 };

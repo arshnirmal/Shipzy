@@ -6,6 +6,7 @@ import {
   pgSchema,
   serial,
   index,
+  uniqueIndex,
   check,
   varchar,
   text,
@@ -82,6 +83,8 @@ export const fcmTokens = notificationsSchema.table(
       .notNull(),
   },
   (table) => [
+    // Single device per user for MVP — enables ON CONFLICT(user_id) upsert
+    uniqueIndex("uq_fcm_tokens_user").on(table.userId),
     index("idx_fcm_tokens_user_active")
       .on(table.userId)
       .where(sql`${table.isActive} = true`),

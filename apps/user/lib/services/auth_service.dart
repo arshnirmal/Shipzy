@@ -24,22 +24,20 @@ class AuthService {
   }
 
   /// Google OAuth authentication
-  Future<GoogleAuthResponse> verifyGoogleToken(
-    String idToken, {
-    String role = 'client',
-  }) async {
+  Future<GoogleAuthResponse> verifyGoogleToken(String idToken, {String role = 'client'}) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/google/verify',
-        data: {'idToken': idToken, 'role': role},
+        data: {
+          'provider': {'idToken': idToken},
+          'identity': {'role': role},
+        },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
 
       if (response.data?['success'] != true) {
-        throw Exception(
-          response.data?['message'] ?? 'Google authentication failed',
-        );
+        throw Exception(response.data?['message'] ?? 'Google authentication failed');
       }
 
       return GoogleAuthResponse.fromJson(response.data!);
@@ -61,11 +59,8 @@ class AuthService {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/register',
         data: {
-          'fullName': fullName,
-          'email': email,
-          'password': password,
-          'role': role,
-          'phoneNumber': phoneNumber,
+          'identity': {'fullName': fullName, 'role': role, 'phoneNumber': phoneNumber},
+          'credentials': {'email': email, 'password': password},
         },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
@@ -81,15 +76,14 @@ class AuthService {
   }
 
   /// User login
-  Future<LoginResponse> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<LoginResponse> login({required String email, required String password}) async {
     try {
       final deviceId = await _getDeviceId();
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/login',
-        data: {'email': email, 'password': password},
+        data: {
+          'credentials': {'email': email, 'password': password},
+        },
         options: Options(headers: {'X-Device-Id': deviceId}),
       );
 
@@ -108,7 +102,9 @@ class AuthService {
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/refresh',
-        data: {'refreshToken': refreshToken},
+        data: {
+          'tokens': {'refreshToken': refreshToken},
+        },
       );
 
       if (response.data?['success'] != true) {
@@ -124,20 +120,43 @@ class AuthService {
   /// Get current user profile
   Future<AppUser> getCurrentUser(String accessToken) async {
     try {
-      final response = await _apiClient.get<Map<String, dynamic>>(
+      final response = await _apiClient.get<Map<String, dynamic>>('/users/me', options: Options(headers: {'Authorization': 'Bearer $accessToken'}));
+
+      if (response.data?['success'] != true) {
+        throw Exception(response.data?['message'] ?? 'Failed to get user profile');
+      }
+
+      return AppUser.fromJson(response.data!['data']['profile'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Get current user');
+    }
+  }
+
+  /// Update user profile
+  Future<AppUser> updateProfile({
+    String? fullName,
+    String? email,
+    String? profilePictureUrl,
+    String? phoneNumber,
+  }) async {
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
         '/users/me',
-        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        data: {
+          if (fullName != null) 'fullName': fullName,
+          if (email != null) 'email': email,
+          if (profilePictureUrl != null) 'profilePictureUrl': profilePictureUrl,
+          if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        },
       );
 
       if (response.data?['success'] != true) {
-        throw Exception(
-          response.data?['message'] ?? 'Failed to get user profile',
-        );
+        throw Exception(response.data?['message'] ?? 'Failed to update profile');
       }
 
-      return AppUser.fromJson(response.data!['data'] as Map<String, dynamic>);
+      return AppUser.fromJson(response.data!['data']['profile'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleDioError(e, 'Get current user');
+      throw _handleDioError(e, 'Update profile');
     }
   }
 
@@ -158,6 +177,5 @@ class AuthService {
   }
 
   /// Handle Dio errors
-  ApiException _handleDioError(DioException e, String operation) =>
-      mapDioException(e, operation);
+  ApiException _handleDioError(DioException e, String operation) => mapDioException(e, operation);
 }

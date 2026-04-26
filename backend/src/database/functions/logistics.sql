@@ -41,14 +41,13 @@ BEGIN
             )::numeric / 1000, 2
         ) AS distance_km,
         vc.name AS vehicle_category,
-        cv.vehicle_number,
+        cs.vehicle->>'vehicleNumber' AS vehicle_number,
         cs.total_deliveries_today,
         ST_Y(cs.current_location::geometry) AS current_location_lat,
         ST_X(cs.current_location::geometry) AS current_location_lng
     FROM logistics.courier_status cs
     JOIN users.profiles u ON cs.courier_id = u.user_id
-    LEFT JOIN logistics.courier_vehicles cv ON cs.courier_id = cv.courier_id AND cv.is_active = true
-    LEFT JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
+    LEFT JOIN public.vehicle_categories vc ON cs.vehicle_category_id = vc.category_id
     WHERE cs.is_available = true
         AND cs.is_online = true
         AND u.is_active = true

@@ -33,7 +33,7 @@ class VehicleSelector extends ConsumerWidget {
               label: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(v.displayName),
+                  Text(v.displayName ?? v.name),
                   const SizedBox(width: 6),
                   Text('• up to ${v.maxWeightKg.toStringAsFixed(0)} kg', style: const TextStyle(fontSize: 12)),
                 ],

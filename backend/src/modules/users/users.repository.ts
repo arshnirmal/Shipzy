@@ -3,10 +3,20 @@ import { eq, and, isNull } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import usersQueries from "../../database/queries/users.queries.js";
+import notificationsQueries from "../../database/queries/notifications.queries.js";
 import { userProfiles } from "../../database/schema/users.js";
 import { userAddresses } from "../../database/schema/users.js";
+import {
+  SaveFcmTokenResultDbZ,
+  UserAddressDbZ,
+  UserProfileDbZ,
+} from "../../schemas/db.zod.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
+import { AppError } from "../../utils/error.util.js";
 
 import type { DbUser } from "../../types/user.js";
+import type { UpdateProfileRequest, SaveAddressRequest } from "./users.zod.js";
+import type { UserAddressDb } from "../../schemas/db.zod.js";
 
 type User = DbUser;
 
@@ -14,10 +24,10 @@ function mapProfileRowToDbUser(row: {
   userId: number;
   userUuid: string;
   roleName: string;
-  phoneNumber: string | null;
-  email: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
   fullName: string;
-  profilePictureUrl: string | null;
+  profilePictureUrl?: string | null;
   isVerified: boolean;
   isActive: boolean;
   createdAt: Date;
@@ -38,27 +48,7 @@ function mapProfileRowToDbUser(row: {
   };
 }
 
-interface Address {
-  addressId: number;
-  userId?: number;
-  label: string;
-  fullAddress: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  latitude: number;
-  longitude: number;
-  addressType?: string;
-  building?: string;
-  floor?: string;
-  flatNumber?: string;
-  landmark?: string;
-  isDefault: boolean;
-  createdAt: Date;
-  updatedAt?: Date;
-}
-
-import type { UpdateProfileRequest, SaveAddressRequest } from "./users.zod.js";
+type Address = UserAddressDb;
 
 type UpdateProfileData = UpdateProfileRequest;
 type AddressData = SaveAddressRequest;
@@ -93,7 +83,12 @@ class UsersRepository {
         .limit(1);
 
       const row = result[0];
-      return row ? mapProfileRowToDbUser(row) : null;
+      if (!row) {
+        return null;
+      }
+
+      const parsedRow = parseDbRow(UserProfileDbZ, row, "user profile");
+      return mapProfileRowToDbUser(parsedRow);
     } catch (error) {
       logger.error({
         msg: "Error finding user by UUID",
@@ -118,6 +113,7 @@ class UsersRepository {
         .set({
           fullName: fullName || undefined,
           email: email || undefined,
+          phoneNumber: updateData.phoneNumber || undefined,
           profilePictureUrl: profilePictureUrl || undefined,
           updatedAt: new Date(),
         })
@@ -126,13 +122,13 @@ class UsersRepository {
 
       const updatedRow = result[0];
       if (!updatedRow) {
-        throw new Error("User update returned no row");
+        throw new AppError("User not found", 404);
       }
 
       // Fetch full user with role for return type compatibility
       const updatedUser = await this.findByUuid(updatedRow.userUuid);
       if (!updatedUser) {
-        throw new Error("User not found after update");
+        throw new AppError("User not found after update", 404);
       }
       return updatedUser;
     } catch (error) {
@@ -152,7 +148,7 @@ class UsersRepository {
       const result = await drizzlePool.query(usersQueries.GET_USER_ADDRESSES, [
         userId,
       ]);
-      return result.rows;
+      return parseDbRows(UserAddressDbZ, result.rows, "user addresses");
     } catch (error) {
       logger.error({
         msg: "Error getting user addresses",
@@ -170,7 +166,12 @@ class UsersRepository {
       const result = await drizzlePool.query(usersQueries.GET_ADDRESS_BY_ID, [
         addressId,
       ]);
-      return result.rows[0] || null;
+      const row = result.rows[0];
+      if (!row) {
+        return null;
+      }
+
+      return parseDbRow(UserAddressDbZ, row, "user address");
     } catch (error) {
       logger.error({
         msg: "Error getting address by ID",
@@ -215,8 +216,13 @@ class UsersRepository {
         addressData.isDefault || false,
       ]);
 
+      const savedRow = result.rows[0];
+      if (!savedRow) {
+        throw new AppError("Address could not be saved", 500);
+      }
+
       await client.query("COMMIT");
-      return result.rows[0];
+      return parseDbRow(UserAddressDbZ, savedRow, "saved address");
     } catch (error) {
       await client.query("ROLLBACK");
       logger.error({
@@ -226,6 +232,39 @@ class UsersRepository {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  /**
+   * Register (upsert) the user's single active FCM device token
+   */
+  async saveFcmToken(params: {
+    userId: number;
+    deviceToken: string;
+    deviceType: string;
+    deviceInfo?: Record<string, unknown> | null;
+  }): Promise<{ tokenId: number; deviceToken: string }> {
+    try {
+      const result = await drizzlePool.query(
+        notificationsQueries.SAVE_FCM_TOKEN,
+        [
+          params.userId,
+          params.deviceToken,
+          params.deviceType,
+          params.deviceInfo ? JSON.stringify(params.deviceInfo) : null,
+        ],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new AppError("Failed to register device token", 500);
+      }
+      return parseDbRow(SaveFcmTokenResultDbZ, row, "save fcm token");
+    } catch (error) {
+      logger.error({
+        msg: "Error saving FCM token",
+        error: (error as Error).message,
+      });
+      throw error;
     }
   }
 

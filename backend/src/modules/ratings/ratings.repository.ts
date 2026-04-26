@@ -1,17 +1,25 @@
 // services/backend/src/modules/ratings/ratings.repository.ts
-import { eq, and, isNotNull, sql } from "drizzle-orm";
+import { eq, and, isNotNull, isNull, sql } from "drizzle-orm";
+import { z } from "zod";
 import logger from "../../config/logger.js";
 import drizzleDb, { drizzlePool } from "../../database/drizzle.js";
 import ratingsQueries from "../../database/queries/ratings.queries.js";
-import { driverRatings } from "../../database/schema/ratings.js";
 import { orderRequests } from "../../database/schema/orders.js";
 import { courierStatus } from "../../database/schema/logistics.js";
+import { AppError } from "../../utils/error.util.js";
+import { parseDbRow, parseDbRows } from "../../utils/db-parse.util.js";
 
-import type { RatingRow } from "../../types/ratings.js";
+import { RatingRowDbZ, type RatingRow } from "../../types/ratings.js";
+
+const OrderCourierIdRowZ = z
+  .object({
+    courierId: z.number().int().positive(),
+  })
+  .strict();
 
 class RatingsRepository {
   /**
-   * Create a new driver rating (migrated to Drizzle)
+   * Create a new driver rating (stored on orders.requests.rating JSONB)
    */
   async createRating(ratingData: {
     orderId: number;
@@ -21,23 +29,37 @@ class RatingsRepository {
     isAnonymous?: boolean;
     comment?: string | null;
   }): Promise<RatingRow> {
+    const createdAtIso = new Date().toISOString();
+    const ratingJson = {
+      value: ratingData.rating as 1 | 2 | 3 | 4 | 5,
+      isAnonymous: ratingData.isAnonymous ?? false,
+      comment: ratingData.comment ?? undefined,
+      customerId: ratingData.customerId,
+      createdAt: createdAtIso,
+    };
+
     try {
       const insertedRating = await drizzleDb.transaction(async (tx) => {
-        const result = await tx
-          .insert(driverRatings)
-          .values({
-            orderId: ratingData.orderId,
-            driverId: ratingData.driverId,
-            customerId: ratingData.customerId,
-            rating: ratingData.rating,
-            isAnonymous: ratingData.isAnonymous ?? false,
-            comment: ratingData.comment || undefined,
+        const updatedRows = await tx
+          .update(orderRequests)
+          .set({
+            rating: ratingJson,
+            updatedAt: new Date(),
           })
-          .returning();
+          .where(
+            and(
+              eq(orderRequests.orderId, ratingData.orderId),
+              isNull(orderRequests.rating),
+            ),
+          )
+          .returning({
+            orderId: orderRequests.orderId,
+            rating: orderRequests.rating,
+          });
 
-        const row = result[0];
-        if (!row) {
-          throw new Error("Rating insert returned no row");
+        const row = updatedRows[0];
+        if (!row?.rating) {
+          throw new AppError("Rating already exists for this order", 400);
         }
 
         const updatedCourier = await tx
@@ -51,24 +73,25 @@ class RatingsRepository {
           .returning({ courierId: courierStatus.courierId });
 
         if (updatedCourier.length === 0) {
-          throw new Error(
+          throw new AppError(
             `Courier status not found for driver ${ratingData.driverId}`,
+            500,
           );
         }
 
-        return row;
+        return {
+          ratingId: row.orderId,
+          orderId: row.orderId,
+          driverId: ratingData.driverId,
+          customerId: ratingData.customerId,
+          rating: ratingData.rating,
+          isAnonymous: ratingData.isAnonymous ?? false,
+          comment: ratingData.comment ?? null,
+          createdAt: new Date(createdAtIso),
+        };
       });
 
-      return {
-        ratingId: insertedRating.ratingId,
-        orderId: insertedRating.orderId,
-        driverId: insertedRating.driverId,
-        customerId: insertedRating.customerId,
-        rating: insertedRating.rating,
-        isAnonymous: insertedRating.isAnonymous,
-        comment: insertedRating.comment || null,
-        createdAt: insertedRating.createdAt,
-      } as RatingRow;
+      return parseDbRow(RatingRowDbZ, insertedRating, "created rating");
     } catch (error) {
       logger.error({
         msg: "Error creating driver rating",
@@ -92,7 +115,7 @@ class RatingsRepository {
         ratingsQueries.FIND_DRIVER_RATINGS_RECENT,
         [driverId, since],
       );
-      return result.rows;
+      return parseDbRows(RatingRowDbZ, result.rows, "driver recent ratings");
     } catch (error) {
       logger.error({
         msg: "Error getting driver ratings",
@@ -142,7 +165,11 @@ class RatingsRepository {
       const result = await drizzlePool.query(ratingsQueries.ORDER_HAS_DRIVER, [
         orderId,
       ]);
-      return result.rows[0]?.courierId || null;
+      const row = result.rows[0];
+      if (!row) return null;
+
+      const parsed = parseDbRow(OrderCourierIdRowZ, row, "order courier");
+      return parsed.courierId;
     } catch (error) {
       logger.error({
         msg: "Error getting driver for order",
@@ -182,14 +209,16 @@ class RatingsRepository {
   }
 
   /**
-   * Check if rating already exists for order (migrated to Drizzle)
+   * Check if rating already exists for order
    */
   async ratingExistsForOrder(orderId: number): Promise<boolean> {
     try {
       const result = await drizzleDb
         .select()
-        .from(driverRatings)
-        .where(eq(driverRatings.orderId, orderId))
+        .from(orderRequests)
+        .where(
+          and(eq(orderRequests.orderId, orderId), isNotNull(orderRequests.rating)),
+        )
         .limit(1);
 
       return result.length > 0;

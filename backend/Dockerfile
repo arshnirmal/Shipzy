@@ -7,11 +7,15 @@
 # ============================================
 FROM node:24-alpine AS base
 
+# Force UTC timezone across all stages
+ENV TZ=UTC
+
 # Install system dependencies and pnpm
 RUN apk add --no-cache \
     libc6-compat \
     dumb-init \
-    wget && \
+    wget \
+    tzdata && \
     npm install -g pnpm@10.21.0
 
 WORKDIR /app

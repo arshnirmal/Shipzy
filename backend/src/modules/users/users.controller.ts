@@ -2,16 +2,24 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
-import { AuthenticationError } from "../../utils/error.util.js";
+import { AppError, AuthenticationError } from "../../utils/error.util.js";
 import usersService from "./users.service.js";
 
 import type {
   UpdateProfileRequest,
   SaveAddressRequest,
   DeleteAddressParams,
+  RegisterDeviceTokenRequest,
 } from "./users.zod.js";
 
 class UsersController {
+  private _requireAuthenticatedUser(request: FastifyRequest) {
+    if (!request.user) {
+      throw new AuthenticationError("User not authenticated");
+    }
+    return request.user;
+  }
+
   /**
    * GET /api/v1/users/me
    * Get current user profile
@@ -19,31 +27,27 @@ class UsersController {
   async getCurrentUser(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      if (!request.user) {
-        throw new AuthenticationError("User not authenticated");
-      }
-
-      const { userUuid } = request.user;
+      const { userUuid } = this._requireAuthenticatedUser(request);
 
       const user = await usersService.getCurrentUser(userUuid);
 
       return successResponse(
         reply,
-        user,
+        { profile: user },
         "User profile retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get current user controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -54,31 +58,30 @@ class UsersController {
   async updateProfile(
     request: FastifyRequest<{ Body: UpdateProfileRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      if (!request.user) {
-        throw new AuthenticationError("User not authenticated");
-      }
+      const { userId } = this._requireAuthenticatedUser(request);
 
-      const { userId } = request.user;
-
-      const updatedUser = await usersService.updateProfile(userId, request.body);
+      const updatedUser = await usersService.updateProfile(
+        userId,
+        request.body,
+      );
 
       return successResponse(
         reply,
-        updatedUser,
+        { profile: updatedUser },
         "Profile updated successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Update profile controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -89,31 +92,30 @@ class UsersController {
   async getAddresses(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      if (!request.user) {
-        throw new AuthenticationError("User not authenticated");
-      }
-
-      const { userId } = request.user;
+      const { userId } = this._requireAuthenticatedUser(request);
 
       const addresses = await usersService.getAddresses(userId);
 
       return successResponse(
         reply,
-        addresses,
+        {
+          addresses,
+          total: addresses.length,
+        },
         "Addresses retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get addresses controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -124,32 +126,60 @@ class UsersController {
   async saveAddress(
     request: FastifyRequest<{ Body: SaveAddressRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      if (!request.user) {
-        throw new AuthenticationError("User not authenticated");
-      }
-
-      const { userId } = request.user;
+      const { userId } = this._requireAuthenticatedUser(request);
 
       const savedAddress = await usersService.saveAddress(userId, request.body);
 
       return successResponse(
         reply,
-        savedAddress,
+        { address: savedAddress },
         "Address saved successfully",
         201,
       );
     } catch (error) {
       logger.error({
         msg: "Save address controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/users/me/device-token
+   * Register (upsert) the caller's FCM device token
+   */
+  async registerDeviceToken(
+    request: FastifyRequest<{ Body: RegisterDeviceTokenRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const { userId } = this._requireAuthenticatedUser(request);
+      const result = await usersService.registerDeviceToken(
+        userId,
+        request.body,
       );
+      return successResponse(
+        reply,
+        { deviceToken: result },
+        "Device token registered",
+      );
+    } catch (error) {
+      logger.error({
+        msg: "Register device token controller error",
+        requestId: request.id,
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -160,31 +190,28 @@ class UsersController {
   async deleteAddress(
     request: FastifyRequest<{ Params: DeleteAddressParams }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      if (!request.user) {
-        throw new AuthenticationError("User not authenticated");
-      }
-
-      const { userId } = request.user;
+      const { userId } = this._requireAuthenticatedUser(request);
       const { id } = request.params;
 
-      const result = await usersService.deleteAddress(
-        Number.parseInt(id),
-        userId,
-      );
+      const result = await usersService.deleteAddress(id, userId);
 
-      return successResponse(reply, result, "Address deleted successfully");
+      return successResponse(
+        reply,
+        { deletion: result },
+        "Address deleted successfully",
+      );
     } catch (error) {
       logger.error({
         msg: "Delete address controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

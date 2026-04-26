@@ -7,7 +7,6 @@ export * from "./orders.js";
 export * from "./logistics.js";
 export * from "./payments.js";
 export * from "./tracking.js";
-export * from "./ratings.js";
 export * from "./notifications.js";
 export * from "./relations.js";
 export * from "./types.js";

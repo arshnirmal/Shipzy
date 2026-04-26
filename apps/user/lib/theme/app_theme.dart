@@ -14,14 +14,15 @@ class AppTheme {
       surfaceContainerHigh: AppColors.lightSurfaceHigh,
       onSurface: AppColors.lightOnSurface,
       onSurfaceVariant: AppColors.lightOnSurfaceVariant,
-      outlineVariant: AppColors.outlineVariant,
+      surfaceContainer: AppColors.lightSurfaceLowest,
+      outlineVariant: AppColors.lightOutlineVariant,
       error: AppColors.error,
       tertiaryContainer: AppColors.tertiaryContainer,
     ),
     textTheme: AppTypography.lightTextTheme,
     scaffoldBackgroundColor: AppColors.lightSurfaceLow,
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.lightSurfaceLow,
+      backgroundColor: AppColors.lightSurfaceLowest,
       foregroundColor: AppColors.lightOnSurface,
       elevation: 0,
       centerTitle: true,
@@ -46,7 +47,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+        side: BorderSide(color: AppColors.lightOutlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         textStyle: AppTypography.lightTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
@@ -64,11 +65,11 @@ class AppTheme {
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       border: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.lightOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.lightOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
@@ -98,14 +99,15 @@ class AppTheme {
       surfaceContainerHigh: AppColors.darkSurfaceHigh,
       onSurface: AppColors.darkOnSurface,
       onSurfaceVariant: AppColors.darkOnSurfaceVariant,
-      outlineVariant: AppColors.outlineVariant,
+      surfaceContainer: AppColors.darkSurfaceHigh,
+      outlineVariant: AppColors.darkOutlineVariant,
       error: AppColors.error,
       tertiaryContainer: AppColors.tertiaryContainer,
     ),
     textTheme: AppTypography.darkTextTheme,
     scaffoldBackgroundColor: AppColors.darkSurfaceLow,
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.darkSurfaceLow,
+      backgroundColor: AppColors.darkSurfaceHigh,
       surfaceTintColor: Colors.transparent,
       foregroundColor: AppColors.darkOnSurface,
       elevation: 0,
@@ -114,7 +116,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
-      color: AppColors.darkSurfaceLowest,
+      color: AppColors.darkSurfaceHigh,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -130,7 +132,7 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        side: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
+        side: BorderSide(color: AppColors.darkOutlineVariant.withValues(alpha: AppDepth.ghostBorderOpacity)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusLg),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
         textStyle: AppTypography.darkTextTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
@@ -148,11 +150,11 @@ class AppTheme {
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       border: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.darkOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,
-        borderSide: BorderSide(color: AppColors.outlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
+        borderSide: BorderSide(color: AppColors.darkOutlineVariant.withValues(alpha: AppDepth.inputBorderOpacity)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: AppRadius.radiusLg,

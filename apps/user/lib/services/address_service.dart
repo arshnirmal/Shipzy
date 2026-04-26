@@ -21,8 +21,9 @@ class AddressService {
         throw Exception(response.data?['message'] ?? 'Failed to get addresses');
       }
 
-      final data = response.data!['data'] as List<dynamic>;
-      return data.map((json) => SavedAddress.fromJson(json as Map<String, dynamic>)).toList();
+      final data = response.data!['data'] as Map<String, dynamic>;
+      final addresses = data['addresses'] as List<dynamic>;
+      return addresses.map((json) => SavedAddress.fromJson(json as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
       throw _handleDioError(e, 'get addresses');
     }
@@ -31,13 +32,17 @@ class AddressService {
   /// Save new address
   Future<SavedAddress> saveAddress(CreateAddress addressData) async {
     try {
-      final response = await _apiClient.post<Map<String, dynamic>>('/users/me/addresses', data: addressData.toJson());
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/users/me/addresses',
+        data: addressData.toJson(),
+      );
 
       if (response.data?['success'] != true) {
         throw Exception(response.data?['message'] ?? 'Failed to save address');
       }
 
-      return SavedAddress.fromJson(response.data!['data'] as Map<String, dynamic>);
+      final data = response.data!['data'] as Map<String, dynamic>;
+      return SavedAddress.fromJson(data['address'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e, 'save address');
     }
@@ -56,10 +61,22 @@ class AddressService {
     }
   }
 
-  /// Search places (step 1 - get suggestions)
-  Future<List<PlaceSuggestion>> searchPlaces({required String query, String? proximity, int? limit}) async {
+  /// Search places (step 1 - get suggestions + session token)
+  Future<AddressSearchResult> searchPlaces({
+    required String query,
+    Coordinates? proximity,
+    String? country,
+    List<String>? types,
+    int? limit,
+  }) async {
     try {
-      final request = SearchPlacesRequest(query: query, proximity: proximity, limit: limit);
+      final request = SearchPlacesRequest(
+        query: query,
+        proximity: proximity,
+        country: country,
+        types: types,
+        limit: limit,
+      );
 
       final response = await _apiClient.post<Map<String, dynamic>>('/addresses/search', data: request.toJson());
 
@@ -67,8 +84,8 @@ class AddressService {
         throw Exception(response.data?['message'] ?? 'Failed to search places');
       }
 
-      final results = response.data!['data'] as List<dynamic>;
-      return results.map((json) => PlaceSuggestion.fromJson(json as Map<String, dynamic>)).toList();
+      final data = response.data!['data'] as Map<String, dynamic>;
+      return AddressSearchResult.fromJson(data['search'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e, 'search places');
     }
@@ -85,7 +102,8 @@ class AddressService {
         throw Exception(response.data?['message'] ?? 'Failed to retrieve place details');
       }
 
-      return PlaceDetails.fromJson(response.data!['data'] as Map<String, dynamic>);
+      final data = response.data!['data'] as Map<String, dynamic>;
+      return PlaceDetails.fromJson(data['place'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e, 'retrieve place details');
     }
@@ -102,7 +120,8 @@ class AddressService {
         throw Exception(response.data?['message'] ?? 'Failed to reverse geocode');
       }
 
-      return ReverseGeocodeResult.fromJson(response.data!['data'] as Map<String, dynamic>);
+      final data = response.data!['data'] as Map<String, dynamic>;
+      return ReverseGeocodeResult.fromJson(data['reverseGeocode'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e, 'reverse geocode');
     }
@@ -146,12 +165,12 @@ class AddressService {
         throw Exception(response.data?['message'] ?? 'Failed to calculate distance');
       }
 
-      return DistanceResult.fromJson(response.data!['data'] as Map<String, dynamic>);
+      final data = response.data!['data'] as Map<String, dynamic>;
+      return DistanceResult.fromJson(data['distance'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _handleDioError(e, 'calculate distance');
     }
   }
 
-  ApiException _handleDioError(DioException e, String operation) =>
-      mapDioException(e, operation);
+  ApiException _handleDioError(DioException e, String operation) => mapDioException(e, operation);
 }

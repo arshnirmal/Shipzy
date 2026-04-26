@@ -90,113 +90,101 @@ VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
--- public.delivery_type_capabilities
+-- public.delivery_types.capabilities (JSONB matrix; replaces delivery_type_capabilities)
 -- ---------------------------------------------------------------------------
-INSERT INTO public.delivery_type_capabilities (
-  delivery_type_id,
-  vehicle_category_id,
-  weight_tier_id
+UPDATE public.delivery_types dt
+SET capabilities = (
+  SELECT COALESCE(jsonb_agg(q.obj), '[]'::jsonb)
+  FROM (
+    SELECT jsonb_build_object(
+      'vehicleCategoryId', vc.category_id,
+      'weightTierId', wt.tier_id
+    ) AS obj
+    FROM public.delivery_types d2
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+    WHERE d2.delivery_type_id = dt.delivery_type_id
+      AND d2.name = 'deliver_now'
+      AND vc.name = '2_wheeler'
+      AND wt.max_weight_kg <= 20.00
+    UNION ALL
+    SELECT jsonb_build_object(
+      'vehicleCategoryId', vc.category_id,
+      'weightTierId', wt.tier_id
+    )
+    FROM public.delivery_types d2
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+    WHERE d2.delivery_type_id = dt.delivery_type_id
+      AND d2.name = 'deliver_now'
+      AND vc.name = '3_wheeler'
+      AND wt.max_weight_kg <= 100.00
+  ) q
 )
-SELECT dt.delivery_type_id, vc.category_id, wt.tier_id
-FROM public.delivery_types dt
-CROSS JOIN public.vehicle_categories vc
-CROSS JOIN public.weight_tiers wt
-WHERE dt.name = 'deliver_now'
-  AND vc.name = '2_wheeler'
-  AND wt.max_weight_kg <= 20.00
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.delivery_type_capabilities dtc
-    WHERE dtc.delivery_type_id = dt.delivery_type_id
-      AND dtc.vehicle_category_id = vc.category_id
-      AND dtc.weight_tier_id = wt.tier_id
-  );
+WHERE dt.name = 'deliver_now';
 
-INSERT INTO public.delivery_type_capabilities (
-  delivery_type_id,
-  vehicle_category_id,
-  weight_tier_id
+UPDATE public.delivery_types dt
+SET capabilities = (
+  SELECT COALESCE(jsonb_agg(q.obj), '[]'::jsonb)
+  FROM (
+    SELECT jsonb_build_object(
+      'vehicleCategoryId', vc.category_id,
+      'weightTierId', wt.tier_id
+    ) AS obj
+    FROM public.delivery_types d2
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+    WHERE d2.delivery_type_id = dt.delivery_type_id
+      AND d2.name = 'scheduled'
+      AND vc.name IN ('2_wheeler', '3_wheeler')
+      AND (
+        (vc.name = '2_wheeler' AND wt.max_weight_kg <= 20.00)
+        OR (vc.name = '3_wheeler' AND wt.max_weight_kg <= 100.00)
+      )
+  ) q
 )
-SELECT dt.delivery_type_id, vc.category_id, wt.tier_id
-FROM public.delivery_types dt
-CROSS JOIN public.vehicle_categories vc
-CROSS JOIN public.weight_tiers wt
-WHERE dt.name = 'deliver_now'
-  AND vc.name = '3_wheeler'
-  AND wt.max_weight_kg <= 100.00
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.delivery_type_capabilities dtc
-    WHERE dtc.delivery_type_id = dt.delivery_type_id
-      AND dtc.vehicle_category_id = vc.category_id
-      AND dtc.weight_tier_id = wt.tier_id
-  );
+WHERE dt.name = 'scheduled';
 
-INSERT INTO public.delivery_type_capabilities (
-  delivery_type_id,
-  vehicle_category_id,
-  weight_tier_id
+UPDATE public.delivery_types dt
+SET capabilities = (
+  SELECT COALESCE(jsonb_agg(q.obj), '[]'::jsonb)
+  FROM (
+    SELECT jsonb_build_object(
+      'vehicleCategoryId', vc.category_id,
+      'weightTierId', wt.tier_id
+    ) AS obj
+    FROM public.delivery_types d2
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+    WHERE d2.delivery_type_id = dt.delivery_type_id
+      AND d2.name = 'end_of_day'
+      AND vc.name IN ('2_wheeler', '3_wheeler')
+      AND (
+        (vc.name = '2_wheeler' AND wt.max_weight_kg <= 20.00)
+        OR (vc.name = '3_wheeler' AND wt.max_weight_kg <= 100.00)
+      )
+  ) q
 )
-SELECT dt.delivery_type_id, vc.category_id, wt.tier_id
-FROM public.delivery_types dt
-CROSS JOIN public.vehicle_categories vc
-CROSS JOIN public.weight_tiers wt
-WHERE dt.name = 'scheduled'
-  AND vc.name IN ('2_wheeler', '3_wheeler')
-  AND (
-    (vc.name = '2_wheeler' AND wt.max_weight_kg <= 20.00)
-    OR (vc.name = '3_wheeler' AND wt.max_weight_kg <= 100.00)
-  )
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.delivery_type_capabilities dtc
-    WHERE dtc.delivery_type_id = dt.delivery_type_id
-      AND dtc.vehicle_category_id = vc.category_id
-      AND dtc.weight_tier_id = wt.tier_id
-  );
+WHERE dt.name = 'end_of_day';
 
-INSERT INTO public.delivery_type_capabilities (
-  delivery_type_id,
-  vehicle_category_id,
-  weight_tier_id
+UPDATE public.delivery_types dt
+SET capabilities = (
+  SELECT COALESCE(jsonb_agg(q.obj), '[]'::jsonb)
+  FROM (
+    SELECT jsonb_build_object(
+      'vehicleCategoryId', vc.category_id,
+      'weightTierId', wt.tier_id
+    ) AS obj
+    FROM public.delivery_types d2
+    CROSS JOIN public.vehicle_categories vc
+    CROSS JOIN public.weight_tiers wt
+    WHERE d2.delivery_type_id = dt.delivery_type_id
+      AND d2.name = 'truck_delivery'
+      AND vc.name IN ('mini_truck', 'truck')
+      AND wt.min_weight_kg >= 20.00
+  ) q
 )
-SELECT dt.delivery_type_id, vc.category_id, wt.tier_id
-FROM public.delivery_types dt
-CROSS JOIN public.vehicle_categories vc
-CROSS JOIN public.weight_tiers wt
-WHERE dt.name = 'end_of_day'
-  AND vc.name IN ('2_wheeler', '3_wheeler')
-  AND (
-    (vc.name = '2_wheeler' AND wt.max_weight_kg <= 20.00)
-    OR (vc.name = '3_wheeler' AND wt.max_weight_kg <= 100.00)
-  )
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.delivery_type_capabilities dtc
-    WHERE dtc.delivery_type_id = dt.delivery_type_id
-      AND dtc.vehicle_category_id = vc.category_id
-      AND dtc.weight_tier_id = wt.tier_id
-  );
-
-INSERT INTO public.delivery_type_capabilities (
-  delivery_type_id,
-  vehicle_category_id,
-  weight_tier_id
-)
-SELECT dt.delivery_type_id, vc.category_id, wt.tier_id
-FROM public.delivery_types dt
-CROSS JOIN public.vehicle_categories vc
-CROSS JOIN public.weight_tiers wt
-WHERE dt.name = 'truck_delivery'
-  AND vc.name IN ('mini_truck', 'truck')
-  AND wt.min_weight_kg >= 20.00
-  AND NOT EXISTS (
-    SELECT 1
-    FROM public.delivery_type_capabilities dtc
-    WHERE dtc.delivery_type_id = dt.delivery_type_id
-      AND dtc.vehicle_category_id = vc.category_id
-      AND dtc.weight_tier_id = wt.tier_id
-  );
+WHERE dt.name = 'truck_delivery';
 
 -- ---------------------------------------------------------------------------
 -- public.pricing_config
@@ -211,9 +199,34 @@ VALUES
   ('peak_hour_bonus_rate', 0.15, 'Peak hour bonus as percentage of base payout'),
   ('urgency_bonus_amount', 15.00, 'Fixed bonus for urgent deliveries'),
   ('on_time_bonus_rate', 0.05, 'On-time delivery bonus rate'),
-  ('quality_bonus_amount', 5.00, 'Quality bonus for good ratings')
+  ('quality_bonus_amount', 5.00, 'Quality bonus for good ratings'),
+  ('undeliverable_wait_minutes', 5, 'Minutes driver must wait at delivery before marking undeliverable'),
+  ('average_courier_speed_kmph', 25, 'Used for estimated delivery minutes calculation')
 ON CONFLICT (config_key) DO UPDATE SET
   config_value = EXCLUDED.config_value,
   description = EXCLUDED.description,
   is_active = TRUE,
   updated_at = NOW();
+
+-- ---------------------------------------------------------------------------
+-- users.profiles — platform admin (email/password; idempotent)
+-- Default password: ShipzyAdminDev!2026 (bcrypt 12). Change after first login
+-- in any shared or production environment.
+-- ---------------------------------------------------------------------------
+INSERT INTO users.profiles (
+  role,
+  email,
+  full_name,
+  password_hash,
+  is_verified,
+  is_active
+)
+VALUES (
+  'admin',
+  'admin@shipzy.local',
+  'Shipzy Admin',
+  '$2b$12$BmEMVe./4fqC6O8NkrMuE.TCCh0zVHKlqLKskaUBYjbLegtWhuvOS',
+  TRUE,
+  TRUE
+)
+ON CONFLICT (email) DO NOTHING;

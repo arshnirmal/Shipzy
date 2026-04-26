@@ -14,8 +14,10 @@ import {
   boolean,
   integer,
   timestamp,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { DeliveryTypeCapabilitiesJSONB } from "./types.js";
 
 // Tables in PostgreSQL default "public" schema — use pgTable() directly (no pgSchema("public")).
 
@@ -28,12 +30,14 @@ export const userRoleEnum = pgEnum("user_role", [
 ]);
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
+  "scheduled",
   "accepted",
   "picked_up",
   "in_transit",
   "delivered",
   "cancelled",
   "undeliverable",
+  "returning",
   "returned",
 ]);
 export const assignmentStatusEnum = pgEnum("assignment_status", [
@@ -42,6 +46,7 @@ export const assignmentStatusEnum = pgEnum("assignment_status", [
   "rejected",
   "picked_up",
   "in_transit",
+  "returning",
   "delivered",
   "cancelled",
   "returned",
@@ -85,6 +90,12 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "completed",
   "failed",
 ]);
+export const monthlyVolumeEnum = pgEnum("monthly_volume", [
+  "0-100",
+  "100-500",
+  "500-2000",
+  "2000+",
+]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "completed",
@@ -99,11 +110,12 @@ export const weightTiers = pgTable(
   {
     tierId: serial("tier_id").primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
-    minWeightKg: numeric("min_weight_kg", { precision: 10, scale: 2 }).notNull(),
-    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2 }).notNull(),
+    minWeightKg: numeric("min_weight_kg", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2, mode: "number" }).notNull(),
     additionalCharge: numeric("additional_charge", {
       precision: 10,
       scale: 2,
+      mode: "number",
     }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -138,10 +150,14 @@ export const deliveryTypes = pgTable(
     name: varchar("name", { length: 100 }).notNull().unique(),
     displayName: varchar("display_name", { length: 100 }).notNull(),
     description: text("description"),
-    baseRate: numeric("base_rate", { precision: 10, scale: 2 }).notNull(),
-    perKmRate: numeric("per_km_rate", { precision: 10, scale: 2 }).notNull(),
+    baseRate: numeric("base_rate", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    perKmRate: numeric("per_km_rate", { precision: 10, scale: 2, mode: "number" }).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     sortOrder: integer("sort_order").default(0).notNull(),
+    capabilities: jsonb("capabilities")
+      .$type<DeliveryTypeCapabilitiesJSONB>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -165,8 +181,9 @@ export const packageTypes = pgTable(
     specialHandlingFee: numeric("special_handling_fee", {
       precision: 10,
       scale: 2,
+      mode: "number",
     })
-      .default("0.00")
+      .default(0)
       .notNull(),
     requiresSpecialHandling: boolean("requires_special_handling")
       .default(false)
@@ -184,49 +201,13 @@ export const packageTypes = pgTable(
   ],
 );
 
-// Delivery Type Capabilities
-export const deliveryTypeCapabilities = pgTable(
-  "delivery_type_capabilities",
-  {
-    capabilityId: serial("capability_id").primaryKey(),
-    deliveryTypeId: integer("delivery_type_id")
-      .notNull()
-      .references(() => deliveryTypes.deliveryTypeId, { onDelete: "cascade" }),
-    vehicleCategoryId: integer("vehicle_category_id")
-      .notNull()
-      .references(() => vehicleCategories.categoryId, { onDelete: "cascade" }),
-    weightTierId: integer("weight_tier_id")
-      .notNull()
-      .references(() => weightTiers.tierId, { onDelete: "cascade" }),
-    baseRateOverride: numeric("base_rate_override", {
-      precision: 10,
-      scale: 2,
-    }),
-    perKmRateOverride: numeric("per_km_rate_override", {
-      precision: 10,
-      scale: 2,
-    }),
-    isActive: boolean("is_active").default(true).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    uniqueIndex("uq_delivery_type_vehicle_weight").on(
-      table.deliveryTypeId,
-      table.vehicleCategoryId,
-      table.weightTierId,
-    ),
-  ],
-);
-
 // Pricing Config
 export const pricingConfig = pgTable(
   "pricing_config",
   {
     configId: serial("config_id").primaryKey(),
     configKey: varchar("config_key", { length: 50 }).notNull().unique(),
-    configValue: numeric("config_value", { precision: 10, scale: 4 }).notNull(),
+    configValue: numeric("config_value", { precision: 10, scale: 4, mode: "number" }).notNull(),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
     updatedBy: integer("updated_by"),
@@ -253,7 +234,7 @@ export const vehicleCategories = pgTable(
     name: varchar("name", { length: 50 }).notNull().unique(),
     displayName: varchar("display_name", { length: 100 }).notNull(),
     description: text("description"),
-    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2 }).notNull(),
+    maxWeightKg: numeric("max_weight_kg", { precision: 10, scale: 2, mode: "number" }).notNull(),
     iconUrl: varchar("icon_url", { length: 255 }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -266,4 +247,25 @@ export const vehicleCategories = pgTable(
       sql`${table.maxWeightKg} >= 0`,
     ),
   ],
+);
+
+// Business Discount Tiers
+export const businessDiscountTiers = pgTable(
+  "business_discount_tiers",
+  {
+    tierId: serial("tier_id").primaryKey(),
+    label: varchar("label", { length: 100 }).notNull(),
+    minOrders: integer("min_orders").notNull(),
+    maxOrders: integer("max_orders"),
+    discountPct: numeric("discount_pct", { precision: 5, scale: 2, mode: "number" }).notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check("discount_pct_range_chk", sql`${table.discountPct} BETWEEN 0 AND 100`),
+    check("min_orders_non_negative_chk", sql`${table.minOrders} >= 0`),
+    check("max_orders_valid_chk", sql`${table.maxOrders} > ${table.minOrders} OR ${table.maxOrders} IS NULL`),
+  ]
 );

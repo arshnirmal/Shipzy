@@ -1,6 +1,7 @@
 // services/backend/src/modules/addresses/addresses.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import addressesService from "./addresses.service.js";
 import type {
@@ -19,42 +20,35 @@ class AddressesController {
   async searchAddresses(
     request: FastifyRequest<{ Body: SearchAddresses }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      const { query, proximity, types, limit } = request.body;
+      const { query } = request.body;
 
       logger.info({
-        msg: "Address search request",
-        query,
-        proximity,
+        msg: "POST /api/v1/addresses/search",
+        requestId: request.id,
+        proximity: request.body.proximity,
         userId: request.user?.userId,
       });
 
-      const suggestions = await addressesService.searchAddresses(request.body);
+      const result = await addressesService.searchAddresses(request.body);
 
       return successResponse(
         reply,
-        suggestions,
-        `Found ${suggestions.length} suggestions for "${query}"`,
+        result,
+        `Found ${result.search.total} suggestions for "${query}"`,
       );
     } catch (error) {
       logger.error({
         msg: "Address search controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
-        : "An error occurred while searching for addresses";
-
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -65,12 +59,13 @@ class AddressesController {
   async retrievePlace(
     request: FastifyRequest<{ Body: RetrievePlace }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { mapboxId, sessionToken } = request.body;
 
       logger.info({
-        msg: "Place retrieve request",
+        msg: "POST /api/v1/addresses/retrieve",
+        requestId: request.id,
         mapboxId,
         userId: request.user?.userId,
       });
@@ -82,27 +77,20 @@ class AddressesController {
 
       return successResponse(
         reply,
-        placeDetails,
+        { place: placeDetails },
         "Place details retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Place retrieve controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
-        : "An error occurred while retrieving place details";
-
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -113,45 +101,40 @@ class AddressesController {
   async reverseGeocode(
     request: FastifyRequest<{ Body: ReverseGeocode }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      const { latitude, longitude, types } = request.body;
+      const { latitude, longitude, types, limit } = request.body;
 
       logger.info({
-        msg: "Reverse geocoding request",
-        coordinates: { latitude, longitude },
+        msg: "POST /api/v1/addresses/reverse-geocode",
+        requestId: request.id,
+        hasCustomTypes: Boolean(types?.length),
         userId: request.user?.userId,
       });
 
       const result = await addressesService.reverseGeocode({
         latitude,
         longitude,
-        types: types || ["street", "neighborhood"],
+        types: types || ["address", "neighborhood"],
+        limit,
       });
 
       return successResponse(
         reply,
-        result,
+        { reverseGeocode: result },
         `Reverse geocode completed for (${longitude}, ${latitude})`,
       );
     } catch (error) {
       logger.error({
         msg: "Reverse geocoding controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
-        : "An error occurred while converting coordinates to address";
-
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -162,14 +145,13 @@ class AddressesController {
   async getDirections(
     request: FastifyRequest<{ Body: Directions }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { origin, destination, profile } = request.body;
 
       logger.info({
-        msg: "Directions request",
-        origin,
-        destination,
+        msg: "POST /api/v1/addresses/directions",
+        requestId: request.id,
         profile,
         userId: request.user?.userId,
       });
@@ -180,29 +162,37 @@ class AddressesController {
         profile,
       );
 
+      const response = {
+        route: {
+          distanceMeters: result.distance,
+          durationSeconds: result.duration,
+          distanceKm: result.distanceKm,
+          durationMinutes: result.durationMinutes,
+          geometry: result.geometry,
+        },
+        navigation: {
+          origin: result.origin,
+          destination: result.destination,
+          profile: profile ?? "driving",
+        },
+      };
+
       return successResponse(
         reply,
-        result,
-        `Directions calculated: ${result.distanceKm}km, ${result.durationMinutes}min`,
+        response,
+        `Directions calculated: ${response.route.distanceKm}km, ${response.route.durationMinutes}min`,
       );
     } catch (error) {
       logger.error({
         msg: "Directions controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
-        : "An error occurred while calculating directions";
-
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -213,35 +203,48 @@ class AddressesController {
   async calculateDistance(
     request: FastifyRequest<{ Body: Distance }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { lat1, lon1, lat2, lon2 } = request.body;
 
-      const distance = addressesService.calculateDistance(lat1, lon1, lat2, lon2);
+      const distance = addressesService.calculateDistance(
+        lat1,
+        lon1,
+        lat2,
+        lon2,
+      );
+
+      logger.info({
+        msg: "POST /api/v1/addresses/distance",
+        requestId: request.id,
+        userId: request.user?.userId,
+        statusCode: 200,
+      });
 
       return successResponse(
         reply,
-        { distanceKm: distance },
+        {
+          distance: {
+            kilometers: distance,
+          },
+          points: {
+            origin: { latitude: lat1, longitude: lon1 },
+            destination: { latitude: lat2, longitude: lon2 },
+          },
+        },
         `Distance calculated: ${distance}km`,
       );
     } catch (error) {
       logger.error({
         msg: "Distance calculation error",
+        requestId: request.id,
         error: (error as Error).message,
       });
 
-      const isValidationError =
-        (error as any).message.includes("ValidationError") ||
-        (error as any).statusCode === 400;
-      const userMessage = isValidationError
-        ? (error as Error).message
-        : "An error occurred while calculating distance";
-
-      return errorResponse(
-        reply,
-        userMessage,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

@@ -37,17 +37,22 @@ export const authenticate = async (
     // 2. Verify token
     const decoded = verifyToken(token);
 
-    // 3. Hash token for database lookup
+    // 3. Reject refresh tokens presented as access tokens
+    if (decoded.type !== "access") {
+      throw new AuthenticationError("Invalid token type");
+    }
+
+    // 4. Hash token for database lookup
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
-    // 4. Validate token in database (check if revoked)
+    // 5. Validate token in database (check if revoked)
     const isValid = await authRepository.validateJwtToken(tokenHash);
 
     if (!isValid) {
       throw new AuthenticationError("Invalid or revoked token");
     }
 
-    // 5. Update last activity (async, non-blocking)
+    // 6. Update last activity (async, non-blocking)
     authRepository.updateSessionActivity(tokenHash).catch((err) => {
       logger.warn({
         msg: "Failed to update session activity",
@@ -55,7 +60,7 @@ export const authenticate = async (
       });
     });
 
-    // 6. Attach user info to request
+    // 7. Attach user info to request
     request.user = {
       userId: decoded.userId,
       userUuid: decoded.userUuid,
@@ -63,13 +68,12 @@ export const authenticate = async (
       phoneNumber: decoded.phoneNumber,
     };
   } catch (error) {
-    logger.error({
-      msg: "Authentication failed",
-      error: (error as Error).message,
-    });
-    throw new AuthenticationError(
-      (error as Error).message || "Authentication failed",
-    );
+    // Preserve typed auth errors; wrap everything else generically
+    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+      throw error;
+    }
+    logger.error({ msg: "Authentication failed", error: (error as Error).message });
+    throw new AuthenticationError("Authentication failed");
   }
 };
 

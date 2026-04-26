@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../utils/app_routes.dart';
+import '../../utils/auth_utils.dart';
+import '../../utils/logger.dart';
+import '../../utils/snackbar_utils.dart';
 import 'widgets/auth_widgets.dart';
+
+const double _kHorizontalPadding = 24;
+const double _kTopSpacing = 56;
+const double _kSectionSpacing = 32;
+const double _kFieldSpacing = 16;
+const double _kBlockSpacing = 24;
+const double _kDividerSpacing = 20;
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -20,11 +30,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _isGoogleSigningIn = false;
 
   @override
   void dispose() {
@@ -32,12 +41,56 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+  void _togglePasswordVisibility() {
+    setState(() => _obscurePassword = !_obscurePassword);
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleSigningIn = true);
+
+    try {
+      final result = await ref.read(authProvider.notifier).signInWithGoogle();
+
+      result.when(
+        success: (user, {required bool isNewUser}) {
+          if (!mounted) {
+            return;
+          }
+          SnackbarUtils.showSuccess(
+            context,
+            'Welcome to Shipzy, ${user.fullName}',
+          );
+          context.go(AppRoutes.splash);
+        },
+        error: (message) {
+          AppLogger.e('Google sign in error: $message');
+          if (mounted) {
+            SnackbarUtils.showError(
+              context,
+              AuthErrorParser.parseRegisterError(message),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      AppLogger.e('Google sign in error: $e');
+      if (mounted) {
+        SnackbarUtils.showError(context, 'Failed to sign in with Google');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleSigningIn = false);
+      }
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
     FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
@@ -47,43 +100,45 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           .read(authProvider.notifier)
           .createUserWithEmailAndPassword(
             _emailController.text.trim(),
-            _passwordController.text.trim(),
+            _passwordController.text,
             fullName: _fullNameController.text.trim(),
             phoneNumber: '+91${_phoneController.text.trim()}',
           );
 
+      result.when(
+        success: (user, {required bool isNewUser}) {
+          if (!mounted) {
+            return;
+          }
+          FocusScope.of(context).unfocus();
+          SnackbarUtils.showSuccess(
+            context,
+            'Welcome to Shipzy, ${user.fullName}!',
+          );
+          context.go(AppRoutes.splash);
+        },
+        error: (message) {
+          AppLogger.e('Register error: $message');
+          if (mounted) {
+            SnackbarUtils.showError(
+              context,
+              AuthErrorParser.parseRegisterError(message),
+            );
+          }
+        },
+      );
+    } catch (e) {
+      AppLogger.e('Register error: $e');
       if (mounted) {
-        result.when(
-          success: (user, {required isNewUser}) {
-            // Navigation handled by router listener
-          },
-          error: (message) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registration failed: $message')));
-          },
+        SnackbarUtils.showError(
+          context,
+          'An unexpected error occurred. Please try again.',
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _handleGoogleSignUp() async {
-    setState(() => _isLoading = true);
-    try {
-      final result = await ref.read(authProvider.notifier).signInWithGoogle();
-
       if (mounted) {
-        result.when(
-          success: (user, {required isNewUser}) {
-            // Navigation handled by router listener
-          },
-          error: (message) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Google sign-up failed: $message')));
-          },
-        );
+        setState(() => _isLoading = false);
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -92,187 +147,127 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _kHorizontalPadding,
+          ).copyWith(bottom: _kBlockSpacing),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 32),
-
-                // Title
-                Center(
-                  child: Text(
-                    'Create Account',
-                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                const SizedBox(height: _kTopSpacing),
+                Text(
+                  'Create Account',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
                   ),
+                  textAlign: TextAlign.center,
                 ),
-
-                const SizedBox(height: 32),
-
-                // Full Name Field
+                const SizedBox(height: 8),
+                Text(
+                  'Create your Shipzy account to start delivering.',
+                  style: theme.textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: _kSectionSpacing),
                 AuthTextField(
                   controller: _fullNameController,
                   label: 'Full Name',
                   hintText: 'Enter full name',
                   textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
                   prefixIcon: const Icon(Icons.person_outline),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your full name';
-                    }
-                    return null;
-                  },
+                  enabled: !_isLoading,
+                  validator: AuthValidators.validateFullName,
                 ),
-
-                const SizedBox(height: 24),
-
-                // Email Field
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _emailController,
                   label: 'Email Address',
                   hintText: 'Enter email address',
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
                   prefixIcon: const Icon(Icons.email_outlined),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    return null;
-                  },
+                  enabled: !_isLoading,
+                  validator: AuthValidators.validateEmail,
                 ),
-
-                const SizedBox(height: 24),
-
-                // Phone Number Field
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _phoneController,
                   label: 'Phone Number',
-                  hintText: '9876543210',
+                  hintText: 'Enter phone number',
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
                   prefixIcon: const Icon(Icons.phone_outlined),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
-                    }
-                    if (value.length != 10) {
-                      return 'Please enter a valid 10-digit phone number';
-                    }
-                    return null;
-                  },
+                  enabled: !_isLoading,
+                  validator: AuthValidators.validatePhoneNumber,
                 ),
-
-                const SizedBox(height: 24),
-
-                // Password Field
+                const SizedBox(height: _kFieldSpacing),
                 AuthTextField(
                   controller: _passwordController,
                   label: 'Password',
                   hintText: 'Enter password',
                   obscureText: _obscurePassword,
-                  textInputAction: TextInputAction.next,
-                  enabled: !_isLoading,
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 24),
-
-                // Confirm Password Field
-                AuthTextField(
-                  controller: _confirmPasswordController,
-                  label: 'Confirm Password',
-                  hintText: 'Re-enter password',
-                  obscureText: _obscureConfirmPassword,
                   textInputAction: TextInputAction.done,
-                  enabled: !_isLoading,
-                  onFieldSubmitted: (_) => _register(),
+                  onFieldSubmitted: (_) => _submit(),
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                    icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                    onPressed: _togglePasswordVisibility,
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
                   ),
-                  validator: (value) {
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
+                  enabled: !_isLoading,
+                  validator: (value) =>
+                      AuthValidators.validatePassword(value, minLength: 8),
                 ),
-
-                const SizedBox(height: 32),
-
-                // Register Button
-                AuthLoadingButton(isLoading: _isLoading, onPressed: _register, text: 'Create Account'),
-
-                const SizedBox(height: 16),
-
-                // Sign In Link
+                const SizedBox(height: _kBlockSpacing),
+                AuthLoadingButton(
+                  isLoading: _isLoading,
+                  onPressed: _submit,
+                  text: 'Create account',
+                ),
+                const SizedBox(height: _kDividerSpacing),
+                const AuthDivider(text: 'or continue with'),
+                const SizedBox(height: _kDividerSpacing),
+                SocialButton(
+                  label: 'Continue with Google',
+                  icon: SvgPicture.asset(
+                    'assets/icons/Google.svg',
+                    width: 20,
+                    height: 20,
+                  ),
+                  onPressed: _signInWithGoogle,
+                  isLoading: _isGoogleSigningIn,
+                ),
+                const SizedBox(height: _kBlockSpacing),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Already have an account?', style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    Text(
+                      'Already have an account?',
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     TextButton(
                       onPressed: _isLoading ? null : () => context.pop(),
-                      style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: Size.zero),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                      ),
                       child: Text(
-                        'Sign In',
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                        'Sign in',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // Divider
-                const AuthDivider(text: 'Or Sign up with'),
-
-                const SizedBox(height: 24),
-
-                // Social Sign Up Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: SocialButton(
-                        label: 'Google',
-                        icon: SvgPicture.asset('assets/icons/Google.svg', width: 20, height: 20),
-                        onPressed: _isLoading ? null : _handleGoogleSignUp,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SocialButton(
-                        label: 'Apple',
-                        icon: SvgPicture.asset('assets/icons/Apple.svg', width: 22, height: 22),
-                        onPressed: null, // TODO: Implement Apple sign-up
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
               ],
             ),
           ),

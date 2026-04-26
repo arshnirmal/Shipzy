@@ -2,10 +2,13 @@
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../models/app_user_mapping.dart';
 import '../models/user.dart';
 import '../utils/logger.dart';
 import 'auth_service_provider.dart';
 import 'google_auth_provider.dart';
+import 'home_provider.dart';
+import 'onboarding_gate_provider.dart';
 import 'storage_provider.dart';
 
 part 'auth_provider.g.dart';
@@ -18,20 +21,25 @@ class Auth extends _$Auth {
   Future<AuthState> _checkAuthStatus() async {
     try {
       final storage = ref.read(secureStorageProvider);
-      final accessToken = await storage.read(key: 'access_token');
-
-      if (accessToken == null) {
+      if (await storage.read(key: 'access_token') == null) {
         return const AuthState.unauthenticated();
       }
 
-      // Validate token by fetching current user
-      final authService = ref.read(authServiceProvider);
-      final user = await authService.getCurrentUser(accessToken);
+      // Validate session and load courier profile (cached for [driverProfileProvider]).
+      final profile = await ref.read(driverProfileProvider.future);
+      final user = profile.toAppUser();
 
-      // Check if user profile is complete (determines if new user)
-      final isNewUser = !user.profileComplete;
+      if (user.isVerified) {
+        try {
+          final prefs = await ref.read(sharedPreferencesProvider.future);
+          await prefs.remove(kDriverOnboardingStatusKey);
+          ref.invalidate(driverOnboardingStatusProvider);
+        } catch (_) {
+          // Non-fatal
+        }
+      }
 
-      return AuthState.authenticated(user, isNewUser: isNewUser);
+      return AuthState.authenticated(user);
     } catch (e) {
       AppLogger.e('Auth status check failed: $e');
       await _clearTokens();
@@ -40,7 +48,7 @@ class Auth extends _$Auth {
   }
 
   /// Google Sign-In
-  Future<AuthResult> signInWithGoogle({String role = 'driver'}) async {
+  Future<AuthResult> signInWithGoogle({String role = 'courier'}) async {
     try {
       final googleAuth = ref.read(googleAuthProvider.notifier);
       final account = await googleAuth.signIn();
@@ -57,45 +65,95 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final response = await authService.verifyGoogleToken(idToken, role: role);
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(
+        response.data.authSection.tokens.accessToken,
+        response.data.authSection.tokens.refreshToken,
+      );
 
-      state = AsyncData(AuthState.authenticated(response.data.user, isNewUser: response.data.isNewUser));
+      final isNewUser = response.data.authSection.session.isNewUser;
+      final user = response.data.actor.user;
 
-      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
+      if (user.role != 'courier') {
+        await _clearTokens();
+        return const AuthResult.error(
+          'This app is for Shipzy couriers only. Please use the Shipzy customer app.',
+        );
+      }
+
+      state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
+      _invalidateCourierCaches();
+
+      return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
   /// Register
-  Future<AuthResult> createUserWithEmailAndPassword(String email, String password, {String? fullName, String? phoneNumber}) async {
+  Future<AuthResult> createUserWithEmailAndPassword(
+    String email,
+    String password, {
+    String? fullName,
+    String? phoneNumber,
+  }) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.register(fullName: fullName ?? '', email: email, password: password, phoneNumber: phoneNumber ?? '');
+      final response = await authService.register(
+        fullName: fullName ?? '',
+        email: email,
+        password: password,
+        phoneNumber: phoneNumber ?? '',
+      );
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(
+        response.data.authSection.tokens.accessToken,
+        response.data.authSection.tokens.refreshToken,
+      );
 
-      state = AsyncData(AuthState.authenticated(response.data.user, isNewUser: response.data.isNewUser));
+      final isNewUser = response.data.authSection.session.isNewUser;
+      final user = response.data.actor.user;
 
-      return AuthResult.success(response.data.user, isNewUser: response.data.isNewUser);
+      state = AsyncData(AuthState.authenticated(user, isNewUser: isNewUser));
+      _invalidateCourierCaches();
+
+      return AuthResult.success(user, isNewUser: isNewUser);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
   }
 
   /// Login
-  Future<AuthResult> signInWithEmailAndPassword(String email, String password) async {
+  Future<AuthResult> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
       final authService = ref.read(authServiceProvider);
-      final response = await authService.login(email: email, password: password);
+      final response = await authService.login(
+        email: email,
+        password: password,
+      );
 
       AppLogger.d('Login response: ${response.data.toJson()}');
 
-      await _storeTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
+      await _storeTokens(
+        response.data.authSection.tokens.accessToken,
+        response.data.authSection.tokens.refreshToken,
+      );
 
-      state = AsyncData(AuthState.authenticated(response.data.user));
+      final user = response.data.actor.user;
 
-      return AuthResult.success(response.data.user, isNewUser: false);
+      if (user.role != 'courier') {
+        await _clearTokens();
+        return const AuthResult.error(
+          'This app is for Shipzy couriers only. Please use the Shipzy customer app.',
+        );
+      }
+
+      state = AsyncData(AuthState.authenticated(user));
+      _invalidateCourierCaches();
+
+      return AuthResult.success(user, isNewUser: false);
     } catch (e) {
       return AuthResult.error(e.toString());
     }
@@ -114,7 +172,10 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final response = await authService.refreshToken(refreshToken);
 
-      await storage.write(key: 'access_token', value: response.data.accessToken);
+      await storage.write(
+        key: 'access_token',
+        value: response.data.authSection.tokens.accessToken,
+      );
 
       return true;
     } catch (e) {
@@ -137,6 +198,14 @@ class Auth extends _$Auth {
       // Continue with local logout
     } finally {
       await _clearTokens();
+      _invalidateCourierCaches();
+
+      try {
+        final prefs = await ref.read(sharedPreferencesProvider.future);
+        await prefs.remove(kDriverOnboardingStatusKey);
+      } catch (_) {
+        // Ignore prefs errors during logout
+      }
 
       try {
         final googleAuth = ref.read(googleAuthProvider.notifier);
@@ -159,18 +228,30 @@ class Auth extends _$Auth {
     final storage = ref.read(secureStorageProvider);
     await storage.deleteAll();
   }
+
+  /// Drops cached courier profile and active assignment after auth changes.
+  void _invalidateCourierCaches() {
+    ref.invalidate(driverProfileProvider);
+    ref.invalidate(activeOrderProvider);
+  }
 }
 
 // Auth state classes
 sealed class AuthState {
   const AuthState();
-  const factory AuthState.authenticated(AppUser user, {bool isNewUser}) = Authenticated;
+  const factory AuthState.authenticated(AppUser user, {bool isNewUser}) =
+      Authenticated;
   const factory AuthState.unauthenticated() = Unauthenticated;
 
-  T maybeWhen<T>({required T Function() orElse, T Function(AppUser user, {required bool isNewUser})? authenticated, T Function()? unauthenticated}) {
+  T maybeWhen<T>({
+    required T Function() orElse,
+    T Function(AppUser user, {required bool isNewUser})? authenticated,
+    T Function()? unauthenticated,
+  }) {
     if (this is Authenticated) {
       final auth = this as Authenticated;
-      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ?? orElse();
+      return authenticated?.call(auth.user, isNewUser: auth.isNewUser) ??
+          orElse();
     } else if (this is Unauthenticated) {
       return unauthenticated?.call() ?? orElse();
     } else {
@@ -192,10 +273,14 @@ class Unauthenticated extends AuthState {
 // Auth result
 sealed class AuthResult {
   const AuthResult();
-  const factory AuthResult.success(AppUser user, {required bool isNewUser}) = AuthSuccess;
+  const factory AuthResult.success(AppUser user, {required bool isNewUser}) =
+      AuthSuccess;
   const factory AuthResult.error(String message) = AuthError;
 
-  T when<T>({required T Function(AppUser user, {required bool isNewUser}) success, required T Function(String message) error}) {
+  T when<T>({
+    required T Function(AppUser user, {required bool isNewUser}) success,
+    required T Function(String message) error,
+  }) {
     if (this is AuthSuccess) {
       final s = this as AuthSuccess;
       return success(s.user, isNewUser: s.isNewUser);

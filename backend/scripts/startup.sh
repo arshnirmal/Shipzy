@@ -61,19 +61,19 @@ _db_ping() {
 # Function to check database readiness
 check_database_ready() {
     print_status "Checking database readiness..."
-    
+
     local retry=0
     while [ $retry -lt $MAX_RETRIES ]; do
         if _db_ping; then
             print_success "Database is ready!"
             return 0
         fi
-        
+
         retry=$((retry + 1))
         print_status "Database not ready (attempt $retry/$MAX_RETRIES), retrying in ${RETRY_INTERVAL}s..."
         sleep $RETRY_INTERVAL
     done
-    
+
     print_error "Database failed to become ready after $MAX_RETRIES attempts"
     print_warning "Check DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD and that Postgres accepts connections from this container."
     return 1
@@ -82,7 +82,7 @@ check_database_ready() {
 # Function to deploy database migrations
 deploy_migrations() {
     print_status "Deploying database migrations..."
-    
+
     if [ -f "/app/package.json" ]; then
         # Running in Docker container
         cd /app
@@ -90,16 +90,29 @@ deploy_migrations() {
         # Running locally
         cd "$(dirname "$0")/.."
     fi
-    
-    # Check if there are any migration files
-    if [ ! -d "src/database/migrations" ] || [ -z "$(ls -A src/database/migrations/*.sql 2>/dev/null)" ]; then
-        print_warning "No migration files found, generating from schema..."
-        if ! pnpm run db:generate; then
-            print_error "Failed to generate migrations"
-            return 1
+
+d    # Check if there are any migration files using find (more robust than shell glob checks)
+    has_migrations="false"
+    if [ -d "src/database/migrations" ] && [ -n "$(find src/database/migrations -maxdepth 1 -type f -name '*.sql' -print -quit 2>/dev/null)" ]; then
+        has_migrations="true"
+    fi
+
+    if [ "$has_migrations" != "true" ]; then
+        # In Docker dev we mount /app as read-only to prevent in-container code changes,
+        # so migration generation must be done on the host beforehand.
+        if [ -f "/.dockerenv" ] || [ -f "/app/package.json" ]; then
+            print_warning "No migration files found in src/database/migrations"
+            print_warning "Container is configured for read-only source. Generate and commit migrations on host if needed: pnpm run db:generate"
+            print_warning "Continuing startup; db:deploy will still run setup/functions/master-data"
+        else
+            print_warning "No migration files found, generating from schema..."
+            if ! pnpm run db:generate; then
+                print_error "Failed to generate migrations"
+                return 1
+            fi
         fi
     fi
-    
+
     # Deploy migrations
     if pnpm run db:deploy; then
         print_success "Database migrations deployed successfully!"
@@ -109,22 +122,10 @@ deploy_migrations() {
     fi
 }
 
-# Function to seed development data (optional)
-seed_development_data() {
-    if [ "$NODE_ENV" = "development" ] && [ "$SKIP_SEEDING" != "true" ]; then
-        print_status "Seeding via API (seed-api.ts)..."
-        if pnpm run db:seed; then
-            print_success "Development data seeded successfully!"
-        else
-            print_warning "Failed to seed development data (non-critical)"
-        fi
-    fi
-}
-
 # Function to start the application
 start_application() {
     print_status "Starting Shipzy backend application..."
-    
+
     if [ -f "/app/package.json" ]; then
         # Running in Docker container
         cd /app
@@ -141,23 +142,20 @@ main() {
     print_status "Starting Shipzy backend startup sequence..."
     print_status "Environment: $NODE_ENV"
     print_status "Database: $DB_HOST:$DB_PORT/$DB_NAME"
-    
+
     # Step 1: Check database readiness
     if ! check_database_ready; then
         print_error "Startup sequence failed: Database not ready"
         exit 1
     fi
-    
+
     # Step 2: Deploy migrations
     if ! deploy_migrations; then
         print_error "Startup sequence failed: Migration deployment"
         exit 1
     fi
-    
-    # Step 3: Seed development data (optional)
-    seed_development_data
-    
-    # Step 4: Start application
+
+    # Step 3: Start application
     print_success "Startup sequence completed successfully!"
     start_application
 }

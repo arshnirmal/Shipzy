@@ -19,5 +19,6 @@ class EarningsBreakdown with _$EarningsBreakdown {
     required double netEarning,
   }) = _EarningsBreakdown;
 
-  factory EarningsBreakdown.fromJson(Map<String, dynamic> json) => _$EarningsBreakdownFromJson(json);
+  factory EarningsBreakdown.fromJson(Map<String, dynamic> json) =>
+      _$EarningsBreakdownFromJson(json);
 }

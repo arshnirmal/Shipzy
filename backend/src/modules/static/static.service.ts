@@ -1,163 +1,182 @@
-// services/backend/src/modules/static/static.service.js
-import logger from "../../config/logger.js";
+// services/backend/src/modules/static/static.service.ts
 import staticRepository from "./static.repository.js";
+import type {
+  CreateOrderData,
+  DeliveryType,
+  PackageType,
+  StaticPaymentMethod,
+  SupportedVehicle,
+  VehicleCategory,
+  WeightTier,
+} from "./static.zod.js";
 
 class StaticService {
-  /**
-   * Get all delivery types with pricing info
-   */
-  async getDeliveryTypes() {
-    try {
-      const deliveryTypes = await staticRepository.getDeliveryTypes();
-
-      return deliveryTypes.map((dt) => ({
-        deliveryTypeId: dt.delivery_type_id,
-        name: dt.name,
-        displayName: dt.display_name,
-        description: dt.description,
-        pricing: {
-          baseRate: Number.parseFloat(dt.base_rate),
-          perKmRate: Number.parseFloat(dt.per_km_rate),
-        },
-        supportedVehicles: dt.supported_vehicles || [],
-        sortOrder: dt.sort_order,
-        isActive: dt.is_active,
-      }));
-    } catch (error) {
-      logger.error({
-        msg: "Error getting delivery types",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
+  private _toNumber(value: unknown): number {
+    const n =
+      typeof value === "number" ? value : Number.parseFloat(String(value));
+    return Number.isFinite(n) ? n : 0;
   }
 
-  /**
-   * Get weight tiers
-   */
-  async getWeightTiers() {
-    try {
-      const tiers = await staticRepository.getWeightTiers();
-
-      return tiers.map((tier) => ({
-        tierId: tier.tierId,
-        name: tier.name,
-        minWeightKg: Number.parseFloat(tier.minWeightKg),
-        maxWeightKg: Number.parseFloat(tier.maxWeightKg),
-        additionalCharge: Number.parseFloat(tier.additionalCharge),
-      }));
-    } catch (error) {
-      logger.error({
-        msg: "Error getting weight tiers",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
+  private _mapWeightTier(tier: {
+    tierId: number;
+    name: string;
+    minWeightKg: number | string;
+    maxWeightKg: number | string;
+    additionalCharge: number | string;
+  }): WeightTier {
+    return {
+      tierId: tier.tierId,
+      name: tier.name,
+      minWeightKg: this._toNumber(tier.minWeightKg),
+      maxWeightKg: this._toNumber(tier.maxWeightKg),
+      additionalCharge: this._toNumber(tier.additionalCharge),
+    };
   }
 
-  /**
-   * Get vehicle categories
-   */
-  async getVehicleCategories() {
-    try {
-      const categories = await staticRepository.getVehicleCategories();
-
-      return categories.map((cat) => ({
-        categoryId: cat.categoryId,
-        name: cat.name,
-        description: cat.description,
-        maxWeightKg: cat.maxWeightKg,
-        icon: cat.iconUrl,
-      }));
-    } catch (error) {
-      logger.error({
-        msg: "Error getting vehicle categories",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
+  private _mapSupportedVehicle(vehicle: {
+    categoryId: number;
+    name: string;
+    displayName?: string | null;
+    maxWeightKg: number | string;
+    iconUrl?: string | null;
+    weightTiers: Array<{
+      tierId: number;
+      name: string;
+      minWeightKg: number | string;
+      maxWeightKg: number | string;
+      additionalCharge: number | string;
+    }>;
+  }): SupportedVehicle {
+    return {
+      categoryId: vehicle.categoryId,
+      name: vehicle.name,
+      displayName: vehicle.displayName ?? undefined,
+      maxWeightKg: this._toNumber(vehicle.maxWeightKg),
+      iconUrl: vehicle.iconUrl ?? undefined,
+      weightTiers: vehicle.weightTiers.map((tier) => this._mapWeightTier(tier)),
+    };
   }
 
-  /**
-   * Get package types (for order creation screen)
-   */
-  async getPackageTypes() {
-    try {
-      const types = await staticRepository.getPackageTypes();
+  private _mapDeliveryType(deliveryType: {
+    deliveryTypeId: number;
+    name: string;
+    displayName?: string | null;
+    description?: string | null;
+    baseRate: number | string;
+    perKmRate: number | string;
+    sortOrder: number | string;
+    isActive: boolean;
+    supportedVehicles: Array<{
+      categoryId: number;
+      name: string;
+      displayName?: string | null;
+      maxWeightKg: number | string;
+      iconUrl?: string | null;
+      weightTiers: Array<{
+        tierId: number;
+        name: string;
+        minWeightKg: number | string;
+        maxWeightKg: number | string;
+        additionalCharge: number | string;
+      }>;
+    }>;
+  }): DeliveryType {
+    return {
+      deliveryTypeId: deliveryType.deliveryTypeId,
+      name: deliveryType.name,
+      displayName: deliveryType.displayName ?? undefined,
+      description: deliveryType.description ?? null,
+      pricing: {
+        baseRate: this._toNumber(deliveryType.baseRate),
+        perKmRate: this._toNumber(deliveryType.perKmRate),
+      },
+      supportedVehicles: deliveryType.supportedVehicles.map((vehicle) =>
+        this._mapSupportedVehicle(vehicle),
+      ),
+      sortOrder: Math.max(
+        0,
+        Math.floor(this._toNumber(deliveryType.sortOrder)),
+      ),
+      isActive: deliveryType.isActive,
+    };
+  }
 
-      return types.map((type) => ({
+  async getDeliveryTypes(): Promise<DeliveryType[]> {
+    const deliveryTypes = await staticRepository.getDeliveryTypes();
+
+    return deliveryTypes.map((deliveryType) =>
+      this._mapDeliveryType(deliveryType),
+    );
+  }
+
+  async getWeightTiers(): Promise<WeightTier[]> {
+    const tiers = await staticRepository.getWeightTiers();
+
+    return tiers.map((tier) => this._mapWeightTier(tier));
+  }
+
+  async getVehicleCategories(): Promise<VehicleCategory[]> {
+    const categories = await staticRepository.getVehicleCategories();
+
+    return categories.map((cat) => ({
+      categoryId: cat.categoryId,
+      name: cat.name,
+      displayName: cat.displayName ?? undefined,
+      description: cat.description ?? undefined,
+      maxWeightKg: this._toNumber(cat.maxWeightKg),
+      iconUrl: cat.iconUrl ?? undefined,
+      isActive: cat.isActive,
+    }));
+  }
+
+  async getPackageTypes(): Promise<PackageType[]> {
+    const types = await staticRepository.getPackageTypes();
+
+    return types.map((type) => ({
+      packageTypeId: type.packageTypeId,
+      name: type.name,
+      description: type.description ?? undefined,
+    }));
+  }
+
+  async getPaymentMethods(): Promise<StaticPaymentMethod[]> {
+    const methods = await staticRepository.getPaymentMethods();
+
+    return methods.map((method) => ({
+      methodId: method.methodId,
+      name: method.name,
+      displayName: method.name,
+      description: method.description ?? undefined,
+      isActive: method.isActive,
+    }));
+  }
+
+  async getCreateOrderData(): Promise<CreateOrderData> {
+    const data = await staticRepository.getCreateOrderData();
+
+    return {
+      deliveryTypes: data.deliveryTypes.map((deliveryType) =>
+        this._mapDeliveryType(deliveryType),
+      ),
+      packageTypes: data.packageTypes.map((type) => ({
         packageTypeId: type.packageTypeId,
         name: type.name,
-        description: type.description,
-        icon: null as string | null,
-      }));
-    } catch (error) {
-      logger.error({
-        msg: "Error getting package types",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get payment methods
-   */
-  async getPaymentMethods() {
-    try {
-      const methods = await staticRepository.getPaymentMethods();
-
-      return methods.map((method) => ({
+        description: type.description ?? undefined,
+      })),
+      paymentMethods: data.paymentMethods.map((method) => ({
         methodId: method.methodId,
         name: method.name,
         displayName: method.name,
-        description: method.description,
+        description: method.description ?? undefined,
         isActive: method.isActive,
-      }));
-    } catch (error) {
-      logger.error({
-        msg: "Error getting payment methods",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
+      })),
+    };
   }
 
-  /**
-   * Get all static data for create order screen
-   * Returns delivery types with nested vehicles and weight tiers, plus package types and payment methods
-   */
-  async getCreateOrderData() {
-    try {
-      return await staticRepository.getCreateOrderData();
-    } catch (error) {
-      logger.error({
-        msg: "Error getting create order data",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
-  }
+  async getOrderStatuses(): Promise<string[]> {
+    const statuses = await staticRepository.getOrderStatuses();
 
-  /**
-   * Get order tracking statuses
-   */
-  async getOrderStatuses() {
-    try {
-      const statuses = await staticRepository.getOrderStatuses();
-
-      return statuses.map((status) => ({
-        statusId: status.statusId,
-        name: status.name,
-        description: status.description,
-      }));
-    } catch (error) {
-      logger.error({
-        msg: "Error getting order statuses",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
+    return statuses.map((status) => status.name);
   }
 }
 

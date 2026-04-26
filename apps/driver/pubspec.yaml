@@ -32,6 +32,16 @@ dependencies:
   device_info_plus: ^11.2.0
   pretty_dio_logger: ^1.4.0
   shared_preferences: ^2.3.3
+  firebase_messaging: ^15.2.4
+  flutter_foreground_task: ^8.15.0
+  sqflite: ^2.4.1
+  path: ^1.9.1
+  url_launcher: ^6.3.2
+  flutter_local_notifications: ^17.2.0
+  battery_plus: ^6.0.1
+  connectivity_plus: ^6.0.3
+  cached_network_image: ^3.4.0
+  permission_handler: ^11.3.0
 
 dev_dependencies:
   flutter_test:
@@ -50,13 +60,13 @@ flutter:
     - assets/mapbox/
     - .env
   fonts:
-    - family: Inter
+    - family: PlusJakartaSans
       fonts:
-        - asset: assets/fonts/Inter/Inter-Regular.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Inter/Inter-Medium.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-Medium.ttf
           weight: 500
-        - asset: assets/fonts/Inter/Inter-SemiBold.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Inter/Inter-Bold.ttf
+        - asset: assets/fonts/Plus_Jakarta_Sans/PlusJakartaSans-Bold.ttf
           weight: 700

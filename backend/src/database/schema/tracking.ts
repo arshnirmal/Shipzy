@@ -40,9 +40,9 @@ export const trackingEvents = trackingSchema.table(
     location: geography("location"),
     // OPTIMIZED: Removed redundant latitude and longitude columns
     // Extract coordinates with: ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude
-    accuracyMeters: numeric("accuracy_meters", { precision: 6, scale: 2 }),
-    speedKmph: numeric("speed_kmph", { precision: 5, scale: 2 }),
-    bearingDegrees: numeric("bearing_degrees", { precision: 5, scale: 2 }),
+    accuracyMeters: numeric("accuracy_meters", { precision: 6, scale: 2, mode: "number" }),
+    speedKmph: numeric("speed_kmph", { precision: 5, scale: 2, mode: "number" }),
+    bearingDegrees: numeric("bearing_degrees", { precision: 5, scale: 2, mode: "number" }),
     eventDescription: text("event_description"),
     metadata: jsonb("metadata"),
     timestamp: timestamp("timestamp", { withTimezone: true })

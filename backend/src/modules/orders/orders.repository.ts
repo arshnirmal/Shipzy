@@ -3,15 +3,24 @@ import { eq } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
 import { drizzlePool } from "../../database/drizzle.js";
-import { rawTransaction } from "../../database/transaction.js";
 import ordersQueries from "../../database/queries/orders.queries.js";
 import { orderRequests } from "../../database/schema/orders.js";
-import { FareCalculationResultZ, OrderCreateResultZ } from "./orders.zod.js";
-import { toIsoDateTime } from "../../utils/datetime.util.js";
+import {
+  AcceptOrderResultZ,
+  CancelOrderResultZ,
+  FareCalculationResultZ,
+  OrderCreateResultZ,
+} from "./orders.zod.js";
+import { AppError, NotFoundError, ValidationError } from "../../utils/error.util.js";
+import type { FareCalculationResult, OrderCreateResult } from "./orders.zod.js";
 import type {
-  FareCalculationResult,
-  OrderCreateResult,
-} from "../../types/orders.js";
+  AcceptOrderResult,
+  CancelOrderResult,
+  OrderRow,
+  OrderListRow,
+  AvailableOrderRow,
+  CreateOrderPayload,
+} from "./orders.zod.js";
 
 // Whitelist of sortable columns to prevent SQL injection
 const SORT_COLUMN_WHITELIST: Record<string, string> = {
@@ -44,10 +53,10 @@ class OrdersRepository {
         ],
       );
 
-      const rawResult = result.rows[0]?.result as any;
+      const rawResult = result.rows[0]?.result as Record<string, unknown>;
       const mappedResult = {
         success: Boolean(rawResult?.success),
-        fareBreakdown: rawResult?.fare_breakdown ?? rawResult?.fareBreakdown,
+        pricing: rawResult?.pricing,
         error: rawResult?.error,
       };
 
@@ -64,18 +73,13 @@ class OrdersRepository {
   /**
    * Create order using stored function
    */
-  async createOrder(
-    orderData: Record<string, any>,
-  ): Promise<OrderCreateResult> {
+  async createOrder(orderData: CreateOrderPayload): Promise<OrderCreateResult> {
     try {
       const result = await drizzlePool.query(ordersQueries.CALL_CREATE_ORDER, [
         JSON.stringify(orderData),
       ]);
 
-      const rawResult = result.rows[0]?.result as any;
-      if (rawResult?.order?.createdAt != null) {
-        rawResult.order.createdAt = toIsoDateTime(rawResult.order.createdAt);
-      }
+      const rawResult = result.rows[0]?.result;
       return OrderCreateResultZ.parse(rawResult);
     } catch (error) {
       logger.error({
@@ -89,12 +93,12 @@ class OrdersRepository {
   /**
    * Find order by ID
    */
-  async findById(orderId: number) {
+  async findById(orderId: number): Promise<OrderRow | null> {
     try {
       const result = await drizzlePool.query(ordersQueries.FIND_ORDER_BY_ID, [
         orderId,
       ]);
-      return result.rows[0] || null;
+      return (result.rows[0] as OrderRow) || null;
     } catch (error) {
       logger.error({
         msg: "Error finding order by ID",
@@ -116,7 +120,11 @@ class OrdersRepository {
     dateTo?: string,
     sortBy?: string,
     sortOrder: "asc" | "desc" = "desc",
-  ) {
+    search?: string,
+    deliveryTypeId?: number,
+    minPrice?: number,
+    maxPrice?: number,
+  ): Promise<{ orders: OrderListRow[]; total: number }> {
     try {
       const sortCol = SORT_COLUMN_WHITELIST[sortBy ?? ""] ?? "o.created_at";
       const sortDir = sortOrder === "asc" ? "ASC" : "DESC";
@@ -131,21 +139,41 @@ class OrdersRepository {
         statusWhere = `AND o.status = 'cancelled'`;
       }
 
-      // Build date WHERE clauses with parameterized placeholders
-      const queryParams: any[] = [clientId];
-      const dateConditions: string[] = [];
+      // Build parameterized filter conditions
+      const queryParams: Array<number | string> = [clientId];
+      const filterConditions: string[] = [];
 
       if (dateFrom) {
         queryParams.push(dateFrom);
-        dateConditions.push(`o.created_at >= $${queryParams.length}`);
+        filterConditions.push(`o.created_at >= $${queryParams.length}`);
       }
       if (dateTo) {
         queryParams.push(dateTo);
-        dateConditions.push(`o.created_at <= $${queryParams.length}`);
+        filterConditions.push(`o.created_at <= $${queryParams.length}`);
+      }
+      if (search) {
+        const pattern = `%${search}%`;
+        queryParams.push(pattern);
+        const idx = queryParams.length;
+        filterConditions.push(
+          `(o.order_number ILIKE $${idx} OR o.delivery_location->>'contactName' ILIKE $${idx} OR o.delivery_location->>'fullAddress' ILIKE $${idx})`,
+        );
+      }
+      if (deliveryTypeId != null) {
+        queryParams.push(deliveryTypeId);
+        filterConditions.push(`o.delivery_type_id = $${queryParams.length}`);
+      }
+      if (minPrice != null) {
+        queryParams.push(minPrice);
+        filterConditions.push(`o.total_price >= $${queryParams.length}`);
+      }
+      if (maxPrice != null) {
+        queryParams.push(maxPrice);
+        filterConditions.push(`o.total_price <= $${queryParams.length}`);
       }
 
-      const dateWhere = dateConditions.length
-        ? `AND ${dateConditions.join(" AND ")}`
+      const filterWhere = filterConditions.length
+        ? `AND ${filterConditions.join(" AND ")}`
         : "";
       const countParams = [...queryParams];
 
@@ -154,63 +182,46 @@ class OrdersRepository {
       queryParams.push(limit, offset);
 
       const selectFields = `
-        o.order_id AS "orderId",
-        o.order_uuid AS "orderUuid",
-        o.order_number AS "orderNumber",
-        CASE o.status
-          WHEN 'pending' THEN 1
-          WHEN 'accepted' THEN 2
-          WHEN 'picked_up' THEN 3
-          WHEN 'in_transit' THEN 4
-          WHEN 'delivered' THEN 5
-          WHEN 'cancelled' THEN 6
-          WHEN 'undeliverable' THEN 7
-          WHEN 'returned' THEN 8
-        END AS "statusId",
-        o.status AS "statusName",
-        o.delivery_type_id AS "deliveryTypeId",
-        dt.name AS "deliveryType",
-        dt.display_name AS "deliveryTypeDisplay",
-        o.vehicle_category_id AS "vehicleCategoryId",
-        vc.name AS "vehicleCategory",
-        vc.display_name AS "vehicleCategoryDisplay",
-        o.package_description AS "packageDescription",
+        o.order_id             AS "orderId",
+        o.order_uuid           AS "orderUuid",
+        o.order_number         AS "orderNumber",
+        o.status               AS "status",
+        o.delivery_type_id     AS "deliveryTypeId",
+        o.vehicle_category_id  AS "vehicleCategoryId",
+        o.weight_tier_id       AS "weightTierId",
+        o.package_type_id      AS "packageTypeId",
+        o.payment_method_id    AS "paymentMethodId",
         o.estimated_distance_km AS "estimatedDistanceKm",
-        o.actual_distance_km AS "actualDistanceKm",
-        o.total_price AS "totalPrice",
-        o.created_at AS "createdAt",
-        o.actual_pickup_time AS "actualPickupTime",
-        o.actual_delivery_time AS "actualDeliveryTime",
-        o.accepted_at AS "acceptedAt",
-        o.picked_up_at AS "pickedUpAt",
-        o.delivered_at AS "deliveredAt",
-        o.pickup_location->>'fullAddress' AS "pickupAddress",
-        o.pickup_location->>'city' AS "pickupCity",
-        o.delivery_location->>'fullAddress' AS "deliveryAddress",
-        o.delivery_location->>'city' AS "deliveryCity",
-        ca.courier_id AS "courierId",
-        cu.full_name AS "courierName",
-        cu.profile_picture_url AS "courierPhoto",
-        wt.tier_id AS "weightTierId",
-        wt.name AS "weightTierName",
-        wt.min_weight_kg AS "weightTierMin",
-        wt.max_weight_kg AS "weightTierMax"
+        o.actual_distance_km   AS "actualDistanceKm",
+        o.total_price          AS "totalPrice",
+        o.created_at           AS "createdAt",
+        o.accepted_at          AS "acceptedAt",
+        o.picked_up_at         AS "pickedUpAt",
+        o.in_transit_at        AS "inTransitAt",
+        o.delivered_at         AS "deliveredAt",
+        o.cancelled_at         AS "cancelledAt",
+        o.pickup_location      AS "pickup",
+        o.delivery_location    AS "delivery",
+        o.package              AS "package",
+        o.pricing              AS "pricing",
+        o.snapshot             AS "snapshot",
+        ca.courier_id          AS "courierId",
+        cu.full_name           AS "courierName",
+        cu.phone_number        AS "courierPhone",
+        cu.profile_picture_url AS "courierPhoto"
       `;
 
       const fromJoins = `
         FROM orders.requests o
-        JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-        JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
         LEFT JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
         LEFT JOIN users.profiles cu ON ca.courier_id = cu.user_id
-        LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
       `;
 
       const whereClause = `
         WHERE o.client_id = $1
           AND o.deleted_at IS NULL
           ${statusWhere}
-          ${dateWhere}
+          ${filterWhere}
       `;
 
       const ordersQuery = `
@@ -233,7 +244,7 @@ class OrdersRepository {
       ]);
 
       return {
-        orders: ordersResult.rows,
+        orders: ordersResult.rows as OrderListRow[],
         total: Number.parseInt(countResult.rows[0].total, 10),
       };
     } catch (error) {
@@ -253,14 +264,14 @@ class OrdersRepository {
     longitude: number,
     radiusKm: number,
     limit: number,
-  ) {
+  ): Promise<AvailableOrderRow[]> {
     try {
       const result = await drizzlePool.query(
         ordersQueries.FIND_AVAILABLE_ORDERS_FOR_COURIER,
         [longitude, latitude, radiusKm, limit],
       );
 
-      return result.rows;
+      return result.rows as AvailableOrderRow[];
     } catch (error) {
       logger.error({
         msg: "Error finding available orders",
@@ -277,14 +288,24 @@ class OrdersRepository {
     orderId: number,
     cancellationReason: string,
     cancelledByUserId: number,
-  ) {
+  ): Promise<CancelOrderResult> {
     try {
       const result = await drizzlePool.query(
         ordersQueries.CALL_CANCEL_ORDER_WITH_REFUND,
         [orderId, cancellationReason, cancelledByUserId],
       );
 
-      return result.rows[0]?.result ?? null;
+      const raw = result.rows[0]?.result as Record<string, unknown> | undefined;
+      if (!raw?.success) {
+        throw new ValidationError(
+          String(raw?.error ?? "Unable to cancel order"),
+        );
+      }
+
+      return CancelOrderResultZ.parse({
+        order: raw.order,
+        refund: raw.refund,
+      });
     } catch (error) {
       logger.error({
         msg: "Error cancelling order",
@@ -297,43 +318,65 @@ class OrdersRepository {
   /**
    * Accept order (driver accepts) - using proper transaction
    */
-  async acceptOrder(orderId: number, courierId: number) {
-    return await rawTransaction(async (client) => {
-      try {
-        // Create assignment
-        const assignmentResult = await client.query(
-          ordersQueries.CREATE_COURIER_ASSIGNMENT,
-          [orderId, courierId],
+  async acceptOrder(
+    orderId: number,
+    courierId: number,
+  ): Promise<AcceptOrderResult> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.CALL_ASSIGN_ORDER_TO_COURIER,
+        [orderId, courierId],
+      );
+
+      const parsed = result.rows[0]?.result as Record<string, unknown>;
+      if (!parsed?.success) {
+        throw new ValidationError(
+          String(parsed?.error ?? "Unable to accept order"),
         );
-
-        // Update assignment to accepted
-        await client.query(ordersQueries.ACCEPT_ASSIGNMENT, [
-          orderId,
-          courierId,
-        ]);
-
-        // Update order status to assigned
-        await client.query(ordersQueries.UPDATE_ORDER_STATUS_TO_ASSIGNED, [
-          orderId,
-        ]);
-
-        // Update courier status
-        await client.query(ordersQueries.UPDATE_COURIER_CURRENT_ASSIGNMENT, [
-          courierId,
-          assignmentResult.rows[0].assignment_id,
-        ]);
-
-        return assignmentResult.rows[0];
-      } catch (error) {
-        logger.error({
-          msg: "Error in acceptOrder transaction",
-          error: (error as Error).message,
-          orderId,
-          courierId,
-        });
-        throw error;
       }
-    });
+
+      return AcceptOrderResultZ.parse({
+        assignment: parsed.assignment,
+        order: parsed.order,
+      });
+    } catch (error) {
+      logger.error({
+        msg: "Error accepting order",
+        error: (error as Error).message,
+        orderId,
+        courierId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Record a status transition in orders.status_history
+   */
+  async recordStatusHistory(
+    orderId: number,
+    status: string,
+    previousStatus: string | null,
+    changedBy: number | null,
+    notes?: string,
+  ): Promise<void> {
+    try {
+      await drizzlePool.query(ordersQueries.INSERT_STATUS_HISTORY, [
+        orderId,
+        status,
+        previousStatus,
+        changedBy,
+        notes ?? null,
+      ]);
+    } catch (error) {
+      logger.error({
+        msg: "Error recording status history",
+        error: (error as Error).message,
+        orderId,
+        status,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -341,17 +384,25 @@ class OrdersRepository {
    */
   async updateOrderStatus(orderId: number, status: string) {
     try {
-      const validStatuses = new Set(["picked_up", "in_transit", "delivered"]);
-      if (!validStatuses.has(status)) {
-        throw new Error(`Invalid status: ${status}`);
+      const validStatuses = new Set([
+        "picked_up",
+        "in_transit",
+        "delivered",
+      ] as const);
+      if (
+        !validStatuses.has(status as "picked_up" | "in_transit" | "delivered")
+      ) {
+        throw new ValidationError(`Invalid status: ${status}`);
       }
-      const updateData: any = {
+      const updateData: Partial<typeof orderRequests.$inferInsert> = {
         status: status as "picked_up" | "in_transit" | "delivered",
         updatedAt: new Date(),
       };
 
       if (status === "picked_up") {
         updateData.pickedUpAt = new Date();
+      } else if (status === "in_transit") {
+        updateData.inTransitAt = new Date();
       } else if (status === "delivered") {
         updateData.deliveredAt = new Date();
       }
@@ -363,7 +414,7 @@ class OrdersRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new Error(`Order not found or update failed: ${orderId}`);
+        throw new NotFoundError(`Order not found or update failed: ${orderId}`);
       }
 
       return result[0];
@@ -377,6 +428,381 @@ class OrdersRepository {
       throw error;
     }
   }
+
+  async getVolumeDiscount(clientId: number): Promise<{discountPct?: number}> {
+    try {
+      const userRes = await drizzlePool.query(`SELECT role FROM users.profiles WHERE user_id = $1 LIMIT 1`, [clientId]);
+      if (userRes.rows[0]?.role !== "business") return {};
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const countRes = await drizzlePool.query(`
+        SELECT COUNT(*) as cnt FROM orders.requests 
+        WHERE client_id = $1 
+        AND created_at >= $2 
+        AND deleted_at IS NULL
+        AND status IN ('pending', 'scheduled', 'accepted', 'picked_up', 'in_transit', 'delivered')
+      `, [clientId, thirtyDaysAgo]);
+      
+      const count = parseInt(countRes.rows[0].cnt, 10);
+      
+      const tierRes = await drizzlePool.query(`
+        SELECT discount_pct FROM public.business_discount_tiers
+        WHERE min_orders <= $1 
+        AND (max_orders >= $1 OR max_orders IS NULL)
+        AND is_active = true
+        LIMIT 1
+      `, [count]);
+      
+      if (tierRes.rows.length === 0) return {};
+      return { discountPct: parseFloat(tierRes.rows[0].discount_pct) };
+    } catch (err) {
+      logger.error({ msg: "Error fetching volume discount", error: (err as Error).message });
+      return {};
+    }
+  }
+
+  async releaseScheduledOrders(): Promise<number[]> {
+    const result = await drizzlePool.query(`
+      UPDATE orders.requests
+      SET status = 'pending', updated_at = NOW()
+      WHERE status = 'scheduled'
+      AND (schedule->>'pickupAt')::timestamptz <= NOW() + interval '30 minutes'
+      AND deleted_at IS NULL
+      RETURNING order_id;
+    `);
+    return result.rows.map(r => r.order_id);
+  }
+
+  /**
+   * Atomically deliver order and release courier via stored function
+   */
+  async deliverOrder(
+    orderId: number,
+    courierId: number,
+  ): Promise<{ orderId: number; status: string; deliveredAt: string }> {
+    try {
+      const result = await drizzlePool.query(ordersQueries.CALL_DELIVER_ORDER, [
+        orderId,
+        courierId,
+      ]);
+      const json = result.rows[0]?.result as {
+        success: boolean;
+        error?: string;
+        order?: { orderId: number; status: string; deliveredAt: string };
+      };
+      if (!json?.success) {
+        throw new AppError(json?.error ?? "Delivery failed", 500);
+      }
+      return json.order!;
+    } catch (error) {
+      logger.error({
+        msg: "Error delivering order",
+        error: (error as Error).message,
+        orderId,
+        courierId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk cancel orders for a client/business user
+   */
+  async bulkCancelOrders(
+    orderIds: number[],
+    userId: number,
+    reason: string,
+  ): Promise<{
+    requested: number;
+    cancelled: number;
+    failed: number;
+    results: { orderId: number; success: boolean; error?: string }[];
+  }> {
+    const results: { orderId: number; success: boolean; error?: string }[] = [];
+
+    await Promise.all(
+      orderIds.map(async (orderId) => {
+        try {
+          const result = await drizzlePool.query(
+            ordersQueries.CALL_CANCEL_ORDER_WITH_REFUND,
+            [orderId, reason, userId],
+          );
+          const raw = result.rows[0]?.result as
+            | Record<string, unknown>
+            | undefined;
+          if (!raw?.success) {
+            results.push({
+              orderId,
+              success: false,
+              error: String(raw?.error ?? "Cannot cancel order"),
+            });
+          } else {
+            results.push({ orderId, success: true });
+          }
+        } catch (err) {
+          results.push({
+            orderId,
+            success: false,
+            error: (err as Error).message,
+          });
+        }
+      }),
+    );
+
+    const cancelled = results.filter((r) => r.success).length;
+    return {
+      requested: orderIds.length,
+      cancelled,
+      failed: orderIds.length - cancelled,
+      results,
+    };
+  }
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * Patch delivery_attempt JSONB on orders.requests (merge semantics)
+   */
+  async updateDeliveryAttempt(
+    orderId: number,
+    patch: Record<string, unknown>,
+  ): Promise<unknown> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.UPDATE_DELIVERY_ATTEMPT,
+        [orderId, JSON.stringify(patch)],
+      );
+      return result.rows[0]?.deliveryAttempt ?? null;
+    } catch (error) {
+      logger.error({
+        msg: "Error updating delivery attempt",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Read delivery_attempt JSONB for an order
+   */
+  async getDeliveryAttempt(
+    orderId: number,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.GET_DELIVERY_ATTEMPT,
+        [orderId],
+      );
+      return (result.rows[0]?.deliveryAttempt as Record<string, unknown>) ?? null;
+    } catch (error) {
+      logger.error({
+        msg: "Error getting delivery attempt",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update order status to undeliverable
+   */
+  async markUndeliverable(orderId: number) {
+    try {
+      const result = await drizzleDb
+        .update(orderRequests)
+        .set({
+          status: "undeliverable",
+          updatedAt: new Date(),
+        })
+        .where(eq(orderRequests.orderId, orderId))
+        .returning();
+
+      if (!result || result.length === 0) {
+        throw new NotFoundError(`Order not found: ${orderId}`);
+      }
+      return result[0];
+    } catch (error) {
+      logger.error({
+        msg: "Error marking order undeliverable",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark order as returning and assignment as returning (RTO start)
+   */
+  async markReturning(orderId: number, courierId: number) {
+    try {
+      // Update order status
+      await drizzleDb
+        .update(orderRequests)
+        .set({
+          status: "returning",
+          updatedAt: new Date(),
+        })
+        .where(eq(orderRequests.orderId, orderId));
+
+      // Update assignment status
+      await drizzlePool.query(
+        `UPDATE orders.courier_assignments
+         SET status = 'returning', updated_at = NOW()
+         WHERE order_id = $1 AND courier_id = $2
+           AND status NOT IN ('cancelled', 'rejected', 'delivered', 'returned')`,
+        [orderId, courierId],
+      );
+
+      return { orderId, status: "returning" as const };
+    } catch (error) {
+      logger.error({
+        msg: "Error marking order returning",
+        error: (error as Error).message,
+        orderId,
+        courierId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Atomically return order and release courier via stored function
+   */
+  async returnOrder(
+    orderId: number,
+    courierId: number,
+  ): Promise<{ orderId: number; status: string; returnedAt: string }> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.CALL_RETURN_ORDER,
+        [orderId, courierId],
+      );
+      const json = result.rows[0]?.result as {
+        success: boolean;
+        error?: string;
+        order?: { orderId: number; status: string; returnedAt: string };
+      };
+      if (!json?.success) {
+        throw new AppError(json?.error ?? "Return failed", 500);
+      }
+      return json.order!;
+    } catch (error) {
+      logger.error({
+        msg: "Error returning order",
+        error: (error as Error).message,
+        orderId,
+        courierId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Insert proof of delivery record
+   */
+  async insertProofOfDelivery(data: {
+    orderId: number;
+    assignmentId: number;
+    recipientName?: string;
+    photoUrl?: string;
+    recipientSignatureUrl?: string;
+    deliveryNotes?: string;
+  }): Promise<{ proofId: number; orderId: number; deliveredAt: Date }> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.INSERT_PROOF_OF_DELIVERY,
+        [
+          data.orderId,
+          data.recipientName ?? null,
+          data.photoUrl ?? null,
+          data.recipientSignatureUrl ?? null,
+          data.deliveryNotes ?? null,
+        ],
+      );
+      const row = result.rows[0] as {
+        orderId: number;
+        deliveredAt: Date;
+      };
+      return {
+        proofId: row.orderId,
+        orderId: row.orderId,
+        deliveredAt: row.deliveredAt,
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error inserting proof of delivery",
+        error: (error as Error).message,
+        orderId: data.orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get order tracking data (live location + milestones + delivery attempt)
+   */
+  async getOrderTracking(orderId: number) {
+    try {
+      const [trackingResult, milestonesResult] = await Promise.all([
+        drizzlePool.query(ordersQueries.GET_ORDER_TRACKING, [orderId]),
+        drizzlePool.query(ordersQueries.GET_ORDER_MILESTONES, [orderId]),
+      ]);
+
+      return {
+        tracking: trackingResult.rows[0] ?? null,
+        milestones: milestonesResult.rows,
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error getting order tracking",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Insert a milestone tracking event
+   */
+  async insertMilestoneEvent(data: {
+    assignmentId: number;
+    orderId: number;
+    courierId: number;
+    eventType: string;
+    eventDescription: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  }): Promise<{ eventId: number; timestamp: Date }> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.INSERT_MILESTONE_EVENT,
+        [
+          data.assignmentId,
+          data.orderId,
+          data.courierId,
+          data.eventType,
+          data.eventDescription,
+          data.latitude ?? null,
+          data.longitude ?? null,
+        ],
+      );
+      return result.rows[0] as { eventId: number; timestamp: Date };
+    } catch (error) {
+      logger.error({
+        msg: "Error inserting milestone event",
+        error: (error as Error).message,
+        orderId: data.orderId,
+      });
+      throw error;
+    }
+  }
 }
 
 export default new OrdersRepository();
+

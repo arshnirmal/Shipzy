@@ -18,12 +18,14 @@ export default {
       FROM public.delivery_types dt
       WHERE dt.is_active = TRUE
     ),
-      active_dtc_dedup AS (
-        SELECT DISTINCT ON (dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id)
-          dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id
-        FROM public.delivery_type_capabilities dtc
-        WHERE dtc.is_active = TRUE
-        ORDER BY dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id
+      active_caps AS (
+        SELECT
+          dt.delivery_type_id,
+          (elem->>'vehicleCategoryId')::int AS vehicle_category_id,
+          (elem->>'weightTierId')::int AS weight_tier_id
+        FROM public.delivery_types dt
+        CROSS JOIN LATERAL jsonb_array_elements(COALESCE(dt.capabilities, '[]'::jsonb)) AS elem
+        WHERE dt.is_active = TRUE
       ),
       vehicle_weight_tiers AS (
         SELECT
@@ -43,7 +45,7 @@ export default {
             )
             ORDER BY wt.min_weight_kg
           ) AS weight_tiers
-        FROM active_dtc_dedup a
+        FROM active_caps a
         JOIN public.vehicle_categories vc
           ON vc.category_id = a.vehicle_category_id
          AND vc.is_active = TRUE
@@ -119,10 +121,7 @@ export default {
    * Get all order statuses
    */
   GET_ORDER_STATUSES: `
-    SELECT
-        ROW_NUMBER() OVER () AS "statusId",
-        status::text AS "name",
-        NULL::text AS "description"
+    SELECT status::text AS "name"
     FROM unnest(enum_range(NULL::order_status)) AS status
   `,
 
@@ -130,10 +129,7 @@ export default {
    * Get all assignment statuses
    */
   GET_ASSIGNMENT_STATUSES: `
-    SELECT
-        ROW_NUMBER() OVER () AS "statusId",
-        status::text AS "name",
-        NULL::text AS "description"
+    SELECT status::text AS "name"
     FROM unnest(enum_range(NULL::assignment_status)) AS status
   `,
 
@@ -213,12 +209,14 @@ export default {
         FROM public.delivery_types dt
         WHERE dt.is_active = TRUE
       ),
-      active_dtc_dedup AS (
-        SELECT DISTINCT ON (dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id)
-          dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id
-        FROM public.delivery_type_capabilities dtc
-        WHERE dtc.is_active = TRUE
-        ORDER BY dtc.delivery_type_id, dtc.vehicle_category_id, dtc.weight_tier_id
+      active_caps AS (
+        SELECT
+          dt.delivery_type_id,
+          (elem->>'vehicleCategoryId')::int AS vehicle_category_id,
+          (elem->>'weightTierId')::int AS weight_tier_id
+        FROM public.delivery_types dt
+        CROSS JOIN LATERAL jsonb_array_elements(COALESCE(dt.capabilities, '[]'::jsonb)) AS elem
+        WHERE dt.is_active = TRUE
       ),
       vehicle_weight_tiers AS (
         SELECT
@@ -238,7 +236,7 @@ export default {
             )
             ORDER BY wt.min_weight_kg
           ) AS weight_tiers
-        FROM active_dtc_dedup a
+        FROM active_caps a
         JOIN public.vehicle_categories vc
           ON vc.category_id = a.vehicle_category_id
          AND vc.is_active = TRUE

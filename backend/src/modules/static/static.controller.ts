@@ -1,6 +1,7 @@
 // services/backend/src/modules/static/static.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import staticService from "./static.service.js";
 
@@ -12,25 +13,28 @@ class StaticController {
   async getDeliveryTypes(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const deliveryTypes = await staticService.getDeliveryTypes();
 
       return successResponse(
         reply,
-        deliveryTypes,
+        {
+          deliveryTypes,
+          total: deliveryTypes.length,
+        },
         "Delivery types retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get delivery types controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -41,25 +45,28 @@ class StaticController {
   async getWeightTiers(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const weightTiers = await staticService.getWeightTiers();
 
       return successResponse(
         reply,
-        weightTiers,
+        {
+          weightTiers,
+          total: weightTiers.length,
+        },
         "Weight tiers retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get weight tiers controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -70,25 +77,28 @@ class StaticController {
   async getVehicleCategories(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const categories = await staticService.getVehicleCategories();
 
       return successResponse(
         reply,
-        categories,
+        {
+          vehicleCategories: categories,
+          total: categories.length,
+        },
         "Vehicle categories retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get vehicle categories controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -99,25 +109,28 @@ class StaticController {
   async getPackageTypes(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const packageTypes = await staticService.getPackageTypes();
 
       return successResponse(
         reply,
-        packageTypes,
+        {
+          packageTypes,
+          total: packageTypes.length,
+        },
         "Package types retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get package types controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -128,25 +141,28 @@ class StaticController {
   async getPaymentMethods(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const paymentMethods = await staticService.getPaymentMethods();
 
       return successResponse(
         reply,
-        paymentMethods,
+        {
+          paymentMethods,
+          total: paymentMethods.length,
+        },
         "Payment methods retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get payment methods controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -157,25 +173,25 @@ class StaticController {
   async getCreateOrderData(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const data = await staticService.getCreateOrderData();
 
       return successResponse(
         reply,
-        data,
+        { createOrder: data },
         "Create order data retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get create order data controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -186,25 +202,28 @@ class StaticController {
   async getOrderStatuses(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const statuses = await staticService.getOrderStatuses();
 
       return successResponse(
         reply,
-        statuses,
+        {
+          orderStatuses: statuses,
+          total: statuses.length,
+        },
         "Order statuses retrieved successfully",
       );
     } catch (error) {
       logger.error({
         msg: "Get order statuses controller error",
+        requestId: request.id,
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

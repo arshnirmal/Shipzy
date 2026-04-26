@@ -1,116 +1,156 @@
-// services/backend/src/modules/orders/orders.service.ts
-import logger from "../../config/logger.js";
 import {
   AppError,
   AuthorizationError,
   NotFoundError,
+  RetryAfterError,
   ValidationError,
 } from "../../utils/error.util.js";
-import {
-  toIsoDateTime,
-  toIsoDateTimeOrUndefined,
-} from "../../utils/datetime.util.js";
+import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ordersRepository from "./orders.repository.js";
+import fcmService from "../../services/fcm.service.js";
+import { drizzlePool } from "../../database/drizzle.js";
+import driversQueries from "../../database/queries/drivers.queries.js";
 
 import type {
+  AcceptOrderResult,
+  AssignmentStatus,
+  ArriveRequest,
+  ArriveResponse,
+  AvailableOrderItem,
+  AvailableOrderRow,
+  BaseOrder,
   CalculateFareRequest,
-  CreateOrderRequest,
+  CalculateFareResponse,
   CancelOrderResult,
+  CreateOrderRequest,
+  CreateOrderResponse,
   OrderDetails,
   OrderListItem,
+  OrderListRow,
+  OrderRow,
+  ProofOfDeliveryRequest,
+  ProofOfDeliveryResponse,
+  ReturnedResponse,
+  ReturnResponse,
+  TrackingResponse,
+  UndeliverableRequest,
+  UndeliverableResponse,
+  UpdateOrderStatusResponse,
 } from "./orders.zod.js";
-import type { FareBreakdown, OrderAddress } from "../../schemas/common.zod.js";
-import type { CreatedOrder } from "../../types/orders.js";
-
-// DB row shape for order queries (only fields used by _formatOrderDetails)
-type OrderRow = {
-  orderId: number;
-  orderUuid: string;
-  orderNumber: string;
-  statusId?: number;
-  statusName?: string;
-  deliveryTypeId?: number;
-  deliveryType?: string;
-  deliveryTypeDisplay?: string;
-  vehicleCategoryId?: number;
-  vehicleCategoryDisplay?: string;
-  packageDescription?: string | null;
-  packageTypeId?: number | null;
-  weightTierId?: number | null;
-  weightTierName?: string | null;
-  weightTierMin?: number | string | null;
-  weightTierMax?: number | string | null;
-  estimatedDistanceKm?: number | string | null;
-  actualDistanceKm?: number | string | null;
-  actualPickupTime?: string | Date | null;
-  actualDeliveryTime?: string | Date | null;
-  paymentMethodId?: number;
-  paymentMethod?: string;
-  createdAt?: Date;
-  acceptedAt?: Date | null;
-  pickedUpAt?: Date | null;
-  deliveredAt?: Date | null;
-  cancelledAt?: Date | null;
-  cancellationReason?: string | null;
-  pickupLocationId?: number;
-  pickupBuilding?: string | null;
-  pickupFloor?: string | null;
-  pickupFlat?: string | null;
-  pickupAddress?: string | null;
-  pickupLandmark?: string | null;
-  pickupCity?: string | null;
-  pickupState?: string | null;
-  pickupPostalCode?: string | null;
-  pickupLatitude?: number | string | null;
-  pickupLongitude?: number | string | null;
-  pickupContactName?: string | null;
-  pickupContactPhone?: string | null;
-  deliveryLocationId?: number;
-  deliveryBuilding?: string | null;
-  deliveryFloor?: string | null;
-  deliveryFlat?: string | null;
-  deliveryAddress?: string | null;
-  deliveryLandmark?: string | null;
-  deliveryCity?: string | null;
-  deliveryState?: string | null;
-  deliveryPostalCode?: string | null;
-  deliveryLatitude?: number | string | null;
-  deliveryLongitude?: number | string | null;
-  deliveryContactName?: string | null;
-  deliveryContactPhone?: string | null;
-  basePrice?: number | string | null;
-  distancePrice?: number | string | null;
-  weightSurcharge?: number | string | null;
-  platformFee?: number | string | null;
-  specialHandlingFee?: number | string | null;
-  gstAmount?: number | string | null;
-  subtotalBeforeTax?: number | string | null;
-  totalPrice?: number | string | null;
-  clientId?: number | null;
-  clientName?: string | null;
-  clientPhone?: string | null;
-  specialInstructions?: string | null;
-  courierId?: number | null;
-  courierName?: string | null;
-  courierPhone?: string | null;
-  courierPhoto?: string | null;
-  assignmentStatus?: string | null;
-  assignedAt?: string | Date | null;
-  courierAcceptedAt?: string | Date | null;
-};
+import logger from "../../config/logger.js";
 
 class OrdersService {
-  /**
-   * Calculate fare estimate using real-time distance from Mapbox
-   */
-  async calculateFare(fareData: CalculateFareRequest): Promise<FareBreakdown> {
+  private toNumber(value: unknown, fallback = 0): number {
+    if (value == null) return fallback;
+    const n =
+      typeof value === "number" ? value : Number.parseFloat(String(value));
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  private toBaseOrderFromRow(
+    row: OrderRow | OrderListRow | AvailableOrderRow,
+  ): BaseOrder {
+    const pricing = row.pricing;
+    const totalPrice = this.toNumber(row.totalPrice, 0);
+
+    return {
+      identifiers: {
+        orderId: row.orderId,
+        orderUuid: row.orderUuid,
+        orderNumber: row.orderNumber ?? null,
+      },
+      status: row.status,
+      fulfillment: {
+        deliveryTypeId: row.deliveryTypeId,
+        vehicleCategoryId: row.vehicleCategoryId,
+        weightTierId: row.weightTierId ?? null,
+        packageTypeId: row.packageTypeId ?? null,
+        paymentMethodId: row.paymentMethodId,
+      },
+      locations: {
+        pickup: row.pickup,
+        delivery: row.delivery,
+      },
+      package: row.package ?? { notifyRecipientSms: false },
+      schedule: "schedule" in row ? (row.schedule ?? {}) : {},
+      pricing: {
+        basePrice: this.toNumber(pricing?.basePrice),
+        distanceKm: this.toNumber(
+          pricing?.distanceKm,
+          this.toNumber(row.estimatedDistanceKm, 0),
+        ),
+        distancePrice: this.toNumber(pricing?.distancePrice),
+        weightSurcharge: this.toNumber(pricing?.weightSurcharge),
+        platformFee: this.toNumber(pricing?.platformFee),
+        specialHandlingFee: this.toNumber(pricing?.specialHandlingFee),
+        subtotalBeforeTax: this.toNumber(pricing?.subtotalBeforeTax),
+        gstAmount: this.toNumber(pricing?.gstAmount),
+        totalPrice,
+        currency: pricing?.currency ?? "INR",
+      },
+      couponCode: "couponCode" in row ? (row.couponCode ?? null) : null,
+      items:
+        "orderItems" in row && Array.isArray(row.orderItems)
+          ? (row.orderItems as BaseOrder["items"])
+          : [],
+      metrics: {
+        estimatedDistanceKm:
+          row.estimatedDistanceKm != null
+            ? this.toNumber(row.estimatedDistanceKm)
+            : null,
+        actualDistanceKm:
+          "actualDistanceKm" in row && row.actualDistanceKm != null
+            ? this.toNumber(row.actualDistanceKm)
+            : null,
+        actualDurationMins:
+          "actual" in row && row.actual?.pickupAt && row.actual?.deliveryAt
+            ? Math.round(
+                (new Date(row.actual.deliveryAt).getTime() -
+                  new Date(row.actual.pickupAt).getTime()) /
+                  60000,
+              )
+            : null,
+        totalPrice,
+      },
+      timeline: {
+        createdAt: toIsoDateTime(row.createdAt),
+        acceptedAt:
+          "acceptedAt" in row && row.acceptedAt
+            ? toIsoDateTime(row.acceptedAt)
+            : null,
+        pickedUpAt:
+          "pickedUpAt" in row && row.pickedUpAt
+            ? toIsoDateTime(row.pickedUpAt)
+            : null,
+        inTransitAt:
+          "inTransitAt" in row && row.inTransitAt
+            ? toIsoDateTime(row.inTransitAt)
+            : null,
+        deliveredAt:
+          "deliveredAt" in row && row.deliveredAt
+            ? toIsoDateTime(row.deliveredAt)
+            : null,
+        cancelledAt:
+          "cancelledAt" in row && row.cancelledAt
+            ? toIsoDateTime(row.cancelledAt)
+            : null,
+      },
+      snapshot: row.snapshot ?? undefined,
+      actual: "actual" in row ? (row.actual ?? undefined) : undefined,
+    };
+  }
+
+  async calculateFare(
+    fareData: CalculateFareRequest,
+  ): Promise<CalculateFareResponse> {
     const {
-      deliveryTypeId,
-      vehicleCategoryId,
-      weightTierId,
-      packageTypeId,
-      pickup,
-      drop,
+      fulfillment: {
+        deliveryTypeId,
+        vehicleCategoryId,
+        weightTierId,
+        packageTypeId,
+      },
+      locations: { pickup, delivery },
     } = fareData;
 
     const addressesService =
@@ -119,8 +159,8 @@ class OrdersService {
     const estimatedDistanceKm = addressesService.calculateDistance(
       pickup.latitude,
       pickup.longitude,
-      drop.latitude,
-      drop.longitude,
+      delivery.latitude,
+      delivery.longitude,
     );
 
     if (estimatedDistanceKm <= 0.5) {
@@ -129,7 +169,7 @@ class OrdersService {
 
     const distanceData = await addressesService.getDistanceMatrix(
       { lat: pickup.latitude, lng: pickup.longitude },
-      { lat: drop.latitude, lng: drop.longitude },
+      { lat: delivery.latitude, lng: delivery.longitude },
     );
 
     const fareResult = await ordersRepository.calculateFare(
@@ -140,167 +180,164 @@ class OrdersService {
       packageTypeId ?? undefined,
     );
 
-    if (!fareResult.success) {
+    if (!fareResult.success || !fareResult.pricing) {
       throw new AppError(fareResult.error || "Fare calculation failed", 400);
     }
 
-    return fareResult.fareBreakdown!;
+    return {
+      pricing: fareResult.pricing,
+    };
   }
 
-  /**
-   * Create new order
-   */
   async createOrder(
     clientId: number,
     orderData: CreateOrderRequest,
-  ): Promise<CreatedOrder> {
-    // Validate fare breakdown server-side to prevent price tampering
+  ): Promise<CreateOrderResponse> {
     const serverCalculatedFare = await ordersRepository.calculateFare(
-      orderData.deliveryTypeId,
-      orderData.vehicleCategoryId,
-      orderData.fareBreakdown.distanceKm,
-      orderData.weightTierId,
+      orderData.fulfillment.deliveryTypeId,
+      orderData.fulfillment.vehicleCategoryId,
+      orderData.pricing.distanceKm,
+      orderData.fulfillment.weightTierId,
+      orderData.fulfillment.packageTypeId ?? undefined,
     );
 
-    if (!serverCalculatedFare.success) {
+    if (!serverCalculatedFare.success || !serverCalculatedFare.pricing) {
       throw new ValidationError("Invalid pricing parameters");
     }
 
-    const serverPricing = serverCalculatedFare.fareBreakdown!;
     const tolerance = 0.01;
     const priceDifference = Math.abs(
-      serverPricing.totalPrice - orderData.fareBreakdown.totalPrice,
+      serverCalculatedFare.pricing.totalPrice - orderData.pricing.totalPrice,
     );
 
     if (priceDifference > tolerance) {
       throw new ValidationError("Pricing mismatch - please recalculate fare");
     }
 
-    const orderPayload = {
-      clientId,
-      deliveryTypeId: orderData.deliveryTypeId,
-      vehicleCategoryId: orderData.vehicleCategoryId,
-      weightTierId: orderData.weightTierId,
-      packageTypeId: orderData.packageTypeId || null,
-      paymentMethodId: orderData.paymentMethodId,
-      notifyRecipientSms: orderData.notifyRecipientSms || false,
-      couponCode: orderData.couponCode || null,
-      pickup: {
-        addressId: orderData.pickup.addressId || null,
-        address: orderData.pickup.fullAddress,
-        latitude: orderData.pickup.latitude,
-        longitude: orderData.pickup.longitude,
-        city: orderData.pickup.city,
-        state: orderData.pickup.state,
-        postalCode: orderData.pickup.postalCode,
-        howToReach: orderData.pickup.howToReach || null,
-        building: orderData.pickup.building || null,
-        floor: orderData.pickup.floor || null,
-        flatNumber: orderData.pickup.flatNumber || null,
-        contactName: orderData.pickup.contactName,
-        contactPhone: orderData.pickup.contactPhone,
-      },
-      delivery: {
-        addressId: orderData.delivery.addressId || null,
-        address: orderData.delivery.fullAddress,
-        latitude: orderData.delivery.latitude,
-        longitude: orderData.delivery.longitude,
-        city: orderData.delivery.city,
-        state: orderData.delivery.state,
-        postalCode: orderData.delivery.postalCode,
-        howToReach: orderData.delivery.howToReach || null,
-        building: orderData.delivery.building || null,
-        floor: orderData.delivery.floor || null,
-        flatNumber: orderData.delivery.flatNumber || null,
-        contactName: orderData.delivery.contactName,
-        contactPhone: orderData.delivery.contactPhone,
-      },
-      packageDescription: orderData.packageDescription || null,
-      specialInstructions: orderData.specialInstructions || null,
-      declaredValue: orderData.declaredValue || null,
-      scheduledPickupTime: orderData.scheduledPickupTime || null,
-      scheduledDeliveryTime: orderData.scheduledDeliveryTime || null,
-      fareBreakdown: {
-        basePrice: orderData.fareBreakdown.basePrice,
-        distanceKm: orderData.fareBreakdown.distanceKm,
-        distancePrice: orderData.fareBreakdown.distancePrice,
-        weightSurcharge: orderData.fareBreakdown.weightSurcharge,
-        platformFee: orderData.fareBreakdown.platformFee || 10.0,
-        specialHandlingFee: orderData.fareBreakdown.specialHandlingFee || 0.0,
-        subtotalBeforeTax:
-          orderData.fareBreakdown.subtotalBeforeTax ||
-          orderData.fareBreakdown.basePrice +
-            orderData.fareBreakdown.distancePrice +
-            orderData.fareBreakdown.weightSurcharge +
-            (orderData.fareBreakdown.platformFee || 10.0) +
-            (orderData.fareBreakdown.specialHandlingFee || 0.0),
-        gstAmount: orderData.fareBreakdown.gstAmount,
-        totalPrice: orderData.fareBreakdown.totalPrice,
-        currency: orderData.fareBreakdown.currency,
-      },
-    };
+    const schedule = orderData.schedule || {};
+    let isScheduled = false;
+    if (schedule.pickupAt) {
+      const pickupDate = new Date(schedule.pickupAt);
+      if (pickupDate.getTime() > Date.now() + 30 * 60 * 1000) {
+        isScheduled = true;
+      } else if (pickupDate.getTime() < Date.now()) {
+        throw new ValidationError("Scheduled pickup time must be in the future");
+      }
+    }
 
-    const result = await ordersRepository.createOrder(orderPayload);
+    const discountInfo = await ordersRepository.getVolumeDiscount(clientId);
+    let pricing = orderData.pricing;
+    if (discountInfo.discountPct !== undefined) {
+      const discountAmount = Number(
+        ((pricing.totalPrice * discountInfo.discountPct) / 100).toFixed(2),
+      );
+      pricing = {
+        ...pricing,
+        discountPct: discountInfo.discountPct,
+        discountAmount,
+        totalPrice: Math.max(0, pricing.totalPrice - discountAmount),
+      };
+    }
+
+    const result = await ordersRepository.createOrder({
+      clientId,
+      ...orderData,
+      pricing,
+      ...(isScheduled ? { initialStatus: "scheduled" } : {}),
+    });
 
     if (!result.success) {
       throw new AppError(result.error || "Order creation failed", 400);
     }
 
-    const orderRow = result.order;
-    if (!orderRow) {
+    if (!result.order) {
       throw new AppError(
         "Order creation succeeded but order payload is missing",
         500,
       );
     }
 
-    const toNum = (v: unknown, fallback = 0): number => {
-      if (v == null) return fallback;
-      const n = typeof v === "number" ? v : Number.parseFloat(String(v));
-      return Number.isFinite(n) ? n : fallback;
-    };
-
-    const pricing = orderRow.pricing;
-    const fareBreakdown = pricing
-      ? {
-          basePrice: toNum(pricing.basePrice),
-          distanceKm: toNum(pricing.distanceKm),
-          distancePrice: toNum(pricing.distancePrice),
-          weightSurcharge: toNum(pricing.weightSurcharge),
-          platformFee: toNum(pricing.platformFee),
-          specialHandlingFee: toNum(pricing.specialHandlingFee),
-          subtotalBeforeTax: toNum(pricing.subtotalBeforeTax),
-          gstAmount: toNum(pricing.gstAmount),
-          totalPrice: toNum(pricing.totalPrice),
-          currency: pricing.currency,
-        }
-      : orderData.fareBreakdown;
-
-    let createdAtStr: string;
-    try {
-      createdAtStr = toIsoDateTime(orderRow.createdAt);
-    } catch {
-      throw new AppError("Invalid createdAt value from order creation", 500);
+    if (isScheduled) {
+      result.order.status = "scheduled";
+      await ordersRepository.recordStatusHistory(
+        result.order.identifiers.orderId,
+        "scheduled",
+        null,
+        clientId,
+        "Order scheduled at creation",
+      );
+    } else {
+      // Fire-and-forget: notify nearby online couriers of the new order.
+      this.broadcastNewOrderToNearbyCouriers({
+        orderId: result.order.identifiers.orderId,
+        orderNumber: result.order.identifiers.orderNumber ?? "",
+        pickupLat: orderData.locations.pickup.latitude,
+        pickupLng: orderData.locations.pickup.longitude,
+        totalPrice: pricing.totalPrice,
+      }).catch((err) => {
+        logger.warn({
+          msg: "broadcastNewOrderToNearbyCouriers failed",
+          error: (err as Error).message,
+        });
+      });
     }
 
     return {
-      orderId: orderRow.orderId,
-      orderUuid: orderRow.orderUuid,
-      orderNumber: orderRow.orderNumber,
-      status: orderRow.status || "pending",
-      fareBreakdown,
-      estimatedDistanceKm: toNum(orderRow.estimatedDistanceKm),
-      estimatedDurationMins:
-        orderRow.estimatedDurationMins != null
-          ? toNum(orderRow.estimatedDurationMins)
-          : undefined,
-      createdAt: createdAtStr,
+      order: result.order,
     };
   }
 
   /**
-   * Get order details
+   * Notify online, idle couriers within radius about a freshly created order.
+   * Uses logistics.find_nearby_couriers() then dispatches FCM via fcmService.
    */
+  private async broadcastNewOrderToNearbyCouriers(params: {
+    orderId: number;
+    orderNumber: string;
+    pickupLat: number;
+    pickupLng: number;
+    totalPrice: number;
+  }): Promise<void> {
+    try {
+      const radiusKm = 10;
+      const limit = 25;
+      const result = await drizzlePool.query<{ courier_id: number }>(
+        driversQueries.CALL_FIND_NEARBY_COURIERS,
+        [params.pickupLat, params.pickupLng, radiusKm, limit],
+      );
+      const courierIds = result.rows.map((r) => r.courier_id);
+      if (courierIds.length === 0) return;
+
+      await fcmService.sendToUsers(courierIds, {
+        title: "New delivery nearby",
+        body: `₹${params.totalPrice} · Tap to view pickup`,
+        data: {
+          type: "order.available",
+          orderId: String(params.orderId),
+          orderNumber: params.orderNumber,
+        },
+      });
+    } catch (error) {
+      logger.warn({
+        msg: "Error broadcasting new order to nearby couriers",
+        error: (error as Error).message,
+      });
+    }
+  }
+
+  async releaseScheduledOrders() {
+    const releasedOrders = await ordersRepository.releaseScheduledOrders();
+    for (const orderId of releasedOrders) {
+      await ordersRepository.recordStatusHistory(
+        orderId,
+        "pending",
+        "scheduled",
+        null,
+        "Auto-released by scheduler"
+      );
+    }
+  }
+
   async getOrderById(
     orderId: number,
     userId: number,
@@ -324,12 +361,44 @@ class OrdersService {
       throw new AuthorizationError("You can only view orders assigned to you");
     }
 
-    return this._formatOrderDetails(order);
+    const baseOrder = this.toBaseOrderFromRow(order);
+
+    return {
+      order: {
+        ...baseOrder,
+        assignment: order.assignmentId
+          ? {
+              assignmentId: order.assignmentId,
+              status: (order.assignmentStatus ??
+                "assigned") as AssignmentStatus,
+              assignedAt: order.assignedAt
+                ? toIsoDateTime(order.assignedAt)
+                : null,
+              timeline: order.assignmentTimeline ?? null,
+            }
+          : null,
+        cancellation: {
+          reason: order.cancellationReason ?? null,
+        },
+      },
+      actors: {
+        client: {
+          userId: order.clientId!,
+          name: order.clientName ?? null,
+          phone: order.clientPhone ?? null,
+        },
+        courier: order.courierId
+          ? {
+              userId: order.courierId,
+              name: order.courierName ?? null,
+              phone: order.courierPhone ?? null,
+              profilePictureUrl: order.courierPhoto ?? null,
+            }
+          : null,
+      },
+    };
   }
 
-  /**
-   * List user's orders
-   */
   async listOrders(
     clientId: number,
     page: number = 1,
@@ -339,6 +408,10 @@ class OrdersService {
     dateTo?: string,
     sortBy?: string,
     sortOrder?: string,
+    search?: string,
+    deliveryTypeId?: number,
+    minPrice?: number,
+    maxPrice?: number,
   ): Promise<{
     orders: OrderListItem[];
     pagination: {
@@ -359,65 +432,24 @@ class OrdersService {
       dateTo,
       sortBy,
       sortOrder as "asc" | "desc" | undefined,
+      search,
+      deliveryTypeId,
+      minPrice,
+      maxPrice,
     );
 
     return {
-      orders: orders.map((order) => {
-        let actualDurationMins = null;
-        if (order.actualPickupTime && order.actualDeliveryTime) {
-          const pickupTime = new Date(order.actualPickupTime).getTime();
-          const deliveryTime = new Date(order.actualDeliveryTime).getTime();
-          actualDurationMins = Math.round(
-            (deliveryTime - pickupTime) / (1000 * 60),
-          );
-        } else if (order.actualPickupTime && !order.actualDeliveryTime) {
-          const pickupTime = new Date(order.actualPickupTime).getTime();
-          actualDurationMins = Math.round(
-            (Date.now() - pickupTime) / (1000 * 60),
-          );
-        }
-
-        const weightTierDisplay =
-          order.weightTierName ||
-          (order.weightTierMin != null && order.weightTierMax != null
-            ? `${order.weightTierMin}-${order.weightTierMax} kg`
-            : null);
-
-        return {
-          orderId: order.orderId,
-          orderUuid: order.orderUuid,
-          orderNumber: order.orderNumber,
-          status: order.statusName,
-          statusId: order.statusId,
-          deliveryTypeId: order.deliveryTypeId,
-          deliveryTypeDisplay: order.deliveryTypeDisplay,
-          vehicleCategoryId: order.vehicleCategoryId,
-          vehicleCategoryDisplay: order.vehicleCategoryDisplay,
-          packageDescription: order.packageDescription,
-          weightTierId: order.weightTierId,
-          weightTierDisplay,
-          estimatedDistanceKm: order.estimatedDistanceKm
-            ? Number.parseFloat(order.estimatedDistanceKm)
-            : null,
-          actualDistanceKm: order.actualDistanceKm
-            ? Number.parseFloat(order.actualDistanceKm)
-            : null,
-          actualDurationMins,
-          totalPrice: Number.parseFloat(order.totalPrice ?? "0"),
-          createdAt: toIsoDateTime(order.createdAt),
-          pickup: {
-            address: order.pickupAddress,
-            city: order.pickupCity ?? undefined,
-          },
-          delivery: {
-            address: order.deliveryAddress,
-            city: order.deliveryCity ?? undefined,
-          },
-          courier: order.courierId
-            ? { name: order.courierName, photo: order.courierPhoto }
-            : null,
-        };
-      }),
+      orders: orders.map((order) => ({
+        order: this.toBaseOrderFromRow(order),
+        courier: order.courierId
+          ? {
+              userId: order.courierId,
+              name: order.courierName ?? null,
+              phone: order.courierPhone ?? null,
+              profilePictureUrl: order.courierPhoto ?? null,
+            }
+          : null,
+      })),
       pagination: {
         page,
         limit,
@@ -427,15 +459,12 @@ class OrdersService {
     };
   }
 
-  /**
-   * Get available orders for drivers
-   */
   async getAvailableOrders(
     latitude: number,
     longitude: number,
     radiusKm: number = 10,
     limit: number = 20,
-  ): Promise<import("./orders.zod.js").AvailableOrderItem[]> {
+  ): Promise<AvailableOrderItem[]> {
     const orders = await ordersRepository.findAvailableOrders(
       latitude,
       longitude,
@@ -444,53 +473,11 @@ class OrdersService {
     );
 
     return orders.map((order) => ({
-      orderId: order.orderId,
-      orderUuid: order.orderUuid,
-      orderNumber: order.orderNumber,
-      deliveryTypeDisplay: order.deliveryTypeDisplay,
-      vehicleCategoryDisplay: order.vehicleCategoryDisplay,
-      createdAt: toIsoDateTime(order.createdAt),
-      pickup: {
-        address: order.pickupAddress,
-        landmark: order.pickupLandmark,
-        city: order.pickupCity,
-        coordinates: {
-          latitude: Number.parseFloat(order.pickupLatitude),
-          longitude: Number.parseFloat(order.pickupLongitude),
-        },
-      },
-      delivery: {
-        address: order.deliveryAddress,
-        landmark: order.deliveryLandmark,
-        city: order.deliveryCity,
-        coordinates: {
-          latitude: order.deliveryLatitude
-            ? Number.parseFloat(order.deliveryLatitude)
-            : 0,
-          longitude: order.deliveryLongitude
-            ? Number.parseFloat(order.deliveryLongitude)
-            : 0,
-        },
-      },
-      distanceFromDriverKm: Number.parseFloat(order.distanceFromCourierKm),
-      estimatedDistanceKm: Number.parseFloat(order.estimatedDistanceKm),
-      fareBreakdown: {
-        basePrice: Number.parseFloat(order.basePrice || "0"),
-        distanceKm: Number.parseFloat(order.estimatedDistanceKm || "0"),
-        distancePrice: Number.parseFloat(order.distancePrice || "0"),
-        weightSurcharge: Number.parseFloat(order.weightSurcharge || "0"),
-        platformFee: Number.parseFloat(order.platformFee || "0"),
-        specialHandlingFee: Number.parseFloat(order.specialHandlingFee || "0"),
-        gstAmount: Number.parseFloat(order.gstAmount || "0"),
-        totalPrice: Number.parseFloat(order.totalPrice || "0"),
-        subtotalBeforeTax: Number.parseFloat(order.subtotalBeforeTax || "0"),
-      },
+      order: this.toBaseOrderFromRow(order),
+      distanceFromDriverKm: this.toNumber(order.distanceFromCourierKm),
     }));
   }
 
-  /**
-   * Cancel order
-   */
   async cancelOrder(
     orderId: number,
     userId: number,
@@ -507,47 +494,74 @@ class OrdersService {
       throw new AuthorizationError("You can only cancel your own orders");
     }
 
-    const nonCancellableStatuses = ["delivered", "cancelled"];
-    if (nonCancellableStatuses.includes(order.statusName)) {
+    // MVP guard: clients/businesses cannot cancel once the courier has
+    // committed to handling the parcel. After picked_up the parcel is in
+    // the driver's custody and cancellation must go through driver-side
+    // undeliverable + return flow.
+    const clientNonCancellableStatuses = [
+      "picked_up",
+      "in_transit",
+      "undeliverable",
+      "returning",
+      "returned",
+      "delivered",
+      "cancelled",
+    ];
+    const adminNonCancellableStatuses = ["delivered", "cancelled"];
+    const blockedStatuses =
+      userRole === "admin"
+        ? adminNonCancellableStatuses
+        : clientNonCancellableStatuses;
+
+    if (blockedStatuses.includes(order.status)) {
       throw new ValidationError(
-        `Order cannot be cancelled in ${order.statusName} status`,
+        `Order cannot be cancelled in ${order.status} status`,
       );
     }
 
-    const result = await ordersRepository.cancelOrder(
+    const cancelResult = await ordersRepository.cancelOrder(
       orderId,
       cancellationReason,
       userId,
     );
 
-    if (!result.success) {
-      throw new AppError(result.error, 400);
+    // Fire-and-forget: if a courier was assigned, notify them immediately.
+    if (order.courierId) {
+      fcmService
+        .sendToUser(order.courierId, {
+          title: "Order cancelled",
+          body: `Order ${order.orderNumber ?? orderId} was cancelled by the customer.`,
+          data: {
+            type: "order.cancelled",
+            orderId: String(orderId),
+            reason: cancellationReason,
+          },
+        })
+        .catch((err) => {
+          logger.warn({
+            msg: "FCM cancel notification failed",
+            courierId: order.courierId,
+            error: (err as Error).message,
+          });
+        });
     }
 
-    return result;
+    return cancelResult;
   }
 
-  /**
-   * Driver accepts order
-   */
   async acceptOrder(
     orderId: number,
     courierId: number,
-  ): Promise<{
-    assignmentId: number;
-    orderId: number;
-    courierId: number;
-    assignedAt: string;
-  }> {
+  ): Promise<AcceptOrderResult> {
     const order = await ordersRepository.findById(orderId);
 
     if (!order) {
       throw new NotFoundError("Order not found");
     }
 
-    if (order.statusName !== "pending") {
+    if (order.status !== "pending") {
       throw new ValidationError(
-        `Order cannot be accepted in ${order.statusName} status`,
+        `Order cannot be accepted in ${order.status} status`,
       );
     }
 
@@ -555,24 +569,14 @@ class OrdersService {
       throw new ValidationError("Order already assigned to another driver");
     }
 
-    const result = await ordersRepository.acceptOrder(orderId, courierId);
-
-    return {
-      assignmentId: result.assignmentId,
-      orderId: result.orderId,
-      courierId: result.courierId,
-      assignedAt: toIsoDateTime(result.assignedAt),
-    };
+    return await ordersRepository.acceptOrder(orderId, courierId);
   }
 
-  /**
-   * Update order status
-   */
   async updateOrderStatus(
     orderId: number,
     status: string,
     courierId: number,
-  ): Promise<{ orderId: number; status: string; timestamp: string }> {
+  ): Promise<UpdateOrderStatusResponse> {
     const order = await ordersRepository.findById(orderId);
 
     if (!order) {
@@ -585,22 +589,33 @@ class OrdersService {
       );
     }
 
-    if (status === "picked_up" && order.statusName !== "accepted") {
+    if (status === "picked_up" && order.status !== "accepted") {
       throw new ValidationError(
         "Order must be in accepted status to be picked up",
       );
     }
 
-    if (status === "in_transit" && order.statusName !== "picked_up") {
+    if (status === "in_transit" && order.status !== "picked_up") {
       throw new ValidationError(
         "Order must be picked up before marking in transit",
       );
     }
 
-    if (status === "delivered" && order.statusName !== "in_transit") {
+    if (status === "delivered" && order.status !== "in_transit") {
       throw new ValidationError(
         "Order must be in transit before marking delivered",
       );
+    }
+
+    if (status === "delivered") {
+      const delivered = await ordersRepository.deliverOrder(orderId, courierId);
+      return {
+        order: {
+          orderId: delivered.orderId,
+          status: "delivered" as const,
+          timestamp: delivered.deliveredAt,
+        },
+      };
     }
 
     const updated = await ordersRepository.updateOrderStatus(orderId, status);
@@ -608,145 +623,425 @@ class OrdersService {
       throw new NotFoundError("Order not found or update failed");
     }
 
+    await ordersRepository.recordStatusHistory(
+      orderId,
+      status,
+      order.status,
+      courierId,
+    );
+
     const timestamp =
       status === "picked_up"
         ? updated.pickedUpAt
-        : status === "delivered"
-          ? updated.deliveredAt
+        : status === "in_transit"
+          ? updated.inTransitAt
           : updated.updatedAt;
+
     if (!timestamp) {
       throw new AppError("Status timestamp missing after update", 500);
     }
 
     return {
-      orderId: updated.orderId,
-      status,
-      timestamp: toIsoDateTime(timestamp),
+      order: {
+        orderId: updated.orderId,
+        status: status as "picked_up" | "in_transit",
+        timestamp: toIsoDateTime(timestamp),
+      },
+    };
+  }
+
+  async bulkCancelOrders(
+    userId: number,
+    orderIds: number[],
+    reason: string,
+  ): Promise<{
+    bulk: {
+      requested: number;
+      cancelled: number;
+      failed: number;
+      results: { orderId: number; success: boolean; error?: string }[];
+    };
+  }> {
+    const result = await ordersRepository.bulkCancelOrders(
+      orderIds,
+      userId,
+      reason,
+    );
+    return { bulk: result };
+  }
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * Driver arrives at delivery location.
+   * Guard: order must be in_transit, courier must match.
+   */
+  async arriveAtDelivery(
+    orderId: number,
+    courierId: number,
+    body: ArriveRequest,
+  ): Promise<ArriveResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "in_transit") {
+      throw new ValidationError(
+        `Order must be in_transit to arrive, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    // Read configurable wait minutes
+    const pricingRepo = await import("../pricing/pricing.repository.js").then(
+      (m) => m.default,
+    );
+    const pricingConfig = await pricingRepo.getAllPricingConfig();
+    const waitMinutes = pricingConfig.get("undeliverable_wait_minutes") ?? 5;
+
+    // Idempotency — if arrivedAt already set, return existing window (no re-write, no duplicate event)
+    if (order.deliveryAttempt?.arrivedAt) {
+      const arrivedAt = new Date(order.deliveryAttempt.arrivedAt as string);
+      const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
+      return {
+        data: {
+          arrivedAt: arrivedAt.toISOString(),
+          waitUntil: waitUntil.toISOString(),
+          waitMinutes,
+        },
+      };
+    }
+
+    const arrivedAt = new Date();
+    const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
+
+    // Patch delivery_attempt
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      arrivedAt: arrivedAt.toISOString(),
+      gps: body.gps,
+    });
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "checkpoint",
+        eventDescription: "Driver arrived at delivery location",
+        latitude: body.gps.latitude,
+        longitude: body.gps.longitude,
+      });
+    }
+
+    return {
+      data: {
+        arrivedAt: arrivedAt.toISOString(),
+        waitUntil: waitUntil.toISOString(),
+        waitMinutes,
+      },
     };
   }
 
   /**
-   * Format order details from DB row to API response shape
+   * Mark order as undeliverable.
+   * Guard: order must be in_transit, arrivedAt must exist, wait must have elapsed.
    */
-  _formatOrderDetails(order: OrderRow): OrderDetails {
-    let actualDurationMins = null;
-    if (order.actualPickupTime && order.actualDeliveryTime) {
-      const pickupTime = new Date(order.actualPickupTime).getTime();
-      const deliveryTime = new Date(order.actualDeliveryTime).getTime();
-      actualDurationMins = Math.round(
-        (deliveryTime - pickupTime) / (1000 * 60),
+  async markUndeliverable(
+    orderId: number,
+    courierId: number,
+    body: UndeliverableRequest,
+  ): Promise<UndeliverableResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "in_transit") {
+      throw new ValidationError(
+        `Order must be in_transit to mark undeliverable, current: ${order.status}`,
       );
-    } else if (order.actualPickupTime && !order.actualDeliveryTime) {
-      const pickupTime = new Date(order.actualPickupTime).getTime();
-      actualDurationMins = Math.round((Date.now() - pickupTime) / (1000 * 60));
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
     }
 
-    const weightTierDisplay =
-      order.weightTierName ||
-      (order.weightTierMin != null && order.weightTierMax != null
-        ? `${order.weightTierMin}-${order.weightTierMax} kg`
-        : null);
+    // Check that driver has arrived
+    const attempt = await ordersRepository.getDeliveryAttempt(orderId);
+    if (!attempt?.arrivedAt) {
+      throw new ValidationError(
+        "Must arrive at delivery location first (POST /:id/arrive)",
+      );
+    }
+
+    // Check wait time has elapsed
+    const pricingRepo = await import("../pricing/pricing.repository.js").then(
+      (m) => m.default,
+    );
+    const pricingConfig = await pricingRepo.getAllPricingConfig();
+    const waitMinutes = pricingConfig.get("undeliverable_wait_minutes") ?? 5;
+    const arrivedAt = new Date(attempt.arrivedAt as string);
+    const waitUntil = new Date(arrivedAt.getTime() + waitMinutes * 60 * 1000);
+
+    if (new Date() < waitUntil) {
+      throw new RetryAfterError("Wait period not elapsed", waitUntil.toISOString());
+    }
+
+    const undeliverableAt = new Date();
+
+    // Patch delivery_attempt with note + photo
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      undeliverableAt: undeliverableAt.toISOString(),
+      driverNote: body.driverNote,
+      ...(body.photoUrl ? { photoUrl: body.photoUrl } : {}),
+    });
+
+    // Update order status
+    await ordersRepository.markUndeliverable(orderId);
+
+    // Record status history
+    await ordersRepository.recordStatusHistory(
+      orderId,
+      "undeliverable",
+      "in_transit",
+      courierId,
+      body.driverNote,
+    );
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "status_change",
+        eventDescription: `Undeliverable: ${body.driverNote}`,
+        latitude: (attempt.gps as { latitude?: number })?.latitude ?? null,
+        longitude: (attempt.gps as { longitude?: number })?.longitude ?? null,
+      });
+    }
 
     return {
-      orderId: order.orderId,
-      orderUuid: order.orderUuid,
-      orderNumber: order.orderNumber,
-
-      status: order.statusName,
-      statusId: order.statusId!,
-
-      deliveryTypeId: order.deliveryTypeId!,
-      deliveryTypeDisplay: order.deliveryTypeDisplay,
-      vehicleCategoryId: order.vehicleCategoryId!,
-      vehicleCategoryDisplay: order.vehicleCategoryDisplay,
-
-      packageDescription: order.packageDescription,
-      packageTypeId: order.packageTypeId || null,
-      weightTierId: order.weightTierId,
-      weightTierDisplay,
-      specialInstructions: order.specialInstructions,
-
-      estimatedDistanceKm: order.estimatedDistanceKm
-        ? Number(order.estimatedDistanceKm)
-        : null,
-      actualDistanceKm: order.actualDistanceKm
-        ? Number(order.actualDistanceKm)
-        : null,
-      actualDurationMins,
-
-      createdAt: order.createdAt
-        ? toIsoDateTime(order.createdAt)
-        : toIsoDateTime(new Date()),
-
-      timeline: {
-        confirmedAt: order.createdAt
-          ? toIsoDateTime(order.createdAt)
-          : toIsoDateTime(new Date()),
-        assignedAt: toIsoDateTimeOrUndefined(order.acceptedAt),
-        pickedUpAt: toIsoDateTimeOrUndefined(order.pickedUpAt),
-        deliveredAt: toIsoDateTimeOrUndefined(order.deliveredAt),
-        cancelledAt: toIsoDateTimeOrUndefined(order.cancelledAt),
+      data: {
+        order: {
+          orderId,
+          status: "undeliverable",
+          undeliverableAt: undeliverableAt.toISOString(),
+        },
       },
+    };
+  }
 
-      pickup: {
-        locationId: order.pickupLocationId,
-        address: order.pickupAddress || "",
-        building: order.pickupBuilding,
-        floor: order.pickupFloor,
-        flat: order.pickupFlat,
-        landmark: order.pickupLandmark,
-        city: order.pickupCity ?? undefined,
-        state: order.pickupState ?? undefined,
-        postalCode: order.pickupPostalCode ?? undefined,
-        latitude: Number(order.pickupLatitude),
-        longitude: Number(order.pickupLongitude),
-        contactName: order.pickupContactName ?? undefined,
-        contactPhone: order.pickupContactPhone ?? undefined,
+  /**
+   * Start RTO return.
+   * Guard: order must be undeliverable, courier must match.
+   */
+  async startReturn(
+    orderId: number,
+    courierId: number,
+  ): Promise<ReturnResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "undeliverable") {
+      throw new ValidationError(
+        `Order must be undeliverable to start return, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    const returnStartedAt = new Date();
+
+    // Patch delivery_attempt
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      returnStartedAt: returnStartedAt.toISOString(),
+    });
+
+    // Mark order + assignment as returning
+    await ordersRepository.markReturning(orderId, courierId);
+
+    // Record status history
+    await ordersRepository.recordStatusHistory(
+      orderId,
+      "returning",
+      "undeliverable",
+      courierId,
+      "Driver initiated RTO return",
+    );
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "status_change",
+        eventDescription: "Driver started return to pickup",
+      });
+    }
+
+    return {
+      data: {
+        order: {
+          orderId,
+          status: "returning",
+          returnStartedAt: returnStartedAt.toISOString(),
+        },
       },
+    };
+  }
 
-      delivery: {
-        locationId: order.deliveryLocationId,
-        address: order.deliveryAddress || "",
-        building: order.deliveryBuilding,
-        floor: order.deliveryFloor,
-        flat: order.deliveryFlat,
-        landmark: order.deliveryLandmark,
-        city: order.deliveryCity ?? undefined,
-        state: order.deliveryState ?? undefined,
-        postalCode: order.deliveryPostalCode ?? undefined,
-        latitude: Number(order.deliveryLatitude),
-        longitude: Number(order.deliveryLongitude),
-        contactName: order.deliveryContactName ?? undefined,
-        contactPhone: order.deliveryContactPhone ?? undefined,
+  /**
+   * Confirm order returned to pickup (RTO terminal state).
+   * Guard: order must be returning, courier must match.
+   */
+  async confirmReturned(
+    orderId: number,
+    courierId: number,
+  ): Promise<ReturnedResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "returning") {
+      throw new ValidationError(
+        `Order must be returning to confirm returned, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+
+    // Patch delivery_attempt
+    const returnedAt = new Date();
+    await ordersRepository.updateDeliveryAttempt(orderId, {
+      returnedAt: returnedAt.toISOString(),
+    });
+
+    // Call stored function: atomically mark returned + release courier
+    const result = await ordersRepository.returnOrder(orderId, courierId);
+
+    // Insert milestone tracking event
+    if (order.assignmentId) {
+      await ordersRepository.insertMilestoneEvent({
+        assignmentId: order.assignmentId,
+        orderId,
+        courierId,
+        eventType: "delivery",
+        eventDescription: "Order returned to pickup location",
+      });
+    }
+
+    return {
+      data: {
+        order: {
+          orderId,
+          status: "returned",
+          returnedAt: result.returnedAt,
+        },
       },
+    };
+  }
 
-      fareBreakdown: {
-        basePrice: Number(order.basePrice),
-        distanceKm: order.estimatedDistanceKm
-          ? Number(order.estimatedDistanceKm)
-          : 0,
-        distancePrice: Number(order.distancePrice),
-        weightSurcharge: Number(order.weightSurcharge),
-        platformFee: Number(order.platformFee || 0),
-        specialHandlingFee: Number(order.specialHandlingFee || 0),
-        gstAmount: Number(order.gstAmount || 0),
-        subtotalBeforeTax: Number(order.subtotalBeforeTax || order.totalPrice),
-        totalPrice: Number(order.totalPrice),
+  /**
+   * Submit proof of delivery after order is delivered.
+   * Guard: order must be delivered, courier must match.
+   */
+  async submitProofOfDelivery(
+    orderId: number,
+    courierId: number,
+    body: ProofOfDeliveryRequest,
+  ): Promise<ProofOfDeliveryResponse> {
+    const order = await ordersRepository.findById(orderId);
+    if (!order) throw new NotFoundError("Order not found");
+    if (order.status !== "delivered") {
+      throw new ValidationError(
+        `Order must be delivered to submit proof, current: ${order.status}`,
+      );
+    }
+    if (order.courierId !== courierId) {
+      throw new AuthorizationError("Not assigned to this order");
+    }
+    if (!order.assignmentId) {
+      throw new AppError("No assignment found for this order", 500);
+    }
+
+    const proof = await ordersRepository.insertProofOfDelivery({
+      orderId,
+      assignmentId: order.assignmentId,
+      recipientName: body.recipientName,
+      photoUrl: body.photoUrl,
+      recipientSignatureUrl: body.recipientSignatureUrl,
+      deliveryNotes: body.deliveryNotes,
+    });
+
+    return {
+      data: {
+        proof: {
+          proofId: proof.proofId,
+          orderId: proof.orderId,
+          deliveredAt: toIsoDateTime(proof.deliveredAt),
+        },
       },
+    };
+  }
 
-      courier: order.courierId
-        ? {
-            userId: order.courierId,
-            name: order.courierName || undefined,
-            phone: order.courierPhone || undefined,
-            profilePictureUrl: order.courierPhoto || undefined,
-          }
-        : null,
+  /**
+   * Get order tracking: live location + milestones + delivery attempt.
+   * Guard: client owns order, courier is assigned, or admin.
+   */
+  async getOrderTracking(
+    orderId: number,
+    userId: number,
+    userRole: string,
+  ): Promise<TrackingResponse> {
+    const { tracking, milestones } =
+      await ordersRepository.getOrderTracking(orderId);
 
-      client: {
-        userId: order.clientId!,
-        name: order.clientName ?? undefined,
-        phone: order.clientPhone ?? undefined,
+    if (!tracking) throw new NotFoundError("Order not found");
+
+    // Auth check
+    const row = tracking as Record<string, unknown>;
+    if (userRole === "client" && row.clientId !== userId) {
+      throw new AuthorizationError("Access denied");
+    }
+    if (userRole === "courier" && row.courierId !== userId) {
+      throw new AuthorizationError("Access denied");
+    }
+
+    const hasDriverLocation =
+      row.driverLatitude != null && row.driverLongitude != null;
+    const locationMeta = (row.locationMeta as Record<string, unknown>) ?? {};
+
+    return {
+      data: {
+        order: {
+          orderId: row.orderId as number,
+          status: row.status as string as TrackingResponse["data"]["order"]["status"],
+        },
+        driver: hasDriverLocation
+          ? {
+              location: {
+                latitude: Number(row.driverLatitude),
+                longitude: Number(row.driverLongitude),
+              },
+              locationMeta: {
+                speed: (locationMeta.speed as number) ?? null,
+                bearing: (locationMeta.bearing as number) ?? null,
+                accuracy: (locationMeta.accuracy as number) ?? null,
+              },
+              lastUpdatedAt: toIsoDateTime(
+                row.lastLocationUpdate as Date,
+              ),
+            }
+          : null,
+        milestones: (milestones as Record<string, unknown>[]).map((m) => ({
+          eventType: m.eventType as string,
+          description: (m.description as string) ?? null,
+          location:
+            m.lat != null && m.lng != null
+              ? { lat: Number(m.lat), lng: Number(m.lng) }
+              : null,
+          timestamp: toIsoDateTime(m.timestamp as Date),
+        })),
+        attempt:
+          (row.deliveryAttempt as TrackingResponse["data"]["attempt"]) ?? null,
       },
     };
   }

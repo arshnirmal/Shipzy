@@ -7,7 +7,9 @@ part 'google_auth_provider.g.dart';
 
 @riverpod
 class GoogleAuth extends _$GoogleAuth {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile', 'openid']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email', 'profile', 'openid'],
+  );
 
   @override
   GoogleSignInAccount? build() => null;
@@ -63,5 +65,6 @@ class GoogleAuth extends _$GoogleAuth {
   Future<bool> isSignedIn() async => _googleSignIn.isSignedIn();
 
   /// Get current Google user
-  Future<GoogleSignInAccount?> getCurrentUser() async => _googleSignIn.currentUser;
+  Future<GoogleSignInAccount?> getCurrentUser() async =>
+      _googleSignIn.currentUser;
 }

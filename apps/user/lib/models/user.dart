@@ -13,7 +13,7 @@ abstract class AppUser with _$AppUser {
     @JsonKey(name: 'role') required String role,
     @JsonKey(name: 'fullName') required String fullName,
     @JsonKey(name: 'email') required String email,
-    @JsonKey(name: 'phoneNumber') required String phoneNumber,
+    @JsonKey(name: 'phoneNumber') String? phoneNumber,
     @JsonKey(name: 'createdAt') required String createdAt, @JsonKey(name: 'profilePictureUrl') String? profilePictureUrl,
     @JsonKey(name: 'isVerified') @Default(false) bool isVerified,
     @JsonKey(name: 'isActive') @Default(false) bool isActive,

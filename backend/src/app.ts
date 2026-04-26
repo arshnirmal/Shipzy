@@ -11,10 +11,8 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middleware/error.middleware.js";
-import {
-  authRateLimitConfig,
-  rateLimitConfig,
-} from "./middleware/ratelimit.middleware.js";
+import { rateLimitConfig } from "./middleware/ratelimit.middleware.js";
+import { startScheduler } from "./utils/scheduler.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -24,9 +22,12 @@ declare module "fastify" {
 
 // Import routes
 import addressesRoutes from "./modules/addresses/addresses.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
+import businessRoutes from "./modules/business/business.routes.js";
 import driversRoutes from "./modules/drivers/drivers.routes.js";
 import ordersRoutes from "./modules/orders/orders.routes.js";
+import ratingsRoutes from "./modules/ratings/ratings.routes.js";
 import staticRoutes from "./modules/static/static.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 
@@ -100,7 +101,7 @@ export const buildApp = async (
     });
   } catch (err) {
     // swagger packages not installed — continue without interactive docs
-    app.log?.debug?.("Swagger plugins not available")
+    app.log?.debug?.("Swagger plugins not available");
   }
 
   // ============ DECORATORS ============
@@ -141,17 +142,28 @@ export const buildApp = async (
 
   // ============ ROUTES ============
 
-  // Health check with database connectivity and server uptime
+  // Public health check — minimal info only (no internals exposed)
   app.get("/health", async (request, reply) => {
     try {
-      // Test database connectivity
-      const dbTest = await drizzlePool.query("SELECT 1 as test");
+      await drizzlePool.query("SELECT 1");
+      return { status: "ok", timestamp: new Date().toISOString() };
+    } catch {
+      return reply.status(503).send({
+        status: "error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
 
+  // Internal health check — detailed diagnostics, should be protected by infra-level auth
+  // (e.g., accessible only from internal network / load balancer health probe path)
+  app.get("/_internal/health", async (request, reply) => {
+    try {
+      const dbTest = await drizzlePool.query("SELECT 1 as test");
       return {
         status: "ok",
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        environment: config.nodeEnv,
         database: {
           connected: dbTest.rows.length > 0,
           pool: {
@@ -163,7 +175,6 @@ export const buildApp = async (
         memory: {
           used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
           total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-          external: Math.round(process.memoryUsage().external / 1024 / 1024),
         },
       };
     } catch (error) {
@@ -171,14 +182,9 @@ export const buildApp = async (
         msg: "Health check failed",
         error: (error as Error).message,
       });
-
       return reply.status(503).send({
         status: "error",
         timestamp: new Date().toISOString(),
-        error: "Service unavailable",
-        database: {
-          connected: false,
-        },
       });
     }
   });
@@ -193,15 +199,15 @@ export const buildApp = async (
   });
 
   // Register module routes
-  await app.register(authRoutes, {
-    prefix: "/api/v1/auth",
-    config: authRateLimitConfig, // Stricter rate limit for auth
-  });
+  await app.register(authRoutes, { prefix: "/api/v1/auth" });
+  await app.register(businessRoutes, { prefix: "/api/v1/business" });
 
   await app.register(addressesRoutes, { prefix: "/api/v1/addresses" });
+  await app.register(adminRoutes, { prefix: "/api/v1/admin" });
   await app.register(usersRoutes, { prefix: "/api/v1/users" });
   await app.register(driversRoutes, { prefix: "/api/v1/drivers" });
   await app.register(ordersRoutes, { prefix: "/api/v1/orders" });
+  await app.register(ratingsRoutes, { prefix: "/api/v1/ratings" });
   await app.register(staticRoutes, { prefix: "/api/v1/static" });
 
   // ============ ERROR HANDLERS ============
@@ -211,6 +217,11 @@ export const buildApp = async (
 
   // Global error handler
   app.setErrorHandler(errorHandler as any);
+
+  app.ready((err) => {
+    if (err) throw err;
+    startScheduler(app);
+  });
 
   return app;
 };

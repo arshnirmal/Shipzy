@@ -7,9 +7,10 @@ import {
   updateProfileSchema,
   getAddressesSchema,
   getCurrentUserSchema,
+  registerDeviceTokenSchema,
 } from "./users.schema.js";
 
-async function usersRoutes(fastify: FastifyInstance, options: any) {
+async function usersRoutes(fastify: FastifyInstance, _options: unknown) {
   // All routes require authentication
   fastify.addHook("onRequest", fastify.authenticate);
 
@@ -20,8 +21,8 @@ async function usersRoutes(fastify: FastifyInstance, options: any) {
     usersController.getCurrentUser.bind(usersController),
   );
 
-  // PUT /api/v1/users/me - Update user profile
-  fastify.put(
+  // PATCH /api/v1/users/me - Partial profile update
+  fastify.patch(
     "/me",
     { schema: updateProfileSchema },
     usersController.updateProfile.bind(usersController),
@@ -46,6 +47,13 @@ async function usersRoutes(fastify: FastifyInstance, options: any) {
     "/me/addresses/:id",
     { schema: deleteAddressSchema },
     usersController.deleteAddress.bind(usersController),
+  );
+
+  // POST /api/v1/users/me/device-token - Register FCM device token
+  fastify.post(
+    "/me/device-token",
+    { schema: registerDeviceTokenSchema },
+    usersController.registerDeviceToken.bind(usersController),
   );
 }
 

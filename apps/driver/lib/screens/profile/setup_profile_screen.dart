@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../models/static/static_vehicle_category.dart';
+import '../../providers/home_provider.dart';
+import '../../services/api_service.dart';
+import '../../services/cloudinary_service.dart';
+import '../../theme/design_tokens.dart';
+import '../../utils/app_routes.dart';
+import '../../utils/driver_upload_image_picker.dart';
+import '../../utils/snackbar_utils.dart';
+import '../auth/widgets/auth_widgets.dart';
+import 'widgets/onboarding_widgets.dart';
 
 class SetupProfileScreen extends ConsumerStatefulWidget {
   const SetupProfileScreen({super.key});
@@ -11,91 +24,362 @@ class SetupProfileScreen extends ConsumerStatefulWidget {
 
 class _SetupProfileScreenState extends ConsumerState<SetupProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _vehicleTypeController = TextEditingController();
-  bool _isLoading = false;
+  final _makeCtrl = TextEditingController();
+  final _modelCtrl = TextEditingController();
+  final _yearCtrl = TextEditingController();
+  final _plateCtrl = TextEditingController();
+
+  XFile? _photo;
+  bool _photoUploading = false;
+  String? _photoUrl;
+  int? _vehicleCategoryId;
+  bool _submitting = false;
+  bool _catalogLoading = true;
+  List<StaticVehicleCategory> _vehicleOptions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadVehicleCatalog();
+      await _prefillFromServerProfile();
+    });
+  }
 
   @override
   void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _phoneController.dispose();
-    _vehicleTypeController.dispose();
+    _makeCtrl.dispose();
+    _modelCtrl.dispose();
+    _yearCtrl.dispose();
+    _plateCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
+  Future<void> _loadVehicleCatalog() async {
     try {
-      // TODO: Call API to save profile
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-      if (mounted) context.push('/document-upload');
-    } catch (e) {
+      final rows = await ref
+          .read(apiServiceProvider)
+          .getVehicleCategoryCatalog();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _vehicleOptions = rows;
+        _catalogLoading = false;
+      });
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save profile: ${e.toString()}')));
+        setState(() {
+          _vehicleOptions = [];
+          _catalogLoading = false;
+        });
+        SnackbarUtils.showError(
+          context,
+          'Could not load vehicle types. Check connection and retry.',
+        );
+      }
+    }
+  }
+
+  /// If the courier already saved vehicle details, mirror them in the form (resume / re-entry).
+  Future<void> _prefillFromServerProfile() async {
+    try {
+      final profile = await ref.read(driverProfileProvider.future);
+      if (!mounted) {
+        return;
+      }
+      final v = profile.vehicle;
+      final spec = v?.specification;
+      final catId = v?.category?.id;
+      final combinedModel = spec?.model?.trim();
+      var nextCategoryId = _vehicleCategoryId;
+      var nextPhotoUrl = _photoUrl;
+      if (combinedModel != null && combinedModel.isNotEmpty) {
+        final parts = combinedModel.split(RegExp(r'\s+'));
+        if (parts.length >= 2) {
+          _makeCtrl.text = parts.first;
+          _modelCtrl.text = parts.sublist(1).join(' ');
+        } else {
+          _modelCtrl.text = combinedModel;
+        }
+      }
+      if (spec?.year != null) {
+        _yearCtrl.text = '${spec!.year}';
+      }
+      if (spec?.vehicleNumber != null &&
+          spec!.vehicleNumber!.trim().isNotEmpty) {
+        _plateCtrl.text = spec.vehicleNumber!.trim();
+      }
+      if (profile.profilePictureUrl != null &&
+          profile.profilePictureUrl!.trim().isNotEmpty) {
+        nextPhotoUrl = profile.profilePictureUrl!.trim();
+      }
+      if (catId != null && _vehicleOptions.any((c) => c.categoryId == catId)) {
+        nextCategoryId = catId;
+      }
+      setState(() {
+        _photoUrl = nextPhotoUrl;
+        _vehicleCategoryId = nextCategoryId;
+      });
+    } catch (_) {
+      // No profile yet — leave fields empty
+    }
+  }
+
+  Future<void> _pickPhoto() async {
+    final picked = await pickImageForDriverUpload(
+      ImagePicker(),
+      source: ImageSource.gallery,
+      use: DriverImageUploadUse.profile,
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _photo = picked;
+      _photoUploading = true;
+    });
+    try {
+      final url = await ref
+          .read(cloudinaryServiceProvider)
+          .uploadDriverProfilePhoto(picked);
+      if (mounted) {
+        setState(() => _photoUrl = url);
+      }
+    } catch (_) {
+      if (mounted) {
+        SnackbarUtils.showError(
+          context,
+          'Photo upload failed. You can retry or continue without a photo.',
+        );
+        setState(() => _photo = null);
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _photoUploading = false);
+      }
+    }
+  }
+
+  Future<void> _onContinue() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_vehicleCategoryId == null) {
+      SnackbarUtils.showError(context, 'Please select a vehicle type');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await ref
+          .read(apiServiceProvider)
+          .submitVehicleDetails(
+            vehicleCategoryId: _vehicleCategoryId!,
+            vehicleMake: _makeCtrl.text.trim(),
+            vehicleModel: _modelCtrl.text.trim(),
+            vehicleYear: int.parse(_yearCtrl.text.trim()),
+            plateNumber: _plateCtrl.text.trim().toUpperCase(),
+            profilePictureUrl: _photoUrl,
+          );
+      if (mounted) {
+        await context.push(AppRoutes.documentUpload);
+      }
+    } catch (_) {
+      if (mounted) {
+        SnackbarUtils.showError(
+          context,
+          'Failed to save vehicle details. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('Setup Profile')),
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final maxYear = DateTime.now().year;
+
+    return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('Personal Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: const InputDecoration(labelText: 'First Name'),
-                  validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: const InputDecoration(labelText: 'Last Name'),
-                  validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: 'Phone Number'),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-                ),
-                const SizedBox(height: 32),
-                const Text('Vehicle Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Vehicle Type'),
-                  items: const [
-                    DropdownMenuItem(value: 'bike', child: Text('Bike')),
-                    DropdownMenuItem(value: 'car', child: Text('Car')),
-                    DropdownMenuItem(value: 'van', child: Text('Van')),
-                  ],
-                  onChanged: (value) => _vehicleTypeController.text = value ?? '',
-                  validator: (value) => value == null ? 'Please select a vehicle type' : null,
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _saveProfile,
-                  child: _isLoading ? const CircularProgressIndicator() : const Text('Continue'),
-                ),
-              ],
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'STEP 1 OF 2',
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '1/2',
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const OnboardingProgressBar(currentStep: 1, totalSteps: 2),
+                  const SizedBox(height: 20),
+                  Text('Vehicle details', style: tt.headlineSmall),
+                  const SizedBox(height: 4),
+                  Text('Tell us about your vehicle', style: tt.bodyMedium),
+                ],
+              ),
             ),
-          ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: ProfilePhotoPicker(
+                          imageFile: _photo,
+                          networkPreviewUrl: _photo == null ? _photoUrl : null,
+                          isLoading: _photoUploading,
+                          onPick: _pickPhoto,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      if (_catalogLoading)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_vehicleOptions.isEmpty)
+                        Text(
+                          'No vehicle categories available.',
+                          style: tt.bodyMedium?.copyWith(color: cs.error),
+                        )
+                      else
+                        VehicleCategorySelector(
+                          options: _vehicleOptions,
+                          selectedCategoryId: _vehicleCategoryId,
+                          onChanged: (id) =>
+                              setState(() => _vehicleCategoryId = id),
+                        ),
+                      const SizedBox(height: 20),
+                      AuthTextField(
+                        controller: _makeCtrl,
+                        label: 'VEHICLE MAKE',
+                        hintText: 'e.g. Honda, Maruti',
+                        labelDensity: AuthFieldLabelDensity.section,
+                        textCapitalization: TextCapitalization.words,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Vehicle make is required'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      AuthTextField(
+                        controller: _modelCtrl,
+                        label: 'VEHICLE MODEL',
+                        hintText: 'e.g. Activa, Swift',
+                        labelDensity: AuthFieldLabelDensity.section,
+                        textCapitalization: TextCapitalization.words,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Vehicle model is required'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: AuthTextField(
+                              controller: _yearCtrl,
+                              label: 'YEAR',
+                              hintText: '2021',
+                              labelDensity: AuthFieldLabelDensity.section,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(4),
+                              ],
+                              validator: (v) {
+                                final y = int.tryParse(v ?? '');
+                                if (y == null || y < 1990 || y > maxYear) {
+                                  return 'Enter year (1990–$maxYear)';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: AuthTextField(
+                              controller: _plateCtrl,
+                              label: 'PLATE NUMBER',
+                              hintText: 'MH12AB1234',
+                              labelDensity: AuthFieldLabelDensity.section,
+                              textCapitalization: TextCapitalization.characters,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp('[A-Za-z0-9]'),
+                                ),
+                                LengthLimitingTextInputFormatter(12),
+                              ],
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Required'
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      OnboardingPrimaryButton(
+                        label: 'Continue',
+                        onPressed:
+                            (_submitting ||
+                                _photoUploading ||
+                                _catalogLoading ||
+                                _vehicleOptions.isEmpty)
+                            ? null
+                            : _onContinue,
+                        isLoading: _submitting,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
 }

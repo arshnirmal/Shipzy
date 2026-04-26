@@ -2,10 +2,13 @@
 import crypto from "node:crypto";
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import authService from "./auth.service.js";
+import type { DeviceInfo } from "../../types/index.js";
 
 import type {
+  BusinessRegisterRequest,
   GoogleAuthRequest,
   RefreshTokenRequest,
   RegisterRequest,
@@ -13,6 +16,27 @@ import type {
 } from "./auth.zod.js";
 
 class AuthController {
+  private _getHeaderValue(
+    value: string | string[] | undefined,
+  ): string | undefined {
+    if (typeof value === "string") return value;
+    return Array.isArray(value) ? value[0] : undefined;
+  }
+
+  private _getDeviceInfo(request: FastifyRequest): DeviceInfo {
+    const deviceInfo: DeviceInfo = {
+      ipAddress: request.ip,
+    };
+
+    const deviceId = this._getHeaderValue(request.headers["x-device-id"]);
+    const userAgent = this._getHeaderValue(request.headers["user-agent"]);
+
+    if (deviceId) deviceInfo.deviceId = deviceId;
+    if (userAgent) deviceInfo.userAgent = userAgent;
+
+    return deviceInfo;
+  }
+
   /**
    * POST /api/v1/auth/refresh
    * Refresh JWT access token
@@ -20,9 +44,11 @@ class AuthController {
   async refreshToken(
     request: FastifyRequest<{ Body: RefreshTokenRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      const result = await authService.refreshToken(request.body.refreshToken);
+      const result = await authService.refreshToken(
+        request.body.tokens.refreshToken,
+      );
 
       return successResponse(reply, result, "Token refreshed successfully");
     } catch (error) {
@@ -30,11 +56,10 @@ class AuthController {
         msg: "Token refresh controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 401,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -45,21 +70,14 @@ class AuthController {
   async verifyGoogle(
     request: FastifyRequest<{ Body: GoogleAuthRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      const { idToken, role } = request.body;
-
-      // Get device info from request
-      const deviceInfo: any = {
-        ipAddress: request.ip,
-      };
-      if (request.headers["x-device-id"] !== undefined)
-        deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined)
-        deviceInfo.userAgent = request.headers["user-agent"];
-
-      const userData: any = {};
-      if (role !== undefined) userData.roleName = role;
+      const {
+        provider: { idToken },
+        identity: { role },
+      } = request.body;
+      const deviceInfo = this._getDeviceInfo(request);
+      const userData: { roleName?: string } = { roleName: role };
 
       const result = await authService.verifyGoogleAndCreateUser(
         idToken,
@@ -70,21 +88,20 @@ class AuthController {
       return successResponse(
         reply,
         result,
-        result.isNewUser
+        result.auth.session.isNewUser
           ? "User registered successfully"
           : "User logged in successfully",
-        result.isNewUser ? 201 : 200,
+        result.auth.session.isNewUser ? 201 : 200,
       );
     } catch (error) {
       logger.error({
         msg: "Google verification controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -92,7 +109,10 @@ class AuthController {
    * POST /api/v1/auth/logout
    * Logout user (revoke token)
    */
-  async logout(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async logout(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
     try {
       // Get token from Authorization header
       const token = request.headers.authorization?.replace("Bearer ", "");
@@ -112,11 +132,10 @@ class AuthController {
         msg: "Logout controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -127,25 +146,11 @@ class AuthController {
   async register(
     request: FastifyRequest<{ Body: RegisterRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      const { fullName, email, password, role, phoneNumber } = request.body;
-
-      // Get device info from request
-      const deviceInfo: any = {
-        ipAddress: request.ip,
-      };
-      if (request.headers["x-device-id"] !== undefined)
-        deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined)
-        deviceInfo.userAgent = request.headers["user-agent"];
-
-      const registerData: any = { fullName, email, password };
-      if (role !== undefined) registerData.role = role;
-      if (phoneNumber !== undefined) registerData.phoneNumber = phoneNumber;
-
+      const deviceInfo = this._getDeviceInfo(request);
       const result = await authService.registerWithEmail(
-        registerData,
+        request.body,
         deviceInfo,
       );
 
@@ -160,11 +165,40 @@ class AuthController {
         msg: "Registration controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/auth/register/business
+   * Register new business user
+   */
+  async registerBusiness(
+    request: FastifyRequest<{ Body: BusinessRegisterRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const deviceInfo = this._getDeviceInfo(request);
+      const result = await authService.registerBusiness(request.body, deviceInfo);
+
+      return successResponse(
         reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
+        result,
+        "Business account registered successfully",
+        201,
       );
+    } catch (error) {
+      logger.error({
+        msg: "Business registration controller error",
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -175,23 +209,10 @@ class AuthController {
   async login(
     request: FastifyRequest<{ Body: LoginRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
-      const { email, password } = request.body;
-
-      // Get device info from request
-      const deviceInfo: any = {
-        ipAddress: request.ip,
-      };
-      if (request.headers["x-device-id"] !== undefined)
-        deviceInfo.deviceId = request.headers["x-device-id"];
-      if (request.headers["user-agent"] !== undefined)
-        deviceInfo.userAgent = request.headers["user-agent"];
-
-      const result = await authService.loginWithEmail(
-        { email, password },
-        deviceInfo,
-      );
+      const deviceInfo = this._getDeviceInfo(request);
+      const result = await authService.loginWithEmail(request.body, deviceInfo);
 
       return successResponse(reply, result, "User logged in successfully");
     } catch (error) {
@@ -199,11 +220,10 @@ class AuthController {
         msg: "Login controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 401,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

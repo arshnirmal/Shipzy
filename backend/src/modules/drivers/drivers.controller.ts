@@ -1,14 +1,18 @@
 // services/backend/src/modules/drivers/drivers.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
+import { AppError } from "../../utils/error.util.js";
 import { errorResponse, successResponse } from "../../utils/response.util.js";
 import driversService from "./drivers.service.js";
 import ratingsService from "../ratings/ratings.service.js";
 
-import type {
-  UpdateDriverProfileRequest,
-  UpdateAvailabilityRequest,
-  UpdateLocationRequest,
+import {
+  type EarningsPeriodQuery,
+  type SubmitKycRequest,
+  type TripHistoryQuery,
+  type UpdateAvailabilityRequest,
+  type UpdateDriverProfileRequest,
+  type UpdateLocationRequest,
 } from "./drivers.zod.js";
 
 class DriversController {
@@ -19,7 +23,7 @@ class DriversController {
   async getDriverProfile(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 
@@ -35,11 +39,10 @@ class DriversController {
         msg: "Get driver profile controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -50,7 +53,7 @@ class DriversController {
   async updateProfile(
     request: FastifyRequest<{ Body: UpdateDriverProfileRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
       const updatedDriver = await driversService.updateProfile(
@@ -68,11 +71,39 @@ class DriversController {
         msg: "Update driver profile controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/drivers/me/kyc
+   * Submit KYC document URLs (stored on courier_status + profile onboarding).
+   */
+  async submitKyc(
+    request: FastifyRequest<{ Body: SubmitKycRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const { userId } = request.user!;
+      const result = await driversService.submitKyc(userId, request.body);
+
+      return successResponse(
         reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
+        result,
+        "KYC documents submitted for review",
       );
+    } catch (error) {
+      logger.error({
+        msg: "Submit KYC controller error",
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -83,7 +114,7 @@ class DriversController {
   async updateAvailability(
     request: FastifyRequest<{ Body: UpdateAvailabilityRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
       const result = await driversService.updateAvailability(
@@ -101,11 +132,10 @@ class DriversController {
         msg: "Update availability controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -116,10 +146,14 @@ class DriversController {
   async updateLocation(
     request: FastifyRequest<{ Body: UpdateLocationRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
-      const result = await driversService.updateLocation(userId, request.body);
+      const result = await driversService.updateLocation(
+        userId,
+        request.body.location.current,
+        request.body.locationMeta,
+      );
 
       return successResponse(reply, result, "Location updated successfully");
     } catch (error) {
@@ -127,11 +161,10 @@ class DriversController {
         msg: "Update location controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -142,7 +175,7 @@ class DriversController {
   async getActiveAssignments(
     request: FastifyRequest,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 
@@ -158,11 +191,10 @@ class DriversController {
         msg: "Get assignments controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -172,21 +204,18 @@ class DriversController {
    * Query params: ?period=today|week|month|year (default: today)
    */
   async getEarnings(
-    request: FastifyRequest,
+    request: FastifyRequest<{ Querystring: EarningsPeriodQuery }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
-      const query = request.query as { period?: string };
-
-      // Default to today for home screen (lightweight)
-      const period = query.period || "today";
+      const period = request.query.period ?? "today";
 
       const earnings = await driversService.getEarningsSummary(userId, period);
 
       return successResponse(
         reply,
-        earnings,
+        { earnings },
         "Earnings retrieved successfully",
       );
     } catch (error) {
@@ -194,11 +223,10 @@ class DriversController {
         msg: "Get earnings controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -206,7 +234,10 @@ class DriversController {
    * GET /api/v1/drivers/me/rating
    * Get driver rating stats
    */
-  async getRating(request: FastifyRequest, reply: FastifyReply): Promise<any> {
+  async getRating(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
     try {
       const { userId } = request.user!;
 
@@ -214,7 +245,7 @@ class DriversController {
 
       return successResponse(
         reply,
-        ratingStats,
+        { rating: ratingStats },
         "Rating stats retrieved successfully",
       );
     } catch (error) {
@@ -222,11 +253,35 @@ class DriversController {
         msg: "Get rating stats controller error",
         error: (error as Error).message,
       });
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        (error as any).statusCode || 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * GET /api/v1/drivers/me/trips
+   * Get paginated trip history
+   */
+  async getTripHistory(
+    request: FastifyRequest<{ Querystring: TripHistoryQuery }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const { userId } = request.user!;
+      const result = await driversService.getTripHistory(userId, request.query);
+
+      return successResponse(reply, result, "Trip history retrieved successfully");
+    } catch (error) {
+      logger.error({
+        msg: "Get trip history controller error",
+        error: (error as Error).message,
+      });
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

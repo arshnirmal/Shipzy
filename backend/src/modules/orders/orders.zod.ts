@@ -1,325 +1,731 @@
-// services/backend/src/modules/orders/orders.zod.ts
 import { z } from "zod";
 import {
   CoordinatesZ,
-  OrderAddressZ,
   FareBreakdownZ,
   BaseQueryZ,
   VehicleZ,
 } from "../../schemas/common.zod.js";
+import {
+  AssignmentTimelineJSONBZ,
+  DeliveryAttemptJSONBZ,
+  OrderActualJSONBZ,
+  OrderItemJSONBZ,
+  OrderLocationJSONBZ,
+  OrderPackageJSONBZ,
+  OrderPricingJSONBZ,
+  OrderScheduleJSONBZ,
+  OrderSnapshotJSONBZ,
+} from "../../database/schema/types.js";
 
 // ============================================================================
-// BASE ORDER SCHEMA - Common fields across all order representations
+// BASE ORDER SCHEMAS
 // ============================================================================
 
-export const BaseOrderZ = z.object({
-  orderId: z.number().int().positive(),
-  orderUuid: z.string().uuid(),
-  orderNumber: z.string().optional(),
-  status: z.string().optional(),
-  statusId: z.number().int().positive(),
-  deliveryTypeId: z.number().int().positive(),
-  deliveryTypeDisplay: z.string().optional(),
-  vehicleCategoryId: z.number().int().positive(),
-  vehicleCategoryDisplay: z.string().optional(),
-  createdAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime().optional(),
-});
+export const OrderLifecycleStatusZ = z.enum([
+  "pending",
+  "scheduled",
+  "accepted",
+  "picked_up",
+  "in_transit",
+  "delivered",
+  "cancelled",
+  "undeliverable",
+  "returning",
+  "returned",
+]);
+
+export const AssignmentStatusZ = z.enum([
+  "assigned",
+  "accepted",
+  "rejected",
+  "picked_up",
+  "in_transit",
+  "returning",
+  "delivered",
+  "cancelled",
+  "returned",
+]);
+export type AssignmentStatus = z.infer<typeof AssignmentStatusZ>;
+
+export const OrderIdentifiersZ = z
+  .object({
+    orderId: z.number().int().positive(),
+    orderUuid: z.string().uuid(),
+    orderNumber: z.string().nullable().optional(),
+  })
+  .strict();
+
+export const OrderFulfillmentZ = z
+  .object({
+    deliveryTypeId: z.number().int().positive(),
+    vehicleCategoryId: z.number().int().positive(),
+    weightTierId: z.number().int().positive().nullable().optional(),
+    packageTypeId: z.number().int().positive().nullable().optional(),
+    paymentMethodId: z.number().int().positive(),
+  })
+  .strict();
+
+export const OrderLocationsZ = z
+  .object({
+    pickup: OrderLocationJSONBZ,
+    delivery: OrderLocationJSONBZ,
+  })
+  .strict();
+
+export const OrderMetricsZ = z
+  .object({
+    estimatedDistanceKm: z.number().nonnegative().nullable().optional(),
+    actualDistanceKm: z.number().nonnegative().nullable().optional(),
+    actualDurationMins: z.number().int().nonnegative().nullable().optional(),
+    totalPrice: z.number().nonnegative(),
+  })
+  .strict();
+
+export const OrderTimelineZ = z
+  .object({
+    createdAt: z.iso.datetime(),
+    acceptedAt: z.iso.datetime().nullable().optional(),
+    pickedUpAt: z.iso.datetime().nullable().optional(),
+    inTransitAt: z.iso.datetime().nullable().optional(),
+    deliveredAt: z.iso.datetime().nullable().optional(),
+    cancelledAt: z.iso.datetime().nullable().optional(),
+  })
+  .strict();
+
+export const BaseOrderCoreZ = z
+  .object({
+    fulfillment: OrderFulfillmentZ,
+    locations: OrderLocationsZ,
+    package: OrderPackageJSONBZ.default({ notifyRecipientSms: false }),
+    schedule: OrderScheduleJSONBZ.default({}),
+    pricing: OrderPricingJSONBZ,
+    couponCode: z.string().max(50).nullable().optional(),
+    items: z.array(OrderItemJSONBZ).optional().default([]),
+  })
+  .strict();
+
+export type BaseOrderCore = z.infer<typeof BaseOrderCoreZ>;
+
+export const BaseOrderZ = BaseOrderCoreZ.extend({
+  identifiers: OrderIdentifiersZ,
+  status: OrderLifecycleStatusZ,
+  metrics: OrderMetricsZ,
+  timeline: OrderTimelineZ,
+  snapshot: OrderSnapshotJSONBZ.optional(),
+  actual: OrderActualJSONBZ.optional(),
+}).strict();
+
 export type BaseOrder = z.infer<typeof BaseOrderZ>;
 
 // ============================================================================
-// REQUEST SCHEMAS - API request payloads
+// REQUEST SCHEMAS
 // ============================================================================
 
-// Calculate Fare Request
-export const CalculateFareRequestZ = z.object({
-  deliveryTypeId: z.number().int().positive(),
-  vehicleCategoryId: z.number().int().positive(),
-  weightTierId: z.number().int().positive(),
-  packageTypeId: z.number().int().positive().nullable().optional(),
-  pickup: CoordinatesZ,
-  drop: CoordinatesZ,
-});
+export const CalculateFareRequestZ = z
+  .object({
+    fulfillment: z
+      .object({
+        deliveryTypeId: z.number().int().positive(),
+        vehicleCategoryId: z.number().int().positive(),
+        weightTierId: z.number().int().positive(),
+        packageTypeId: z.number().int().positive().nullable().optional(),
+      })
+      .strict(),
+    locations: z
+      .object({
+        pickup: CoordinatesZ,
+        delivery: CoordinatesZ,
+      })
+      .strict(),
+  })
+  .strict();
 export type CalculateFareRequest = z.infer<typeof CalculateFareRequestZ>;
 
-// Create Order Request
-export const CreateOrderRequestZ = z.object({
-  deliveryTypeId: z.number().int().positive(),
-  vehicleCategoryId: z.number().int().positive(),
-  weightTierId: z.number().int().positive(),
-  packageTypeId: z.number().int().positive().nullable().optional(),
-  paymentMethodId: z.number().int().positive(),
-  packageDescription: z.string().max(500).nullable().optional(),
-  specialInstructions: z.string().max(1000).nullable().optional(),
-  scheduledPickupTime: z.iso.datetime().nullable().optional(),
-  scheduledDeliveryTime: z.iso.datetime().nullable().optional(),
-  declaredValue: z.number().nonnegative().nullable().optional(),
-  notifyRecipientSms: z.boolean().optional().default(false),
-  couponCode: z.string().max(50).nullable().optional(),
-  fareBreakdown: FareBreakdownZ,
-  pickup: OrderAddressZ,
-  delivery: OrderAddressZ,
-});
+export const CreateOrderRequestZ = BaseOrderCoreZ.extend({
+  fulfillment: z
+    .object({
+      deliveryTypeId: z.number().int().positive(),
+      vehicleCategoryId: z.number().int().positive(),
+      weightTierId: z.number().int().positive(),
+      packageTypeId: z.number().int().positive().nullable().optional(),
+      paymentMethodId: z.number().int().positive(),
+    })
+    .strict(),
+  package: OrderPackageJSONBZ,
+}).strict();
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestZ>;
 
-// Cancel Order Request
-export const CancelOrderRequestZ = z.object({
-  cancellationReason: z.string().min(5).max(500),
-});
+export const CancelOrderRequestZ = z
+  .object({
+    cancellation: z
+      .object({
+        reason: z.string().min(5).max(500),
+      })
+      .strict(),
+  })
+  .strict();
 export type CancelOrderRequest = z.infer<typeof CancelOrderRequestZ>;
 
-// Update Order Status Request
-export const UpdateOrderStatusRequestZ = z.object({
-  status: z.enum(["picked_up", "in_transit", "delivered"]),
-});
+export const UpdateOrderStatusRequestZ = z
+  .object({
+    transition: z
+      .object({
+        status: z.enum(["picked_up", "in_transit", "delivered"]),
+      })
+      .strict(),
+  })
+  .strict();
 export type UpdateOrderStatusRequest = z.infer<
   typeof UpdateOrderStatusRequestZ
 >;
 
-// Rate Order Request
-export const RateOrderRequestZ = z.object({
-  rating: z.number().int().min(1).max(5),
-  comment: z.string().max(500).nullable().optional(),
-  anonymous: z.boolean().optional(),
-});
+export const RateOrderRequestZ = z
+  .object({
+    feedback: z
+      .object({
+        rating: z.number().int().min(1).max(5),
+        comment: z.string().max(500).nullable().optional(),
+        anonymous: z.boolean().optional(),
+      })
+      .strict(),
+  })
+  .strict();
 export type RateOrderRequest = z.infer<typeof RateOrderRequestZ>;
 
-// Cancel Order Result (stored function response)
-export const CancelOrderResultZ = z.object({
-  success: z.boolean(),
-  orderId: z.number().int().positive().optional(),
-  status: z.string().optional(),
-  refundAmount: z.number().nonnegative().optional(),
-  refundStatus: z.string().optional(),
-  error: z.string().optional(),
-}).passthrough();
-export type CancelOrderResult = z.infer<typeof CancelOrderResultZ>;
+// ── Driver order action request schemas ────────────────────────────────────────
+
+export const ArriveRequestZ = z
+  .object({
+    gps: CoordinatesZ,
+  })
+  .strict();
+export type ArriveRequest = z.infer<typeof ArriveRequestZ>;
+
+export const UndeliverableRequestZ = z
+  .object({
+    driverNote: z.string().min(1).max(1000),
+    photoUrl: z.string().url().optional(),
+  })
+  .strict();
+export type UndeliverableRequest = z.infer<typeof UndeliverableRequestZ>;
+
+export const ProofOfDeliveryRequestZ = z
+  .object({
+    recipientName: z.string().max(100).optional(),
+    photoUrl: z.string().url().optional(),
+    recipientSignatureUrl: z.string().url().optional(),
+    deliveryNotes: z.string().max(500).optional(),
+  })
+  .strict();
+export type ProofOfDeliveryRequest = z.infer<typeof ProofOfDeliveryRequestZ>;
 
 // ============================================================================
-// QUERY SCHEMAS - API query parameters
+// QUERY SCHEMAS
 // ============================================================================
 
-// List Orders Query
 export const ListOrdersQueryZ = BaseQueryZ.extend({
   status: z.enum(["active", "completed", "cancelled"]).optional(),
   dateFrom: z.iso.datetime().optional(),
   dateTo: z.iso.datetime().optional(),
-});
+  sortBy: z
+    .enum(["createdAt", "totalPrice", "deliveredAt", "pickedUpAt"])
+    .optional(),
+  search: z.string().max(200).optional(),
+  deliveryTypeId: z.coerce.number().int().positive().optional(),
+  minPrice: z.coerce.number().nonnegative().optional(),
+  maxPrice: z.coerce.number().nonnegative().optional(),
+}).strict();
 export type ListOrdersQuery = z.infer<typeof ListOrdersQueryZ>;
 
-// Available Orders Query (for drivers)
-export const AvailableOrdersQueryZ = z.object({
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
-  radius: z.coerce.number().positive().optional().default(10),
-  limit: z.coerce.number().int().positive().optional().default(20),
-});
+export const BulkCancelRequestZ = z
+  .object({
+    orders: z
+      .object({
+        ids: z.array(z.number().int().positive()).min(1).max(100),
+        reason: z.string().min(5).max(500),
+      })
+      .strict(),
+  })
+  .strict();
+export type BulkCancelRequest = z.infer<typeof BulkCancelRequestZ>;
+
+export const BulkCancelResultZ = z
+  .object({
+    bulk: z
+      .object({
+        requested: z.number().int().nonnegative(),
+        cancelled: z.number().int().nonnegative(),
+        failed: z.number().int().nonnegative(),
+        results: z.array(
+          z
+            .object({
+              orderId: z.number().int().positive(),
+              success: z.boolean(),
+              error: z.string().optional(),
+            })
+            .strict(),
+        ),
+      })
+      .strict(),
+  })
+  .strict();
+export type BulkCancelResult = z.infer<typeof BulkCancelResultZ>;
+
+export const AvailableOrdersQueryZ = z
+  .object({
+    latitude: z.coerce.number().min(-90).max(90),
+    longitude: z.coerce.number().min(-180).max(180),
+    radius: z.coerce.number().positive().optional().default(10),
+    limit: z.coerce.number().int().positive().optional().default(20),
+  })
+  .strict();
 export type AvailableOrdersQuery = z.infer<typeof AvailableOrdersQueryZ>;
 
 // ============================================================================
-// RESPONSE SCHEMAS - API responses
+// RESPONSE SCHEMAS
 // ============================================================================
 
-// Calculate Fare Response
-export const CalculateFareResponseZ = FareBreakdownZ.extend({
-  estimatedDurationMins: z.number().nonnegative().optional(),
-});
+export const CalculateFareResponseZ = z
+  .object({
+    pricing: FareBreakdownZ,
+    estimatedDurationMins: z.number().nonnegative().optional(),
+  })
+  .strict();
 export type CalculateFareResponse = z.infer<typeof CalculateFareResponseZ>;
 
-// Stored function result (camelCase) - used internally
-export const FareCalculationResultZ = z.object({
-  success: z.boolean(),
-  fareBreakdown: FareBreakdownZ.optional(),
-  error: z.string().optional(),
-});
-export type FareCalculationResult = z.infer<typeof FareCalculationResultZ>;
-
-// Create Order Response
-export const CreateOrderResponseZ = z.object({
-  orderId: z.number().int().positive(),
-  orderUuid: z.string().uuid(),
-  orderNumber: z.string(),
-  status: z.string(),
-  fareBreakdown: FareBreakdownZ,
-  estimatedDistanceKm: z.number().nonnegative(),
-  estimatedDurationMins: z.number().nonnegative().optional(),
-  createdAt: z.iso.datetime(),
-});
+export const CreateOrderResponseZ = z
+  .object({
+    order: BaseOrderZ,
+  })
+  .strict();
 export type CreateOrderResponse = z.infer<typeof CreateOrderResponseZ>;
 
-// Stored function order payload (camelCase) used for normalization
-export const CreatedOrderRowZ = z
+export const OrderListItemZ = z
   .object({
-    orderId: z.number().int().positive(),
-    orderUuid: z.string().uuid(),
-    orderNumber: z.string(),
-    status: z.string().optional(),
-    pricing: FareBreakdownZ.partial().optional(),
-    estimatedDistanceKm: z.number().nonnegative().optional(),
-    estimatedDurationMins: z.number().nonnegative().optional(),
-    createdAt: z.iso.datetime(),
+    order: BaseOrderZ,
+    courier: z
+      .object({
+        userId: z.number().int().positive(),
+        name: z.string().nullable().optional(),
+        phone: z.string().nullable().optional(),
+        profilePictureUrl: z.string().url().nullable().optional(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
   })
-  .passthrough();
-export type CreatedOrderRow = z.infer<typeof CreatedOrderRowZ>;
-
-// Stored function result (camelCase) - used internally
-export const OrderCreateResultZ = z.object({
-  success: z.boolean(),
-  order: CreatedOrderRowZ.optional(),
-  error: z.string().optional(),
-});
-export type OrderCreateResult = z.infer<typeof OrderCreateResultZ>;
-
-// Order List Item (minimal info for lists)
-export const OrderListItemZ = z.object({
-  orderId: z.number().int().positive(),
-  orderUuid: z.string().uuid(),
-  orderNumber: z.string().nullable().optional(),
-  status: z.string(),
-  statusId: z.number().int().positive(),
-  deliveryTypeId: z.number().int().positive(),
-  deliveryTypeDisplay: z.string().optional(),
-  vehicleCategoryId: z.number().int().positive(),
-  vehicleCategoryDisplay: z.string().optional(),
-  packageDescription: z.string().nullable().optional(),
-  weightTierId: z.number().nullable().optional(),
-  weightTierDisplay: z.string().nullable().optional(),
-  estimatedDistanceKm: z.number().nullable().optional(),
-  actualDistanceKm: z.number().nullable().optional(),
-  actualDurationMins: z.number().nullable().optional(),
-  totalPrice: z.number().nonnegative(),
-  createdAt: z.iso.datetime(),
-  pickup: z.object({
-    address: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-  }),
-  delivery: z.object({
-    address: z.string().nullable().optional(),
-    city: z.string().nullable().optional(),
-  }),
-  courier: z
-    .object({
-      name: z.string().nullable().optional(),
-      photo: z.string().nullable().optional(),
-    })
-    .nullable()
-    .optional(),
-});
+  .strict();
 export type OrderListItem = z.infer<typeof OrderListItemZ>;
 
-// Order Details (full info for get by ID)
-export const OrderDetailsZ = BaseOrderZ.extend({
-  packageDescription: z.string().nullable().optional(),
-  packageTypeId: z.number().nullable().optional(),
-  weightTierId: z.number().nullable().optional(),
-  weightTierDisplay: z.string().nullable().optional(),
-  specialInstructions: z.string().nullable().optional(),
-
-  pickup: z.object({
-    locationId: z.number().optional(),
-    address: z.string(),
-    building: z.string().nullable().optional(),
-    floor: z.string().nullable().optional(),
-    flat: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    postalCode: z.string().optional(),
-    latitude: z.number(),
-    longitude: z.number(),
-    contactName: z.string().optional(),
-    contactPhone: z.string().optional(),
-  }),
-  delivery: z.object({
-    locationId: z.number().optional(),
-    address: z.string(),
-    building: z.string().nullable().optional(),
-    floor: z.string().nullable().optional(),
-    flat: z.string().nullable().optional(),
-    landmark: z.string().nullable().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    postalCode: z.string().optional(),
-    latitude: z.number(),
-    longitude: z.number(),
-    contactName: z.string().optional(),
-    contactPhone: z.string().optional(),
-  }),
-
-  fareBreakdown: FareBreakdownZ,
-
-  client: z
-    .object({
-      userId: z.number(),
-      name: z.string().optional(),
-      phone: z.string().optional(),
-      profilePictureUrl: z.string().url().nullable().optional(),
-    })
-    .optional(),
-
-  courier: z
-    .object({
-      userId: z.number(),
-      name: z.string().optional(),
-      phone: z.string().optional(),
-      profilePictureUrl: z.string().url().nullable().optional(),
-      vehicle: VehicleZ.nullable().optional(),
-      rating: z
+export const OrderDetailsZ = z
+  .object({
+    order: BaseOrderZ.extend({
+      assignment: z
         .object({
-          averageRating: z.number().min(0).max(5),
-          totalRatings: z.number().int().nonnegative(),
+          assignmentId: z.number().int().positive(),
+          status: AssignmentStatusZ,
+          assignedAt: z.iso.datetime().nullable().optional(),
+          timeline: AssignmentTimelineJSONBZ.nullable().optional(),
         })
+        .strict()
+        .nullable()
         .optional(),
-    })
-    .nullable()
-    .optional(),
-
-  timeline: z.object({
-    confirmedAt: z.iso.datetime(),
-    assignedAt: z.iso.datetime().nullable().optional(),
-    pickedUpAt: z.iso.datetime().nullable().optional(),
-    deliveredAt: z.iso.datetime().nullable().optional(),
-    cancelledAt: z.iso.datetime().nullable().optional(),
-  }),
-
-  estimatedDistanceKm: z.number().nullable().optional(),
-  actualDistanceKm: z.number().nullable().optional(),
-  actualDurationMins: z.number().nullable().optional(),
-});
+      cancellation: z
+        .object({
+          reason: z.string().nullable().optional(),
+        })
+        .strict()
+        .optional(),
+    }).strict(),
+    actors: z
+      .object({
+        client: z
+          .object({
+            userId: z.number().int().positive(),
+            name: z.string().nullable().optional(),
+            phone: z.string().nullable().optional(),
+          })
+          .strict(),
+        courier: z
+          .object({
+            userId: z.number().int().positive(),
+            name: z.string().nullable().optional(),
+            phone: z.string().nullable().optional(),
+            profilePictureUrl: z.string().url().nullable().optional(),
+            vehicle: VehicleZ.nullable().optional(),
+            rating: z
+              .object({
+                averageRating: z.number().min(0).max(5),
+                totalRatings: z.number().int().nonnegative(),
+              })
+              .strict()
+              .optional(),
+          })
+          .strict()
+          .nullable()
+          .optional(),
+      })
+      .strict(),
+  })
+  .strict();
 export type OrderDetails = z.infer<typeof OrderDetailsZ>;
 
-// Available Order Item (for drivers)
-export const AvailableOrderItemZ = z.object({
-  orderId: z.number().int().positive(),
-  orderUuid: z.string().uuid(),
-  orderNumber: z.string(),
-  deliveryTypeDisplay: z.string(),
-  vehicleCategoryDisplay: z.string(),
-  createdAt: z.iso.datetime(),
-  pickup: z.object({
-    address: z.string(),
-    landmark: z.string().nullable().optional(),
-    city: z.string(),
-    coordinates: CoordinatesZ,
-  }),
-  delivery: z.object({
-    address: z.string(),
-    landmark: z.string().nullable().optional(),
-    city: z.string(),
-    coordinates: CoordinatesZ,
-  }),
-  fareBreakdown: FareBreakdownZ,
-  estimatedDistanceKm: z.number().nonnegative(),
-  distanceFromDriverKm: z.number().nonnegative(),
-  packageDescription: z.string().nullable().optional(),
-});
+export const AvailableOrderItemZ = z
+  .object({
+    order: BaseOrderZ,
+    distanceFromDriverKm: z.number().nonnegative(),
+  })
+  .strict();
 export type AvailableOrderItem = z.infer<typeof AvailableOrderItemZ>;
+
+export const CancelOrderResultZ = z
+  .object({
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: z.literal("cancelled"),
+        cancelledAt: z.iso.datetime().optional(),
+        cancellationReason: z.string().nullable().optional(),
+      })
+      .strict(),
+    refund: z
+      .object({
+        initiated: z.boolean(),
+        amount: z.number().nonnegative(),
+        status: z.string().optional(),
+      })
+      .strict(),
+  })
+  .strict();
+export type CancelOrderResult = z.infer<typeof CancelOrderResultZ>;
+
+export const AcceptOrderResultZ = z
+  .object({
+    assignment: z
+      .object({
+        assignmentId: z.number().int().positive(),
+        orderId: z.number().int().positive(),
+        courierId: z.number().int().positive(),
+        status: AssignmentStatusZ,
+        assignedAt: z.iso.datetime(),
+        acceptedAt: z.iso.datetime().nullable().optional(),
+      })
+      .strict(),
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: OrderLifecycleStatusZ,
+        acceptedAt: z.iso.datetime().nullable().optional(),
+      })
+      .strict(),
+  })
+  .strict();
+export type AcceptOrderResult = z.infer<typeof AcceptOrderResultZ>;
+
+export const UpdateOrderStatusResponseZ = z
+  .object({
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: z.enum(["picked_up", "in_transit", "delivered"]),
+        timestamp: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type UpdateOrderStatusResponse = z.infer<
+  typeof UpdateOrderStatusResponseZ
+>;
+
+// ── Driver order action response schemas ──────────────────────────────────────
+
+export const ArrivePayloadZ = z
+  .object({
+    arrivedAt: z.iso.datetime(),
+    waitUntil: z.iso.datetime(),
+    waitMinutes: z.number(),
+  })
+  .strict();
+export type ArrivePayload = z.infer<typeof ArrivePayloadZ>;
+
+export const ArriveResponseZ = z
+  .object({
+    data: ArrivePayloadZ,
+  })
+  .strict();
+export type ArriveResponse = z.infer<typeof ArriveResponseZ>;
+
+export const UndeliverablePayloadZ = z
+  .object({
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: z.literal("undeliverable"),
+        undeliverableAt: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type UndeliverablePayload = z.infer<typeof UndeliverablePayloadZ>;
+
+export const UndeliverableResponseZ = z
+  .object({
+    data: UndeliverablePayloadZ,
+  })
+  .strict();
+export type UndeliverableResponse = z.infer<typeof UndeliverableResponseZ>;
+
+export const ReturnPayloadZ = z
+  .object({
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: z.literal("returning"),
+        returnStartedAt: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ReturnPayload = z.infer<typeof ReturnPayloadZ>;
+
+export const ReturnResponseZ = z
+  .object({
+    data: ReturnPayloadZ,
+  })
+  .strict();
+export type ReturnResponse = z.infer<typeof ReturnResponseZ>;
+
+export const ReturnedPayloadZ = z
+  .object({
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: z.literal("returned"),
+        returnedAt: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ReturnedPayload = z.infer<typeof ReturnedPayloadZ>;
+
+export const ReturnedResponseZ = z
+  .object({
+    data: ReturnedPayloadZ,
+  })
+  .strict();
+export type ReturnedResponse = z.infer<typeof ReturnedResponseZ>;
+
+export const ProofOfDeliveryPayloadZ = z
+  .object({
+    proof: z
+      .object({
+        proofId: z.number().int().positive(),
+        orderId: z.number().int().positive(),
+        deliveredAt: z.iso.datetime(),
+      })
+      .strict(),
+  })
+  .strict();
+export type ProofOfDeliveryPayload = z.infer<typeof ProofOfDeliveryPayloadZ>;
+
+export const ProofOfDeliveryResponseZ = z
+  .object({
+    data: ProofOfDeliveryPayloadZ,
+  })
+  .strict();
+export type ProofOfDeliveryResponse = z.infer<typeof ProofOfDeliveryResponseZ>;
+
+export const TrackingMilestoneZ = z
+  .object({
+    eventType: z.string(),
+    description: z.string().nullable().optional(),
+    location: z
+      .object({
+        lat: z.number(),
+        lng: z.number(),
+      })
+      .strict()
+      .nullable()
+      .optional(),
+    timestamp: z.iso.datetime(),
+  })
+  .strict();
+
+export const LocationMetaResponseZ = z
+  .object({
+    speed: z.number().nullable().optional(),
+    bearing: z.number().nullable().optional(),
+    accuracy: z.number().nullable().optional(),
+  })
+  .strict();
+
+export const TrackingPayloadZ = z
+  .object({
+    order: z
+      .object({
+        orderId: z.number().int().positive(),
+        status: OrderLifecycleStatusZ,
+      })
+      .strict(),
+    driver: z
+      .object({
+        location: CoordinatesZ,
+        locationMeta: LocationMetaResponseZ,
+        lastUpdatedAt: z.iso.datetime(),
+      })
+      .strict()
+      .nullable(),
+    milestones: z.array(TrackingMilestoneZ),
+    attempt: DeliveryAttemptJSONBZ.nullable(),
+  })
+  .strict();
+export type TrackingPayload = z.infer<typeof TrackingPayloadZ>;
+
+export const TrackingResponseZ = z
+  .object({
+    data: TrackingPayloadZ,
+  })
+  .strict();
+export type TrackingResponse = z.infer<typeof TrackingResponseZ>;
+
+// Stored function result contracts
+export const FareCalculationResultZ = z
+  .object({
+    success: z.boolean(),
+    pricing: FareBreakdownZ.optional(),
+    error: z.string().optional(),
+  })
+  .strict();
+export type FareCalculationResult = z.infer<typeof FareCalculationResultZ>;
+
+export const OrderCreateResultZ = z
+  .object({
+    success: z.boolean(),
+    order: BaseOrderZ.optional(),
+    error: z.string().optional(),
+  })
+  .strict();
+export type OrderCreateResult = z.infer<typeof OrderCreateResultZ>;
+
+// ============================================================================
+// INTERNAL DB ROW TYPES
+// ============================================================================
+
+export type OrderLocationJSONB = z.infer<typeof OrderLocationJSONBZ>;
+export type OrderPricingJSONB = z.infer<typeof OrderPricingJSONBZ>;
+export type OrderScheduleJSONB = z.infer<typeof OrderScheduleJSONBZ>;
+export type OrderActualJSONB = z.infer<typeof OrderActualJSONBZ>;
+export type OrderPackageJSONB = z.infer<typeof OrderPackageJSONBZ>;
+export type OrderSnapshotJSONB = z.infer<typeof OrderSnapshotJSONBZ>;
+export type AssignmentTimelineJSONB = z.infer<typeof AssignmentTimelineJSONBZ>;
+
+export type OrderRow = {
+  orderId: number;
+  orderUuid: string;
+  orderNumber: string;
+  clientId?: number | null;
+  clientName?: string | null;
+  clientPhone?: string | null;
+  status: z.infer<typeof OrderLifecycleStatusZ>;
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId?: number | null;
+  packageTypeId?: number | null;
+  paymentMethodId: number;
+  totalPrice?: number | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  couponCode?: string | null;
+  cancellationReason?: string | null;
+  pickup: OrderLocationJSONB;
+  delivery: OrderLocationJSONB;
+  orderItems?: unknown[];
+  pricing?: OrderPricingJSONB | null;
+  schedule?: OrderScheduleJSONB | null;
+  actual?: OrderActualJSONB | null;
+  package?: OrderPackageJSONB | null;
+  snapshot?: OrderSnapshotJSONB | null;
+  createdAt: Date;
+  acceptedAt?: Date | null;
+  pickedUpAt?: Date | null;
+  inTransitAt?: Date | null;
+  deliveredAt?: Date | null;
+  cancelledAt?: Date | null;
+  assignmentId?: number | null;
+  courierId?: number | null;
+  courierName?: string | null;
+  courierPhone?: string | null;
+  courierPhoto?: string | null;
+  assignmentStatus?: string | null;
+  assignedAt?: string | Date | null;
+  assignmentTimeline?: AssignmentTimelineJSONB | null;
+  deliveryAttempt?:
+    | import("../../database/schema/types.js").DeliveryAttemptJSONB
+    | null;
+};
+
+export type OrderListRow = {
+  orderId: number;
+  orderUuid: string;
+  orderNumber?: string | null;
+  status: z.infer<typeof OrderLifecycleStatusZ>;
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId?: number | null;
+  packageTypeId?: number | null;
+  paymentMethodId: number;
+  totalPrice?: number | null;
+  estimatedDistanceKm?: number | null;
+  actualDistanceKm?: number | null;
+  createdAt: Date;
+  acceptedAt?: Date | null;
+  pickedUpAt?: Date | null;
+  inTransitAt?: Date | null;
+  deliveredAt?: Date | null;
+  cancelledAt?: Date | null;
+  pickup: OrderLocationJSONB;
+  delivery: OrderLocationJSONB;
+  package?: OrderPackageJSONB | null;
+  pricing?: OrderPricingJSONB | null;
+  snapshot?: OrderSnapshotJSONB | null;
+  courierId?: number | null;
+  courierName?: string | null;
+  courierPhone?: string | null;
+  courierPhoto?: string | null;
+};
+
+export type AvailableOrderRow = {
+  orderId: number;
+  orderUuid: string;
+  orderNumber: string;
+  status: z.infer<typeof OrderLifecycleStatusZ>;
+  deliveryTypeId: number;
+  vehicleCategoryId: number;
+  weightTierId?: number | null;
+  packageTypeId?: number | null;
+  paymentMethodId: number;
+  totalPrice?: number | null;
+  estimatedDistanceKm?: number | null;
+  createdAt: Date;
+  pickup: OrderLocationJSONB;
+  delivery: OrderLocationJSONB;
+  pricing?: OrderPricingJSONB | null;
+  snapshot?: OrderSnapshotJSONB | null;
+  package?: OrderPackageJSONB | null;
+  distanceFromCourierKm: number;
+};
+
+export type CreateOrderPayload = CreateOrderRequest & {
+  clientId: number;
+};
 
 // ============================================================================
 // ROUTE PARAMS
 // ============================================================================
 
-export const OrderParamsZ = z.object({
-  id: z.string().regex(/^\d+$/),
-});
+export const OrderParamsZ = z
+  .object({
+    id: z.coerce.number().int().positive(),
+  })
+  .strict();
 export type OrderParams = z.infer<typeof OrderParamsZ>;

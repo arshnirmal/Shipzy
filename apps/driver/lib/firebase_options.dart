@@ -63,8 +63,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1096727737605',
     projectId: 'shipzy-37e1c',
     storageBucket: 'shipzy-37e1c.firebasestorage.app',
-    androidClientId: '1096727737605-fl4c5pbqgb79h4q30q94nbic7niidhes.apps.googleusercontent.com',
-    iosClientId: '1096727737605-nisqmrv9ghkmllcsqd1rprm3t5cnb840.apps.googleusercontent.com',
+    androidClientId:
+        '1096727737605-fl4c5pbqgb79h4q30q94nbic7niidhes.apps.googleusercontent.com',
+    iosClientId:
+        '1096727737605-nisqmrv9ghkmllcsqd1rprm3t5cnb840.apps.googleusercontent.com',
     iosBundleId: 'com.shipzy.shipzyDriver',
   );
 }

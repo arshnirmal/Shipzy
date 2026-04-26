@@ -8,29 +8,23 @@ import {
 import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ratingsRepository from "./ratings.repository.js";
 
-import type { CreateRating } from "./ratings.zod.js";
+import type { DriverRatingStats, RatingResponse } from "./ratings.zod.js";
 
-interface DriverRatingStats {
-  averageRating: number;
-  totalRatings: number;
-  ratingDistribution: { [key: number]: number };
-  lastUpdated: string;
+interface CreateRatingInput {
+  orderId: number;
+  customerId: number;
+  rating: number;
+  isAnonymous?: boolean;
+  comment?: string | null;
 }
 
 class RatingsService {
   /**
    * Create a new driver rating
    */
-  async createRating(
-    ratingData: CreateRating,
-  ): Promise<import("./ratings.zod.js").RatingResponse> {
+  async createRating(ratingData: CreateRatingInput): Promise<RatingResponse> {
     try {
       const { orderId, customerId, rating, isAnonymous, comment } = ratingData;
-
-      // Validate rating range
-      if (rating < 1 || rating > 5) {
-        throw new ValidationError("Rating must be between 1 and 5");
-      }
 
       // Check if order belongs to customer
       const orderBelongsToCustomer =
@@ -107,13 +101,15 @@ class RatingsService {
           averageRating: 0,
           totalRatings: 0,
           ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          recentRatings: [],
           lastUpdated: toIsoDateTime(new Date()),
         };
       }
 
-      // Calculate distribution
+      // Calculate distribution using only valid rating rows
       const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
       let totalScore = 0;
+      let validRatingsCount = 0;
 
       ratings.forEach((rating) => {
         if (
@@ -126,12 +122,13 @@ class RatingsService {
           const ratingValue = rating.rating;
           distribution[ratingValue as keyof typeof distribution]++;
           totalScore += ratingValue;
+          validRatingsCount++;
         }
       });
 
       const averageRating =
-        ratings.length > 0
-          ? Math.round((totalScore / ratings.length) * 10) / 10
+        validRatingsCount > 0
+          ? Math.round((totalScore / validRatingsCount) * 10) / 10
           : 0;
 
       // Find the most recent rating date
@@ -143,10 +140,17 @@ class RatingsService {
         }
       }
 
+      const recentRatings = ratings.slice(0, 5).map((entry) => ({
+        rating: entry.rating,
+        comment: entry.comment ?? null,
+        createdAt: toIsoDateTime(entry.createdAt),
+      }));
+
       return {
         averageRating,
-        totalRatings: ratings.length,
+        totalRatings: validRatingsCount,
         ratingDistribution: distribution,
+        recentRatings,
         lastUpdated: toIsoDateTime(lastUpdated),
       };
     } catch (error) {

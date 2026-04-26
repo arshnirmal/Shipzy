@@ -1,13 +1,11 @@
 // services/backend/src/modules/auth/auth.repository.ts
-import { eq, and, isNull, gt, sql } from "drizzle-orm";
+import { eq, and, isNull, gt, sql, not } from "drizzle-orm";
 import logger from "../../config/logger.js";
 import drizzleDb from "../../database/drizzle.js";
-import { getUserRoleName } from "../../utils/roles.utils.js";
-import { userProfiles } from "../../database/schema/users.js";
-import { authSessions } from "../../database/schema/users.js";
-import { courierStatus } from "../../database/schema/logistics.js";
-
+import { userProfiles, authSessions } from "../../database/schema/users.js";
+import type { BusinessMetaJSONB } from "../../database/schema/types.js";
 import type { AuthUser } from "../../types/user.js";
+import type { DeviceInfo } from "../../types/index.js";
 
 type User = AuthUser;
 
@@ -47,33 +45,47 @@ function mapProfileRowToUser(
 }
 
 interface CreateUserData {
-  roleId: number;
+  role: "client" | "courier";
   firebaseUid?: string;
   phoneNumber?: string | null;
   fullName: string;
   email?: string;
   passwordHash?: string | null;
-  roleName?: string;
 }
 
 interface CreateEmailUserData {
-  roleId: number;
+  role: "client" | "courier";
   fullName: string;
   email: string;
   passwordHash: string;
   phoneNumber?: string | null;
-  roleName?: string;
+}
+
+interface CreateBusinessUserData {
+  fullName: string;
+  email: string;
+  passwordHash: string;
+  phoneNumber?: string | null;
+}
+
+interface CreateBusinessAccountData {
+  businessName: string;
+  gstNumber?: string;
+  panNumber?: string;
+  businessType?: string;
+  website?: string;
+  monthlyVolume?: "0-100" | "100-500" | "500-2000" | "2000+";
 }
 
 interface StoreJwtTokenData {
   userId: number;
   email?: string;
-  phoneNumber?: string;
   tokenHash: string;
+  refreshTokenHash?: string;
   deviceId?: string | null;
-  deviceInfo?: any;
+  deviceInfo?: DeviceInfo | null;
   ipAddress?: string | null;
-  authMethod?: "email" | "phone" | "google" | "firebase";
+  authMethod?: "email" | "google";
 }
 
 class AuthRepository {
@@ -159,47 +171,6 @@ class AuthRepository {
   }
 
   /**
-   * Find user by phone number (migrated to Drizzle)
-   */
-  async findByPhone(phoneNumber: string): Promise<User | null> {
-    try {
-      const result = await drizzleDb
-        .select({
-          userId: userProfiles.userId,
-          userUuid: userProfiles.userUuid,
-          roleName: userProfiles.role,
-          firebaseUid: userProfiles.firebaseUid,
-          phoneNumber: userProfiles.phoneNumber,
-          email: userProfiles.email,
-          fullName: userProfiles.fullName,
-          profilePictureUrl: userProfiles.profilePictureUrl,
-          passwordHash: userProfiles.passwordHash,
-          isVerified: userProfiles.isVerified,
-          isActive: userProfiles.isActive,
-          createdAt: userProfiles.createdAt,
-          updatedAt: userProfiles.updatedAt,
-        })
-        .from(userProfiles)
-        .where(
-          and(
-            eq(userProfiles.phoneNumber, phoneNumber),
-            isNull(userProfiles.deletedAt),
-          ),
-        )
-        .limit(1);
-
-      const row = result[0];
-      return row ? mapProfileRowToUser(row) : null;
-    } catch (error) {
-      logger.error({
-        msg: "Error finding user by phone",
-        error: (error as Error).message,
-      });
-      throw error;
-    }
-  }
-
-  /**
    * Find user by email (migrated to Drizzle)
    */
   async findByEmail(email: string): Promise<User | null> {
@@ -238,12 +209,12 @@ class AuthRepository {
   }
 
   /**
-   * Create new user (for social/OTP auth - migrated to Drizzle)
+   * Create new user for social auth (migrated to Drizzle)
    */
   async createUser(userData: CreateUserData): Promise<User> {
     try {
       const {
-        roleId,
+        role,
         firebaseUid,
         phoneNumber,
         fullName,
@@ -254,11 +225,7 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          role: getUserRoleName(roleId) as
-            | "client"
-            | "courier"
-            | "admin"
-            | "business",
+          role,
           firebaseUid: firebaseUid || undefined,
           phoneNumber: phoneNumber || undefined,
           fullName,
@@ -272,19 +239,6 @@ class AuthRepository {
       if (!createdUser) {
         throw new Error("User insert returned no row");
       }
-      const roleName = getUserRoleName(roleId);
-
-      // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
-      if (userData.roleName === "courier") {
-        await drizzleDb
-          .insert(courierStatus)
-          .values({
-            courierId: createdUser.userId,
-            isAvailable: false,
-            isOnline: false,
-          })
-          .onConflictDoNothing({ target: courierStatus.courierId });
-      }
 
       // Fetch full user with role for return type compatibility
       const user = await this.findByUuid(createdUser.userUuid);
@@ -292,7 +246,7 @@ class AuthRepository {
         throw new Error("User not found after creation");
       }
 
-      return { ...user, roleName } as User;
+      return user as User;
     } catch (error) {
       logger.error({
         msg: "Error creating user",
@@ -308,7 +262,7 @@ class AuthRepository {
   async createEmailUser(userData: CreateEmailUserData): Promise<User> {
     try {
       const {
-        roleId,
+        role,
         fullName,
         email,
         passwordHash,
@@ -318,11 +272,7 @@ class AuthRepository {
       const result = await drizzleDb
         .insert(userProfiles)
         .values({
-          role: getUserRoleName(roleId) as
-            | "client"
-            | "courier"
-            | "admin"
-            | "business",
+          role,
           fullName,
           email,
           passwordHash,
@@ -335,19 +285,6 @@ class AuthRepository {
       if (!createdUser) {
         throw new Error("User insert returned no row");
       }
-      const roleName = getUserRoleName(roleId);
-
-      // Initialize courier status if role is courier (keep as raw SQL for ON CONFLICT)
-      if (userData.roleName === "courier") {
-        await drizzleDb
-          .insert(courierStatus)
-          .values({
-            courierId: createdUser.userId,
-            isAvailable: false,
-            isOnline: false,
-          })
-          .onConflictDoNothing({ target: courierStatus.courierId });
-      }
 
       // Fetch full user with role for return type compatibility
       const user = await this.findByUuid(createdUser.userUuid);
@@ -355,10 +292,87 @@ class AuthRepository {
         throw new Error("User not found after creation");
       }
 
-      return { ...user, roleName } as User;
+      return user as User;
     } catch (error) {
       logger.error({
         msg: "Error creating email user",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Create business user and business account in a single transaction
+   */
+  async createBusinessUser(
+    userData: CreateBusinessUserData,
+    accountData: CreateBusinessAccountData,
+  ): Promise<User> {
+    try {
+      const user = await drizzleDb.transaction(async (tx) => {
+        const businessMeta: BusinessMetaJSONB = {
+          businessName: accountData.businessName,
+        };
+        if (accountData.gstNumber !== undefined) {
+          businessMeta.gstNumber = accountData.gstNumber;
+        }
+        if (accountData.panNumber !== undefined) {
+          businessMeta.panNumber = accountData.panNumber;
+        }
+        if (accountData.businessType !== undefined) {
+          businessMeta.businessType = accountData.businessType;
+        }
+        if (accountData.website !== undefined) {
+          businessMeta.website = accountData.website;
+        }
+        if (accountData.monthlyVolume !== undefined) {
+          businessMeta.monthlyVolume = accountData.monthlyVolume;
+        }
+
+        const [createdUser] = await tx
+          .insert(userProfiles)
+          .values({
+            role: "business" as const,
+            fullName: userData.fullName,
+            email: userData.email,
+            passwordHash: userData.passwordHash,
+            phoneNumber: userData.phoneNumber || undefined,
+            isVerified: false,
+            businessMeta,
+          })
+          .returning();
+
+        if (!createdUser) throw new Error("User insert returned no row");
+
+        const [fetched] = await tx
+          .select({
+            userId: userProfiles.userId,
+            userUuid: userProfiles.userUuid,
+            roleName: userProfiles.role,
+            firebaseUid: userProfiles.firebaseUid,
+            phoneNumber: userProfiles.phoneNumber,
+            email: userProfiles.email,
+            fullName: userProfiles.fullName,
+            profilePictureUrl: userProfiles.profilePictureUrl,
+            isVerified: userProfiles.isVerified,
+            isActive: userProfiles.isActive,
+            createdAt: userProfiles.createdAt,
+            updatedAt: userProfiles.updatedAt,
+          })
+          .from(userProfiles)
+          .where(eq(userProfiles.userId, createdUser.userId))
+          .limit(1);
+
+        if (!fetched) throw new Error("User not found after creation");
+
+        return mapProfileRowToUser(fetched);
+      });
+
+      return user;
+    } catch (error) {
+      logger.error({
+        msg: "Error creating business user",
         error: (error as Error).message,
       });
       throw error;
@@ -373,8 +387,8 @@ class AuthRepository {
       const {
         userId,
         email,
-        phoneNumber,
         tokenHash,
+        refreshTokenHash,
         deviceId,
         deviceInfo,
         ipAddress,
@@ -384,25 +398,97 @@ class AuthRepository {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
 
-      await drizzleDb
-        .insert(authSessions)
-        .values({
-          userId,
-          email: email || undefined,
-          phoneNumber: phoneNumber || undefined,
-          jwtTokenHash: tokenHash,
-          deviceId: deviceId || undefined,
-          deviceInfo: deviceInfo || undefined,
-          ipAddress: ipAddress || undefined,
-          authMethod,
-          isVerified: true,
-          verifiedAt: new Date(),
-          expiresAt,
-          lastActivityAt: new Date(),
-        });
+      const values = {
+        userId,
+        email: email || undefined,
+        jwtTokenHash: tokenHash,
+        refreshTokenHash: refreshTokenHash || undefined,
+        deviceId: deviceId || undefined,
+        deviceInfo: deviceInfo ?? undefined,
+        ipAddress: ipAddress || undefined,
+        authMethod,
+        isVerified: true,
+        verifiedAt: new Date(),
+        expiresAt,
+        lastActivityAt: new Date(),
+      };
+
+      if (deviceId) {
+        // UPSERT: replace the existing session for this user+device
+        await drizzleDb
+          .insert(authSessions)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [authSessions.userId, authSessions.deviceId],
+            targetWhere: sql`${authSessions.deviceId} IS NOT NULL`,
+            set: {
+              jwtTokenHash: tokenHash,
+              refreshTokenHash: refreshTokenHash || undefined,
+              ipAddress: ipAddress || undefined,
+              deviceInfo: deviceInfo ?? undefined,
+              authMethod,
+              expiresAt,
+              lastActivityAt: new Date(),
+            },
+          });
+      } else {
+        // No deviceId: simple insert (anonymous/web session)
+        await drizzleDb.insert(authSessions).values(values);
+      }
     } catch (error) {
       logger.error({
         msg: "Error storing JWT token",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Find an active session by refresh token hash and update access token hash
+   * Returns the userId if valid, null if not found or expired
+   */
+  async refreshSession(
+    refreshTokenHash: string,
+    newAccessTokenHash: string,
+  ): Promise<{ userId: number; userUuid: string } | null> {
+    try {
+      const result = await drizzleDb
+        .update(authSessions)
+        .set({
+          jwtTokenHash: newAccessTokenHash,
+          lastActivityAt: new Date(),
+        })
+        .where(
+          and(
+            eq(authSessions.refreshTokenHash, refreshTokenHash),
+            gt(authSessions.expiresAt, sql`NOW()`),
+          ),
+        )
+        .returning({ userId: authSessions.userId });
+
+      if (!result[0]?.userId) return null;
+
+      const userId = result[0].userId;
+      const user = await drizzleDb
+        .select({
+          userId: userProfiles.userId,
+          userUuid: userProfiles.userUuid,
+        })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.userId, userId),
+            eq(userProfiles.isActive, true),
+            isNull(userProfiles.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      return user[0] ?? null;
+    } catch (error) {
+      logger.error({
+        msg: "Error refreshing session",
         error: (error as Error).message,
       });
       throw error;

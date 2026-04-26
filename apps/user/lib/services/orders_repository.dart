@@ -14,7 +14,7 @@ class OrdersRepository {
       if (response.statusCode == 200) {
         final data = response.data;
         final List<dynamic> ordersJson = data['data'];
-        return ordersJson.map((json) => Order.fromJson(json as Map<String, dynamic>)).toList();
+        return ordersJson.map((json) => Order.fromJson((json as Map<String, dynamic>)['order'] as Map<String, dynamic>)).toList();
       } else {
         throw Exception('Failed to load orders');
       }

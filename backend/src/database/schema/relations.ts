@@ -2,42 +2,24 @@
 // Drizzle relations for foreign key relationships
 
 import { relations } from "drizzle-orm";
-import {
-  userProfiles,
-  userAddresses,
-  authSessions,
-  businessAccounts,
-} from "./users.js";
-import {
-  orderRequests,
-  courierAssignments,
-  proofOfDelivery,
-} from "./orders.js";
-import {
-  courierStatus,
-  courierVehicles,
-  driverSessions,
-} from "./logistics.js";
+import { userProfiles, userAddresses, authSessions } from "./users.js";
+import { orderRequests, courierAssignments } from "./orders.js";
+import { courierStatus, driverSessions } from "./logistics.js";
+import { vehicleCategories } from "./public.js";
 import { paymentTransactions, refunds } from "./payments.js";
 import { trackingEvents } from "./tracking.js";
-import { driverRatings } from "./ratings.js";
 import { notificationQueue, fcmTokens } from "./notifications.js";
 
 // User Relations
 export const userProfilesRelations = relations(userProfiles, ({ many }) => ({
   addresses: many(userAddresses),
   authSessions: many(authSessions),
-  businessAccount: many(businessAccounts),
   orders: many(orderRequests, { relationName: "clientOrders" }),
   courierAssignments: many(courierAssignments),
   courierStatus: many(courierStatus),
-  courierVehicles: many(courierVehicles),
   trackingEvents: many(trackingEvents),
   notifications: many(notificationQueue),
   fcmTokens: many(fcmTokens),
-  driverRatingsAsCustomer: many(driverRatings, {
-    relationName: "customerRatings",
-  }),
 }));
 
 export const userAddressesRelations = relations(userAddresses, ({ one }) => ({
@@ -54,24 +36,12 @@ export const authSessionsRelations = relations(authSessions, ({ one }) => ({
   }),
 }));
 
-export const businessAccountsRelations = relations(
-  businessAccounts,
-  ({ one }) => ({
-    user: one(userProfiles, {
-      fields: [businessAccounts.userId],
-      references: [userProfiles.userId],
-    }),
-  }),
-);
-
 // Order Relations
 export const orderRequestsRelations = relations(orderRequests, ({ many }) => ({
   courierAssignments: many(courierAssignments),
-  proofOfDelivery: many(proofOfDelivery),
   paymentTransactions: many(paymentTransactions),
   refunds: many(refunds),
   trackingEvents: many(trackingEvents),
-  driverRatings: many(driverRatings),
 }));
 
 export const courierAssignmentsRelations = relations(
@@ -85,22 +55,7 @@ export const courierAssignmentsRelations = relations(
       fields: [courierAssignments.courierId],
       references: [userProfiles.userId],
     }),
-    proofOfDelivery: many(proofOfDelivery),
     trackingEvents: many(trackingEvents),
-  }),
-);
-
-export const proofOfDeliveryRelations = relations(
-  proofOfDelivery,
-  ({ one }) => ({
-    order: one(orderRequests, {
-      fields: [proofOfDelivery.orderId],
-      references: [orderRequests.orderId],
-    }),
-    assignment: one(courierAssignments, {
-      fields: [proofOfDelivery.assignmentId],
-      references: [courierAssignments.assignmentId],
-    }),
   }),
 );
 
@@ -114,20 +69,12 @@ export const courierStatusRelations = relations(courierStatus, ({ one, many }) =
     fields: [courierStatus.currentAssignmentId],
     references: [courierAssignments.assignmentId],
   }),
-  vehicles: many(courierVehicles),
-  driverSessions: many(driverSessions),
-  driverRatings: many(driverRatings),
-}));
-
-export const courierVehiclesRelations = relations(
-  courierVehicles,
-  ({ one }) => ({
-    courier: one(userProfiles, {
-      fields: [courierVehicles.courierId],
-      references: [userProfiles.userId],
-    }),
+  vehicleCategory: one(vehicleCategories, {
+    fields: [courierStatus.vehicleCategoryId],
+    references: [vehicleCategories.categoryId],
   }),
-);
+  driverSessions: many(driverSessions),
+}));
 
 export const driverSessionsRelations = relations(driverSessions, ({ one }) => ({
   driver: one(userProfiles, {
@@ -171,22 +118,6 @@ export const trackingEventsRelations = relations(trackingEvents, ({ one }) => ({
   }),
   courier: one(userProfiles, {
     fields: [trackingEvents.courierId],
-    references: [userProfiles.userId],
-  }),
-}));
-
-// Ratings Relations
-export const driverRatingsRelations = relations(driverRatings, ({ one }) => ({
-  order: one(orderRequests, {
-    fields: [driverRatings.orderId],
-    references: [orderRequests.orderId],
-  }),
-  driver: one(courierStatus, {
-    fields: [driverRatings.driverId],
-    references: [courierStatus.courierId],
-  }),
-  customer: one(userProfiles, {
-    fields: [driverRatings.customerId],
     references: [userProfiles.userId],
   }),
 }));

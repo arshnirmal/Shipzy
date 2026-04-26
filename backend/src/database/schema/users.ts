@@ -1,11 +1,12 @@
 // services/backend/src/database/schema/users.ts
-// Users schema: profiles, auth_sessions, addresses, business_accounts
+// Users schema: profiles, auth_sessions, addresses
 
 import {
   pgTable,
   pgSchema,
   serial,
   index,
+  uniqueIndex,
   check,
   uuid,
   varchar,
@@ -19,6 +20,10 @@ import {
 import { sql } from "drizzle-orm";
 import { userRoleEnum, authMethodEnum } from "./public.js";
 import { geographyPoint4326 as geography } from "./postgisGeography.js";
+import type {
+  OnboardingJSONB,
+  BusinessMetaJSONB,
+} from "./types.js";
 
 const usersSchema = pgSchema("users");
 
@@ -42,6 +47,8 @@ export const userProfiles = usersSchema.table("profiles", {
     .defaultNow()
     .notNull(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  onboarding: jsonb("onboarding").$type<OnboardingJSONB>(),
+  businessMeta: jsonb("business_meta").$type<BusinessMetaJSONB>(),
 }, (table) => [
   index("idx_users_profiles_uuid_active")
     .on(table.userUuid)
@@ -52,6 +59,11 @@ export const userProfiles = usersSchema.table("profiles", {
   index("idx_users_profiles_email_active")
     .on(table.email)
     .where(sql`${table.deletedAt} IS NULL`),
+  uniqueIndex("uq_users_profiles_business_gst_lower")
+    .on(sql`lower(${table.businessMeta}->>'gstNumber')`)
+    .where(
+      sql`${table.role} = 'business' AND ${table.businessMeta} IS NOT NULL AND coalesce(trim(${table.businessMeta}->>'gstNumber'), '') <> ''`,
+    ),
 ]);
 
 // Auth Sessions
@@ -67,6 +79,7 @@ export const authSessions = usersSchema.table("auth_sessions", {
   isVerified: boolean("is_verified").default(false).notNull(),
   verificationAttempts: integer("verification_attempts").default(0).notNull(),
   jwtTokenHash: varchar("jwt_token_hash", { length: 255 }).notNull().unique(),
+  refreshTokenHash: varchar("refresh_token_hash", { length: 255 }).unique(),
   deviceId: varchar("device_id", { length: 255 }),
   deviceInfo: jsonb("device_info"),
   ipAddress: inet("ip_address"),
@@ -84,6 +97,10 @@ export const authSessions = usersSchema.table("auth_sessions", {
     "auth_sessions_contact_present_chk",
     sql`${table.email} IS NOT NULL OR ${table.phoneNumber} IS NOT NULL`,
   ),
+  // One active session per device per user — enables UPSERT on login
+  uniqueIndex("uq_auth_sessions_user_device")
+    .on(table.userId, table.deviceId)
+    .where(sql`${table.deviceId} IS NOT NULL`),
 ]);
 
 // User Addresses (for saved addresses - uses PostGIS)
@@ -105,25 +122,6 @@ export const userAddresses = usersSchema.table("addresses", {
   country: varchar("country", { length: 100 }).default("India").notNull(),
   location: geography("location").notNull(),
   isDefault: boolean("is_default").default(false).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-
-// Business Accounts
-export const businessAccounts = usersSchema.table("business_accounts", {
-  businessId: serial("business_id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => userProfiles.userId, { onDelete: "cascade" }),
-  businessName: varchar("business_name", { length: 200 }).notNull(),
-  gstNumber: varchar("gst_number", { length: 15 }).unique(),
-  panNumber: varchar("pan_number", { length: 10 }),
-  businessType: varchar("business_type", { length: 100 }),
-  website: varchar("website", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -9,6 +9,7 @@ interface JWTPayload {
   role: string;
   email?: string;
   phoneNumber?: string;
+  type?: "access" | "refresh";
   iat?: number;
   exp?: number;
 }
@@ -19,7 +20,7 @@ interface JWTPayload {
  * @returns JWT token
  */
 export const generateAccessToken = (payload: Partial<JWTPayload>): string => {
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign({ ...payload, type: "access" }, config.jwt.secret, {
     expiresIn: config.jwt.expiresIn,
   } as jwt.SignOptions);
 };
@@ -30,7 +31,7 @@ export const generateAccessToken = (payload: Partial<JWTPayload>): string => {
  * @returns JWT refresh token
  */
 export const generateRefreshToken = (payload: Partial<JWTPayload>): string => {
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign({ ...payload, type: "refresh" }, config.jwt.secret, {
     expiresIn: config.jwt.refreshExpiresIn,
   } as jwt.SignOptions);
 };

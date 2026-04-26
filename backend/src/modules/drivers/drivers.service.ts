@@ -11,103 +11,150 @@ import {
 } from "../../utils/datetime.util.js";
 import driversRepository from "./drivers.repository.js";
 
-import type { DriverProfileResponse } from "./drivers.zod.js";
+import type {
+  ActiveAssignmentsResponse,
+  ActiveAssignment,
+  DriverAvailabilityResponse,
+  DriverEarningsSummary,
+  EarningsPeriodQuery,
+  DriverLocationResponse,
+  DriverProfileMutationResponse,
+  DriverProfileResponse,
+  SubmitKycRequest,
+  SubmitKycResponse,
+  TripHistoryQuery,
+  TripHistoryResponse,
+  UpdateDriverProfileRequest,
+  UpdateLocationRequest,
+} from "./drivers.zod.js";
 
-type UpdateProfileData = import("./drivers.zod.js").UpdateDriverProfileRequest;
 type UpdateAvailabilityData =
   import("./drivers.zod.js").UpdateAvailabilityRequest;
-type LocationData = import("./drivers.zod.js").UpdateLocationRequest;
+type LocationData = UpdateLocationRequest["location"]["current"];
 
-type DriverProfile = DriverProfileResponse;
-
-// API return shape for earnings summary (used by `getEarningsSummary`)
-type EarningsSummary = {
-  deliveries: {
-    today?: number;
-    total?: number;
-    thisWeek?: number;
-    thisMonth?: number;
-  };
-  earnings: {
-    today?: number;
-    total?: number;
-    thisWeek?: number;
-    thisMonth?: number;
-    averageOrderValue?: number;
-  };
-  totalDistanceKm: number;
-};
-
-// API return shape for active assignments (frontend-friendly)
-type ActiveAssignment = {
-  assignmentId: number;
-  orderId: number;
-  orderUuid?: string;
-  orderNumber?: string;
-  orderStatus?: string;
-  assignmentStatus?: string;
-  vehicleCategory?: string | null;
-  vehicleCategoryDisplay?: string | null;
-  packageType?: string | null;
-  weightTier?: {
-    id?: number;
-    name?: string;
-    minWeightKg?: number;
-    maxWeightKg?: number;
-  } | null;
-  pickup: {
-    address?: string | null;
-    building?: string | null;
-    landmark?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postalCode?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
-  };
-  delivery: {
-    address?: string | null;
-    building?: string | null;
-    landmark?: string | null;
-    city?: string | null;
-    state?: string | null;
-    postalCode?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    contactName?: string | null;
-    contactPhone?: string | null;
-  };
-  packageDescription?: string | null;
-  specialInstructions?: string | null;
-  declaredValue?: number | null;
-  estimatedDistanceKm?: number | null;
-  actualDistanceKm?: number | null;
-  driverEarnings: number;
-  earningsBreakdown: {
-    basePayout: number;
-    distanceEarning: number;
-    weightCompensation: number;
-    peakHourBonus: number;
-    urgencyBonus: number;
-    onTimeBonus: number;
-    qualityBonus: number;
-    platformCommission: number;
-    customerTip: number;
-    grossEarning: number;
-    netEarning: number;
-  };
-  estimatedDeliveryTime: number;
-  assignedAt?: string | null;
-  acceptedAt?: string | null;
-};
+type DriverProfile = DriverProfileResponse["driver"];
 
 class DriversService {
   /**
+   * Build nested `vehicle` for profile responses from `courier_status` row fields.
+   */
+  private mapDriverVehicle(
+    driver: import("../../types/drivers.js").DbCourier,
+  ): DriverProfileMutationResponse["driver"]["vehicle"] {
+    const category =
+      driver.vehicleCategoryId != null ||
+      (driver.vehicleCategory != null && driver.vehicleCategory !== "") ||
+      driver.vehicleMaxWeight != null
+        ? {
+            ...(driver.vehicleCategoryId != null
+              ? { id: driver.vehicleCategoryId }
+              : {}),
+            ...(driver.vehicleCategory
+              ? { name: driver.vehicleCategory }
+              : {}),
+            ...(driver.vehicleMaxWeight != null
+              ? { maxWeightKg: Number(driver.vehicleMaxWeight) }
+              : {}),
+          }
+        : undefined;
+
+    const specification =
+      (driver.vehicleNumber != null && driver.vehicleNumber !== "") ||
+      (driver.vehicleModel != null && driver.vehicleModel !== "") ||
+      (driver.vehicleYear != null && driver.vehicleYear > 0)
+        ? {
+            ...(driver.vehicleNumber
+              ? { vehicleNumber: driver.vehicleNumber }
+              : {}),
+            ...(driver.vehicleModel ? { model: driver.vehicleModel } : {}),
+            ...(driver.vehicleYear != null && driver.vehicleYear > 0
+              ? { year: driver.vehicleYear }
+              : {}),
+          }
+        : undefined;
+
+    const hasVehicleData =
+      driver.vehicleId != null ||
+      category !== undefined ||
+      specification !== undefined ||
+      driver.vehicleIsActive != null;
+
+    if (!hasVehicleData) {
+      return null;
+    }
+
+    return {
+      ...(driver.vehicleId != null ? { vehicleId: driver.vehicleId } : {}),
+      ...(driver.vehicleIsActive != null
+        ? { isActive: Boolean(driver.vehicleIsActive) }
+        : {}),
+      ...(category !== undefined ? { category } : {}),
+      ...(specification !== undefined ? { specification } : {}),
+    };
+  }
+
+  private mapDriverCore(
+    driver: import("../../types/drivers.js").DbCourier,
+  ): DriverProfileMutationResponse["driver"] {
+    const hasCurrentLocation =
+      driver.currentLatitude != null && driver.currentLongitude != null;
+
+    return {
+      userId: driver.userId,
+      userUuid: driver.userUuid,
+      phoneNumber: driver.phoneNumber ?? null,
+      fullName: driver.fullName,
+      email: driver.email ?? null,
+      role: "courier",
+      profilePictureUrl: driver.profilePictureUrl ?? null,
+      isVerified: driver.isVerified,
+      isActive: driver.isActive,
+      status: {
+        isAvailable: driver.isAvailable,
+        isOnline: driver.isOnline,
+        totalDeliveriesToday: driver.totalDeliveriesToday,
+        currentLocation: hasCurrentLocation
+          ? {
+              latitude: Number(driver.currentLatitude),
+              longitude: Number(driver.currentLongitude),
+            }
+          : null,
+        lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
+      },
+      vehicle: this.mapDriverVehicle(driver),
+      onboarding: driver.onboarding ?? null,
+      kyc: driver.kyc ?? null,
+      createdAt: toIsoDateTime(driver.createdAt),
+      updatedAt: toIsoDateTime(driver.updatedAt),
+    };
+  }
+
+  private mapDriverProfile(
+    driver: import("../../types/drivers.js").DbCourier,
+  ): DriverProfile {
+    const core = this.mapDriverCore(driver);
+
+    return {
+      ...core,
+      earnings: {
+        total: 0,
+        today: 0,
+        thisWeek: 0,
+        thisMonth: 0,
+        averageOrderValue: 0,
+        totalDistanceKm: 0,
+      },
+      rating: {
+        averageRating: driver.avgRating != null ? Number(driver.avgRating) : 0,
+        totalRatings: driver.totalRatings ?? 0,
+      },
+    };
+  }
+
+  /**
    * Get driver profile
    */
-  async getDriverProfile(userId: number): Promise<DriverProfile> {
+  async getDriverProfile(userId: number): Promise<DriverProfileResponse> {
     try {
       const driver = await driversRepository.findCourierById(userId);
 
@@ -115,50 +162,14 @@ class DriversService {
         throw new NotFoundError("Driver profile not found");
       }
 
+      // Lazy offline detection: if courier is marked online but location is stale,
+      // flip offline without blocking the response.
+      if (driver.isOnline) {
+        driversRepository.markOfflineIfStale(driver.courierId).catch(() => {});
+      }
+
       return {
-        userId: driver.userId,
-        userUuid: driver.userUuid,
-        phoneNumber: driver.phoneNumber ?? null,
-        fullName: driver.fullName,
-        email: driver.email || "",
-        role: "courier",
-        profilePictureUrl: driver.profilePictureUrl ?? null,
-        isVerified: driver.isVerified,
-        isActive: driver.isActive,
-        status: {
-          isAvailable: driver.isAvailable,
-          isOnline: driver.isOnline,
-          totalDeliveriesToday: driver.totalDeliveriesToday,
-          currentLocation:
-            driver.currentLatitude && driver.currentLongitude
-              ? {
-                  latitude: Number(driver.currentLatitude),
-                  longitude: Number(driver.currentLongitude),
-                }
-              : null,
-          lastLocationUpdate: toIsoDateTimeOrNull(driver.lastLocationUpdate),
-        },
-        vehicle: driver.vehicleId
-          ? {
-              vehicleId: driver.vehicleId,
-              categoryId: driver.vehicleCategoryId ?? undefined,
-              category: driver.vehicleCategory || "",
-              isActive: Boolean(driver.vehicleIsActive),
-              vehicleNumber: driver.vehicleNumber || "",
-              model: driver.vehicleModel || "",
-              year: driver.vehicleYear || 0,
-            }
-          : null,
-        earnings: {
-          total: 0,
-          today: 0,
-          thisWeek: 0,
-          thisMonth: 0,
-          averageOrderValue: 0,
-          totalDistanceKm: 0,
-        },
-        createdAt: toIsoDateTime(driver.createdAt),
-        updatedAt: toIsoDateTime(driver.updatedAt),
+        driver: this.mapDriverProfile(driver),
       };
     } catch (error) {
       logger.error({
@@ -174,13 +185,8 @@ class DriversService {
    */
   async updateProfile(
     userId: number,
-    updateData: UpdateProfileData,
-  ): Promise<
-    Pick<
-      DriverProfileResponse,
-      "userId" | "fullName" | "email" | "profilePictureUrl" | "updatedAt"
-    >
-  > {
+    updateData: UpdateDriverProfileRequest,
+  ): Promise<DriverProfileMutationResponse> {
     try {
       // Validate role is courier
       const driver = await driversRepository.findCourierById(userId);
@@ -194,11 +200,7 @@ class DriversService {
       );
 
       return {
-        userId: updatedDriver.userId,
-        fullName: updatedDriver.fullName,
-        email: updatedDriver.email ?? null,
-        profilePictureUrl: updatedDriver.profilePictureUrl ?? null,
-        updatedAt: toIsoDateTime(updatedDriver.updatedAt),
+        driver: this.mapDriverCore(updatedDriver),
       };
     } catch (error) {
       logger.error({
@@ -210,23 +212,35 @@ class DriversService {
   }
 
   /**
+   * Submit KYC document URLs for admin review.
+   */
+  async submitKyc(
+    userId: number,
+    docs: SubmitKycRequest,
+  ): Promise<SubmitKycResponse> {
+    const result = await driversRepository.submitKyc(userId, docs);
+    return {
+      onboarding: {
+        status: "pending_review",
+        stepsCompleted: result.stepsCompleted,
+        submittedAt: result.submittedAt,
+      },
+    };
+  }
+
+  /**
    * Update driver availability and manage sessions
    */
   async updateAvailability(
     userId: number,
     availabilityData: UpdateAvailabilityData,
-  ): Promise<{
-    courierId: number;
-    isAvailable: boolean;
-    isOnline: boolean;
-    updatedAt: string;
-  }> {
+  ): Promise<DriverAvailabilityResponse> {
     try {
       const {
-        isAvailable,
-        isOnline = false,
-        currentLocation,
+        availability: { isAvailable, isOnline = false },
+        tracking,
       } = availabilityData;
+      const currentLocation = tracking?.currentLocation;
 
       // Get current status before update
       const currentProfile = await driversRepository.findCourierById(userId);
@@ -282,10 +296,17 @@ class DriversService {
       }
 
       return {
-        courierId: result.courierId,
-        isAvailable: result.isAvailable,
-        isOnline: result.isOnline,
-        updatedAt: toIsoDateTime(result.updatedAt),
+        availability: {
+          courierId: result.courierId,
+          isAvailable: result.isAvailable,
+          isOnline: result.isOnline,
+          updatedAt: toIsoDateTime(result.updatedAt),
+        },
+        tracking: currentLocation
+          ? {
+              currentLocation,
+            }
+          : undefined,
       };
     } catch (error) {
       logger.error({
@@ -302,12 +323,8 @@ class DriversService {
   async updateLocation(
     userId: number,
     locationData: LocationData,
-  ): Promise<{
-    courierId: number;
-    latitude: number;
-    longitude: number;
-    lastLocationUpdate: string;
-  }> {
+    locationMeta?: { speed?: number | null; bearing?: number | null; accuracy?: number | null } | null,
+  ): Promise<DriverLocationResponse> {
     try {
       const { latitude, longitude } = locationData;
 
@@ -323,13 +340,18 @@ class DriversService {
         userId,
         latitude,
         longitude,
+        locationMeta,
       );
 
       return {
-        courierId: result.courierId,
-        latitude: Number(result.latitude),
-        longitude: Number(result.longitude),
-        lastLocationUpdate: toIsoDateTime(result.lastLocationUpdate),
+        location: {
+          courierId: result.courierId,
+          current: {
+            latitude: Number(result.latitude),
+            longitude: Number(result.longitude),
+          },
+          lastLocationUpdate: toIsoDateTime(result.lastLocationUpdate),
+        },
       };
     } catch (error) {
       logger.error({
@@ -343,79 +365,77 @@ class DriversService {
   /**
    * Get driver active assignments
    */
-  async getActiveAssignments(userId: number): Promise<ActiveAssignment[]> {
+  async getActiveAssignments(
+    userId: number,
+  ): Promise<ActiveAssignmentsResponse> {
     try {
       const assignments = await driversRepository.getActiveAssignments(userId);
 
+      // Fetch all pricing config once to avoid N+1 queries per assignment
+      const pricingRepo = await import("../pricing/pricing.repository.js").then(
+        (m) => m.default,
+      );
+      const pricingConfig = await pricingRepo.getAllPricingConfig();
+
       // Calculate earnings for all assignments
-      const assignmentsWithEarnings = await Promise.all(
+      const assignmentsWithEarnings: ActiveAssignment[] = await Promise.all(
         assignments.map(async (assignment) => {
-          const earnings = await this.calculateDriverEarnings(assignment);
-          return {
-            assignmentId: assignment.assignmentId,
-            orderId: assignment.orderId,
-            orderUuid: assignment.orderUuid ?? undefined,
-            orderNumber: assignment.orderNumber ?? undefined,
-            orderStatus: assignment.orderStatus ?? undefined,
-            assignmentStatus: assignment.assignmentStatus ?? undefined,
-            vehicleCategory: assignment.vehicleCategory,
-            vehicleCategoryDisplay: assignment.vehicleCategoryDisplay,
-            packageType: assignment.packageType,
-            weightTier: assignment.weightTierName
-              ? {
-                  id: assignment.weightTierId ?? undefined,
-                  name: assignment.weightTierName,
-                  minWeightKg: Number(assignment.weightTierMin || 0),
-                  maxWeightKg: Number(assignment.weightTierMax || 0),
-                }
-              : null,
-            pickup: {
-              address: assignment.pickupAddress,
-              building: assignment.pickupBuilding,
-              landmark: assignment.pickupLandmark,
-              city: assignment.pickupCity,
-              state: assignment.pickupState,
-              postalCode: assignment.pickupPostalCode,
-              latitude: Number(assignment.pickupLatitude),
-              longitude: Number(assignment.pickupLongitude),
-              contactName: assignment.pickupContactName,
-              contactPhone: assignment.pickupContactPhone,
-            },
-            delivery: {
-              address: assignment.deliveryAddress,
-              building: assignment.deliveryBuilding,
-              landmark: assignment.deliveryLandmark,
-              city: assignment.deliveryCity,
-              state: assignment.deliveryState,
-              postalCode: assignment.deliveryPostalCode,
-              latitude: Number(assignment.deliveryLatitude),
-              longitude: Number(assignment.deliveryLongitude),
-              contactName: assignment.deliveryContactName,
-              contactPhone: assignment.deliveryContactPhone,
-            },
-            packageDescription: assignment.packageDescription,
-            specialInstructions: assignment.specialInstructions,
-            declaredValue: assignment.declaredValue
-              ? Number(assignment.declaredValue)
-              : null,
-            estimatedDistanceKm: assignment.estimatedDistanceKm
+          const earnings = await this.calculateDriverEarnings(assignment, pricingConfig);
+          const snap = assignment.snapshot;
+          const estimatedDistanceKm =
+            assignment.estimatedDistanceKm != null
               ? Number(assignment.estimatedDistanceKm)
-              : null,
-            actualDistanceKm: assignment.actualDistanceKm
+              : null;
+          const actualDistanceKm =
+            assignment.actualDistanceKm != null
               ? Number(assignment.actualDistanceKm)
-              : null,
-            driverEarnings: earnings.netEarning,
-            earningsBreakdown: earnings.earningsBreakdown,
-            estimatedDeliveryTime: Math.ceil(
-              (Number(assignment.estimatedDistanceKm || 10) / 25) * 60,
-            ), // Estimate based on 25km/h average speed
-            assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
-            acceptedAt: toIsoDateTimeOrNull(assignment.acceptedAt),
+              : null;
+
+          return {
+            assignment: {
+              assignmentId: assignment.assignmentId,
+              orderId: assignment.orderId,
+              orderUuid: assignment.orderUuid ?? null,
+              orderNumber: assignment.orderNumber ?? null,
+            },
+            status: {
+              order: assignment.orderStatus ?? null,
+              assignment: assignment.assignmentStatus ?? null,
+            },
+            routing: {
+              pickup: assignment.pickup ?? null,
+              delivery: assignment.delivery ?? null,
+              estimatedDistanceKm,
+              actualDistanceKm,
+          estimatedDeliveryMinutes: Math.ceil(
+                ((estimatedDistanceKm ?? 10) /
+                  (pricingConfig.get("average_courier_speed_kmph") ?? 25)) *
+                  60,
+              ),
+            },
+            snapshot: {
+              deliveryType: snap?.deliveryType,
+              vehicleCategory: snap?.vehicleCategory,
+              packageType: snap?.packageType,
+              weightTier: snap?.weightTier ?? null,
+            },
+            package: assignment.package ?? null,
+            pricing: assignment.pricing ?? null,
+            earnings: {
+              net: earnings.netEarning,
+              breakdown: earnings.earningsBreakdown,
+            },
+            timeline: {
+              assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
+              acceptedAt: assignment.timeline?.acceptedAt ?? null,
+            },
           };
         }),
       );
 
-      return assignmentsWithEarnings;
+      return {
+        assignments: assignmentsWithEarnings,
+      };
     } catch (error) {
       logger.error({
         msg: "Error getting driver assignments",
@@ -431,6 +451,7 @@ class DriversService {
    */
   private async calculateDriverEarnings(
     assignment: import("../../types/drivers.js").CourierAssignmentRow,
+    pricingConfig?: Map<string, number>,
   ): Promise<{
     netEarning: number;
     earningsBreakdown: {
@@ -448,35 +469,27 @@ class DriversService {
     };
   }> {
     try {
-      // Import pricing repository for configurable rates
-      const pricingRepo = await import("../pricing/pricing.repository.js").then(
-        (m) => m.default,
-      );
+      // Use pre-fetched pricing config if provided, otherwise fetch (fallback for direct calls)
+      let config = pricingConfig;
+      if (!config) {
+        const pricingRepo = await import(
+          "../pricing/pricing.repository.js"
+        ).then((m) => m.default);
+        config = await pricingRepo.getAllPricingConfig();
+      }
 
-      // Get configurable rates
-      const commissionRate =
-        (await pricingRepo.getPricingConfigValue("driver_commission_rate")) ||
-        0.7;
-      const distanceRate =
-        (await pricingRepo.getPricingConfigValue("driver_distance_rate")) ||
-        0.65;
-      const weightRate =
-        (await pricingRepo.getPricingConfigValue("driver_weight_rate")) || 0.6;
-      const peakHourBonusRate =
-        (await pricingRepo.getPricingConfigValue("peak_hour_bonus_rate")) ||
-        0.15;
-      const urgencyBonusAmount =
-        (await pricingRepo.getPricingConfigValue("urgency_bonus_amount")) ||
-        15.0;
-      const onTimeBonusRate =
-        (await pricingRepo.getPricingConfigValue("on_time_bonus_rate")) || 0.05;
-      const qualityBonusAmount =
-        (await pricingRepo.getPricingConfigValue("quality_bonus_amount")) ||
-        5.0;
+      // Get configurable rates from pre-fetched map with defaults
+      const commissionRate = config.get("driver_commission_rate") ?? 0.7;
+      const distanceRate = config.get("driver_distance_rate") ?? 0.65;
+      const weightRate = config.get("driver_weight_rate") ?? 0.6;
+      const peakHourBonusRate = config.get("peak_hour_bonus_rate") ?? 0.15;
+      const urgencyBonusAmount = config.get("urgency_bonus_amount") ?? 15.0;
+      const onTimeBonusRate = config.get("on_time_bonus_rate") ?? 0.05;
+      const qualityBonusAmount = config.get("quality_bonus_amount") ?? 5.0;
 
-      const basePrice = Number(assignment.basePrice || 0);
-      const distancePrice = Number(assignment.distancePrice || 0);
-      const weightSurcharge = Number(assignment.weightSurcharge || 0);
+      const basePrice = Number(assignment.pricing?.basePrice || 0);
+      const distancePrice = Number(assignment.pricing?.distancePrice || 0);
+      const weightSurcharge = Number(assignment.pricing?.weightSurcharge || 0);
 
       // Base earnings using configurable rates
       const basePayout = basePrice * commissionRate;
@@ -494,14 +507,16 @@ class DriversService {
 
       // Urgency bonus for "Deliver Now"
       const urgencyBonus =
-        assignment.deliveryType === "deliver_now" ? urgencyBonusAmount : 0;
+        assignment.snapshot?.deliveryType?.name === "deliver_now"
+          ? urgencyBonusAmount
+          : 0;
 
-      // On-time delivery bonus (simplified)
-      const onTimeBonus =
-        Math.random() > 0.7 ? basePayout * onTimeBonusRate : 0;
+      // TODO: calculate from actual delivery timing against requested schedule.
+      const onTimeBonus = 0;
 
-      // Quality bonus
-      const qualityBonus = qualityBonusAmount;
+      // Quality bonus - only awarded when conditions met (not unconditional)
+      // TODO: calculate from actual completion quality metrics
+      const qualityBonus = 0;
 
       // Calculate gross earning
       const grossEarning =
@@ -574,26 +589,15 @@ class DriversService {
    */
   async getEarningsSummary(
     userId: number,
-    period: string = "today",
-  ): Promise<EarningsSummary> {
+    period: EarningsPeriodQuery["period"] = "today",
+  ): Promise<DriverEarningsSummary> {
     try {
       const earnings = await driversRepository.getEarningsSummary(userId);
 
-      // For home screen (today only) - lightweight response
-      if (period === "today") {
-        return {
-          deliveries: {
-            today: Number(earnings.todayDeliveries),
-          },
-          earnings: {
-            today: Number(earnings.todayEarnings),
-          },
-          totalDistanceKm: Number(earnings.totalDistanceKm),
-        };
-      }
-
-      // For detailed screens - full response
       return {
+        scope: {
+          period,
+        },
         deliveries: {
           total: Number(earnings.totalDeliveries),
           today: Number(earnings.todayDeliveries),
@@ -607,11 +611,65 @@ class DriversService {
           thisMonth: Number(earnings.monthEarnings),
           averageOrderValue: Number(earnings.avgOrderValue),
         },
-        totalDistanceKm: Number(earnings.totalDistanceKm),
+        activity: {
+          totalDistanceKm: Number(earnings.totalDistanceKm),
+        },
       };
     } catch (error) {
       logger.error({
         msg: "Error getting driver earnings",
+        error: (error as Error).message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get paginated trip history for driver
+   */
+  async getTripHistory(
+    userId: number,
+    query: TripHistoryQuery,
+  ): Promise<TripHistoryResponse> {
+    try {
+      const { page, limit, dateFrom, dateTo } = query;
+      const offset = (page - 1) * limit;
+
+      const { rows, total } = await driversRepository.getTripHistory(
+        userId,
+        limit,
+        offset,
+        dateFrom,
+        dateTo,
+      );
+
+      return {
+        trips: rows.map((row) => ({
+          assignmentId: row.assignmentId,
+          orderId: row.orderId,
+          orderUuid: row.orderUuid ?? null,
+          orderNumber: row.orderNumber ?? null,
+          orderStatus: row.orderStatus,
+          pickup: row.pickup ?? null,
+          delivery: row.delivery ?? null,
+          actualDistanceKm:
+            row.actualDistanceKm != null ? Number(row.actualDistanceKm) : null,
+          netEarning: Number(row.netEarning),
+          snapshot: row.snapshot ?? null,
+          assignedAt: toIsoDateTimeOrNull(row.assignedAt),
+          deliveredAt: toIsoDateTimeOrNull(row.deliveredAt),
+          cancelledAt: toIsoDateTimeOrNull(row.cancelledAt),
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      logger.error({
+        msg: "Error getting driver trip history",
         error: (error as Error).message,
       });
       throw error;

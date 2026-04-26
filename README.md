@@ -19,6 +19,7 @@ This is a **monorepo** containing:
 - **Backend API** (`services/backend/`) - Node.js/Fastify REST API
 - **User App** (`apps/user/`) - Flutter mobile app for customers
 - **Driver App** (`apps/driver/`) - Flutter mobile app for couriers
+- **Business Portal** (`apps/business/`) - Next.js web app for merchants/store owners
 - **Shared Types** (`packages/shared-types/`) - TypeScript definitions
 
 ### ✨ Key Features
@@ -79,6 +80,11 @@ flutter run
 ```
 shipzy/
 ├── apps/                    # Frontend Applications
+│   ├── business/           # Merchant Next.js Web Portal
+│   │   ├── src/           # App Router source code
+│   │   ├── public/        # Static assets
+│   │   ├── .env.example   # Environment variables
+│   │   └── package.json   # Web dependencies
 │   ├── user/               # Customer Flutter App
 │   │   ├── lib/           # Source code
 │   │   ├── android/       # Android configuration

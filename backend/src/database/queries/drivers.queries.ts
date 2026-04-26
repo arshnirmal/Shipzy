@@ -13,6 +13,7 @@ export default {
    */
   FIND_COURIER_BY_USER_ID: `
     SELECT
+                        u.user_id AS "courierId",
             u.user_id AS "userId",
             u.user_uuid AS "userUuid",
             u.phone_number AS "phoneNumber",
@@ -22,26 +23,29 @@ export default {
             u.is_verified AS "isVerified",
             u.is_active AS "isActive",
             cs.status_id AS "courierStatusId",
-            cs.is_available AS "isAvailable",
-            cs.is_online AS "isOnline",
-            cs.total_deliveries_today AS "totalDeliveriesToday",
+                        COALESCE(cs.is_available, false) AS "isAvailable",
+                        COALESCE(cs.is_online, false) AS "isOnline",
+                        COALESCE(cs.total_deliveries_today, 0) AS "totalDeliveriesToday",
             cs.last_location_update AS "lastLocationUpdate",
             ST_Y(cs.current_location::geometry) AS "currentLatitude",
             ST_X(cs.current_location::geometry) AS "currentLongitude",
-            cv.vehicle_id AS "vehicleId",
-            cv.vehicle_number AS "vehicleNumber",
-            cv.model AS "vehicleModel",
-            cv.year AS "vehicleYear",
-            vc.category_id AS "vehicleCategoryId",
+                        cs.avg_rating AS "avgRating",
+                        COALESCE(cs.total_ratings, 0) AS "totalRatings",
+            NULL::int AS "vehicleId",
+            cs.vehicle->>'vehicleNumber' AS "vehicleNumber",
+            cs.vehicle->>'model' AS "vehicleModel",
+            (cs.vehicle->>'year')::int AS "vehicleYear",
+            cs.vehicle_category_id AS "vehicleCategoryId",
             vc.name AS "vehicleCategory",
             vc.max_weight_kg AS "vehicleMaxWeight",
-            cv.is_active AS "vehicleIsActive",
-            cs.created_at AS "createdAt",
-            cs.updated_at AS "updatedAt"
+            (cs.vehicle IS NOT NULL) AS "vehicleIsActive",
+            u.onboarding AS "onboarding",
+            cs.kyc AS "kyc",
+                        u.created_at AS "createdAt",
+                        u.updated_at AS "updatedAt"
       FROM users.profiles u
       LEFT JOIN logistics.courier_status cs ON u.user_id = cs.courier_id
-      LEFT JOIN logistics.courier_vehicles cv ON u.user_id = cv.courier_id AND cv.is_active = true
-      LEFT JOIN public.vehicle_categories vc ON cv.category_id = vc.category_id
+      LEFT JOIN public.vehicle_categories vc ON cs.vehicle_category_id = vc.category_id
       WHERE u.user_id = $1
           AND u.role = 'courier'
           AND u.deleted_at IS NULL
@@ -77,11 +81,11 @@ export default {
           COUNT(DISTINCT CASE WHEN o.created_at::date = CURRENT_DATE THEN o.order_id END) AS "todayDeliveries",
           COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.order_id END) AS "weekDeliveries",
           COUNT(DISTINCT CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.order_id END) AS "monthDeliveries",
-          COALESCE(SUM(o.total_price), 0) AS "totalEarnings",
-          COALESCE(SUM(CASE WHEN o.created_at::date = CURRENT_DATE THEN o.total_price END), 0) AS "todayEarnings",
-          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN o.total_price END), 0) AS "weekEarnings",
-          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN o.total_price END), 0) AS "monthEarnings",
-          COALESCE(ROUND(AVG(o.total_price), 2), 0) AS "avgOrderValue",
+          COALESCE(SUM(COALESCE(ca.net_earnings, o.total_price * 0.7)), 0) AS "totalEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at::date = CURRENT_DATE THEN COALESCE(ca.net_earnings, o.total_price * 0.7) END), 0) AS "todayEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('week', CURRENT_DATE) THEN COALESCE(ca.net_earnings, o.total_price * 0.7) END), 0) AS "weekEarnings",
+          COALESCE(SUM(CASE WHEN o.created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN COALESCE(ca.net_earnings, o.total_price * 0.7) END), 0) AS "monthEarnings",
+          COALESCE(ROUND(AVG(COALESCE(ca.net_earnings, o.total_price * 0.7)), 2), 0) AS "avgOrderValue",
           COALESCE(ROUND(SUM(o.actual_distance_km), 2), 0) AS "totalDistanceKm"
       FROM orders.requests o
       JOIN orders.courier_assignments ca ON o.order_id = ca.order_id
@@ -117,6 +121,7 @@ export default {
       UPDATE logistics.courier_status
       SET
           current_location = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+          location_meta = CASE WHEN $4::jsonb IS NOT NULL THEN $4::jsonb ELSE location_meta END,
           last_location_update = NOW(),
           updated_at = NOW()
       WHERE courier_id = $1
@@ -133,77 +138,96 @@ export default {
   // ============ COURIER ASSIGNMENTS ============
 
   /**
-   * Find courier's active assignments (OPTIMIZED - uses JSONB columns)
+   * Find courier's active assignments
+   * No master-table JOINs — delivery type, vehicle category, weight tier all in snapshot JSONB
    */
   FIND_COURIER_ACTIVE_ASSIGNMENTS: `
-      SELECT
-          ca.assignment_id AS "assignmentId",
-          ca.order_id AS "orderId",
-          o.order_uuid AS "orderUuid",
-          o.order_number AS "orderNumber",
-          o.status AS "orderStatus",
-          ca.status AS "assignmentStatus",
+    SELECT
+      ca.assignment_id     AS "assignmentId",
+      ca.order_id          AS "orderId",
+      o.order_uuid         AS "orderUuid",
+      o.order_number       AS "orderNumber",
+      o.status             AS "orderStatus",
+      ca.status            AS "assignmentStatus",
 
-          -- Vehicle and package info
-          vc.name AS "vehicleCategory",
-          vc.display_name AS "vehicleCategoryDisplay",
-          pt.name AS "packageType",
-          wt.tier_id AS "weightTierId",
-          wt.name AS "weightTierName",
-          wt.min_weight_kg AS "weightTierMin",
-          wt.max_weight_kg AS "weightTierMax",
+      -- Whole JSONB location objects
+      o.pickup_location    AS "pickup",
+      o.delivery_location  AS "delivery",
 
-          -- OPTIMIZED: Pickup location from JSONB
-          o.pickup_location->>'fullAddress' AS "pickupAddress",
-          o.pickup_location->>'building' AS "pickupBuilding",
-          o.pickup_location->>'landmark' AS "pickupLandmark",
-          o.pickup_location->>'city' AS "pickupCity",
-          o.pickup_location->>'state' AS "pickupState",
-          o.pickup_location->>'postalCode' AS "pickupPostalCode",
-          (o.pickup_location->>'latitude')::numeric AS "pickupLatitude",
-          (o.pickup_location->>'longitude')::numeric AS "pickupLongitude",
-          o.pickup_location->>'contactName' AS "pickupContactName",
-          o.pickup_location->>'contactPhone' AS "pickupContactPhone",
+      -- JSONB value objects (master data + pricing — no JOINs needed)
+      o.pricing            AS "pricing",
+      o.snapshot           AS "snapshot",
+      o.package            AS "package",
 
-          -- OPTIMIZED: Delivery location from JSONB
-          o.delivery_location->>'fullAddress' AS "deliveryAddress",
-          o.delivery_location->>'building' AS "deliveryBuilding",
-          o.delivery_location->>'landmark' AS "deliveryLandmark",
-          o.delivery_location->>'city' AS "deliveryCity",
-          o.delivery_location->>'state' AS "deliveryState",
-          o.delivery_location->>'postalCode' AS "deliveryPostalCode",
-          (o.delivery_location->>'latitude')::numeric AS "deliveryLatitude",
-          (o.delivery_location->>'longitude')::numeric AS "deliveryLongitude",
-          o.delivery_location->>'contactName' AS "deliveryContactName",
-          o.delivery_location->>'contactPhone' AS "deliveryContactPhone",
+      o.total_price        AS "totalPrice",
+      o.estimated_distance_km AS "estimatedDistanceKm",
+      o.actual_distance_km    AS "actualDistanceKm",
 
-          o.package_description AS "packageDescription",
-          o.special_instructions AS "specialInstructions",
-          o.declared_value AS "declaredValue",
-          o.estimated_distance_km AS "estimatedDistanceKm",
-          o.actual_distance_km AS "actualDistanceKm",
-          -- Delivery type (needed for earnings calculation)
-          dt.name AS "deliveryType",
-          -- Complete pricing breakdown
-          o.base_price AS "basePrice",
-          o.distance_price AS "distancePrice",
-          o.weight_surcharge AS "weightSurcharge",
-          o.platform_fee AS "platformFee",
-          o.special_handling_fee AS "specialHandlingFee",
-          o.gst_amount AS "gstAmount",
-          o.subtotal_before_tax AS "subtotalBeforeTax",
-          o.total_price AS "totalPrice",
-          ca.assigned_at AS "assignedAt",
-          ca.accepted_at AS "acceptedAt"
-      FROM orders.courier_assignments ca
-      JOIN orders.requests o ON ca.order_id = o.order_id
-      LEFT JOIN public.delivery_types dt ON o.delivery_type_id = dt.delivery_type_id
-      LEFT JOIN public.vehicle_categories vc ON o.vehicle_category_id = vc.category_id
-      LEFT JOIN public.package_types pt ON o.package_type_id = pt.package_type_id
-      LEFT JOIN public.weight_tiers wt ON o.weight_tier_id = wt.tier_id
-      WHERE ca.courier_id = $1
-          AND ca.status NOT IN ('delivered', 'cancelled', 'rejected')
-      ORDER BY ca.assigned_at DESC
+      ca.assigned_at       AS "assignedAt",
+      ca.timeline          AS "timeline"
+
+    FROM orders.courier_assignments ca
+    JOIN orders.requests o ON ca.order_id = o.order_id
+    WHERE ca.courier_id = $1
+      AND ca.status NOT IN ('delivered', 'cancelled', 'rejected', 'returned')
+    ORDER BY ca.assigned_at DESC
+  `,
+
+  // ============ AVAILABILITY / STALE DETECTION ============
+
+  /**
+   * Mark a courier offline if their last location update is older than $2 minutes.
+   * No-op if already offline or location is fresh. Returns updated row or nothing.
+   * $1=courierId $2=staleThresholdMinutes
+   */
+  MARK_COURIER_OFFLINE_IF_STALE: `
+    UPDATE logistics.courier_status
+    SET
+      is_online    = false,
+      is_available = false,
+      updated_at   = NOW()
+    WHERE courier_id = $1
+      AND is_online  = true
+      AND (
+        last_location_update IS NULL
+        OR last_location_update < NOW() - ($2 || ' minutes')::interval
+      )
+    RETURNING courier_id AS "courierId"
+  `,
+
+  // ============ TRIP HISTORY ============
+
+  /**
+   * Paginated completed/returned/cancelled assignments for a courier
+   * $1=courierId $2=limit $3=offset $4=dateFrom(nullable) $5=dateTo(nullable)
+   */
+  GET_COURIER_TRIP_HISTORY: `
+    SELECT
+      ca.assignment_id                                        AS "assignmentId",
+      ca.order_id                                             AS "orderId",
+      o.order_uuid                                            AS "orderUuid",
+      o.order_number                                          AS "orderNumber",
+      o.status                                                AS "orderStatus",
+      ca.status                                               AS "assignmentStatus",
+      o.pickup_location                                       AS "pickup",
+      o.delivery_location                                     AS "delivery",
+      o.actual_distance_km                                    AS "actualDistanceKm",
+      o.total_price                                           AS "totalPrice",
+      COALESCE(ca.net_earnings, o.total_price * 0.7)         AS "netEarning",
+      o.snapshot                                              AS "snapshot",
+      ca.assigned_at                                          AS "assignedAt",
+      o.delivered_at                                          AS "deliveredAt",
+      o.cancelled_at                                          AS "cancelledAt",
+      COUNT(*) OVER ()                                        AS "totalCount"
+    FROM orders.courier_assignments ca
+    JOIN orders.requests o ON ca.order_id = o.order_id
+    WHERE ca.courier_id = $1
+      AND o.status IN ('delivered', 'returned', 'cancelled')
+      AND o.deleted_at IS NULL
+      AND ($4::timestamptz IS NULL OR o.created_at >= $4)
+      AND ($5::timestamptz IS NULL OR o.created_at <= $5)
+    ORDER BY ca.assigned_at DESC
+    LIMIT $2 OFFSET $3
   `,
 
   // ============ FUNCTION CALLS ============

@@ -18,15 +18,18 @@ class CTACard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: primaryColor,
-        borderRadius: AppRadius.radiusLg,
+        borderRadius: AppRadius.radiusXl,
         gradient: AppGradients.primaryCta,
-        boxShadow: [BoxShadow(color: primaryColor.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 8))],
+        boxShadow: AppDepth.ambientShadow(theme.brightness),
       ),
       child: Stack(
         children: [
-          // Decorative Icon
-          Positioned(right: -20, bottom: -20, child: Icon(Icons.local_shipping, size: 140, color: Colors.white.withValues(alpha: 0.15))),
+          // Decorative icon
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(Icons.local_shipping, size: 140, color: AppColors.onPrimaryCta.withValues(alpha: 0.15)),
+          ),
 
           // Content
           Padding(
@@ -36,16 +39,19 @@ class CTACard extends StatelessWidget {
               children: [
                 Text(
                   'Need a delivery?',
-                  style: theme.textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(color: AppColors.onPrimaryCta, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Send anything, anywhere in minutes.',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9), fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onPrimaryCta.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Material(
-                  color: Colors.white,
+                  color: AppColors.onPrimaryCta,
                   borderRadius: AppRadius.radiusLg,
                   child: InkWell(
                     onTap: () => context.push(AppRoutes.createOrder),

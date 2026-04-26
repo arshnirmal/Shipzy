@@ -1,23 +1,24 @@
 // services/backend/src/modules/orders/orders.controller.ts
 import { FastifyRequest, FastifyReply } from "fastify";
 import logger from "../../config/logger.js";
-import { AppError } from "../../utils/error.util.js";
+import { AppError, RetryAfterError } from "../../utils/error.util.js";
 import {
   errorResponse,
   paginatedResponse,
   successResponse,
 } from "../../utils/response.util.js";
 import ordersService from "./orders.service.js";
-import ratingsService from "../ratings/ratings.service.js";
 import type {
   CreateOrderRequest as OrderData,
   CalculateFareRequest,
   CancelOrderRequest,
-  RateOrderRequest,
   UpdateOrderStatusRequest,
   OrderParams,
   ListOrdersQuery,
   AvailableOrdersQuery,
+  ArriveRequest,
+  UndeliverableRequest,
+  ProofOfDeliveryRequest,
 } from "./orders.zod.js";
 
 class OrdersController {
@@ -28,7 +29,7 @@ class OrdersController {
   async calculateFare(
     request: FastifyRequest<{ Body: CalculateFareRequest }>,
     reply: FastifyReply,
-  ): Promise<any> {
+  ): Promise<FastifyReply> {
     try {
       const fareData = request.body;
 
@@ -37,16 +38,17 @@ class OrdersController {
       logger.info({
         msg: "POST /api/v1/orders/calculate-fare",
         statusCode: 200,
-        distanceKm: fareData.drop?.latitude ? "calculated" : "pending",
+        distanceKm: fareData.locations?.delivery?.latitude
+          ? "calculated"
+          : "pending",
       });
 
       return successResponse(reply, result, "Fare calculated successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -61,7 +63,7 @@ class OrdersController {
     let requestId: string | undefined;
 
     try {
-      const { userId, role } = request.user!;
+      const { userId } = request.user!;
       const orderData = request.body;
       requestId = request.id;
 
@@ -71,17 +73,16 @@ class OrdersController {
         msg: "Order created",
         requestId,
         userId,
-        orderId: result.orderId,
+        orderId: result.order.identifiers.orderId,
         statusCode: 201,
       });
 
       return successResponse(reply, result, "Order created successfully", 201);
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -97,11 +98,7 @@ class OrdersController {
       const { userId, role } = request.user!;
       const { id } = request.params;
 
-      const order = await ordersService.getOrderById(
-        Number.parseInt(id, 10),
-        userId,
-        role,
-      );
+      const order = await ordersService.getOrderById(id, userId, role);
 
       logger.info({
         msg: "GET /api/v1/orders/:id",
@@ -112,11 +109,10 @@ class OrdersController {
 
       return successResponse(reply, order, "Order retrieved successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -138,6 +134,10 @@ class OrdersController {
         dateTo,
         sortBy,
         sortOrder,
+        search,
+        deliveryTypeId,
+        minPrice,
+        maxPrice,
       } = request.query;
 
       const result = await ordersService.listOrders(
@@ -149,6 +149,10 @@ class OrdersController {
         dateTo,
         sortBy,
         sortOrder,
+        search,
+        deliveryTypeId,
+        minPrice,
+        maxPrice,
       );
 
       logger.info({
@@ -161,13 +165,17 @@ class OrdersController {
         total: result.pagination.total,
       });
 
-      return paginatedResponse(reply, result.orders, result.pagination);
-    } catch (error) {
-      return errorResponse(
+      return paginatedResponse(
         reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
+        result.orders,
+        result.pagination,
+        "Orders retrieved successfully",
       );
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -203,11 +211,10 @@ class OrdersController {
         "Available orders retrieved successfully",
       );
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -222,10 +229,12 @@ class OrdersController {
     try {
       const { userId, role } = request.user!;
       const { id } = request.params;
-      const { cancellationReason } = request.body;
+      const {
+        cancellation: { reason: cancellationReason },
+      } = request.body;
 
       const result = await ordersService.cancelOrder(
-        Number.parseInt(id, 10),
+        id,
         userId,
         role,
         cancellationReason,
@@ -240,11 +249,10 @@ class OrdersController {
 
       return successResponse(reply, result, "Order cancelled successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -260,10 +268,7 @@ class OrdersController {
       const { userId } = request.user!;
       const { id } = request.params;
 
-      const result = await ordersService.acceptOrder(
-        Number.parseInt(id, 10),
-        userId,
-      );
+      const result = await ordersService.acceptOrder(id, userId);
 
       logger.info({
         msg: "POST /api/v1/orders/:id/accept",
@@ -274,11 +279,10 @@ class OrdersController {
 
       return successResponse(reply, result, "Order accepted successfully");
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
-      );
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
@@ -296,13 +300,11 @@ class OrdersController {
     try {
       const { userId } = request.user!;
       const { id } = request.params;
-      const { status } = request.body;
+      const {
+        transition: { status },
+      } = request.body;
 
-      const result = await ordersService.updateOrderStatus(
-        Number.parseInt(id, 10),
-        status,
-        userId,
-      );
+      const result = await ordersService.updateOrderStatus(id, status, userId);
 
       logger.info({
         msg: "PUT /api/v1/orders/:id/status",
@@ -318,53 +320,160 @@ class OrdersController {
         "Order status updated successfully",
       );
     } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  // ============ DRIVER ORDER ACTIONS ============
+
+  /**
+   * POST /api/v1/orders/:id/arrive
+   */
+  async arriveAtDelivery(
+    request: FastifyRequest<{ Params: OrderParams; Body: ArriveRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.arriveAtDelivery(
+        orderId,
+        userId,
+        request.body,
       );
+      return successResponse(reply, result.data, "Arrived at delivery location");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 
   /**
-   * POST /api/v1/orders/:id/rate
-   * Rate a delivered order (customer only)
+   * POST /api/v1/orders/:id/undeliverable
    */
-  async rateOrder(
+  async markUndeliverable(
+    request: FastifyRequest<{ Params: OrderParams; Body: UndeliverableRequest }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.markUndeliverable(
+        orderId,
+        userId,
+        request.body,
+      );
+      return successResponse(reply, result.data, "Order marked undeliverable");
+    } catch (error) {
+      if (error instanceof RetryAfterError) {
+        return errorResponse(reply, error.message, 400, { retryAfter: error.retryAfter });
+      }
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/return
+   */
+  async startReturn(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.startReturn(orderId, userId);
+      return successResponse(reply, result.data, "Return initiated");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/returned
+   */
+  async confirmReturned(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.confirmReturned(orderId, userId);
+      return successResponse(reply, result.data, "Order returned successfully");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/v1/orders/:id/proof-of-delivery
+   */
+  async submitProofOfDelivery(
     request: FastifyRequest<{
       Params: OrderParams;
-      Body: RateOrderRequest;
+      Body: ProofOfDeliveryRequest;
     }>,
     reply: FastifyReply,
-  ) {
+  ): Promise<FastifyReply> {
     try {
-      const { userId } = request.user!;
-      const { id } = request.params;
-      const { rating, anonymous, comment } = request.body;
-
-      const result = await ratingsService.createRating({
-        orderId: Number.parseInt(id, 10),
-        customerId: userId,
-        rating,
-        isAnonymous: anonymous ?? false,
-        comment: comment ?? undefined,
-      });
-
-      logger.info({
-        msg: "POST /api/v1/orders/:id/rate",
-        statusCode: 200,
+      const userId = request.user!.userId;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.submitProofOfDelivery(
+        orderId,
         userId,
-        orderId: id,
-        rating,
-      });
-
-      return successResponse(reply, result, "Order rated successfully");
-    } catch (error) {
-      return errorResponse(
-        reply,
-        (error as Error).message,
-        error instanceof AppError ? error.statusCode : 500,
+        request.body,
       );
+      return successResponse(
+        reply,
+        result.data,
+        "Proof of delivery submitted",
+        201,
+      );
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * GET /api/v1/orders/:id/tracking
+   */
+  async getOrderTracking(
+    request: FastifyRequest<{ Params: OrderParams }>,
+    reply: FastifyReply,
+  ): Promise<FastifyReply> {
+    try {
+      const userId = request.user!.userId;
+      const userRole = request.user!.role;
+      const orderId = Number(request.params.id);
+      const result = await ordersService.getOrderTracking(
+        orderId,
+        userId,
+        userRole,
+      );
+      return successResponse(reply, result.data, "Order tracking data");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
     }
   }
 }

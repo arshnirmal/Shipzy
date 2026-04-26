@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/order_provider.dart';
+import '../../utils/app_routes.dart';
 import '../../widgets/map_widget.dart';
 
 class OrderDetailsScreen extends ConsumerStatefulWidget {
@@ -21,11 +22,13 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
     try {
       await ref.read(orderProvider.notifier).acceptOrder(widget.orderId);
       if (mounted) {
-        context.go('/active-delivery/${widget.orderId}');
+        context.go(AppRoutes.activeDeliveryPath(widget.orderId));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to accept order: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to accept order: ${e.toString()}')),
+        );
       }
     } finally {
       if (mounted) {
@@ -45,8 +48,16 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -5))],
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,30 +65,48 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Order #${widget.orderId}', style: Theme.of(context).textTheme.headlineSmall),
+                    Text(
+                      'Order #${widget.orderId}',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                     Text(
                       '\$15.00',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                _buildLocationRow(Icons.my_location, 'Pickup', '123 Main St, New York, NY'),
+                _buildLocationRow(
+                  Icons.my_location,
+                  'Pickup',
+                  '123 Main St, New York, NY',
+                ),
                 const SizedBox(height: 16),
-                _buildLocationRow(Icons.location_on, 'Dropoff', '456 Elm St, Brooklyn, NY'),
+                _buildLocationRow(
+                  Icons.location_on,
+                  'Dropoff',
+                  '456 Elm St, Brooklyn, NY',
+                ),
                 const Spacer(),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton(onPressed: () => context.pop(), child: const Text('Reject')),
+                      child: OutlinedButton(
+                        onPressed: () => context.pop(),
+                        child: const Text('Reject'),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _acceptOrder,
-                        child: _isLoading ? const CircularProgressIndicator() : const Text('Accept Order'),
+                        child: _isLoading
+                            ? const CircularProgressIndicator()
+                            : const Text('Accept Order'),
                       ),
                     ),
                   ],
