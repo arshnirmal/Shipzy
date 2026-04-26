@@ -1,4 +1,8 @@
-import { OrderDetailView } from "@/components/orders/order-detail-view";
+"use client";
+
+import { Suspense } from "react";
+import { OrderDetailView, OrderDetailSkeleton } from "@/components/orders/order-detail-view";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 type OrderPageProps = {
   params: Promise<{ id: string }>;
@@ -6,5 +10,12 @@ type OrderPageProps = {
 
 export default async function OrderPage({ params }: OrderPageProps) {
   const { id } = await params;
-  return <OrderDetailView id={id} />;
+  
+  return (
+    <ErrorBoundary resetKey={id}>
+      <Suspense fallback={<OrderDetailSkeleton />}>
+        <OrderDetailView id={id} />
+      </Suspense>
+    </ErrorBoundary>
+  );
 }

@@ -27,6 +27,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   mapbox.PointAnnotationManager? _pointAnnotationManager;
   geo.Position? _currentLocation;
   Brightness? _lastBrightness;
+  // Guards camera refits: only fires when trip state changes, not every rebuild.
+  bool? _prevHasActiveTrip;
 
   @override
   void initState() {
@@ -132,6 +134,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final hasIncomingRequest = !hasActiveTrip && hasNearbyOrders;
     final isSearching = status == DriverStatus.online && !hasIncomingRequest;
     final showToggle = !hasActiveTrip && !hasIncomingRequest;
+    final showBottomCard = hasIncomingRequest || hasActiveTrip;
+
+    // Only refit camera when trip state transitions, not on every rebuild.
+    if (_prevHasActiveTrip != hasActiveTrip) {
+      _prevHasActiveTrip = hasActiveTrip;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _mapboxMap == null) {
+          return;
+        }
+        if (hasActiveTrip) {
+          _fitCameraToOrder();
+        } else {
+          _updateCamera();
+        }
+      });
+    }
 
     // Estimate height for FAB offset above bottom card
     final fabBottomOffset = hasActiveTrip
@@ -139,17 +157,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         : hasIncomingRequest
             ? 348.0
             : 72.0;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _mapboxMap == null) {
-        return;
-      }
-      if (hasActiveTrip) {
-        _fitCameraToOrder();
-      } else {
-        _updateCamera();
-      }
-    });
 
     ref.listen(activeOrderProvider, (previous, next) {
       if (next.hasValue && next.value != null) {
@@ -185,6 +192,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onMapCreated: _onMapCreated,
               ),
 
+              // Scrim — softens the map edge above the bottom card.
+              // Rendered behind the cards so the gradient shows only on
+              // the map area above the card's top edge.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 480,
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    opacity: showBottomCard ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 350),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            theme.colorScheme.surface.withValues(alpha: 0.55),
+                          ],
+                          stops: const [0.0, 0.68],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
               // My-location FAB
               Positioned(
                 right: 16,
@@ -204,7 +240,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // Offline dim overlay
               if (status == DriverStatus.offline) const _OfflineOverlay(),
 
-              // Bottom cards / controls, overlaid at map bottom
+              // Bottom controls
               Positioned(
                 left: 0,
                 right: 0,
@@ -212,18 +248,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (isSearching)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 12),
-                        child: _SearchingPill(),
+                    // Toggle + searching pill — AnimatedSize collapses this
+                    // region smoothly when a bottom card takes over.
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeOutCubic,
+                      alignment: Alignment.bottomCenter,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSearching)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Center(child: _SearchingPill()),
+                            ),
+                          if (showToggle)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 20),
+                              child: Center(child: OnlineStatusToggle()),
+                            ),
+                        ],
                       ),
-                    if (showToggle)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 20),
-                        child: OnlineStatusToggle(),
+                    ),
+
+                    // Incoming request or active trip card — slides up from
+                    // below on entry, fades + slides out on exit.
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 380),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      layoutBuilder: (currentChild, previousChildren) => Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
                       ),
-                    if (hasIncomingRequest) const IncomingRequestCard(),
-                    if (hasActiveTrip) const ActiveTripCard(),
+                      transitionBuilder: (child, animation) => SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 1),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      ),
+                      child: hasIncomingRequest
+                          ? const IncomingRequestCard(
+                              key: ValueKey('request'),
+                            )
+                          : hasActiveTrip
+                              ? const ActiveTripCard(
+                                  key: ValueKey('active_trip'),
+                                )
+                              : const SizedBox.shrink(
+                                  key: ValueKey('no_card'),
+                                ),
+                    ),
+
                     const SizedBox(height: 8),
                   ],
                 ),

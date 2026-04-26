@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCancelOrder } from "@/hooks/use-cancel-order";
+import { getErrorMessage } from "@/lib/api";
 
 type CancelOrderDialogProps = {
   open: boolean;
@@ -52,7 +53,7 @@ export function CancelOrderDialog({
           onCancelled?.();
         },
         onError: (err) => {
-          toast.error(err.message || "Failed to cancel order.");
+          toast.error(getErrorMessage(err));
         },
       },
     );

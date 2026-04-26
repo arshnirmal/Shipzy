@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/providers/auth-provider";
+import { getErrorMessage } from "@/lib/api";
 
 export function ProfileForm() {
   const { data, isLoading } = useProfile();
@@ -40,7 +41,7 @@ export function ProfileForm() {
 
     updateProfile.mutate(payload, {
       onSuccess: () => toast.success("Profile updated successfully."),
-      onError: (err) => toast.error(err.message || "Failed to update profile."),
+      onError: (err) => toast.error(getErrorMessage(err)),
     });
   };
 

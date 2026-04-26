@@ -171,6 +171,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
       </Sidebar>
 
       <SidebarInset>
+        {/* Offline Banner Slot (renders inside AppProviders at the root) */}
+        
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />

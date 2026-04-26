@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
+import { apiRequest, getErrorMessage } from "@/lib/api";
 import type { CancelOrderPayload, CancelOrderResponse } from "@/types/orders";
 
 export function useCancelOrder() {
@@ -15,6 +16,9 @@ export function useCancelOrder() {
     onSuccess: (_, { orderId }) => {
       qc.invalidateQueries({ queryKey: ["orders", "detail", orderId] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }

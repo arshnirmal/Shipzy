@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
+import { apiRequest, getErrorMessage } from "@/lib/api";
 
 export type SavedAddress = {
   addressId: number;
@@ -83,7 +84,13 @@ export function useCreateAddress() {
         method: "POST",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["addresses"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["addresses"] });
+      toast.success("Address saved.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
+    },
   });
 }
 
@@ -94,6 +101,12 @@ export function useDeleteAddress() {
       apiRequest<AddressDeleteResponse>(`/users/me/addresses/${id}`, {
         method: "DELETE",
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["addresses"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["addresses"] });
+      toast.success("Address removed.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
+    },
   });
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
+import { apiRequest, getErrorMessage } from "@/lib/api";
 import type { AuthUser } from "@/types/auth";
 
 type UserProfileResponse = {
@@ -41,6 +42,10 @@ export function useUpdateProfile() {
     onSuccess: (data) => {
       qc.setQueryData(["profile"], data);
       qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Profile updated successfully.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }

@@ -22,12 +22,21 @@ export function getStoredUser(): AuthUser | null {
 
 export function setStoredUser(user: AuthUser) {
   if (!isBrowser()) return;
-
   window.localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearStoredUser() {
   if (!isBrowser()) return;
-
   window.localStorage.removeItem(USER_KEY);
+}
+
+/**
+ * Register a one-time listener for the "session:expired" custom event that
+ * is dispatched by apiRequest() after a failed token refresh.
+ * Returns a cleanup function — call it in useEffect teardown.
+ */
+export function onSessionExpired(handler: () => void): () => void {
+  if (!isBrowser()) return () => {};
+  window.addEventListener("session:expired", handler);
+  return () => window.removeEventListener("session:expired", handler);
 }

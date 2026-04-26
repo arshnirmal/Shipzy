@@ -8,7 +8,7 @@ export function useCreateOrderData() {
   return useQuery({
     queryKey: ["static", "create-order-data"],
     queryFn: () =>
-      apiRequest<CreateOrderDataResponse>("/static/create-order-data", {}, { auth: false }),
+      apiRequest<CreateOrderDataResponse>("/static/create-order-data"),
     staleTime: Infinity,
     gcTime: Infinity,
   });

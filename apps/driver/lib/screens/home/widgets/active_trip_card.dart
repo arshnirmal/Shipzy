@@ -50,6 +50,12 @@ class ActiveTripCard extends ConsumerWidget {
     final isPickedUp =
         assignmentStatus == AssignmentOrderStatus.pickedUp ||
         assignmentStatus == AssignmentOrderStatus.inTransit;
+    // TODO(backend): DeliveryAttempt.arrivedAt is a single field shared by both
+    // pickup and drop-off arrival events. If the backend does not clear/replace
+    // this field when status transitions to picked_up, hasArrivedAtDelivery will
+    // be true immediately (using the stale pickup timestamp), skipping the
+    // "Arrived at Drop-off" step. Confirm backend resets arrivedAt on pick-up,
+    // or add a separate deliveryArrivedAt field to DeliveryAttempt.
     final hasArrivedAtDelivery =
         order.deliveryAttempt?.arrivedAt != null && isPickedUp;
 

@@ -25,6 +25,7 @@ import {
   type CreateAddressPayload,
 } from "@/hooks/use-addresses";
 import { useAddressSearch } from "@/hooks/use-address-search";
+import { getErrorMessage } from "@/lib/api";
 
 const ADDRESS_TYPES = [
   { value: "home", label: "Home" },
@@ -107,7 +108,7 @@ function AddAddressDialog() {
         setOpen(false);
         resetForm();
       },
-      onError: (err) => toast.error(err.message || "Failed to save address."),
+      onError: (err) => toast.error(getErrorMessage(err)),
     });
   };
 
@@ -220,7 +221,7 @@ function AddressCard({ address }: { address: SavedAddress }) {
     if (confirm("Delete this saved address?")) {
       deleteAddress.mutate(address.addressId, {
         onSuccess: () => toast.success("Address deleted."),
-        onError: (err) => toast.error(err.message || "Failed to delete address."),
+        onError: (err) => toast.error(getErrorMessage(err)),
       });
     }
   };

@@ -8,10 +8,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { BulkCancelDialog } from "@/components/orders/bulk-cancel-dialog";
 import { OrdersFilters } from "@/components/orders/orders-filters";
 import { OrdersTable } from "@/components/orders/orders-table";
+import { QueryErrorHandler } from "@/components/shared/query-error-handler";
+import { RefetchIndicator } from "@/components/shared/refetch-indicator";
 import { useOrders, useBulkCancelOrders } from "@/hooks/use-orders";
 import { DEFAULT_FILTERS } from "@/types/orders";
 import type { OrderFilters } from "@/types/orders";
@@ -22,6 +25,33 @@ const STATUS_TABS = [
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const;
+
+// ── Skeleton for the full table area ─────────────────────────────────────────
+
+function OrdersTableSkeleton() {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-8 w-28" />
+      </div>
+      <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest overflow-hidden">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex gap-4 px-4 py-3 border-b border-outline-variant/10 last:border-0">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main content ──────────────────────────────────────────────────────────────
 
 function OrdersContent() {
   const router = useRouter();
@@ -46,7 +76,8 @@ function OrdersContent() {
     maxPrice: searchParams.get("maxPrice") || DEFAULT_FILTERS.maxPrice,
   };
 
-  const { data, isLoading } = useOrders(filters);
+  const ordersQuery = useOrders(filters);
+  const { data, isLoading, isFetching, refetch } = ordersQuery;
   const bulkCancel = useBulkCancelOrders();
 
   function updateFilters(patch: Partial<OrderFilters>) {
@@ -58,14 +89,13 @@ function OrdersContent() {
         params.set(key, String(value as string | number));
       }
     });
-    // Use replace for filter changes to avoid filling history with every keystroke
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
   function handleStatusTab(value: string) {
     updateFilters({
       status: value as OrderFilters["status"],
-      page: 1, // Reset to first page on status change
+      page: 1,
     });
   }
 
@@ -87,7 +117,7 @@ function OrdersContent() {
         );
       }
     } catch {
-      toast.error("Bulk cancel failed. Please try again.");
+      // onError in the hook also fires — toast is shown there
     } finally {
       setBulkCancelIds([]);
     }
@@ -101,7 +131,10 @@ function OrdersContent() {
       {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
+            <RefetchIndicator isRefetching={isFetching && !isLoading} />
+          </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Manage and track all deliveries from your account.
           </p>
@@ -136,15 +169,21 @@ function OrdersContent() {
       {/* Filters */}
       <OrdersFilters filters={filters} onChange={updateFilters} />
 
-      {/* Table */}
-      <OrdersTable
-        data={orders}
-        pagination={pagination}
-        isLoading={isLoading}
-        filters={filters}
-        onFiltersChange={updateFilters}
-        onBulkCancel={(ids) => setBulkCancelIds(ids)}
-      />
+      {/* Table area — show skeleton on first load, then delegate errors */}
+      {isLoading ? (
+        <OrdersTableSkeleton />
+      ) : (
+        <QueryErrorHandler query={ordersQuery} onRetry={refetch}>
+          <OrdersTable
+            data={orders}
+            pagination={pagination}
+            isLoading={false}
+            filters={filters}
+            onFiltersChange={updateFilters}
+            onBulkCancel={(ids) => setBulkCancelIds(ids)}
+          />
+        </QueryErrorHandler>
+      )}
 
       {/* Bulk cancel dialog */}
       <BulkCancelDialog
@@ -160,7 +199,15 @@ function OrdersContent() {
 
 export default function OrdersPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading orders...</div>}>
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-10 w-80" />
+          <OrdersTableSkeleton />
+        </div>
+      }
+    >
       <OrdersContent />
     </Suspense>
   );

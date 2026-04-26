@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
+import { apiRequest, getErrorMessage } from "@/lib/api";
 import type {
   DraftResponse,
   Template,
@@ -43,7 +44,13 @@ export function useCreateTemplate() {
         method: "POST",
         body: JSON.stringify(payload),
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Template created.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
+    },
   });
 }
 
@@ -58,6 +65,10 @@ export function useUpdateTemplate() {
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ["templates", id] });
       qc.invalidateQueries({ queryKey: ["templates"], exact: false });
+      toast.success("Template updated.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }
@@ -69,7 +80,13 @@ export function useDeleteTemplate() {
       apiRequest<{ success: boolean; message: string }>(`/business/templates/${id}`, {
         method: "DELETE",
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["templates"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Template deleted.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
+    },
   });
 }
 
@@ -82,6 +99,10 @@ export function useCreateDraftFromTemplate() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["drafts"] });
+      toast.success("Draft created from template.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }

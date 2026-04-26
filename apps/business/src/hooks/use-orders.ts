@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest, ApiError } from "@/lib/api";
+import { toast } from "sonner";
+import { apiRequest, ApiError, getErrorMessage } from "@/lib/api";
 import type {
   BulkCancelApiResponse,
   OrderFilters,
@@ -58,8 +59,8 @@ export function useBulkCancelOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
-    onError: (error: ApiError) => {
-      console.error("Bulk cancel failed:", error.message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }
@@ -81,7 +82,7 @@ export async function downloadOrdersCsv(filters: Partial<OrderFilters>): Promise
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({ message: "Export failed" }));
-    throw new Error(body.message ?? "Export failed");
+    throw new ApiError(body.message ?? "Export failed", response.status, body);
   }
 
   const blob = await response.blob();
@@ -106,6 +107,9 @@ export function useBulkCreateOrders() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }

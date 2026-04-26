@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
+import { apiRequest, getErrorMessage } from "@/lib/api";
 import type {
   Draft,
   DraftCreatePayload,
@@ -50,6 +51,9 @@ export function useCreateDraft() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["drafts"] });
     },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
+    },
   });
 }
 
@@ -67,6 +71,9 @@ export function useUpdateDraft(id: number) {
       qc.setQueryData(["drafts", id], data);
       qc.invalidateQueries({ queryKey: ["drafts"], exact: false });
     },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
+    },
   });
 }
 
@@ -81,6 +88,10 @@ export function useDeleteDraft() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["drafts"] });
+      toast.success("Draft deleted.");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }
@@ -98,6 +109,10 @@ export function useSubmitDraft() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["drafts"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Order placed successfully!");
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }
