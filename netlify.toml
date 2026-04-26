@@ -1,6 +1,7 @@
 [build]
-  command = "pnpm install --frozen-lockfile && pnpm --filter business run build"
-  publish = "apps/business/.next"
+  base = "apps/business"
+  command = "pnpm install --frozen-lockfile && pnpm run build"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
