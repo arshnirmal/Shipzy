@@ -7,6 +7,7 @@ import {
   REALISTIC_BUSINESS_NAMES,
   REALISTIC_FIRST_NAMES,
   REALISTIC_LAST_NAMES,
+  SEED_REGION_BOUNDS,
 } from "./constants.js";
 import {
   ActorAuth,
@@ -259,21 +260,23 @@ export class SeedRunner {
   }
 
   private mumbaiCoordinates() {
-    const minLat = 18.89;
-    const maxLat = 19.27;
-    const minLng = 72.77;
-    const maxLng = 72.98;
+    const u = faker.number.float({ min: 0, max: 1 });
+    const v = faker.number.float({ min: 0, max: 1 });
+
+    const { edge1, edge2 } = SEED_REGION_BOUNDS;
+
+    // Point on Edge 1 (P1 to P2)
+    const latE1 = edge1.p1.lat + u * (edge1.p2.lat - edge1.p1.lat);
+    const lngE1 = edge1.p1.lng + u * (edge1.p2.lng - edge1.p1.lng);
+
+    // Point on Edge 2 (P3 to P4)
+    const latE2 = edge2.p1.lat + u * (edge2.p2.lat - edge2.p1.lat);
+    const lngE2 = edge2.p1.lng + u * (edge2.p2.lng - edge2.p1.lng);
+
+    // Interpolate between the two edges using v
     return {
-      latitude: faker.number.float({
-        min: minLat,
-        max: maxLat,
-        fractionDigits: 6,
-      }),
-      longitude: faker.number.float({
-        min: minLng,
-        max: maxLng,
-        fractionDigits: 6,
-      }),
+      latitude: Number((latE1 + v * (latE2 - latE1)).toFixed(6)),
+      longitude: Number((lngE1 + v * (lngE2 - lngE1)).toFixed(6)),
     };
   }
 

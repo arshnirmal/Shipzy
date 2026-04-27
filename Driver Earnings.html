@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Shipzy — Driver Earnings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:#0f0e1a;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 30% 20%,rgba(70,72,212,.18) 0%,transparent 70%),
+             radial-gradient(ellipse 50% 50% at 80% 80%,rgba(96,99,238,.12) 0%,transparent 60%);
+  pointer-events:none;
+}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes growBar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.scroll-area::-webkit-scrollbar{display:none;}
+.scroll-area{scrollbar-width:none;}
+</style>
+</head>
+<body>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel">
+
+/* ─── Design Tokens ──────────────────────────────────────── */
+const DS = {
+  primary:'#4648d4',
+  primaryGrad:'linear-gradient(135deg,#4648d4 0%,#6063ee 100%)',
+  primaryLight:'#e8e8ff',
+  surface:'#fcf8ff',
+  surfaceLow:'#f5f2fe',
+  surfaceHigh:'#e4e1ed',
+  surfaceHighest:'#d9d6e8',
+  onSurface:'#1b1b23',
+  onSurfaceVar:'#605d72',
+  tertiary:'#006c49',
+  tertiaryBg:'#d6f5e8',
+  tertiaryAlt:'#00a86b',
+  error:'#ba1a1a',
+  errorBg:'#ffdad6',
+  amber:'#a5651b',
+  amberBg:'#ffeacc',
+  ghost:'rgba(96,93,114,0.1)',
+};
+
+/* ─── Period Data ────────────────────────────────────────── */
+const PERIODS = {
+  today: {
+    label:'Today',
+    scope:'Apr 27, 2026',
+    earning: 340,
+    prevEarning: 305,
+    trips: 2,
+    avgOrder: 170,
+    distance: 23.4,
+    bestDay: null, // N/A for today
+    // hourly bars (6 AM – 10 PM)
+    bars: [
+      {label:'6A', value:0},   {label:'7A', value:0},
+      {label:'8A', value:85},  {label:'9A', value:142},
+      {label:'10A',value:0},   {label:'11A',value:0},
+      {label:'12P',value:0},   {label:'1P', value:0},
+      {label:'2P', value:113}, {label:'3P', value:0},
+      {label:'4P', value:0},   {label:'5P', value:0},
+      {label:'6P', value:0},   {label:'7P', value:0},
+      {label:'8P', value:0},
+    ],
+    barLabel:'Hourly',
+    recentTrips:[
+      {order:'ORD-1024', route:'Church St → Koramangala', earning:94,  time:'10:58 AM', tip:9},
+      {order:'ORD-1023', route:'Indiranagar → Whitefield',earning:143, time:'9:48 AM',  tip:6},
+    ],
+    goalAmount: 500,
+  },
+  week: {
+    label:'This Week',
+    scope:'Apr 21 – 27',
+    earning: 3140,
+    prevEarning: 2800,
+    trips: 18,
+    avgOrder: 174,
+    distance: 234.8,
+    bestDay: {label:'Wed', value:680},
+    bars:[
+      {label:'Mon', value:420},
+      {label:'Tue', value:380},
+      {label:'Wed', value:680},
+      {label:'Thu', value:510},
+      {label:'Fri', value:445},
+      {label:'Sat', value:365},
+      {label:'Sun', value:340},
+    ],
+    barLabel:'Daily',
+    recentTrips:[
+      {order:'ORD-1024', route:'Church St → Koramangala', earning:94,  time:'Today 10:58 AM', tip:9},
+      {order:'ORD-1023', route:'Indiranagar → Whitefield',earning:143, time:'Today 9:48 AM',  tip:6},
+      {order:'ORD-1022', route:'HSR Layout → BTM Layout',  earning:68,  time:'Yesterday',     tip:5},
+      {order:'ORD-1021', route:'MG Road → JP Nagar',       earning:0,   time:'Yesterday',     tip:0, cancelled:true},
+      {order:'ORD-1020', route:'Jayanagar → Banashankari', earning:78,  time:'Apr 24',        tip:8},
+    ],
+    goalAmount: 3500,
+  },
+  month: {
+    label:'This Month',
+    scope:'April 2026',
+    earning: 10400,
+    prevEarning: 9850,
+    trips: 62,
+    avgOrder: 168,
+    distance: 812.3,
+    bestDay: {label:'Week 3', value:3140},
+    bars:[
+      {label:'W1', value:2400},
+      {label:'W2', value:2860},
+      {label:'W3', value:3140},
+      {label:'W4', value:2000},
+    ],
+    barLabel:'Weekly',
+    recentTrips:[
+      {order:'ORD-1024', route:'Church St → Koramangala', earning:94,  time:'Today', tip:9},
+      {order:'ORD-1023', route:'Indiranagar → Whitefield',earning:143, time:'Today', tip:6},
+      {order:'ORD-1022', route:'HSR Layout → BTM Layout',  earning:68,  time:'Apr 25',tip:5},
+      {order:'ORD-1020', route:'Jayanagar → Banashankari', earning:78,  time:'Apr 24',tip:8},
+      {order:'ORD-1019', route:'Electronic City → Hebbal', earning:48,  time:'Apr 23',tip:0},
+    ],
+    goalAmount: 12000,
+  },
+  year: {
+    label:'This Year',
+    scope:'2026',
+    earning: 55200,
+    prevEarning: 48600,
+    trips: 250,
+    avgOrder: 173,
+    distance: 1890.6,
+    bestDay: {label:'April', value:10400},
+    bars:[
+      {label:'Jan', value:4200},
+      {label:'Feb', value:4800},
+      {label:'Mar', value:9600},
+      {label:'Apr', value:10400},
+      {label:'May', value:0},
+      {label:'Jun', value:0},
+      {label:'Jul', value:0},
+      {label:'Aug', value:0},
+      {label:'Sep', value:0},
+      {label:'Oct', value:0},
+      {label:'Nov', value:0},
+      {label:'Dec', value:0},
+    ],
+    barLabel:'Monthly',
+    recentTrips:[
+      {order:'ORD-1024', route:'Church St → Koramangala', earning:94,  time:'Apr 27', tip:9},
+      {order:'ORD-1023', route:'Indiranagar → Whitefield',earning:143, time:'Apr 27', tip:6},
+      {order:'ORD-1022', route:'HSR Layout → BTM Layout',  earning:68,  time:'Apr 25',tip:5},
+      {order:'ORD-1020', route:'Jayanagar → Banashankari', earning:78,  time:'Apr 24',tip:8},
+      {order:'ORD-1019', route:'Electronic City → Hebbal', earning:48,  time:'Apr 23',tip:0},
+    ],
+    goalAmount: 60000,
+  },
+};
+
+/* ─── Formatters ─────────────────────────────────────────── */
+const fmt = (n) => {
+  if(n >= 100000) return '₹' + (n/100000).toFixed(1) + 'L';
+  if(n >= 1000)   return '₹' + (n/1000).toFixed(n%1000===0?0:1) + 'K';
+  return '₹' + Math.round(n);
+};
+const fmtFull = (n) => '₹' + n.toLocaleString('en-IN');
+const fmtDelta = (curr, prev) => {
+  const d = Math.round(((curr-prev)/prev)*100);
+  return {pct: Math.abs(d), up: d >= 0};
+};
+
+/* ─── Icons ──────────────────────────────────────────────── */
+const Ico = {
+  Back:({c=DS.onSurface,sz=20})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M19 12H5M10 7l-5 5 5 5" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Trips:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+      <rect x="9" y="3" width="6" height="4" rx="1" stroke={c} strokeWidth="1.75"/>
+    </svg>),
+  Distance:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="5" cy="12" r="2.5" stroke={c} strokeWidth="1.75"/>
+      <circle cx="19" cy="12" r="2.5" stroke={c} strokeWidth="1.75"/>
+      <path d="M7.5 12h9" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeDasharray="3 2"/>
+    </svg>),
+  Avg:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M3 3v18h18" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+      <path d="M7 16l4-5 4 3 4-7" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>),
+  Best:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill={c} fillOpacity=".15">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+        stroke={c} strokeWidth="1.75" strokeLinejoin="round"/>
+    </svg>),
+  Goal:({c='currentColor',sz=18})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="1.75"/>
+      <circle cx="12" cy="12" r="5" stroke={c} strokeWidth="1.75"/>
+      <circle cx="12" cy="12" r="1.5" fill={c}/>
+    </svg>),
+  Edit:({c='currentColor',sz=14})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Home:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" fill={c} fillOpacity=".15" stroke={c} strokeWidth="1.75" strokeLinejoin="round"/>
+      <path d="M9 21V12h6v9" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Earnings:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="1.75"/>
+      <path d="M12 7v1m0 8v1M9.5 9.5A2.5 2.5 0 0112 8c1.38 0 2.5.9 2.5 2s-1.12 2-2.5 2-2.5.9-2.5 2 1.12 2 2.5 2a2.5 2.5 0 002.5-1.5" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  TripsNav:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+      <rect x="9" y="3" width="6" height="4" rx="1" stroke={c} strokeWidth="1.75"/>
+      <path d="M9 12h6M9 16h4" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+  Profile:({c='currentColor',sz=22})=>(
+    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="8" r="4" stroke={c} strokeWidth="1.75"/>
+      <path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke={c} strokeWidth="1.75" strokeLinecap="round"/>
+    </svg>),
+};
+
+/* ─── Period Tabs ────────────────────────────────────────── */
+function PeriodTabs({active, onChange}){
+  const tabs = ['today','week','month','year'];
+  const labels = {today:'Today', week:'Week', month:'Month', year:'Year'};
+  return (
+    <div style={{
+      display:'flex',gap:4,
+      background:DS.surfaceLow,
+      borderRadius:12,padding:4,
+      margin:'0 20px 20px',
+    }}>
+      {tabs.map(t=>{
+        const sel = active===t;
+        return (
+          <button key={t} onClick={()=>onChange(t)} style={{
+            flex:1,height:34,borderRadius:9,border:'none',
+            background: sel ? DS.surface : 'transparent',
+            cursor:'pointer',
+            fontSize:12,fontWeight: sel?800:600,
+            color: sel ? DS.primary : DS.onSurfaceVar,
+            letterSpacing:'0.01em',
+            fontFamily:'Plus Jakarta Sans,sans-serif',
+            boxShadow: sel ? `0 1px 4px rgba(70,72,212,0.12)` : 'none',
+            transition:'all 0.2s',
+          }}>{labels[t]}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Hero Card ──────────────────────────────────────────── */
+function HeroCard({data}){
+  const {earning, prevEarning, scope} = data;
+  const delta = fmtDelta(earning, prevEarning);
+  const earningStr = fmtFull(earning);
+
+  return (
+    <div style={{
+      margin:'0 20px 16px',
+      background:DS.primaryGrad,
+      borderRadius:20,padding:'22px 24px',
+      position:'relative',overflow:'hidden',
+      boxShadow:`0 12px 32px rgba(70,72,212,0.28)`,
+      animation:'fadeSlideUp 0.35s ease',
+    }}>
+      {/* decorative */}
+      <div style={{position:'absolute',top:-50,right:-30,width:150,height:150,borderRadius:75,background:'rgba(255,255,255,0.06)'}}/>
+      <div style={{position:'absolute',bottom:-40,left:-20,width:100,height:100,borderRadius:50,background:'rgba(255,255,255,0.04)'}}/>
+
+      <div style={{position:'relative'}}>
+        <div style={{
+          fontSize:10,fontWeight:700,letterSpacing:'0.1em',
+          color:'rgba(255,255,255,0.65)',marginBottom:8,textTransform:'uppercase',
+        }}>{scope}</div>
+
+        {/* big number */}
+        <div style={{
+          fontSize:40,fontWeight:800,color:'#fff',
+          letterSpacing:'-0.03em',lineHeight:1,marginBottom:12,
+          display:'flex',alignItems:'flex-start',gap:3,
+        }}>
+          <span style={{fontSize:20,fontWeight:700,marginTop:7,lineHeight:1}}>₹</span>
+          <span>{earningStr.slice(1)}</span>
+        </div>
+
+        {/* delta badge */}
+        <div style={{
+          display:'inline-flex',alignItems:'center',gap:5,
+          background: delta.up ? 'rgba(137,248,195,0.2)' : 'rgba(255,180,171,0.2)',
+          borderRadius:20,padding:'5px 12px',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path
+              d={delta.up ? 'M5 8V2M2 5l3-3 3 3' : 'M5 2v6M2 5l3 3 3-3'}
+              stroke={delta.up?'#89f8c3':'#ffb4ab'}
+              strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+            />
+          </svg>
+          <span style={{
+            fontSize:12,fontWeight:800,
+            color: delta.up?'#89f8c3':'#ffb4ab',
+          }}>{delta.up?'+':'-'}{delta.pct}% vs previous {data.label==='Today'?'day':data.label==='This Week'?'week':data.label==='This Month'?'month':'year'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Bar Chart ──────────────────────────────────────────── */
+function EarningsChart({bars, barLabel, period}){
+  const [activeBar, setActiveBar] = React.useState(null);
+  const maxVal = Math.max(...bars.map(b=>b.value), 1);
+  const chartH = 96;
+
+  // animate key change
+  const [animKey, setAnimKey] = React.useState(0);
+  React.useEffect(()=>{ setAnimKey(k=>k+1); setActiveBar(null); }, [period]);
+
+  return (
+    <div style={{
+      margin:'0 20px 16px',
+      background:DS.surface,
+      borderRadius:16,padding:'16px 16px 12px',
+      boxShadow:`0 1px 0 ${DS.ghost}`,
+      animation:'fadeSlideUp 0.4s ease',
+    }}>
+      {/* header */}
+      <div style={{
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+        marginBottom:14,
+      }}>
+        <div style={{fontSize:12,fontWeight:700,color:DS.onSurface,letterSpacing:'-0.01em'}}>
+          {barLabel} breakdown
+        </div>
+        {activeBar !== null && bars[activeBar].value > 0 && (
+          <div style={{
+            fontSize:12,fontWeight:800,color:DS.primary,
+            animation:'fadeIn 0.2s ease',
+          }}>
+            {fmt(bars[activeBar].value)} · {bars[activeBar].label}
+          </div>
+        )}
+      </div>
+
+      {/* bars */}
+      <div style={{
+        display:'flex',alignItems:'flex-end',
+        gap: bars.length > 8 ? 3 : 5,
+        height:chartH,
+      }}>
+        {bars.map((bar, i)=>{
+          const heightPct = bar.value > 0 ? Math.max((bar.value/maxVal)*100, 6) : 0;
+          const isActive = activeBar===i;
+          const isEmpty  = bar.value===0;
+          return (
+            <div
+              key={i+'-'+animKey}
+              onClick={()=>setActiveBar(isActive ? null : i)}
+              style={{
+                flex:1,display:'flex',flexDirection:'column',
+                alignItems:'center',gap:4,cursor: isEmpty?'default':'pointer',
+              }}
+            >
+              <div style={{
+                width:'100%',height:chartH,
+                display:'flex',alignItems:'flex-end',
+              }}>
+                <div style={{
+                  width:'100%',
+                  height: isEmpty ? 4 : `${heightPct}%`,
+                  borderRadius: isEmpty?2:4,
+                  background: isEmpty
+                    ? DS.surfaceHigh
+                    : isActive
+                      ? DS.primaryGrad
+                      : `linear-gradient(180deg,${DS.primaryLight} 0%,${DS.primaryLight} 100%)`,
+                  opacity: isEmpty ? 0.5 : 1,
+                  transition:'height 0.4s cubic-bezier(0.34,1.2,0.64,1), background 0.2s',
+                  transformOrigin:'bottom',
+                  animation: !isEmpty ? `growBar 0.5s cubic-bezier(0.34,1.2,0.64,1) ${i*0.04}s both` : 'none',
+                  position:'relative',
+                }}>
+                  {/* active top dot */}
+                  {isActive && !isEmpty && (
+                    <div style={{
+                      position:'absolute',top:-4,left:'50%',
+                      transform:'translateX(-50%)',
+                      width:6,height:6,borderRadius:3,
+                      background:DS.primary,
+                    }}/>
+                  )}
+                </div>
+              </div>
+              <div style={{
+                fontSize: bars.length > 8 ? 8 : 9,
+                fontWeight:700,
+                color: isActive ? DS.primary : DS.onSurfaceVar,
+                letterSpacing:'0.02em',textTransform:'uppercase',
+                lineHeight:1,
+              }}>{bar.label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Stat Cards Grid ────────────────────────────────────── */
+function StatCards({data}){
+  const period = data.label;
+  const cards = [
+    {
+      icon:<Ico.Trips c={DS.primary} sz={17}/>,
+      label:'Total Trips',
+      value: String(data.trips),
+      sub: `${data.avgOrder > 0 ? Math.round(data.earning / data.trips) : 0} avg trips/day`,
+      bg: DS.primaryLight,
+    },
+    {
+      icon:<Ico.Avg c={DS.tertiary} sz={17}/>,
+      label:'Avg Per Trip',
+      value: `₹${data.avgOrder}`,
+      sub:'average order value',
+      bg: DS.tertiaryBg,
+    },
+    {
+      icon:<Ico.Distance c={DS.amber} sz={17}/>,
+      label:'Distance',
+      value: `${data.distance} km`,
+      sub:'total distance covered',
+      bg: DS.amberBg,
+    },
+    {
+      icon:<Ico.Best c={DS.error} sz={17}/>,
+      label: data.bestDay ? 'Best Period' : 'Online Hours',
+      value: data.bestDay ? fmt(data.bestDay.value) : '5h 20m',
+      sub: data.bestDay ? `${data.bestDay.label} was your best` : 'active today',
+      bg: DS.errorBg,
+    },
+  ];
+
+  return (
+    <div style={{
+      margin:'0 20px 16px',
+      display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,
+    }}>
+      {cards.map((c,i)=>(
+        <div key={i} style={{
+          background:DS.surface,
+          borderRadius:14,padding:'14px 14px',
+          boxShadow:`0 1px 0 ${DS.ghost}`,
+          animation:`fadeSlideUp 0.4s ease ${i*0.06}s both`,
+        }}>
+          <div style={{
+            width:32,height:32,borderRadius:9,
+            background:c.bg,
+            display:'flex',alignItems:'center',justifyContent:'center',
+            marginBottom:10,
+          }}>
+            {c.icon}
+          </div>
+          <div style={{
+            fontSize:10,fontWeight:700,letterSpacing:'0.07em',
+            color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:3,
+          }}>{c.label}</div>
+          <div style={{
+            fontSize:20,fontWeight:800,color:DS.onSurface,
+            letterSpacing:'-0.02em',marginBottom:2,
+          }}>{c.value}</div>
+          <div style={{
+            fontSize:10,fontWeight:500,color:DS.onSurfaceVar,lineHeight:1.3,
+          }}>{c.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Goal Progress ──────────────────────────────────────── */
+function GoalCard({data, onEditGoal}){
+  const {earning, goalAmount, label} = data;
+  const pct = Math.min(earning/goalAmount, 1);
+  const reached = pct >= 1;
+  const remaining = Math.max(goalAmount - earning, 0);
+
+  // ring
+  const R = 28, circ = 2*Math.PI*R;
+  const ringColor = reached ? DS.tertiaryAlt : pct>=0.7 ? DS.amber : DS.primary;
+
+  return (
+    <div style={{
+      margin:'0 20px 16px',
+      background:DS.surface,
+      borderRadius:16,padding:'16px 18px',
+      boxShadow:`0 1px 0 ${DS.ghost}`,
+      display:'flex',alignItems:'center',gap:16,
+      animation:'fadeSlideUp 0.4s ease',
+    }}>
+      {/* ring */}
+      <div style={{position:'relative',flexShrink:0,width:68,height:68}}>
+        <svg width="68" height="68" style={{transform:'rotate(-90deg)'}}>
+          <circle cx="34" cy="34" r={R} fill="none" stroke={DS.surfaceHigh} strokeWidth="5"/>
+          <circle cx="34" cy="34" r={R} fill="none"
+            stroke={ringColor} strokeWidth="5" strokeLinecap="round"
+            strokeDasharray={circ}
+            strokeDashoffset={circ*(1-pct)}
+            style={{transition:'stroke-dashoffset 0.7s cubic-bezier(0.34,1.2,0.64,1), stroke 0.4s'}}
+          />
+        </svg>
+        <div style={{
+          position:'absolute',inset:0,
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+        }}>
+          <div style={{fontSize:14,fontWeight:800,color: reached?DS.tertiary:DS.onSurface,letterSpacing:'-0.02em',lineHeight:1}}>{Math.round(pct*100)}%</div>
+          {reached && <div style={{fontSize:8,fontWeight:700,color:DS.tertiary,letterSpacing:'0.04em'}}>DONE!</div>}
+        </div>
+      </div>
+
+      {/* text */}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{
+          fontSize:10,fontWeight:800,letterSpacing:'0.07em',
+          color:DS.onSurfaceVar,textTransform:'uppercase',marginBottom:4,
+        }}>
+          {label==='Today'?'Daily':label==='This Week'?'Weekly':label==='This Month'?'Monthly':'Yearly'} Goal
+        </div>
+        <div style={{
+          fontSize:16,fontWeight:800,color:DS.onSurface,
+          letterSpacing:'-0.02em',marginBottom:3,
+        }}>{fmtFull(earning)} <span style={{fontSize:12,fontWeight:600,color:DS.onSurfaceVar}}>/ {fmtFull(goalAmount)}</span></div>
+        <div style={{fontSize:11,fontWeight:500,color: reached?DS.tertiary:DS.onSurfaceVar}}>
+          {reached
+            ? '🎉 Goal reached! Great work today.'
+            : `${fmtFull(remaining)} more to hit your goal`}
+        </div>
+      </div>
+
+      {/* edit */}
+      <button onClick={onEditGoal} style={{
+        width:32,height:32,borderRadius:8,border:'none',
+        background:DS.surfaceLow,cursor:'pointer',flexShrink:0,
+        display:'flex',alignItems:'center',justifyContent:'center',
+      }}>
+        <Ico.Edit c={DS.onSurfaceVar} sz={14}/>
+      </button>
+    </div>
+  );
+}
+
+/* ─── Recent Trips ───────────────────────────────────────── */
+function RecentTrips({trips}){
+  return (
+    <div style={{margin:'0 20px 24px'}}>
+      <div style={{
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+        marginBottom:12,
+      }}>
+        <div style={{
+          fontSize:12,fontWeight:700,color:DS.onSurface,letterSpacing:'-0.01em',
+        }}>Recent Trips</div>
+        <button style={{
+          fontSize:11,fontWeight:700,color:DS.primary,
+          background:'none',border:'none',cursor:'pointer',
+          fontFamily:'Plus Jakarta Sans,sans-serif',letterSpacing:'0.02em',
+        }}>View All →</button>
+      </div>
+
+      {trips.map((t,i)=>(
+        <div key={t.order+i} style={{
+          display:'flex',alignItems:'center',gap:12,
+          padding:'11px 0',
+          borderBottom: i<trips.length-1 ? `1px solid ${DS.ghost}` : 'none',
+          animation:`fadeSlideUp 0.35s ease ${i*0.05}s both`,
+        }}>
+          {/* left dot */}
+          <div style={{
+            width:8,height:8,borderRadius:4,flexShrink:0,
+            background: t.cancelled ? DS.error : DS.tertiary,
+          }}/>
+
+          {/* route + meta */}
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{
+              fontSize:13,fontWeight:700,color: t.cancelled?DS.onSurfaceVar:DS.onSurface,
+              letterSpacing:'-0.01em',
+              whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
+              textDecoration: t.cancelled?'line-through':'none',
+            }}>{t.route}</div>
+            <div style={{
+              fontSize:10,fontWeight:600,color:DS.onSurfaceVar,
+              letterSpacing:'0.02em',marginTop:1,
+            }}>{t.order} · {t.time}</div>
+          </div>
+
+          {/* earning + tip */}
+          <div style={{textAlign:'right',flexShrink:0}}>
+            <div style={{
+              fontSize:14,fontWeight:800,
+              color: t.cancelled ? DS.onSurfaceVar : DS.primary,
+              letterSpacing:'-0.02em',
+            }}>{t.cancelled ? '—' : `₹${t.earning}`}</div>
+            {t.tip > 0 && (
+              <div style={{
+                fontSize:9,fontWeight:700,color:DS.amber,letterSpacing:'0.03em',
+              }}>+₹{t.tip} tip</div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Goal Edit Sheet ────────────────────────────────────── */
+function GoalSheet({open, onClose, currentGoal, onSave}){
+  const [val, setVal] = React.useState(String(currentGoal));
+  React.useEffect(()=>{if(open) setVal(String(currentGoal));}, [open, currentGoal]);
+  if(!open) return null;
+  const presets = [300,500,1000,3000,5000,10000];
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position:'absolute',inset:0,background:'rgba(27,27,35,0.45)',
+        backdropFilter:'blur(2px)',zIndex:200,animation:'scrimIn 0.2s ease',
+      }}/>
+      <div style={{
+        position:'absolute',bottom:0,left:0,right:0,zIndex:201,
+        background:DS.surface,borderRadius:'20px 20px 0 0',
+        padding:'10px 0 32px',
+        animation:'slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1)',
+        boxShadow:'0 -8px 32px rgba(0,0,0,0.15)',
+      }}>
+        <div style={{display:'flex',justifyContent:'center',paddingBottom:14}}>
+          <div style={{width:36,height:4,borderRadius:2,background:DS.surfaceHigh}}/>
+        </div>
+        <div style={{padding:'0 20px'}}>
+          <div style={{fontSize:18,fontWeight:800,color:DS.onSurface,letterSpacing:'-0.02em',marginBottom:4}}>Set Goal</div>
+          <div style={{fontSize:12,fontWeight:500,color:DS.onSurfaceVar,marginBottom:18}}>Choose how much you'd like to earn</div>
+
+          {/* presets */}
+          <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:18}}>
+            {presets.map(p=>{
+              const sel = String(p)===val;
+              return (
+                <button key={p} onClick={()=>setVal(String(p))} style={{
+                  background: sel?DS.primary:DS.surfaceLow,
+                  border:'none',borderRadius:20,padding:'8px 14px',cursor:'pointer',
+                  fontSize:13,fontWeight:700,
+                  color: sel?'#fff':DS.onSurface,
+                  fontFamily:'Plus Jakarta Sans,sans-serif',
+                  transition:'all 0.2s',
+                }}>₹{p.toLocaleString('en-IN')}</button>
+              );
+            })}
+          </div>
+
+          {/* custom input */}
+          <div style={{
+            background:DS.surfaceLow,borderRadius:12,padding:'13px 16px',
+            display:'flex',alignItems:'center',gap:8,marginBottom:20,
+          }}>
+            <span style={{fontSize:18,fontWeight:700,color:DS.onSurfaceVar}}>₹</span>
+            <input
+              type="number" value={val} onChange={e=>setVal(e.target.value)}
+              placeholder="Custom amount"
+              style={{
+                flex:1,border:'none',outline:'none',background:'transparent',
+                fontSize:16,fontWeight:700,color:DS.onSurface,
+                fontFamily:'Plus Jakarta Sans,sans-serif',
+                caretColor:DS.primary,
+              }}
+            />
+          </div>
+
+          <button onClick={()=>{onSave(Number(val)||currentGoal);onClose();}} style={{
+            width:'100%',height:54,borderRadius:12,border:'none',
+            background:DS.primaryGrad,
+            fontSize:15,fontWeight:800,color:'#fff',
+            cursor:'pointer',letterSpacing:'0.02em',
+            fontFamily:'Plus Jakarta Sans,sans-serif',
+            boxShadow:`0 6px 20px rgba(70,72,212,0.35)`,
+          }}>Save Goal</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─── Bottom Nav ─────────────────────────────────────────── */
+function BottomNav(){
+  const tabs=[
+    {id:'home',label:'Home',Icon:Ico.Home},
+    {id:'earnings',label:'Earnings',Icon:Ico.Earnings},
+    {id:'trips',label:'Trips',Icon:Ico.TripsNav},
+    {id:'profile',label:'Profile',Icon:Ico.Profile},
+  ];
+  return (
+    <div style={{
+      position:'absolute',bottom:0,left:0,right:0,zIndex:50,
+      background:'rgba(252,248,255,0.96)',
+      backdropFilter:'blur(20px)',
+      borderTop:`1px solid ${DS.surfaceHigh}`,
+      display:'flex',height:70,paddingBottom:8,
+    }}>
+      {tabs.map(({id,label,Icon})=>{
+        const active=id==='earnings';
+        return (
+          <div key={id} style={{
+            flex:1,display:'flex',flexDirection:'column',
+            alignItems:'center',justifyContent:'center',
+            gap:3,cursor:active?'default':'pointer',paddingTop:8,
+          }}>
+            <Icon c={active?DS.primary:DS.onSurfaceVar} sz={22}/>
+            <span style={{
+              fontSize:10,fontWeight:active?700:500,
+              color:active?DS.primary:DS.onSurfaceVar,letterSpacing:'0.03em',
+            }}>{label}</span>
+            {active && <div style={{width:4,height:4,borderRadius:2,background:DS.primary}}/>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── App ────────────────────────────────────────────────── */
+function App(){
+  const [period, setPeriod] = React.useState(
+    ()=>localStorage.getItem('earnings_period')||'week'
+  );
+  const [goalSheet, setGoalSheet] = React.useState(false);
+  const [goals, setGoals] = React.useState({
+    today:500, week:3500, month:12000, year:60000,
+  });
+
+  const changePeriod = (p) => {
+    setPeriod(p);
+    localStorage.setItem('earnings_period', p);
+  };
+
+  const data = {
+    ...PERIODS[period],
+    goalAmount: goals[period],
+  };
+
+  return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+      <AndroidDevice width={390} height={844} dark={false}>
+        <div style={{
+          height:'100%',display:'flex',flexDirection:'column',
+          background:DS.surfaceLow,
+          fontFamily:'Plus Jakarta Sans,sans-serif',
+          position:'relative',
+        }}>
+          {/* Header */}
+          <div style={{
+            padding:'8px 20px 0',background:DS.surface,
+            display:'flex',alignItems:'center',gap:10,
+          }}>
+            <button style={{
+              width:40,height:40,borderRadius:10,border:'none',
+              background:DS.surfaceLow,cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'center',
+            }}>
+              <Ico.Back c={DS.onSurface} sz={20}/>
+            </button>
+            <h1 style={{
+              flex:1,fontSize:22,fontWeight:800,color:DS.onSurface,
+              letterSpacing:'-0.02em',
+            }}>Earnings</h1>
+            <div style={{
+              fontSize:11,fontWeight:700,color:DS.onSurfaceVar,
+              background:DS.surfaceLow,borderRadius:8,padding:'5px 10px',
+              letterSpacing:'0.02em',
+            }}>Rohit K.</div>
+          </div>
+
+          {/* Period tabs */}
+          <div style={{background:DS.surface,paddingTop:12}}>
+            <PeriodTabs active={period} onChange={changePeriod}/>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="scroll-area" style={{
+            flex:1,overflow:'auto',paddingBottom:80,paddingTop:4,
+          }}>
+            <HeroCard data={data}/>
+            <EarningsChart bars={data.bars} barLabel={data.barLabel} period={period}/>
+            <StatCards data={data}/>
+            <GoalCard data={data} onEditGoal={()=>setGoalSheet(true)}/>
+            <RecentTrips trips={data.recentTrips}/>
+          </div>
+
+          <BottomNav/>
+
+          <GoalSheet
+            open={goalSheet}
+            onClose={()=>setGoalSheet(false)}
+            currentGoal={goals[period]}
+            onSave={(v)=>setGoals(g=>({...g,[period]:v}))}
+          />
+        </div>
+      </AndroidDevice>
+
+      <div style={{
+        position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
+        background:'rgba(255,255,255,0.07)',backdropFilter:'blur(12px)',
+        borderRadius:20,padding:'8px 20px',
+        fontSize:11,fontWeight:600,color:'rgba(255,255,255,0.45)',
+        letterSpacing:'0.05em',border:'1px solid rgba(255,255,255,0.1)',
+        whiteSpace:'nowrap',
+      }}>
+        SHIPZY · EARNINGS · Tap period tabs · Tap bars · Edit goal ✏
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<div id="root"></div>
+</body>
+</html>
