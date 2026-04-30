@@ -39,9 +39,9 @@ class CustomBottomNavBar extends StatelessWidget {
               _NavItem(
                 index: 1,
                 currentIndex: currentIndex,
-                icon: Icons.local_shipping_outlined,
-                activeIcon: Icons.local_shipping_rounded,
-                label: 'Orders',
+                icon: Icons.receipt_long_outlined,
+                activeIcon: Icons.receipt_long_rounded,
+                label: 'Trips',
                 onTap: onTap,
               ),
               _NavItem(

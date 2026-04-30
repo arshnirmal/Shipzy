@@ -12,13 +12,14 @@ import '../screens/delivery/active_delivery_screen.dart';
 import '../screens/earnings/earnings_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
-import '../screens/orders/orders_list_screen.dart';
 import '../screens/permissions_screen.dart';
 import '../screens/profile/document_upload_screen.dart';
 import '../screens/profile/pending_review_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/profile/setup_profile_screen.dart';
 import '../screens/splash_screen.dart';
+import '../screens/trips/trip_detail_screen.dart';
+import '../screens/trips/trips_list_screen.dart';
 import 'app_routes.dart';
 
 part 'app_router.g.dart';
@@ -203,7 +204,19 @@ GoRouter router(Ref ref) {
               GoRoute(
                 path: AppRoutes.orders,
                 name: 'orders',
-                builder: (context, state) => const OrdersListScreen(),
+                builder: (context, state) => const TripsListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':orderId',
+                    name: 'tripDetail',
+                    builder: (context, state) {
+                      final id = int.parse(
+                        state.pathParameters['orderId']!,
+                      );
+                      return TripDetailScreen(orderId: id);
+                    },
+                  ),
+                ],
               ),
             ],
           ),

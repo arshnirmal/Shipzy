@@ -60,6 +60,17 @@ export const REALISTIC_BUSINESS_NAMES = [
   "Chopra Pharmacy",
 ];
 
+export const SEED_REGION_BOUNDS = {
+  edge1: {
+    p1: { lat: 19.123209, lng: 72.818089 },
+    p2: { lat: 19.126604, lng: 72.893732 },
+  },
+  edge2: {
+    p1: { lat: 19.303726, lng: 72.843691 },
+    p2: { lat: 19.291484, lng: 72.894133 },
+  },
+};
+
 export const DEFAULT_API_URL =
   process.env.API_URL ||
   `http://${process.env.BACKEND_HOST || "localhost"}:${process.env.BACKEND_PORT || "3000"}/api/v1`;
