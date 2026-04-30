@@ -31,7 +31,7 @@ export async function POST(
       const backendRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ tokens: { refreshToken } }),
       });
 
       const data = await backendRes.json();
@@ -42,8 +42,19 @@ export async function POST(
         return NextResponse.json(data, { status: backendRes.status || 401 });
       }
 
-      const newAccessToken = data.data.accessToken;
-      const newRefreshToken = data.data.refreshToken || refreshToken;
+      const tokens = data?.data?.auth?.tokens;
+
+      if (!tokens?.accessToken) {
+        cookieStore.delete("accessToken");
+        cookieStore.delete("refreshToken");
+        return NextResponse.json(
+          { success: false, message: "Invalid refresh response" },
+          { status: 502 },
+        );
+      }
+
+      const newAccessToken = tokens.accessToken;
+      const newRefreshToken = tokens.refreshToken || refreshToken;
 
       const secure = process.env.NODE_ENV === "production";
       cookieStore.set({
