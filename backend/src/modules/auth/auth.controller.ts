@@ -46,8 +46,13 @@ class AuthController {
     reply: FastifyReply,
   ): Promise<FastifyReply> {
     try {
+      const refreshToken = request.body?.tokens?.refreshToken;
+      if (!refreshToken) {
+        return errorResponse(reply, "Refresh token is required", 400);
+      }
+
       const result = await authService.refreshToken(
-        request.body.tokens.refreshToken,
+        refreshToken,
       );
 
       return successResponse(reply, result, "Token refreshed successfully");
