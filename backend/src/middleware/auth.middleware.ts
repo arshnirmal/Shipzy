@@ -69,10 +69,16 @@ export const authenticate = async (
     };
   } catch (error) {
     // Preserve typed auth errors; wrap everything else generically
-    if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
+    if (
+      error instanceof AuthenticationError ||
+      error instanceof AuthorizationError
+    ) {
       throw error;
     }
-    logger.error({ msg: "Authentication failed", error: (error as Error).message });
+    logger.error({
+      msg: "Authentication failed",
+      error: (error as Error).message,
+    });
     throw new AuthenticationError("Authentication failed");
   }
 };

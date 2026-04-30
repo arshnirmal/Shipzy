@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../utils/date_utils.dart';
 
 /// A completed/cancelled/returned trip entry from the driver's history.
 /// Mapped from GET /drivers/me/trips response items.
@@ -100,7 +101,7 @@ class TripHistoryItem {
     if (raw == null) {
       return 'earlier';
     }
-    final dt = DateTime.tryParse(raw)?.toLocal();
+    final dt = DateTime.tryParse(raw)?.toIst;
     if (dt == null) {
       return 'earlier';
     }
@@ -123,7 +124,7 @@ class TripHistoryItem {
 
   String get dateGroupLabel {
     final raw = effectiveTimestamp;
-    final dt = raw != null ? DateTime.tryParse(raw)?.toLocal() : null;
+    final dt = raw != null ? DateTime.tryParse(raw)?.toIst : null;
     if (dt == null) {
       return 'Earlier';
     }
@@ -145,7 +146,7 @@ class TripHistoryItem {
     if (raw == null) {
       return '';
     }
-    final dt = DateTime.tryParse(raw)?.toLocal();
+    final dt = DateTime.tryParse(raw)?.toIst;
     if (dt == null) {
       return '';
     }

@@ -2,6 +2,63 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
 
+/** Hop-by-hop / browser headers that must not be forwarded to the origin or back to the client. */
+const REQUEST_HEADER_BLOCKLIST = new Set(
+  [
+    "host",
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "transfer-encoding",
+    "upgrade",
+    "cookie",
+    "content-length",
+    "sec-fetch-site",
+    "sec-fetch-mode",
+    "sec-fetch-dest",
+    "sec-fetch-user",
+    "sec-ch-ua",
+    "sec-ch-ua-mobile",
+    "sec-ch-ua-platform",
+    "priority",
+  ].map((h) => h.toLowerCase()),
+);
+
+const RESPONSE_HEADER_BLOCKLIST = new Set(
+  [
+    "connection",
+    "keep-alive",
+    "proxy-connection",
+    "transfer-encoding",
+    "upgrade",
+    // Let Next compute length / chunking for the re-streamed body
+    "content-length",
+  ].map((h) => h.toLowerCase()),
+);
+
+function buildUpstreamHeaders(incoming: Headers, accessToken: string | undefined): Headers {
+  const out = new Headers();
+  incoming.forEach((value, key) => {
+    if (!REQUEST_HEADER_BLOCKLIST.has(key.toLowerCase())) {
+      out.append(key, value);
+    }
+  });
+  if (accessToken) {
+    out.set("Authorization", `Bearer ${accessToken}`);
+  }
+  return out;
+}
+
+function sanitizeResponseHeaders(upstream: Headers): Headers {
+  const out = new Headers();
+  upstream.forEach((value, key) => {
+    if (!RESPONSE_HEADER_BLOCKLIST.has(key.toLowerCase())) {
+      out.append(key, value);
+    }
+  });
+  return out;
+}
+
 /**
  * Robust API Proxy Route Handler (BFF Pattern)
  * 
@@ -22,41 +79,31 @@ async function handleProxy(
   const targetUrl = `${API_BASE_URL}/${path.join("/")}${queryString}`;
 
   const accessToken = request.cookies.get("accessToken")?.value;
-
-  // Clone headers from the incoming request
-  const headers = new Headers(request.headers);
-  
-  // Attach the secure token for backend authentication
-  if (accessToken) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
-  }
-  
-  // Clean up headers that should not be forwarded or will be set by fetch
-  headers.delete("host");
-  headers.delete("connection");
-  // Keep Content-Type, Accept, etc.
+  const headers = buildUpstreamHeaders(request.headers, accessToken);
 
   try {
+    const hasBody = request.method !== "GET" && request.method !== "HEAD";
     const fetchOptions: RequestInit = {
       method: request.method,
-      headers: headers,
-      // @ts-ignore - duplex is required when body is a stream in some environments
-      duplex: "half",
+      headers,
     };
 
-    // Forward the request body for methods that support it
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      // In the App Router, request.body is a ReadableStream
-      fetchOptions.body = request.body;
+    if (hasBody) {
+      Object.assign(fetchOptions, {
+        body: request.body,
+        // Required when forwarding a stream body (Node fetch / undici)
+        duplex: "half" as const,
+      });
     }
 
     const response = await fetch(targetUrl, fetchOptions);
 
-    // Return the backend's response directly, including its body stream and headers
+    // Strip hop-by-hop headers — forwarding them with a re-streamed body often
+    // causes HTML 502s from edge proxies (e.g. OpenResty) even when origin returned 200.
     return new NextResponse(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: response.headers,
+      headers: sanitizeResponseHeaders(response.headers),
     });
   } catch (error) {
     console.error("[BFF Proxy Error]:", error);
