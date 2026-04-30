@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ action: string }> }
+  { params }: { params: Promise<{ action: string }> },
 ) {
   const { action } = await params;
   const cookieStore = await cookies();
@@ -23,7 +24,7 @@ export async function POST(
       if (!refreshToken) {
         return NextResponse.json(
           { success: false, message: "No refresh token" },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -70,7 +71,8 @@ export async function POST(
 
     if (action === "login" || action === "register") {
       const body = await request.json();
-      const endpoint = action === "login" ? "/auth/login" : "/auth/register/business";
+      const endpoint =
+        action === "login" ? "/auth/login" : "/auth/register/business";
 
       const backendRes = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
@@ -85,7 +87,7 @@ export async function POST(
       }
 
       const { tokens } = data.data.auth;
-      
+
       const secure = process.env.NODE_ENV === "production";
       cookieStore.set({
         name: "accessToken",
@@ -120,13 +122,13 @@ export async function POST(
 
     return NextResponse.json(
       { success: false, message: "Invalid action" },
-      { status: 404 }
+      { status: 404 },
     );
   } catch (error) {
     console.error("Auth API Error:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
