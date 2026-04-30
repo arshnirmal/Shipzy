@@ -16,10 +16,10 @@ import {
 
 async function driversRoutes(fastify: FastifyInstance, _options: unknown) {
   // All routes require authentication
-  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("preHandler", fastify.authenticate);
 
   // All routes require courier role
-  fastify.addHook("onRequest", authorize("courier"));
+  fastify.addHook("preHandler", authorize("courier"));
 
   // GET /api/v1/drivers/me - Get driver profile
   fastify.get(

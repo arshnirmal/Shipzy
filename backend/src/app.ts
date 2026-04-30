@@ -198,6 +198,16 @@ export const buildApp = async (
     };
   });
 
+  // ============ ERROR HANDLERS ============
+  // Must be registered before module routes so each plugin's avvio context
+  // captures these handlers when finalized during await app.register().
+
+  // 404 handler
+  app.setNotFoundHandler(notFoundHandler as any);
+
+  // Global error handler
+  app.setErrorHandler(errorHandler as any);
+
   // Register module routes
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
   await app.register(businessRoutes, { prefix: "/api/v1/business" });
@@ -209,14 +219,6 @@ export const buildApp = async (
   await app.register(ordersRoutes, { prefix: "/api/v1/orders" });
   await app.register(ratingsRoutes, { prefix: "/api/v1/ratings" });
   await app.register(staticRoutes, { prefix: "/api/v1/static" });
-
-  // ============ ERROR HANDLERS ============
-
-  // 404 handler
-  app.setNotFoundHandler(notFoundHandler as any);
-
-  // Global error handler
-  app.setErrorHandler(errorHandler as any);
 
   app.ready((err) => {
     if (err) throw err;

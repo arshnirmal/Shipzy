@@ -22,10 +22,10 @@ import {
 
 export default async function businessRoutes(app: FastifyInstance) {
   // Apply authentication to all business routes
-  app.addHook("onRequest", app.authenticate);
+  app.addHook("preHandler", app.authenticate);
 
   // Require "business" role for all routes in this plugin
-  app.addHook("onRequest", authorize("business"));
+  app.addHook("preHandler", authorize("business"));
 
   // =========================================================================
   // DRAFTS

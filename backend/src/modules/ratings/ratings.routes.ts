@@ -12,7 +12,7 @@ async function ratingsRoutes(fastify: FastifyInstance, _options: unknown) {
   };
 
   // All ratings routes require authentication
-  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("preHandler", fastify.authenticate);
 
   // POST /api/v1/ratings/orders/:orderId - Customer rates delivered order
   fastify.post(
