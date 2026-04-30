@@ -12,7 +12,7 @@ import {
 
 async function usersRoutes(fastify: FastifyInstance, _options: unknown) {
   // All routes require authentication
-  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("preHandler", fastify.authenticate);
 
   // GET /api/v1/users/me - Get current user profile
   fastify.get(

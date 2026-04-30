@@ -10,7 +10,7 @@ import {
 } from "./addresses.schema.js";
 
 async function addressesRoutes(fastify: FastifyInstance, _options: unknown) {
-  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("preHandler", fastify.authenticate);
 
   fastify.post(
     "/search",

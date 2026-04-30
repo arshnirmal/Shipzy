@@ -74,7 +74,11 @@ export const errorEnvelope = {
     },
     timestamp: { type: "string", format: "date-time" },
   },
-  required: ["success", "message", "timestamp"],
+  // Only "message" is required: Fastify's fallbackErrorHandler serializes raw
+  // Error objects (which lack "success" and "timestamp") against this schema
+  // before our custom setErrorHandler can intercept. Keeping those optional
+  // prevents a FST_ERR_FAILED_ERROR_SERIALIZATION crash in that fallback path.
+  required: ["message"],
 };
 
 export const COMMON_ERROR_RESPONSES = {

@@ -25,7 +25,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
   };
 
   // All routes require authentication
-  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("preHandler", fastify.authenticate);
 
   // POST /api/v1/orders/calculate-fare - Calculate fare (authenticated)
   fastify.post(
