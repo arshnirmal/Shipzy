@@ -67,7 +67,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { href: "/orders", label: "Orders", icon: ShoppingBag, exact: true },
-      { href: "/orders/new", label: "New Order", icon: PlusCircle, exact: true },
+      { href: "/orders/new", label: "New Order", icon: PlusCircle },
       { href: "/drafts", label: "Drafts", icon: FileEdit },
       { href: "/templates", label: "Templates", icon: LayoutList },
       { href: "/orders/bulk", label: "Bulk Create", icon: Upload, exact: true },

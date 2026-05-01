@@ -14,7 +14,7 @@ export default function NewOrderPage() {
         { name: `New Order (${new Date().toLocaleDateString()})` },
         {
           onSuccess: (res) => {
-            router.replace(`/drafts/${res.data.draftId}`);
+            router.replace(`/orders/new/${res.data.draftId}`);
           },
         }
       );
