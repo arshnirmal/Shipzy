@@ -13,7 +13,7 @@ async function adminRoutes(fastify: FastifyInstance, _options: unknown) {
     "/drivers/:userId/onboarding-review",
     {
       schema: driverOnboardingReviewSchema,
-      onRequest: [fastify.authenticate, authorize("admin")],
+      preHandler: [fastify.authenticate, authorize("admin")],
       config: { rateLimit: ADMIN_MUTATION_RATE_LIMIT },
     },
     asRouteHandler(

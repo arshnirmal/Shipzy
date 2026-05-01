@@ -19,7 +19,7 @@ async function ratingsRoutes(fastify: FastifyInstance, _options: unknown) {
     "/orders/:orderId",
     {
       schema: createRatingSchema,
-      onRequest: [authorize("client")],
+      preHandler: [authorize("client")],
     },
     asRouteHandler(ratingsController.createRating.bind(ratingsController)),
   );
@@ -29,7 +29,7 @@ async function ratingsRoutes(fastify: FastifyInstance, _options: unknown) {
     "/drivers/:driverId",
     {
       schema: getDriverRatingStatsSchema,
-      onRequest: [authorize("client", "courier", "admin", "business")],
+      preHandler: [authorize("client", "courier", "admin", "business")],
     },
     asRouteHandler(
       ratingsController.getDriverRatingStats.bind(ratingsController),
