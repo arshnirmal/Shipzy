@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createColumnHelper,
   flexRender,
@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadOrdersCsv } from "@/hooks/use-orders";
+import { getErrorMessage } from "@/lib/api";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,30 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
+function hasActiveFilters(filters: OrderFilters) {
+  return Boolean(
+    filters.status !== "all" ||
+      filters.search ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      filters.deliveryTypeId ||
+      filters.minPrice ||
+      filters.maxPrice,
+  );
+}
+
+function getVisiblePages(currentPage: number, totalPages: number) {
+  const maxVisible = 5;
+  const safeTotal = Math.max(totalPages, 1);
+  const start = Math.max(
+    1,
+    Math.min(currentPage - Math.floor(maxVisible / 2), safeTotal - maxVisible + 1),
+  );
+  const end = Math.min(safeTotal, start + maxVisible - 1);
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
 type OrdersTableProps = {
   data: OrderListItem[];
   pagination: Pagination | undefined;
@@ -71,6 +96,10 @@ export function OrdersTable({
   onBulkCancel,
 }: OrdersTableProps) {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setRowSelection({});
+  }, [filters.page, filters.search, filters.status, data]);
 
   const columns = useMemo(
     () => [
@@ -141,7 +170,7 @@ export function OrdersTable({
       }),
       col.accessor((row) => row.order.pricing.totalPrice, {
         id: "amount",
-        header: ({ column }) => (
+        header: () => (
           <button
             className="flex items-center gap-1 text-xs font-medium"
             onClick={() => {
@@ -165,7 +194,7 @@ export function OrdersTable({
       }),
       col.accessor((row) => row.order.timeline.createdAt, {
         id: "createdAt",
-        header: ({ column }) => (
+        header: () => (
           <button
             className="flex items-center gap-1 text-xs font-medium"
             onClick={() => {
@@ -225,13 +254,14 @@ export function OrdersTable({
     try {
       await downloadOrdersCsv(filters);
       toast.success("Export downloaded successfully");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to export orders");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     }
   }
 
   const totalPages = pagination?.totalPages ?? 1;
   const currentPage = filters.page;
+  const visiblePages = getVisiblePages(currentPage, totalPages);
 
   return (
     <div className="space-y-3">
@@ -312,17 +342,26 @@ export function OrdersTable({
                         No orders found
                       </p>
                       <p className="text-sm text-muted-foreground/80 max-w-sm mx-auto">
-                        We couldn't find any orders matching your current criteria. Try adjusting your filters or date range.
+                        We could not find any orders matching your current criteria. Try adjusting your filters or date range.
                       </p>
                     </div>
-                    {Object.values(filters).some(
-                      (val) => val !== undefined && val !== "" && val !== "all" && val !== 1 && val !== 10
-                    ) && (
+                    {hasActiveFilters(filters) && (
                       <Button
                         variant="outline"
                         size="sm"
                         className="mt-2"
-                        onClick={() => onFiltersChange({ status: "all", search: "", dateFrom: "", dateTo: "", minPrice: "", maxPrice: "", page: 1 })}
+                        onClick={() =>
+                          onFiltersChange({
+                            status: "all",
+                            search: "",
+                            dateFrom: "",
+                            dateTo: "",
+                            deliveryTypeId: "",
+                            minPrice: "",
+                            maxPrice: "",
+                            page: 1,
+                          })
+                        }
                       >
                         Clear all filters
                       </Button>
@@ -365,11 +404,11 @@ export function OrdersTable({
               className="size-8"
               disabled={currentPage <= 1}
               onClick={() => onFiltersChange({ page: currentPage - 1 })}
+              aria-label="Previous page"
             >
               <ChevronLeft className="size-4" />
             </Button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              const page = i + 1;
+            {visiblePages.map((page) => {
               return (
                 <Button
                   key={page}
@@ -377,6 +416,8 @@ export function OrdersTable({
                   size="icon"
                   className="size-8 text-xs"
                   onClick={() => onFiltersChange({ page })}
+                  aria-label={`Go to page ${page}`}
+                  aria-current={currentPage === page ? "page" : undefined}
                 >
                   {page}
                 </Button>
@@ -388,6 +429,7 @@ export function OrdersTable({
               className="size-8"
               disabled={currentPage >= totalPages}
               onClick={() => onFiltersChange({ page: currentPage + 1 })}
+              aria-label="Next page"
             >
               <ChevronRight className="size-4" />
             </Button>

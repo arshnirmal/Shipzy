@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import type { OrderFilters } from "@/types/orders";
-import { DEFAULT_FILTERS } from "@/types/orders";
 
 type OrdersFiltersProps = {
   filters: OrderFilters;
@@ -35,6 +34,17 @@ export function OrdersFilters({ filters, onChange }: OrdersFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(
     () => hasAdvancedFilters(filters),
   );
+  const [searchValue, setSearchValue] = useState(filters.search);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (searchValue !== filters.search) {
+        onChange({ search: searchValue.trim(), page: 1 });
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [filters.search, onChange, searchValue]);
 
   function clearAll() {
     onChange({
@@ -46,6 +56,7 @@ export function OrdersFilters({ filters, onChange }: OrdersFiltersProps) {
       maxPrice: "",
       page: 1,
     });
+    setSearchValue("");
     setShowAdvanced(false);
   }
 
@@ -65,13 +76,16 @@ export function OrdersFilters({ filters, onChange }: OrdersFiltersProps) {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search order #, recipient, address…"
-            value={filters.search}
-            onChange={(e) => onChange({ search: e.target.value, page: 1 })}
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="h-9 pl-9 text-sm"
           />
-          {filters.search && (
+          {searchValue && (
             <button
-              onClick={() => onChange({ search: "", page: 1 })}
+              onClick={() => {
+                setSearchValue("");
+                onChange({ search: "", page: 1 });
+              }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >

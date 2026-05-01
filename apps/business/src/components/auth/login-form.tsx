@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +18,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { loginSchema, type LoginValues } from "@/lib/validations/auth";
-import { useAuth } from "@/providers/auth-provider";
+import { getSafeNextPath, useAuth } from "@/providers/auth-provider";
+
+const loginResolver = zodResolver(
+  loginSchema as unknown as Parameters<typeof zodResolver>[0],
+) as unknown as Resolver<LoginValues>;
 
 export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
   const router = useRouter();
@@ -26,7 +30,7 @@ export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema as any),
+    resolver: loginResolver,
     defaultValues: {
       email: "",
       password: "",
@@ -39,7 +43,8 @@ export function LoginForm({ onSuccess }: Readonly<{ onSuccess?: () => void }>) {
       await signIn(data);
       toast.success("Welcome back!");
       if (onSuccess) onSuccess();
-      router.push("/dashboard");
+      const nextPath = new URLSearchParams(window.location.search).get("next");
+      router.replace(getSafeNextPath(nextPath));
     } catch (error) {
       const err = error as Error;
       toast.error(err.message || "Failed to login. Please try again.");

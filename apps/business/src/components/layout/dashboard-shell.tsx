@@ -67,7 +67,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { href: "/orders", label: "Orders", icon: ShoppingBag, exact: true },
-      { href: "/orders/new", label: "New Order", icon: PlusCircle, exact: true },
+      { href: "/orders/new", label: "New Order", icon: PlusCircle },
       { href: "/drafts", label: "Drafts", icon: FileEdit },
       { href: "/templates", label: "Templates", icon: LayoutList },
       { href: "/orders/bulk", label: "Bulk Create", icon: Upload, exact: true },
@@ -107,9 +107,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
+      const params = new URLSearchParams({ auth: "login", next: pathname });
+      router.replace(`/?${params.toString()}`);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, pathname, router]);
 
   if (isLoading) {
     return (
@@ -208,8 +209,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  signOut();
-                  router.push("/login");
+                  void signOut();
                 }}
               >
                 <LogOut className="mr-2 size-4" />

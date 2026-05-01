@@ -41,7 +41,7 @@ export function HeroSection() {
             style={{ animationDelay: "0.46s" }}
           >
             <Link
-              href="/register"
+              href="/?auth=register"
               className={cn(
                 buttonVariants({ size: "touch" }),
                 "gradient-brand text-primary-foreground shadow-[var(--shadow-ambient-md)]",

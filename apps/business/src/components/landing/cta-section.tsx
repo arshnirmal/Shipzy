@@ -30,7 +30,7 @@ export function CtaSection() {
 
           <div className="mt-8">
             <Link
-              href="/register"
+              href="/?auth=register"
               className={cn(
                 buttonVariants({ size: "touch" }),
                 "bg-white text-primary shadow-[var(--shadow-ambient-md)] hover:bg-white/92",
