@@ -6,6 +6,7 @@ const API_BASE_URL =
   process.env.API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:3000/api/v1";
+const NORMALIZED_API_BASE_URL = API_BASE_URL.replace(/\/+$/, "");
 
 // RFC 7230 §6.1 — hop-by-hop headers must not be forwarded by proxies.
 const HOP_BY_HOP = new Set([
@@ -18,6 +19,11 @@ const HOP_BY_HOP = new Set([
   "transfer-encoding",
   "upgrade",
 ]);
+const RESPONSE_STRIP_HEADERS = new Set([
+  ...HOP_BY_HOP,
+  "content-length",
+  "content-encoding",
+]);
 
 /**
  * BFF proxy: forwards /api/proxy/* to the backend, injecting the HttpOnly
@@ -27,11 +33,11 @@ const HOP_BY_HOP = new Set([
  */
 async function handleProxy(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
   const queryString = request.nextUrl.search;
-  const targetUrl = `${API_BASE_URL}/${path.join("/")}${queryString}`;
+  const targetUrl = `${NORMALIZED_API_BASE_URL}/${path.join("/")}${queryString}`;
 
   const accessToken = request.cookies.get("accessToken")?.value;
 
@@ -41,7 +47,14 @@ async function handleProxy(
   const forwardHeaders = new Headers();
   for (const [key, value] of request.headers.entries()) {
     const lower = key.toLowerCase();
-    if (HOP_BY_HOP.has(lower) || lower === "host" || lower === "cookie") continue;
+    if (
+      HOP_BY_HOP.has(lower) ||
+      lower === "host" ||
+      lower === "cookie" ||
+      lower === "accept-encoding"
+    ) {
+      continue;
+    }
     forwardHeaders.set(key, value);
   }
 
@@ -55,18 +68,27 @@ async function handleProxy(
     method: request.method,
     headers: forwardHeaders,
     ...(hasBody && { body: request.body }),
-    // @ts-ignore — duplex is required for streaming request bodies in Node.js fetch
     ...(hasBody && { duplex: "half" }),
   };
 
   try {
     const upstream = await fetch(targetUrl, fetchOptions);
 
+    if (!upstream.ok) {
+      console.error("[BFF Proxy Upstream Error]", {
+        targetUrl,
+        method: request.method,
+        status: upstream.status,
+        statusText: upstream.statusText,
+        contentType: upstream.headers.get("content-type"),
+      });
+    }
+
     // Strip hop-by-hop headers from the upstream response before returning.
     // Forwarding them to Netlify's openresty layer causes 502s.
     const responseHeaders = new Headers();
     for (const [key, value] of upstream.headers.entries()) {
-      if (!HOP_BY_HOP.has(key.toLowerCase())) {
+      if (!RESPONSE_STRIP_HEADERS.has(key.toLowerCase())) {
         responseHeaders.set(key, value);
       }
     }
@@ -80,7 +102,7 @@ async function handleProxy(
     console.error("[BFF Proxy Error]:", error);
     return NextResponse.json(
       { success: false, message: "Failed to connect to the backend service" },
-      { status: 502 }
+      { status: 502 },
     );
   }
 }
