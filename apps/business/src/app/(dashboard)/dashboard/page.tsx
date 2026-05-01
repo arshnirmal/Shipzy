@@ -2,16 +2,18 @@
 
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { useAnalytics } from "@/hooks/use-analytics";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KPICard } from "@/components/analytics/kpi-card";
+import { QueryErrorHandler } from "@/components/shared/query-error-handler";
+import { RefetchIndicator } from "@/components/shared/refetch-indicator";
 
 export default function DashboardPage() {
   const now = new Date();
   const dateFrom = format(startOfMonth(now), "yyyy-MM-dd");
   const dateTo = format(endOfMonth(now), "yyyy-MM-dd");
 
-  const { data, isLoading } = useAnalytics(dateFrom, dateTo);
+  const analyticsQuery = useAnalytics(dateFrom, dateTo);
+  const { data, isLoading, isFetching, refetch } = analyticsQuery;
   const analytics = data?.data.analytics;
 
   return (
@@ -19,38 +21,41 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Current month performance ({format(now, "MMMM yyyy")})
-          </p>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <p>Current month performance ({format(now, "MMMM yyyy")})</p>
+            <RefetchIndicator isRefetching={isFetching && !isLoading} />
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KPICard
-          title="Total Orders"
-          value={analytics?.orders.total ?? 0}
-          isLoading={isLoading}
-        />
-        <KPICard
-          title="Active Deliveries"
-          value={analytics?.orders.active ?? 0}
-          isLoading={isLoading}
-          className="border-l-4 border-l-amber-500"
-        />
-        <KPICard
-          title="Monthly Spend"
-          value={analytics?.spend.total ?? 0}
-          prefix="₹"
-          isLoading={isLoading}
-        />
-        <KPICard
-          title="Success Rate"
-          value={analytics?.orders.successRate ?? 0}
-          suffix="%"
-          isLoading={isLoading}
-          className="border-l-4 border-l-green-500"
-        />
-      </div>
+      <QueryErrorHandler query={analyticsQuery} onRetry={refetch}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <KPICard
+            title="Total Orders"
+            value={analytics?.orders.total ?? 0}
+            isLoading={isLoading}
+          />
+          <KPICard
+            title="Active Deliveries"
+            value={analytics?.orders.active ?? 0}
+            isLoading={isLoading}
+            className="border-l-4 border-l-amber-500"
+          />
+          <KPICard
+            title="Monthly Spend"
+            value={analytics?.spend.total ?? 0}
+            prefix="₹"
+            isLoading={isLoading}
+          />
+          <KPICard
+            title="Success Rate"
+            value={analytics?.orders.successRate ?? 0}
+            suffix="%"
+            isLoading={isLoading}
+            className="border-l-4 border-l-green-500"
+          />
+        </div>
+      </QueryErrorHandler>
 
       <Card className="bg-gradient-to-br from-primary/5 via-primary/5 to-transparent border-primary/20">
         <CardHeader>

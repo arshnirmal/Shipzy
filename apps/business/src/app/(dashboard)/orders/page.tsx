@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useCallback, useMemo, useState, Suspense } from "react";
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
@@ -25,6 +25,24 @@ const STATUS_TABS = [
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const;
+
+const VALID_STATUSES = new Set<OrderFilters["status"]>([
+  "all",
+  "active",
+  "completed",
+  "cancelled",
+]);
+
+function toPositiveInt(value: string | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function readStatus(value: string | null): OrderFilters["status"] {
+  return VALID_STATUSES.has(value as OrderFilters["status"])
+    ? (value as OrderFilters["status"])
+    : DEFAULT_FILTERS.status;
+}
 
 // ── Skeleton for the full table area ─────────────────────────────────────────
 
@@ -61,26 +79,33 @@ function OrdersContent() {
   const [bulkCancelIds, setBulkCancelIds] = useState<number[]>([]);
 
   // Derive filters from URL
-  const filters: OrderFilters = {
-    ...DEFAULT_FILTERS,
-    status: (searchParams.get("status") as OrderFilters["status"]) || DEFAULT_FILTERS.status,
-    page: searchParams.get("page") ? Number(searchParams.get("page")) : DEFAULT_FILTERS.page,
-    limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : DEFAULT_FILTERS.limit,
-    sortBy: (searchParams.get("sortBy") as OrderFilters["sortBy"]) || DEFAULT_FILTERS.sortBy,
-    sortOrder: (searchParams.get("sortOrder") as "asc" | "desc") || DEFAULT_FILTERS.sortOrder,
-    search: searchParams.get("search") || DEFAULT_FILTERS.search,
-    dateFrom: searchParams.get("dateFrom") || DEFAULT_FILTERS.dateFrom,
-    dateTo: searchParams.get("dateTo") || DEFAULT_FILTERS.dateTo,
-    deliveryTypeId: searchParams.get("deliveryTypeId") || DEFAULT_FILTERS.deliveryTypeId,
-    minPrice: searchParams.get("minPrice") || DEFAULT_FILTERS.minPrice,
-    maxPrice: searchParams.get("maxPrice") || DEFAULT_FILTERS.maxPrice,
-  };
+  const filters: OrderFilters = useMemo(
+    () => ({
+      ...DEFAULT_FILTERS,
+      status: readStatus(searchParams.get("status")),
+      page: toPositiveInt(searchParams.get("page"), DEFAULT_FILTERS.page),
+      limit: toPositiveInt(searchParams.get("limit"), DEFAULT_FILTERS.limit),
+      sortBy:
+        (searchParams.get("sortBy") as OrderFilters["sortBy"]) ||
+        DEFAULT_FILTERS.sortBy,
+      sortOrder:
+        searchParams.get("sortOrder") === "asc" ? "asc" : DEFAULT_FILTERS.sortOrder,
+      search: searchParams.get("search") || DEFAULT_FILTERS.search,
+      dateFrom: searchParams.get("dateFrom") || DEFAULT_FILTERS.dateFrom,
+      dateTo: searchParams.get("dateTo") || DEFAULT_FILTERS.dateTo,
+      deliveryTypeId:
+        searchParams.get("deliveryTypeId") || DEFAULT_FILTERS.deliveryTypeId,
+      minPrice: searchParams.get("minPrice") || DEFAULT_FILTERS.minPrice,
+      maxPrice: searchParams.get("maxPrice") || DEFAULT_FILTERS.maxPrice,
+    }),
+    [searchParams],
+  );
 
   const ordersQuery = useOrders(filters);
   const { data, isLoading, isFetching, refetch } = ordersQuery;
   const bulkCancel = useBulkCancelOrders();
 
-  function updateFilters(patch: Partial<OrderFilters>) {
+  const updateFilters = useCallback((patch: Partial<OrderFilters>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(patch).forEach(([key, value]) => {
       if (value === undefined || value === null || value === "") {
@@ -89,8 +114,11 @@ function OrdersContent() {
         params.set(key, String(value as string | number));
       }
     });
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }, [pathname, router, searchParams]);
 
   function handleStatusTab(value: string) {
     updateFilters({
@@ -167,7 +195,11 @@ function OrdersContent() {
       </Tabs>
 
       {/* Filters */}
-      <OrdersFilters filters={filters} onChange={updateFilters} />
+      <OrdersFilters
+        key={filters.search}
+        filters={filters}
+        onChange={updateFilters}
+      />
 
       {/* Table area — show skeleton on first load, then delegate errors */}
       {isLoading ? (

@@ -10,10 +10,12 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   clearStoredUser,
   getStoredUser,
+  onSessionExpired,
   setStoredUser,
 } from "@/lib/auth";
 import type {
@@ -37,8 +39,27 @@ type AuthProviderProps = {
   children: ReactNode;
 };
 
+type AuthApiResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    actor?: {
+      user?: AuthUser;
+    };
+  };
+};
+
+function getSafeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+
+  return value;
+}
+
 export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   
   // Initialize with null, hydrate on client
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -46,17 +67,54 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsHydrated(true);
-    // On the very first client render, safely grab from storage without a cascade loop
-    const storedUser = getStoredUser();
-    if (storedUser) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(storedUser);
+    let isMounted = true;
+
+    async function hydrateSession() {
+      const storedUser = getStoredUser();
+      if (storedUser) {
+        if (!isMounted) return;
+        setUser(storedUser);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/refresh", { method: "POST" });
+        const data = (await response.json().catch(() => null)) as AuthApiResponse | null;
+
+        if (response.ok && data?.success && data.data?.actor?.user) {
+          setStoredUser(data.data.actor.user);
+          if (!isMounted) return;
+          setUser(data.data.actor.user);
+        } else {
+          clearStoredUser();
+          queryClient.clear();
+        }
+      } catch {
+        clearStoredUser();
+        queryClient.clear();
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsLoading(false);
-  }, []);
+
+    setIsHydrated(true);
+    void hydrateSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [queryClient]);
+
+  useEffect(() => {
+    return onSessionExpired(() => {
+      clearStoredUser();
+      queryClient.clear();
+      setUser(null);
+    });
+  }, [queryClient]);
 
   const signIn = useCallback(async (payload: LoginPayload) => {
     const response = await fetch("/api/auth/login", {
@@ -72,8 +130,9 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     }
 
     setStoredUser(data.data.actor.user);
+    queryClient.clear();
     setUser(data.data.actor.user);
-  }, []);
+  }, [queryClient]);
 
   const signUp = useCallback(async (payload: RegisterPayload) => {
     const response = await fetch("/api/auth/register", {
@@ -103,17 +162,19 @@ export function AuthProvider({ children }: Readonly<AuthProviderProps>) {
     }
 
     setStoredUser(data.data.actor.user);
+    queryClient.clear();
     setUser(data.data.actor.user);
-  }, []);
+  }, [queryClient]);
 
   const signOut = useCallback(async () => {
     // Call the logout endpoint to clear HttpOnly cookies
     await fetch("/api/auth/logout", { method: "POST" });
     
     clearStoredUser();
+    queryClient.clear();
     setUser(null);
-    router.push("/login");
-  }, [router]);
+    router.push("/?auth=login");
+  }, [queryClient, router]);
 
   const value = useMemo(
     () => ({
@@ -142,3 +203,5 @@ export function useAuth() {
 
   return context;
 }
+
+export { getSafeNextPath };

@@ -1,13 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { AddressesSection } from "@/components/settings/addresses-section";
 import { SecuritySection } from "@/components/settings/security-section";
 
-export default function SettingsPage() {
-  const [tab, setTab] = useState("profile");
+const SETTINGS_TABS = new Set(["profile", "addresses", "security"]);
+
+function SettingsContent() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab = SETTINGS_TABS.has(tabParam ?? "") ? tabParam! : "profile";
+
+  function handleTabChange(value: string) {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (value === "profile") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", value);
+    }
+
+    const queryString = nextParams.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -18,7 +39,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList className="h-10 bg-surface-container-low p-1">
           <TabsTrigger value="profile" className="rounded-md px-4 text-sm data-[state=active]:bg-surface-container-lowest data-[state=active]:shadow-sm">
             Profile
@@ -42,5 +63,13 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
   );
 }

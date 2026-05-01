@@ -79,7 +79,13 @@ export async function POST(
         maxAge: 60 * 60 * 24 * 30,
       });
 
-      return NextResponse.json({ success: true, data: { success: true } });
+      return NextResponse.json({
+        success: true,
+        data: {
+          actor: data.data.actor,
+          auth: { ...data.data.auth, tokens: undefined },
+        },
+      });
     }
 
     if (action === "login" || action === "register") {
