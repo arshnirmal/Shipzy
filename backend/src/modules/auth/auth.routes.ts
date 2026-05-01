@@ -71,7 +71,7 @@ async function authRoutes(fastify: FastifyInstance, _options: unknown) {
     "/logout",
     {
       schema: logoutSchema,
-      onRequest: [fastify.authenticate], // Requires authentication
+      preHandler: [fastify.authenticate], // Requires authentication
     },
     authController.logout.bind(authController),
   );

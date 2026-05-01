@@ -39,7 +39,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/",
     {
       schema: createOrderSchema,
-      onRequest: [authorize("client")],
+      preHandler: [authorize("client")],
     },
     asRouteHandler(ordersController.createOrder.bind(ordersController)),
   );
@@ -49,7 +49,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/",
     {
       schema: listOrdersSchema,
-      onRequest: [authorize("client", "business")],
+      preHandler: [authorize("client", "business")],
     },
     asRouteHandler(ordersController.listOrders.bind(ordersController)),
   );
@@ -59,7 +59,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/available",
     {
       schema: getAvailableOrdersSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.getAvailableOrders.bind(ordersController)),
   );
@@ -69,7 +69,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id",
     {
       schema: getOrderByIdSchema,
-      onRequest: [authorize("client", "courier", "business")],
+      preHandler: [authorize("client", "courier", "business")],
     },
     asRouteHandler(ordersController.getOrderById.bind(ordersController)),
   );
@@ -79,7 +79,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/cancel",
     {
       schema: cancelOrderSchema,
-      onRequest: [authorize("client", "business")],
+      preHandler: [authorize("client", "business")],
     },
     asRouteHandler(ordersController.cancelOrder.bind(ordersController)),
   );
@@ -89,7 +89,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/accept",
     {
       schema: acceptOrderSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.acceptOrder.bind(ordersController)),
   );
@@ -99,7 +99,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/status",
     {
       schema: updateOrderStatusSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.updateOrderStatus.bind(ordersController)),
   );
@@ -111,7 +111,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/arrive",
     {
       schema: arriveSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.arriveAtDelivery.bind(ordersController)),
   );
@@ -121,7 +121,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/undeliverable",
     {
       schema: undeliverableSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.markUndeliverable.bind(ordersController)),
   );
@@ -131,7 +131,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/return",
     {
       schema: returnSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.startReturn.bind(ordersController)),
   );
@@ -141,7 +141,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/returned",
     {
       schema: returnedSchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(ordersController.confirmReturned.bind(ordersController)),
   );
@@ -151,7 +151,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/proof-of-delivery",
     {
       schema: proofOfDeliverySchema,
-      onRequest: [authorize("courier")],
+      preHandler: [authorize("courier")],
     },
     asRouteHandler(
       ordersController.submitProofOfDelivery.bind(ordersController),
@@ -163,7 +163,7 @@ async function ordersRoutes(fastify: FastifyInstance, _options: unknown) {
     "/:id/tracking",
     {
       schema: trackingSchema,
-      onRequest: [authorize("client", "courier", "admin")],
+      preHandler: [authorize("client", "courier", "admin")],
     },
     asRouteHandler(ordersController.getOrderTracking.bind(ordersController)),
   );
