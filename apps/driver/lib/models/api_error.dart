@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:shipzy_driver/utils/date_utils.dart';
 
 part 'api_error.freezed.dart';
 part 'api_error.g.dart';
@@ -16,10 +17,17 @@ abstract class ApiFieldError with _$ApiFieldError {
 
 @freezed
 abstract class ApiErrorResponse with _$ApiErrorResponse {
+  @JsonSerializable(converters: [
+    IstDateTimeConverter(),
+  ])
   const factory ApiErrorResponse({
     required bool success,
     required String message,
     List<ApiFieldError>? errors,
+    @JsonKey(
+      fromJson: nullableIstDateTimeFromJson,
+      toJson: nullableIstDateTimeToJson,
+    )
     DateTime? timestamp,
   }) = _ApiErrorResponse;
 

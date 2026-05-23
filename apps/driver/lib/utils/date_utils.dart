@@ -60,6 +60,22 @@ class NullableIstDateTimeConverter implements JsonConverter<DateTime?, String?> 
   }
 }
 
+DateTime istDateTimeFromJson(String json) {
+  return const IstDateTimeConverter().fromJson(json);
+}
+
+String istDateTimeToJson(DateTime value) {
+  return const IstDateTimeConverter().toJson(value);
+}
+
+DateTime? nullableIstDateTimeFromJson(String? json) {
+  return const NullableIstDateTimeConverter().fromJson(json);
+}
+
+String? nullableIstDateTimeToJson(DateTime? value) {
+  return const NullableIstDateTimeConverter().toJson(value);
+}
+
 extension DateTimeIstX on DateTime {
   /// Returns a new DateTime instance adjusted to IST (+5:30).
   /// Use this instead of .toLocal() if you want to force IST regardless of device timezone.
