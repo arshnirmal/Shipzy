@@ -1,78 +1,84 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Draft, CreateOrderData } from "@/types/business";
-import type { FareBreakdown } from "@/types/orders";
 import {
-  CheckCircle2,
   MapPin,
   Truck,
   Package,
   Clock,
   ShieldCheck,
+  ShoppingCart,
+  CheckCircle2,
 } from "lucide-react";
-import { apiRequest } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { PricingTable } from "@/components/orders/pricing-table";
-import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
+import { apiRequest } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { PricingTable } from "@/components/orders/pricing-table";
+import type { CreateOrderData, DraftFulfillment, DraftItem, DraftPackage, DraftSchedule } from "@/types/business";
+import type { FareBreakdown, OrderLocation } from "@/types/orders";
 
-type ReviewStepProps = {
-  draft: Draft;
-  staticData: CreateOrderData;
-  onSubmit: () => void;
-  isSubmitting: boolean;
+type NewOrderReviewStepProps = {
+  pickup:       OrderLocation;
+  delivery:     OrderLocation;
+  fulfillment:  DraftFulfillment;
+  pkg:          DraftPackage;
+  items:        DraftItem[];
+  schedule:     DraftSchedule;
+  staticData:   CreateOrderData;
+  /** Currently computed fare — may be null before the first calculation */
+  fare:         FareBreakdown | null;
+  /** Called when a new fare is successfully computed */
+  onFareResolved: (fare: FareBreakdown) => void;
+  onPlaceOrder: () => void;
+  isPlacing:    boolean;
 };
 
-export function ReviewStep({
-  draft,
+export function NewOrderReviewStep({
+  pickup,
+  delivery,
+  fulfillment,
+  pkg,
+  items,
+  schedule,
   staticData,
-  onSubmit,
-  isSubmitting,
-}: ReviewStepProps) {
-  const [fare, setFare] = useState<FareBreakdown | null>(null);
+  fare,
+  onFareResolved,
+  onPlaceOrder,
+  isPlacing,
+}: NewOrderReviewStepProps) {
   const [fareLoading, setFareLoading] = useState(true);
-  const [fareError, setFareError] = useState<string | null>(null);
+  const [fareError,   setFareError]   = useState<string | null>(null);
 
-  // Derive static strings
+  // Derive human-readable labels
   const deliveryType = staticData.deliveryTypes.find(
-    (d) => d.deliveryTypeId === draft.fulfillment?.deliveryTypeId,
+    (d) => d.deliveryTypeId === fulfillment.deliveryTypeId,
   )?.displayName;
   const vehicle = staticData.vehicleCategories.find(
-    (v) => v.categoryId === draft.fulfillment?.vehicleCategoryId,
+    (v) => v.categoryId === fulfillment.vehicleCategoryId,
   )?.displayName;
   const paymentMethod = staticData.paymentMethods.find(
-    (p) => p.methodId === draft.fulfillment?.paymentMethodId,
+    (p) => p.methodId === fulfillment.paymentMethodId,
   )?.displayName;
 
+  // ── Fare calculation ───────────────────────────────────────────────────────
   useEffect(() => {
-    const hasRequirements =
-      draft.pickupLocation?.latitude &&
-      draft.deliveryLocation?.latitude &&
-      draft.fulfillment?.deliveryTypeId &&
-      draft.fulfillment?.vehicleCategoryId;
-
-    if (!hasRequirements) {
-      setFareError("Missing required location or fulfillment details to calculate fare.");
-      setFareLoading(false);
-      return;
-    }
-
-    const calculateFare = async () => {
+    const calculate = async () => {
       try {
         setFareLoading(true);
         setFareError(null);
 
         const body = {
           fulfillment: {
-            deliveryTypeId:    draft.fulfillment!.deliveryTypeId,
-            vehicleCategoryId: draft.fulfillment!.vehicleCategoryId,
-            weightTierId:      draft.fulfillment!.weightTierId ?? null,
-            packageTypeId:     draft.fulfillment!.packageTypeId ?? null,
+            deliveryTypeId:   fulfillment.deliveryTypeId,
+            vehicleCategoryId: fulfillment.vehicleCategoryId,
+            weightTierId:     fulfillment.weightTierId ?? null,
+            packageTypeId:    fulfillment.packageTypeId ?? null,
           },
           locations: {
-            pickup:   { latitude: draft.pickupLocation!.latitude,   longitude: draft.pickupLocation!.longitude },
-            delivery: { latitude: draft.deliveryLocation!.latitude, longitude: draft.deliveryLocation!.longitude },
+            pickup:   { latitude: pickup.latitude,   longitude: pickup.longitude },
+            delivery: { latitude: delivery.latitude, longitude: delivery.longitude },
           },
         };
 
@@ -84,58 +90,39 @@ export function ReviewStep({
           body: JSON.stringify(body),
         });
 
-        setFare(res.data.pricing);
+        onFareResolved(res.data.pricing);
       } catch (err: any) {
-        setFareError(err.message || "Failed to calculate pricing");
+        setFareError(err.message || "Failed to calculate pricing.");
       } finally {
         setFareLoading(false);
       }
     };
 
-    calculateFare();
+    calculate();
+    // Re-run only if the key inputs change
   }, [
-    draft.pickupLocation?.latitude,
-    draft.pickupLocation?.longitude,
-    draft.deliveryLocation?.latitude,
-    draft.deliveryLocation?.longitude,
-    draft.fulfillment?.deliveryTypeId,
-    draft.fulfillment?.vehicleCategoryId,
-    draft.fulfillment?.weightTierId,
-    draft.fulfillment?.packageTypeId,
-  ]);
+    pickup.latitude, pickup.longitude,
+    delivery.latitude, delivery.longitude,
+    fulfillment.deliveryTypeId, fulfillment.vehicleCategoryId,
+    fulfillment.weightTierId, fulfillment.packageTypeId,
+  ]); // onFareResolved intentionally omitted — stable callback from parent
 
-  const canSubmit = !fareLoading && !fareError && fare;
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h3 className="text-lg font-medium">Review and Submit</h3>
+          <h3 className="text-lg font-medium">Review &amp; Place Order</h3>
           <p className="text-sm text-muted-foreground">
-            Verify details before creating the order.
+            Verify your details — the order will be placed immediately on confirmation.
           </p>
         </div>
-        <Button
-          onClick={onSubmit}
-          disabled={!canSubmit || isSubmitting}
-          className="gradient-brand min-w-[140px]"
-        >
-          {isSubmitting ? (
-            <span className="flex items-center gap-2">
-              <div className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-r-transparent" />
-              Submitting…
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="size-4" /> Submit Order
-            </span>
-          )}
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 align-top">
-        {/* Left Col: Details Summary */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Left: Summary */}
+        <div className="lg:col-span-7 space-y-4">
           <Card>
             <CardContent className="p-0">
               <div className="divide-y">
@@ -151,11 +138,10 @@ export function ReviewStep({
                       <div className="absolute -left-6 top-1 size-4 rounded-full border-4 border-background bg-blue-500" />
                       <p className="font-medium text-sm">Pickup</p>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {draft.pickupLocation?.fullAddress}
+                        {pickup.fullAddress}
                       </p>
                       <p className="text-xs text-foreground mt-1">
-                        {draft.pickupLocation?.contactName} •{" "}
-                        {draft.pickupLocation?.contactPhone}
+                        {pickup.contactName} • {pickup.contactPhone}
                       </p>
                     </div>
 
@@ -163,17 +149,16 @@ export function ReviewStep({
                       <div className="absolute -left-6 top-1 size-4 rounded-full border-4 border-background bg-green-500" />
                       <p className="font-medium text-sm">Delivery</p>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                        {draft.deliveryLocation?.fullAddress}
+                        {delivery.fullAddress}
                       </p>
                       <p className="text-xs text-foreground mt-1">
-                        {draft.deliveryLocation?.contactName} •{" "}
-                        {draft.deliveryLocation?.contactPhone}
+                        {delivery.contactName} • {delivery.contactPhone}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Fulfillment */}
+                {/* Fulfillment + Schedule */}
                 <div className="p-6 grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="flex items-center gap-2 font-medium text-sm text-muted-foreground">
@@ -190,19 +175,17 @@ export function ReviewStep({
                     <h4 className="flex items-center gap-2 font-medium text-sm text-muted-foreground">
                       <Clock className="size-4" /> Schedule
                     </h4>
-                    {draft.schedule?.pickupAt ? (
+                    {schedule.pickupAt ? (
                       <>
                         <p className="text-sm mt-3 font-medium">
-                          {format(new Date(draft.schedule.pickupAt), "PPP")}
+                          {format(new Date(schedule.pickupAt), "PPP")}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(draft.schedule.pickupAt), "p")}
+                          {format(new Date(schedule.pickupAt), "p")}
                         </p>
                       </>
                     ) : (
-                      <p className="text-sm mt-3 font-medium">
-                        Immediate Dispatch
-                      </p>
+                      <p className="text-sm mt-3 font-medium">Immediate Dispatch</p>
                     )}
                   </div>
                 </div>
@@ -210,30 +193,35 @@ export function ReviewStep({
                 {/* Package */}
                 <div className="p-6">
                   <h4 className="flex items-center gap-2 font-medium text-sm text-muted-foreground">
-                    <Package className="size-4" /> Package ({draft.items.length}{" "}
-                    items)
+                    <Package className="size-4" /> Package ({items.length} items)
                   </h4>
                   <div className="mt-4 space-y-2">
-                    {draft.items.map((it, i) => (
+                    {items.map((it, i) => (
                       <div key={i} className="flex justify-between text-sm">
                         <span>
                           {it.quantity}x {it.name}
                         </span>
                         {it.value ? (
-                          <span className="text-muted-foreground">
-                            ₹{it.value}
-                          </span>
+                          <span className="text-muted-foreground">₹{it.value}</span>
                         ) : null}
                       </div>
                     ))}
                   </div>
+                  {(pkg.description || pkg.specialInstructions) && (
+                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                      {pkg.description && <p>Description: {pkg.description}</p>}
+                      {pkg.specialInstructions && (
+                        <p>Instructions: {pkg.specialInstructions}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Col: Pricing */}
+        {/* Right: Pricing */}
         <div className="lg:col-span-5">
           {fareLoading ? (
             <Card>
@@ -248,12 +236,12 @@ export function ReviewStep({
                 <ShieldCheck className="size-8 mx-auto mb-2 opacity-50" />
                 <p className="font-medium text-sm">{fareError}</p>
                 <p className="text-xs mt-2 opacity-80">
-                  Please check your locations and fulfillment selections.
+                  Please go back and check your locations and fulfillment selections.
                 </p>
               </CardContent>
             </Card>
           ) : fare ? (
-            <PricingTable pricing={fare} isEstimate />
+            <PricingTable pricing={fare} isEstimate={false} />
           ) : null}
         </div>
       </div>
