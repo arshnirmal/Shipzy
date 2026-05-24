@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, BookmarkPlus, ShoppingCart } from "lucide-react";
 
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useCreateOrderData } from "@/hooks/use-static-data";
 import { useCreateDraft } from "@/hooks/use-drafts";
 import { useCreateOrder, buildCreateOrderPayload } from "@/hooks/use-create-order";
+import { useTemplate } from "@/hooks/use-templates";
 
 import { AddressSearchWidget } from "@/components/drafts/address-search-widget";
 import { FulfillmentStep } from "@/components/drafts/steps/fulfillment-step";
@@ -59,12 +60,34 @@ const DEFAULT_STATE: WizardState = {
 
 export function NewOrderWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateIdParam = searchParams.get("templateId");
+  const templateId = templateIdParam ? parseInt(templateIdParam, 10) : null;
+
   const { data: staticDataResult, isLoading: staticLoading } = useCreateOrderData();
+  const { data: templateData, isLoading: templateLoading } = useTemplate(templateId);
   const createDraft  = useCreateDraft();
   const createOrder  = useCreateOrder();
 
   const [step, setStep] = useState(0);
   const [state, setState] = useState<WizardState>(DEFAULT_STATE);
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+
+  // Sync template data once
+  useEffect(() => {
+    if (templateData?.data && !templateLoaded) {
+      const t = templateData.data;
+      setState(prev => ({
+        ...prev,
+        pickup: t.pickupLocation ?? prev.pickup,
+        delivery: t.deliveryLocation ?? prev.delivery,
+        fulfillment: t.fulfillment ?? prev.fulfillment,
+        pkg: t.package ?? prev.pkg,
+        items: t.items?.length ? t.items : prev.items,
+      }));
+      setTemplateLoaded(true);
+    }
+  }, [templateData, templateLoaded]);
 
   const update = useCallback(<K extends keyof WizardState>(key: K, val: WizardState[K]) => {
     setState((prev) => ({ ...prev, [key]: val }));

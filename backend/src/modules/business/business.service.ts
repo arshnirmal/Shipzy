@@ -347,25 +347,79 @@ class BusinessService {
   // =========================================================================
 
   async bulkCreateOrders(clientId: number, requests: BulkOrderCreateRequest) {
+    const addressesService = await import("../addresses/addresses.service.js").then((m) => m.default);
     const results = [];
     let created = 0;
     let failed = 0;
 
     for (let i = 0; i < requests.orders.length; i++) {
+      const row = requests.orders[i]!;
       try {
-        const parsed = CreateOrderRequestZ.parse(requests.orders[i]);
-        const response = await ordersService.createOrder(clientId, parsed);
-        results.push({
-          index: i,
-          success: true,
-          orderId: response.order.identifiers.orderId,
+        const pickupGeo = await addressesService.forwardGeocode(row.pickup.address);
+        const deliveryGeo = await addressesService.forwardGeocode(row.delivery.address);
+
+        if (!pickupGeo || !deliveryGeo) {
+          throw new AppError("Failed to geocode address", 400);
+        }
+
+        const fare = await ordersService.calculateFare({
+          fulfillment: row.fulfillment,
+          locations: { pickup: pickupGeo, delivery: deliveryGeo },
         });
-        created++;
+
+        const orderPayload = {
+          fulfillment: row.fulfillment,
+          locations: { 
+            pickup: { ...pickupGeo, ...row.pickup }, 
+            delivery: { ...deliveryGeo, ...row.delivery } 
+          },
+          pricing: fare.pricing,
+          items: row.items ?? [],
+          package: row.package ?? { notifyRecipientSms: false },
+          schedule: {},
+        };
+
+        if (pickupGeo.confidence === "low" || pickupGeo.confidence === "medium" || 
+            deliveryGeo.confidence === "low" || deliveryGeo.confidence === "medium") {
+          // Low confidence -> save as Draft for review
+          const draftData = {
+            name: `Bulk Upload - Row ${i + 1}`,
+            fulfillment: orderPayload.fulfillment,
+            pickupLocation: orderPayload.locations.pickup,
+            deliveryLocation: orderPayload.locations.delivery,
+            items: orderPayload.items,
+            package: orderPayload.package,
+            pricing: orderPayload.pricing,
+          };
+          const draft = await businessRepository.createDraft(clientId, draftData);
+          if (!draft) throw new Error("Failed to create draft fallback");
+          
+          results.push({
+            index: i,
+            success: true,
+            isDraft: true,
+            draftId: draft.draftId,
+            error: "Saved as Draft due to low address confidence.", // Using error field loosely to pass message to UI, or we can just let UI infer from isDraft
+          });
+          created++;
+        } else {
+          // High confidence -> create Order directly
+          const parsed = CreateOrderRequestZ.parse(orderPayload);
+          const response = await ordersService.createOrder(clientId, parsed);
+          
+          results.push({
+            index: i,
+            success: true,
+            isDraft: false,
+            orderId: response.order.identifiers.orderId,
+          });
+          created++;
+        }
       } catch (err: any) {
         results.push({
           index: i,
           success: false,
-          error: err.message || "Failed to create order",
+          error: err.message || "Failed to process order",
         });
         failed++;
       }

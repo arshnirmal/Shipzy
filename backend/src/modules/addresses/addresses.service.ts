@@ -254,6 +254,57 @@ class AddressesService {
     }
   }
 
+  async forwardGeocode(addressText: string) {
+    if (!this.mapboxAccessToken) {
+      throw new AppError("Address provider is not configured", 500);
+    }
+
+    try {
+      const features = await addressesRepository.forwardGeocode({
+        query: addressText,
+        limit: 1,
+        bbox: "72.6,15.6,80.9,22.0", // Regional bias for Maharashtra
+      });
+
+      if (features.length === 0 || !features[0]) {
+        throw new ValidationError(`Could not find coordinates for address: ${addressText}`);
+      }
+
+      const feature = features[0];
+      const extracted = this._extractFeatureCoordinates(feature);
+      if (!extracted) {
+        throw new ValidationError(`Found address but no coordinates for: ${addressText}`);
+      }
+
+      const featureProperties = feature.properties as Record<string, unknown> || {};
+      const contextParsed = this._parseContext(featureProperties?.context || (feature as any).context);
+
+      const city = contextParsed.place || contextParsed.locality || undefined;
+      const state = contextParsed.region || undefined;
+      const postalCode = contextParsed.postcode || undefined;
+
+      const fullAddress = this._asString(featureProperties.full_address) || 
+                          this._asString(featureProperties.place_formatted) || 
+                          this._asString((feature as any).place_name) || 
+                          addressText;
+
+      const matchCode = featureProperties.match_code as Record<string, any> | undefined;
+      const confidence = (matchCode?.confidence as string) || "high";
+
+      return {
+        latitude: extracted.latitude,
+        longitude: extracted.longitude,
+        fullAddress,
+        city,
+        state,
+        postalCode,
+        confidence
+      };
+    } catch (error) {
+      this._handleMapboxError(error, "forward geocoding");
+    }
+  }
+
   async getDirections(
     origin: Coordinates,
     destination: Coordinates,

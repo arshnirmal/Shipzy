@@ -234,6 +234,8 @@ export type BulkOrderResultItem = {
   index: number;
   success: boolean;
   orderId?: number;
+  draftId?: number;
+  isDraft?: boolean;
   error?: string;
 };
 
@@ -251,6 +253,42 @@ export type BulkOrderResponse = {
   message: string;
   data: BulkOrderResult;
   timestamp: string;
+};
+
+export type BulkOrderRow = {
+  fulfillment: {
+    deliveryTypeId: number;
+    vehicleCategoryId: number;
+    weightTierId: number;
+    packageTypeId?: number | null;
+    paymentMethodId: number;
+  };
+  pickup: {
+    address: string;
+    contactName: string;
+    contactPhone: string;
+    building?: string;
+    floor?: string;
+    flatNumber?: string;
+    howToReach?: string;
+  };
+  delivery: {
+    address: string;
+    contactName: string;
+    contactPhone: string;
+    building?: string;
+    floor?: string;
+    flatNumber?: string;
+    howToReach?: string;
+  };
+  items?: {
+    itemName: string;
+    quantity: number;
+  }[];
+  package?: {
+    description?: string;
+    notifyRecipientSms?: boolean;
+  };
 };
 
 // ============================================================================
