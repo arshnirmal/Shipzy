@@ -73,6 +73,18 @@ const searchCache = new NodeCache({
   checkperiod: 600,
 });
 
+const geocodeCache = new NodeCache({
+  stdTTL: 86400, // 24 hours
+  maxKeys: 5000,
+  checkperiod: 3600,
+});
+
+const matrixCache = new NodeCache({
+  stdTTL: 86400, // 24 hours
+  maxKeys: 5000,
+  checkperiod: 3600,
+});
+
 class AddressesService {
   private readonly mapboxAccessToken: string;
 
@@ -259,6 +271,13 @@ class AddressesService {
       throw new AppError("Address provider is not configured", 500);
     }
 
+    const cacheKey = this._normalizeText(addressText).toLowerCase();
+    const cachedResult = geocodeCache.get<any>(cacheKey);
+    if (cachedResult) {
+      logger.info({ msg: "Geocode cache hit", address: cacheKey });
+      return cachedResult;
+    }
+
     try {
       const features = await addressesRepository.forwardGeocode({
         query: addressText,
@@ -291,7 +310,7 @@ class AddressesService {
       const matchCode = featureProperties.match_code as Record<string, any> | undefined;
       const confidence = (matchCode?.confidence as string) || "high";
 
-      return {
+      const result = {
         latitude: extracted.latitude,
         longitude: extracted.longitude,
         fullAddress,
@@ -300,6 +319,9 @@ class AddressesService {
         postalCode,
         confidence
       };
+
+      geocodeCache.set(cacheKey, result);
+      return result;
     } catch (error) {
       this._handleMapboxError(error, "forward geocoding");
     }
@@ -384,6 +406,23 @@ class AddressesService {
 
     const coordinates = `${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}`;
 
+    const rLat1 = pickup.lat.toFixed(3);
+    const rLng1 = pickup.lng.toFixed(3);
+    const rLat2 = drop.lat.toFixed(3);
+    const rLng2 = drop.lng.toFixed(3);
+    const cacheKey = `${rLat1},${rLng1}-${rLat2},${rLng2}`;
+
+    const cachedResult = matrixCache.get<{ distance: number; distanceKm: number }>(cacheKey);
+    if (cachedResult) {
+      logger.info({ msg: "Distance matrix cache hit", key: cacheKey });
+      return {
+        distance: cachedResult.distance,
+        distanceKm: cachedResult.distanceKm,
+        pickup: { latitude: pickup.lat, longitude: pickup.lng },
+        drop: { latitude: drop.lat, longitude: drop.lng },
+      };
+    }
+
     try {
       const distanceInMeters =
         await addressesRepository.distanceMatrix(coordinates);
@@ -409,6 +448,8 @@ class AddressesService {
           longitude: drop.lng,
         },
       };
+
+      matrixCache.set(cacheKey, { distance: result.distance, distanceKm: result.distanceKm });
 
       logger.info({
         msg: "Distance matrix completed",
