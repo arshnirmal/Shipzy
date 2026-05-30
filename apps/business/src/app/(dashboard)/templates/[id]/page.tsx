@@ -5,12 +5,13 @@ export const metadata = {
   description: "Edit your order template",
 };
 
-export default function EditTemplatePage({
+export default async function EditTemplatePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const templateId = parseInt(params.id, 10);
+  const { id } = await params;
+  const templateId = parseInt(id, 10);
 
   return (
     <div className="flex flex-col gap-8">
