@@ -34,7 +34,7 @@ class ProofOfDeliveryCard extends StatelessWidget {
                 width: double.infinity,
                 height: 200,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   height: 200,
                   color: theme.colorScheme.surfaceContainerHighest,
                   child: const Center(child: Icon(Icons.broken_image)),

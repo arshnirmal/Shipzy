@@ -6,7 +6,7 @@ class OrdersRepository {
   final ApiClient _apiClient;
 
   Future<List<Order>> getOrders({int page = 1, int limit = 20, String? status}) async {
-    final queryParams = {'page': page.toString(), 'limit': limit.toString(), if (status != null) 'status': status};
+    final queryParams = {'page': page.toString(), 'limit': limit.toString(), 'status': ?status};
 
     try {
       final response = await _apiClient.get('/orders', queryParameters: queryParams);

@@ -23,7 +23,7 @@ class OrderService {
     String? status, // 'active', 'completed', or null for all
   }) async {
     try {
-      final queryParams = <String, dynamic>{'page': page, 'limit': limit, if (status != null) 'status': status};
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit, 'status': ?status};
 
       final response = await _apiClient.get<Map<String, dynamic>>('/orders', queryParameters: queryParams);
 
@@ -113,8 +113,8 @@ class OrderService {
         data: {
           'feedback': {
             'rating': rating,
-            if (comment != null) 'comment': comment,
-            if (anonymous != null) 'anonymous': anonymous,
+            'comment': ?comment,
+            'anonymous': ?anonymous,
           },
         },
       );

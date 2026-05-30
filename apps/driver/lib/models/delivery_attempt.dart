@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:shipzy_driver/utils/date_utils.dart';
+import '../utils/date_utils.dart';
 
 part 'delivery_attempt.freezed.dart';
 part 'delivery_attempt.g.dart';

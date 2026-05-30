@@ -143,10 +143,10 @@ class AuthService {
       final response = await _apiClient.put<Map<String, dynamic>>(
         '/users/me',
         data: {
-          if (fullName != null) 'fullName': fullName,
-          if (email != null) 'email': email,
-          if (profilePictureUrl != null) 'profilePictureUrl': profilePictureUrl,
-          if (phoneNumber != null) 'phoneNumber': phoneNumber,
+          'fullName': ?fullName,
+          'email': ?email,
+          'profilePictureUrl': ?profilePictureUrl,
+          'phoneNumber': ?phoneNumber,
         },
       );
 

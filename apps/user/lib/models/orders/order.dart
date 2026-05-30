@@ -8,7 +8,9 @@ part 'order.g.dart';
 @freezed
 abstract class Order with _$Order {
   const factory Order({
-    @JsonKey(readValue: _readOrderId) @Default(0) int orderId,
+    @JsonKey(readValue: _readCreatedAt, fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)
+    required DateTime createdAt, @JsonKey(readValue: _readUpdatedAt, fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)
+    required DateTime updatedAt, @JsonKey(readValue: _readPickup) required OrderLocation pickup, @JsonKey(readValue: _readDelivery) required OrderLocation delivery, @JsonKey(readValue: _readPricing) required OrderFareBreakdown fareBreakdown, @JsonKey(readValue: _readOrderId) @Default(0) int orderId,
     @JsonKey(readValue: _readOrderUuid) @Default('') String orderUuid,
     @JsonKey(readValue: _readOrderNumber) @Default('') String orderNumber,
     @JsonKey(readValue: _readStatus, fromJson: _statusFromJson, toJson: _statusToJson)
@@ -22,14 +24,7 @@ abstract class Order with _$Order {
     @JsonKey(readValue: _readTotalPrice, fromJson: _doubleFromJson, toJson: _doubleToJson)
     @Default(0.0)
     double totalPrice,
-    @JsonKey(readValue: _readCreatedAt, fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)
-    required DateTime createdAt,
-    @JsonKey(readValue: _readUpdatedAt, fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)
-    required DateTime updatedAt,
-    @JsonKey(readValue: _readPickup) required OrderLocation pickup,
-    @JsonKey(readValue: _readDelivery) required OrderLocation delivery,
     @JsonKey(readValue: _readClient) OrderClient? client,
-    @JsonKey(readValue: _readPricing) required OrderFareBreakdown fareBreakdown,
     @JsonKey(readValue: _readPackageDescription) String? packageDescription,
     @JsonKey(readValue: _readPackageTypeId) int? packageTypeId,
     @JsonKey(readValue: _readWeightTierId) int? weightTierId,
