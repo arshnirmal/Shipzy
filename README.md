@@ -16,11 +16,10 @@ Shipzy is a comprehensive delivery platform that enables customers to book insta
 
 This is a **monorepo** containing:
 
-- **Backend API** (`services/backend/`) - Node.js/Fastify REST API
+- **Backend API** (`backend/`) - Node.js/Fastify REST API
 - **User App** (`apps/user/`) - Flutter mobile app for customers
 - **Driver App** (`apps/driver/`) - Flutter mobile app for couriers
 - **Business Portal** (`apps/business/`) - Next.js web app for merchants/store owners
-- **Shared Types** (`packages/shared-types/`) - TypeScript definitions
 
 ### ✨ Key Features
 
@@ -39,7 +38,7 @@ This is a **monorepo** containing:
 ### Prerequisites
 
 - **Backend**: Node.js 24.10+, PostgreSQL 14+, Firebase project
-- **Mobile Apps**: Flutter 3.0+, Android Studio/XCode
+- **Mobile Apps**: Flutter 3.35+, Android Studio/XCode
 - **Development**: Docker & Docker Compose (recommended)
 
 ### Local Development Setup
@@ -50,14 +49,14 @@ git clone https://github.com/arshnirmal/shipzy.git
 cd shipzy
 
 # 2. Setup backend
-cd services/backend
+cd backend
 cp .env.example .env
 # Edit .env with your configuration
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 
 # 3. Setup user app (in new terminal)
-cd ../../apps/user
+cd ../apps/user
 cp .env.example .env
 # Edit .env with your configuration
 flutter pub get
@@ -77,7 +76,7 @@ flutter run
 
 ## 📁 Project Structure
 
-```
+```text
 shipzy/
 ├── apps/                    # Frontend Applications
 │   ├── business/           # Merchant Next.js Web Portal
@@ -97,21 +96,14 @@ shipzy/
 │       ├── ios/         # iOS configuration
 │       ├── .env.example  # Environment variables
 │       └── pubspec.yaml  # Flutter dependencies
-├── services/               # Backend Services
-│   └── backend/           # Node.js API Server
-│       ├── src/          # Source code
-│       ├── tests/        # Test suites
-│       ├── scripts/      # Development scripts
-│       ├── .env.example  # Environment variables
-│       └── docker-compose.dev.yml
-├── packages/              # Shared Packages
-│   └── shared-types/      # TypeScript definitions
-│       └── *.types.ts    # Type definitions
-├── docs/                  # Documentation
-│   ├── api/              # API documentation
-│   ├── architecture/     # System design docs
-│   └── deployment/       # Deployment guides
-├── .github/               # CI/CD workflows
+├── backend/               # Node.js API Server
+│   ├── docs/             # Documentation (API, deployment)
+│   ├── scripts/          # Development scripts
+│   ├── src/              # Source code
+│   ├── tests/            # Test suites
+│   ├── .env.example      # Environment variables
+│   ├── docker-compose.dev.yml
+│   └── package.json
 └── README.md             # This file
 ```
 
@@ -122,24 +114,29 @@ shipzy/
 ### Backend
 
 - **Runtime**: Node.js 24.10+ with ES Modules
-- **Framework**: Fastify 4.28 (high-performance web framework)
-- **Database**: PostgreSQL 14+ with PostGIS
+- **Framework**: Fastify 5.8+ (high-performance web framework)
+- **Database**: PostgreSQL 14+ with PostGIS & Drizzle ORM
 - **Authentication**: Firebase Auth + JWT
 - **Testing**: Jest with Supertest
-- **Deployment**: Docker + Nginx
+- **Deployment**: Docker
 
-### Mobile Apps
+### Mobile Apps (User & Driver)
 
-- **Framework**: Flutter 3.0+ (Dart)
-- **State Management**: Provider/Bloc pattern
+- **Framework**: Flutter 3.35+ (Dart)
+- **State Management**: Riverpod
 - **Networking**: Dio HTTP client
 - **Maps**: Mapbox integration
 - **Notifications**: Firebase Cloud Messaging
 
-### Shared
+### Business Portal (Web)
 
-- **Types**: TypeScript definitions
-- **Linting**: ESLint (backend), Flutter analyze (apps)
+- **Framework**: Next.js 16+ (React 19)
+- **UI/Styling**: Tailwind CSS v4 + Shadcn UI
+- **State Management**: React Query (TanStack Query)
+
+### Shared Practices
+
+- **Linting**: ESLint (backend/business), Flutter analyze (apps)
 - **CI/CD**: GitHub Actions
 
 ---
@@ -150,10 +147,10 @@ shipzy/
 
 ```bash
 # Backend development
-cd services/backend
-npm run dev          # Start development server
-npm test            # Run test suite
-npm run lint        # Lint code
+cd backend
+pnpm run dev          # Start development server
+pnpm test            # Run test suite
+pnpm run lint        # Lint code
 
 # User app development
 cd apps/user
@@ -182,15 +179,16 @@ Each project has its own `.env.example` file. Copy these to `.env` and configure
 
 ### Production Deployment Options
 
-1. **Docker Compose** (Recommended)
+1. **Docker / Containers** (Recommended for self-hosting)
 
    ```bash
-   cd services/backend/infrastructure/docker
-   docker-compose -f docker-compose.prod.yml up -d
+   cd backend
+   docker build -t shipzy-backend .
+   docker run -p 3000:3000 shipzy-backend
    ```
 
 2. **Cloud Platforms**
-   - **Backend**: DigitalOcean Droplet, AWS EC2, or Vercel
+   - **Backend**: Koyeb, DigitalOcean Droplet, AWS EC2, or Vercel
    - **Mobile Apps**: Google Play Store, Apple App Store
 
 ### Infrastructure
@@ -200,7 +198,7 @@ Each project has its own `.env.example` file. Copy these to `.env` and configure
 - **CDN**: Cloudflare or AWS CloudFront
 - **Monitoring**: Application logs, error tracking
 
-> 📖 **Deployment Guide**: See [docs/deployment/production-guide.md](docs/deployment/production-guide.md)
+> 📖 **Deployment Guide**: See [backend/docs/koyeb-deployment.md](backend/docs/koyeb-deployment.md)
 
 ---
 
@@ -224,11 +222,11 @@ Each project has its own `.env.example` file. Copy these to `.env` and configure
 
 ## 📚 Documentation
 
-- [Backend API Documentation](services/backend/README.md)
+- [Backend API Documentation](backend/README.md)
 - [User App Documentation](apps/user/README.md)
 - [Driver App Documentation](apps/driver/README.md)
-- [System Architecture](docs/architecture/system-design.md)
-- [API Reference](docs/api/swagger.yaml)
+- [System Architecture & API Docs](backend/docs/api-documentation.md)
+- [API Reference](backend/docs/api/)
 
 ---
 
