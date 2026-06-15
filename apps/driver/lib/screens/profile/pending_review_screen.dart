@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/driver_kyc_submission.dart';
@@ -8,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/design_tokens.dart';
+import '../../utils/app_routes.dart';
 import '../../utils/snackbar_utils.dart';
 
 final Uri _supportUri = Uri.parse(
@@ -218,6 +220,7 @@ class _PendingReviewScaffold extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final isApproved = profile?.onboarding?.status == 'approved' || (profile?.isVerified ?? false);
+    final isRejected = profile?.onboarding?.status == 'rejected';
 
     return Scaffold(
       body: SafeArea(
@@ -284,11 +287,15 @@ class _PendingReviewScaffold extends StatelessWidget {
                                   children: [
                                     if (isApproved)
                                       const Icon(Icons.check_circle, color: Colors.greenAccent, size: 16)
+                                    else if (isRejected)
+                                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 16)
                                     else
                                       const _PulsingDot(color: Color(0xFFFFD700)),
                                     const SizedBox(width: 8),
                                     Text(
-                                      isApproved ? 'APPROVED' : 'UNDER REVIEW',
+                                      isApproved
+                                          ? 'APPROVED'
+                                          : (isRejected ? 'REVISION REQUIRED' : 'UNDER REVIEW'),
                                       style: tt.labelSmall?.copyWith(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w700,
@@ -301,7 +308,9 @@ class _PendingReviewScaffold extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              isApproved ? 'Application Approved' : 'Application submitted',
+                              isApproved
+                                  ? 'Application Approved'
+                                  : (isRejected ? 'Revision Required' : 'Application submitted'),
                               style: tt.headlineMedium?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
@@ -310,9 +319,12 @@ class _PendingReviewScaffold extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              isApproved 
+                              isApproved
                                   ? 'Your account has been verified. You can now start accepting trips.'
-                                  : 'Our team will verify your documents within 24–48 hours.',
+                                  : (isRejected
+                                      ? (profile?.onboarding?.rejectedReason ??
+                                          'Some of your uploaded documents could not be verified. Please review and re-upload.')
+                                      : 'Our team will verify your documents within 24–48 hours.'),
                               style: tt.bodyMedium?.copyWith(
                                 color: Colors.white.withValues(alpha: 0.9),
                                 height: 1.5,
@@ -361,11 +373,31 @@ class _PendingReviewScaffold extends StatelessWidget {
                             ),
                           ),
                           child: const Text(
-                            "Let's Get Started",
+                            'Let\'s Get Started',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
+                            ),
+                          ),
+                        )
+                      else if (isRejected)
+                        FilledButton(
+                          onPressed: () => context.go(AppRoutes.documentUpload),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 56),
+                            backgroundColor: cs.error,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Update Documents',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
                             ),
                           ),
                         )
@@ -577,6 +609,7 @@ class _VerificationTimeline extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
     final pending = onboarding?.status == 'pending_review';
     final approved = onboarding?.status == 'approved';
+    final rejected = onboarding?.status == 'rejected';
     final steps = <({String label, String sub, bool done, bool active})>[
       (
         label: 'Application received',
@@ -586,15 +619,19 @@ class _VerificationTimeline extends StatelessWidget {
       ),
       (
         label: 'Document review',
-        sub: approved 
-            ? 'Documents verified successfully' 
-            : (pending ? 'We are verifying your uploaded documents' : 'We will verify your documents'),
+        sub: approved
+            ? 'Documents verified successfully'
+            : (rejected
+                ? 'Revision required for documents'
+                : (pending ? 'We are verifying your uploaded documents' : 'We will verify your documents')),
         done: approved,
-        active: pending,
+        active: pending || rejected,
       ),
       (
         label: 'Background check',
-        sub: approved ? 'Background verification cleared' : 'Standard security verification',
+        sub: approved
+            ? 'Background verification cleared'
+            : (rejected ? 'Background check suspended' : 'Standard security verification'),
         done: approved,
         active: pending,
       ),
@@ -624,13 +661,17 @@ class _VerificationTimeline extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: s.done
                         ? cs.tertiary
-                        : s.active
-                        ? cs.primary
-                        : cs.surfaceContainerHighest,
+                        : (s.active && rejected && i == 1)
+                            ? cs.error
+                            : s.active
+                            ? cs.primary
+                            : cs.surfaceContainerHighest,
                     boxShadow: s.active
                         ? [
                             BoxShadow(
-                              color: cs.primary.withValues(alpha: 0.35),
+                              color: (rejected && i == 1)
+                                  ? cs.error.withValues(alpha: 0.35)
+                                  : cs.primary.withValues(alpha: 0.35),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),
@@ -639,9 +680,11 @@ class _VerificationTimeline extends StatelessWidget {
                   ),
                   child: s.done
                       ? const Icon(Icons.check, color: Colors.white, size: 14)
-                      : s.active
-                      ? const Center(child: _PulsingDot(color: Colors.white))
-                      : null,
+                      : (s.active && rejected && i == 1)
+                          ? const Icon(Icons.close, color: Colors.white, size: 14)
+                          : s.active
+                          ? const Center(child: _PulsingDot(color: Colors.white))
+                          : null,
                 ),
                 if (!isLast)
                   Container(

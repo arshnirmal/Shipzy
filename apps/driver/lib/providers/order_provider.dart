@@ -71,6 +71,7 @@ class Order extends _$Order {
         waitElapsed: false,
       ),
     );
+    _refreshAssignmentData();
   }
 
   Future<void> rejectOrder(String orderId) async {
@@ -105,6 +106,7 @@ class Order extends _$Order {
     _setState(
       state.copyWith(activeOrderId: orderId, status: OrderStatus.pickedUp),
     );
+    _refreshAssignmentData();
   }
 
   Future<void> startDropoffNavigation(String orderId) async {
@@ -120,6 +122,7 @@ class Order extends _$Order {
         status: OrderStatus.navigatingToDropoff,
       ),
     );
+    _refreshAssignmentData();
   }
 
   Future<void> arriveAtDelivery(String orderId) async {
@@ -162,6 +165,7 @@ class Order extends _$Order {
           );
       _waitTimer?.cancel();
       _setState(state.copyWith(status: OrderStatus.undeliverable));
+      _refreshAssignmentData();
     } on RetryAfterException catch (e) {
       _setState(state.copyWith(waitUntil: e.retryAfter, waitElapsed: false));
       _startWaitTimer();
@@ -172,6 +176,7 @@ class Order extends _$Order {
   Future<void> startReturn(String orderId) async {
     await ref.read(apiServiceProvider).startReturn(_parseOrderId(orderId));
     _setState(state.copyWith(status: OrderStatus.returning));
+    _refreshAssignmentData();
   }
 
   Future<void> arrivedAtOrigin(String orderId) async {
@@ -189,6 +194,7 @@ class Order extends _$Order {
         waitElapsed: false,
       ),
     );
+    _refreshAssignmentData();
   }
 
   Future<void> submitProofOfDelivery(
@@ -207,6 +213,16 @@ class Order extends _$Order {
           recipientSignatureUrl: recipientSignatureUrl,
           deliveryNotes: deliveryNotes,
         );
+    _waitTimer?.cancel();
+    _setState(
+      state.copyWith(
+        status: OrderStatus.completed,
+        activeOrderId: null,
+        waitUntil: null,
+        waitElapsed: false,
+      ),
+    );
+    _refreshAssignmentData();
   }
 
   Future<void> completeDelivery(String orderId) async {
@@ -219,16 +235,22 @@ class Order extends _$Order {
     _waitTimer?.cancel();
     _setState(
       state.copyWith(
-        status: OrderStatus.completed,
+        status: OrderStatus.delivered,
         waitUntil: null,
         waitElapsed: false,
       ),
     );
+    _refreshAssignmentData();
   }
 
   void closeActiveOrderFlow() {
     _waitTimer?.cancel();
     _setState(const OrderState());
+  }
+
+  void _refreshAssignmentData() {
+    ref.invalidate(activeOrderProvider);
+    ref.invalidate(driverProfileProvider);
   }
 
   void _setState(OrderState nextState) {

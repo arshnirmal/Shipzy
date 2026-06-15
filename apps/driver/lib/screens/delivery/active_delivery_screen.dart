@@ -50,11 +50,10 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     ref.listen<OrderState>(orderProvider, (previous, next) {
       _syncCountdownTicker(next);
 
-      // Trigger PoD sheet on both completed (fresh flow) and delivered (app-kill recovery).
+      // Trigger PoD sheet only once the backend order is delivered.
+      // Returned trips also use completed locally, but they do not need PoD.
       final justFinished =
-          (next.status == OrderStatus.completed ||
-              next.status == OrderStatus.delivered) &&
-          previous?.status != OrderStatus.completed &&
+          next.status == OrderStatus.delivered &&
           previous?.status != OrderStatus.delivered;
       if (justFinished && !_hasOpenedPodSheet) {
         _hasOpenedPodSheet = true;
@@ -72,31 +71,8 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
       appBar: AppBar(
         title: const Text('Active Delivery'),
         leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Cancel Delivery?'),
-                content: const Text(
-                  'Are you sure you want to cancel this delivery? This may affect your rating.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('No'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      context.go('/home');
-                    },
-                    child: const Text('Yes, Cancel'),
-                  ),
-                ],
-              ),
-            );
-          },
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/home'),
         ),
       ),
       body: Column(

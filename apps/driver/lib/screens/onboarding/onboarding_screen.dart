@@ -74,8 +74,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (!mounted) {
       return;
     }
-    // Hand off to router/auth flow to land on login/home/setup based on auth state.
-    context.go(AppRoutes.splash);
+    context.go(AppRoutes.login);
   }
 
   @override

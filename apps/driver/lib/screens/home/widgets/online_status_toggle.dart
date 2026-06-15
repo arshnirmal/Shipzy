@@ -11,7 +11,9 @@ class OnlineStatusToggle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(driverStatusProvider);
+    final homeState = ref.watch(driverHomeProvider);
+    final status = homeState.status;
+    final isLoading = homeState.isLoading;
     final isOnline = status != DriverStatus.offline;
 
     final theme = Theme.of(context);
@@ -19,7 +21,7 @@ class OnlineStatusToggle extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return IgnorePointer(
-      ignoring: status == DriverStatus.onDelivery,
+      ignoring: status == DriverStatus.onDelivery || isLoading,
       child: AnimatedOpacity(
         opacity: status == DriverStatus.onDelivery ? 0.0 : 1.0,
         duration: const Duration(milliseconds: 300),
@@ -53,25 +55,49 @@ class OnlineStatusToggle extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isOnline
-                        ? (isDark
-                              ? AppPalette.onlineDark
-                              : AppPalette.onlineLight)
-                        : Colors.white.withValues(alpha: 0.6),
-                  ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: isLoading
+                      ? SizedBox(
+                          key: const ValueKey('loading'),
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isOnline
+                                  ? theme.colorScheme.primary
+                                  : Colors.white,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          key: const ValueKey('dot'),
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isOnline
+                                ? (isDark
+                                      ? AppPalette.onlineDark
+                                      : AppPalette.onlineLight)
+                                : Colors.white.withValues(alpha: 0.6),
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  isOnline ? 'Go Offline' : 'Go Online',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: isOnline
-                        ? theme.colorScheme.onSurfaceVariant
-                        : Colors.white,
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  child: Text(
+                    isLoading
+                        ? (isOnline ? 'Going Offline...' : 'Going Online...')
+                        : (isOnline ? 'Go Offline' : 'Go Online'),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: isOnline
+                          ? theme.colorScheme.onSurfaceVariant
+                          : Colors.white,
+                    ),
                   ),
                 ),
               ],

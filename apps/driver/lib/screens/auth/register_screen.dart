@@ -63,7 +63,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             context,
             'Welcome to Shipzy, ${user.fullName}',
           );
-          context.go(AppRoutes.splash);
+          context.go(AppRoutes.home);
         },
         error: (message) {
           AppLogger.e('Google sign in error: $message');
@@ -115,7 +115,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             context,
             'Welcome to Shipzy, ${user.fullName}!',
           );
-          context.go(AppRoutes.splash);
+          context.go(AppRoutes.home);
         },
         error: (message) {
           AppLogger.e('Register error: $message');

@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/home_provider.dart';
 import '../providers/onboarding_gate_provider.dart';
 import '../providers/storage_provider.dart';
 import '../screens/auth/login_screen.dart';
@@ -35,25 +37,50 @@ final FutureProvider<bool> onboardingSeenProvider = FutureProvider<bool>((
 
 @riverpod
 GoRouter router(Ref ref) {
-  final authState = ref.watch(authProvider);
-  final onboardingSeenState = ref.watch(onboardingSeenProvider);
-  final driverOnboardingStatus = ref.watch(driverOnboardingStatusProvider);
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.onDispose(refreshNotifier.dispose);
+
+  ref.listen(
+    authProvider,
+    (_, __) => refreshNotifier.notify(),
+    fireImmediately: true,
+  );
+  ref.listen(
+    onboardingSeenProvider,
+    (_, __) => refreshNotifier.notify(),
+    fireImmediately: true,
+  );
+  ref.listen(
+    driverOnboardingStatusProvider,
+    (_, __) => refreshNotifier.notify(),
+    fireImmediately: true,
+  );
+  ref.listen(
+    driverProfileProvider,
+    (_, __) => refreshNotifier.notify(),
+    fireImmediately: true,
+  );
 
   return GoRouter(
     debugLogDiagnostics: true,
     initialLocation: AppRoutes.splash,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      final authState = ref.read(authProvider);
+      final onboardingSeenState = ref.read(onboardingSeenProvider);
+      final driverOnboardingStatus = ref.read(driverOnboardingStatusProvider);
 
       if (authState.isLoading ||
           onboardingSeenState.isLoading ||
           driverOnboardingStatus.isLoading) {
-        return location == AppRoutes.splash ? null : AppRoutes.splash;
+        return null;
       }
 
       if (authState.valueOrNull == null ||
           onboardingSeenState.valueOrNull == null) {
-        return location == AppRoutes.splash ? null : AppRoutes.splash;
+        // Return null to stay on the current screen if it is not splash (prevents flickering splash screen on invalidation)
+        return location == AppRoutes.splash ? null : null;
       }
 
       final hasSeenOnboarding = onboardingSeenState.value ?? false;
@@ -65,8 +92,6 @@ GoRouter router(Ref ref) {
 
       final authData = authState.value!;
       final isAuthenticated = authData is Authenticated;
-      final isNewUser = authData is Authenticated && authData.isNewUser;
-      final isVerified = authData is Authenticated && authData.user.isVerified;
 
       final isOnSplash = location == AppRoutes.splash;
       final isAuthRoute =
@@ -81,25 +106,6 @@ GoRouter router(Ref ref) {
           location == AppRoutes.earnings ||
           location == AppRoutes.profile;
 
-      final kycLocalPending =
-          driverOnboardingStatus.valueOrNull == kDriverOnboardingPendingReview;
-
-      if (isOnboardingRoute) {
-        if (!isAuthenticated) {
-          return AppRoutes.login;
-        }
-        if (isVerified) {
-          return AppRoutes.home;
-        }
-        if (kycLocalPending) {
-          return AppRoutes.pendingReview;
-        }
-        if (isNewUser) {
-          return AppRoutes.setupProfile;
-        }
-        return AppRoutes.pendingReview;
-      }
-
       if (!isAuthenticated) {
         if (isMainRoute ||
             isProfileOnboardingRoute ||
@@ -109,6 +115,15 @@ GoRouter router(Ref ref) {
         }
         return null;
       }
+
+      // User is authenticated. Let's read their profile status.
+      final profileState = ref.read(driverProfileProvider);
+      if (profileState.isLoading) {
+        return null;
+      }
+
+      final profile = profileState.valueOrNull;
+      final isVerified = profile?.isVerified ?? authData.user.isVerified;
 
       if (isVerified) {
         if (isAuthRoute ||
@@ -120,18 +135,46 @@ GoRouter router(Ref ref) {
         return null;
       }
 
-      if (kycLocalPending) {
-        if (isPendingReviewRoute) {
-          return null;
-        }
-        if (isProfileOnboardingRoute) {
+      // Check onboarding steps completed and status
+      final onboarding = profile?.onboarding;
+      final stepsCompleted = onboarding?.stepsCompleted ?? [];
+      final onboardingStatus = onboarding?.status;
+
+      final hasProfileStep = stepsCompleted.contains('profile');
+      final hasVehicleStep = stepsCompleted.contains('vehicle');
+      final hasKycStep = stepsCompleted.contains('kyc');
+
+      final kycLocalPending =
+          driverOnboardingStatus.valueOrNull == kDriverOnboardingPendingReview;
+
+      if (isOnboardingRoute) {
+        if (kycLocalPending || onboardingStatus == 'pending_review' || onboardingStatus == 'rejected') {
           return AppRoutes.pendingReview;
         }
-        return AppRoutes.pendingReview;
+        if (!hasProfileStep) {
+          return AppRoutes.setupProfile;
+        }
+        return AppRoutes.documentUpload;
       }
 
-      if (isNewUser) {
-        return isProfileOnboardingRoute ? null : AppRoutes.setupProfile;
+      if (kycLocalPending || onboardingStatus == 'pending_review' || onboardingStatus == 'rejected') {
+        if (location == AppRoutes.documentUpload) {
+          // Allow navigating to document upload from pending review screen if status is rejected
+          return onboardingStatus == 'rejected' ? null : AppRoutes.pendingReview;
+        }
+        return isPendingReviewRoute ? null : AppRoutes.pendingReview;
+      }
+
+      if (!hasProfileStep) {
+        return isProfileOnboardingRoute && location == AppRoutes.setupProfile
+            ? null
+            : AppRoutes.setupProfile;
+      }
+
+      if (!hasVehicleStep || !hasKycStep) {
+        return isProfileOnboardingRoute && location == AppRoutes.documentUpload
+            ? null
+            : AppRoutes.documentUpload;
       }
 
       if (isProfileOnboardingRoute || isPendingReviewRoute) {
@@ -210,9 +253,7 @@ GoRouter router(Ref ref) {
                     path: ':orderId',
                     name: 'tripDetail',
                     builder: (context, state) {
-                      final id = int.parse(
-                        state.pathParameters['orderId']!,
-                      );
+                      final id = int.parse(state.pathParameters['orderId']!);
                       return TripDetailScreen(orderId: id);
                     },
                   ),
@@ -242,4 +283,8 @@ GoRouter router(Ref ref) {
       ),
     ],
   );
+}
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void notify() => notifyListeners();
 }
