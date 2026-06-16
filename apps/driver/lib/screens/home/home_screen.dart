@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,12 @@ import 'widgets/driver_home_header.dart';
 import 'widgets/incoming_request_card.dart';
 import 'widgets/online_status_toggle.dart';
 
+enum LocationErrorType {
+  servicesDisabled,
+  permissionDenied,
+  permissionPermanentlyDenied,
+}
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -22,18 +29,88 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   mapbox.MapboxMap? _mapboxMap;
   mapbox.PointAnnotationManager? _pointAnnotationManager;
   geo.Position? _currentLocation;
   Brightness? _lastBrightness;
-  // Guards camera refits: only fires when trip state changes, not every rebuild.
-  bool? _prevHasActiveTrip;
+  // Guards camera refits and marker updates: only fires on state transitions.
+  int? _prevCardState;
+
+  LocationErrorType? _locationError;
+  bool _isCheckingLocation = false;
 
   @override
   void initState() {
     super.initState();
-    _initLocation();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_checkLocationStatus());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_checkLocationStatus());
+    }
+  }
+
+  Future<void> _checkLocationStatus() async {
+    if (_isCheckingLocation) {
+      return;
+    }
+    setState(() => _isCheckingLocation = true);
+
+    try {
+      final servicesEnabled = await geo.Geolocator.isLocationServiceEnabled();
+      if (!servicesEnabled) {
+        if (mounted) {
+          setState(() {
+            _locationError = LocationErrorType.servicesDisabled;
+            _isCheckingLocation = false;
+          });
+        }
+        return;
+      }
+
+      final permission = await geo.Geolocator.checkPermission();
+      if (permission == geo.LocationPermission.denied) {
+        if (mounted) {
+          setState(() {
+            _locationError = LocationErrorType.permissionDenied;
+            _isCheckingLocation = false;
+          });
+        }
+        return;
+      }
+
+      if (permission == geo.LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _locationError = LocationErrorType.permissionPermanentlyDenied;
+            _isCheckingLocation = false;
+          });
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _locationError = null;
+          _isCheckingLocation = false;
+        });
+        unawaited(_initLocation());
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isCheckingLocation = false);
+      }
+    }
   }
 
   Future<void> _initLocation() async {
@@ -136,20 +213,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final showToggle = !hasActiveTrip && !hasIncomingRequest;
     final showBottomCard = hasIncomingRequest || hasActiveTrip;
 
-    // Only refit camera when trip state transitions, not on every rebuild.
-    if (_prevHasActiveTrip != hasActiveTrip) {
-      _prevHasActiveTrip = hasActiveTrip;
+    final currentCardState = hasActiveTrip ? 2 : (hasIncomingRequest ? 1 : 0);
+
+    // Only refit camera and update markers when card state transitions, not on every rebuild.
+    if (_prevCardState != currentCardState) {
+      _prevCardState = currentCardState;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _mapboxMap == null) {
           return;
         }
-        if (hasActiveTrip) {
-          _fitCameraToOrder();
+        unawaited(_updateMarkers());
+        if (currentCardState > 0) {
+          unawaited(_fitCameraToOrder());
         } else {
           _updateCamera();
         }
       });
     }
+
+    // Reactively refresh markers if the active order status changes within state 2
+    ref.listen(activeOrderProvider, (previous, next) {
+      if (next.hasValue && _prevCardState == 2) {
+        unawaited(_updateMarkers());
+      }
+    });
+
+    // Reactively refresh markers if the incoming request list changes within state 1
+    ref.listen(nearbyOrdersProvider, (previous, next) {
+      if (next.hasValue && _prevCardState == 1) {
+        unawaited(_updateMarkers());
+      }
+    });
 
     // Estimate height for FAB offset above bottom card
     final fabBottomOffset = hasActiveTrip
@@ -157,14 +251,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         : hasIncomingRequest
             ? 348.0
             : 72.0;
-
-    ref.listen(activeOrderProvider, (previous, next) {
-      if (next.hasValue && next.value != null) {
-        _updateMarkers();
-      } else if (next.value == null) {
-        _pointAnnotationManager?.deleteAll();
-      }
-    });
 
     return Column(
       children: [
@@ -244,7 +330,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
 
               // Offline dim overlay
-              if (status == DriverStatus.offline) const _OfflineOverlay(),
+              if (status == DriverStatus.offline && _locationError == null) const _OfflineOverlay(),
 
               // Bottom controls
               Positioned(
@@ -323,6 +409,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ),
+
+              // Location error overlay blocks all interactions
+              if (_locationError != null)
+                _LocationErrorOverlay(
+                  errorType: _locationError!,
+                  onResolve: () async {
+                    if (_locationError == LocationErrorType.servicesDisabled) {
+                      await geo.Geolocator.openLocationSettings();
+                    } else if (_locationError == LocationErrorType.permissionDenied) {
+                      await geo.Geolocator.requestPermission();
+                      unawaited(_checkLocationStatus());
+                    } else if (_locationError == LocationErrorType.permissionPermanentlyDenied) {
+                      await geo.Geolocator.openAppSettings();
+                    }
+                  },
+                ),
             ],
           ),
         ),
@@ -338,19 +440,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     await _pointAnnotationManager?.deleteAll();
 
     final activeOrder = ref.read(activeOrderProvider).valueOrNull;
-    if (activeOrder == null) {
-      return;
+    final nearbyOrders = ref.read(nearbyOrdersProvider).valueOrNull ?? [];
+
+    final hasActiveTrip = activeOrder != null;
+    final hasIncomingRequest = !hasActiveTrip && nearbyOrders.isNotEmpty;
+
+    mapbox.Point? pickupPoint;
+    mapbox.Point? deliveryPoint;
+
+    if (hasActiveTrip) {
+      final pickup = activeOrder.routing.pickup;
+      final delivery = activeOrder.routing.delivery;
+      if (pickup != null) {
+        pickupPoint = mapbox.Point(
+          coordinates: mapbox.Position(pickup.longitude, pickup.latitude),
+        );
+      }
+      if (delivery != null) {
+        deliveryPoint = mapbox.Point(
+          coordinates: mapbox.Position(delivery.longitude, delivery.latitude),
+        );
+      }
+    } else if (hasIncomingRequest) {
+      final incoming = nearbyOrders.first.order;
+      final pickup = incoming.locations.pickup;
+      final delivery = incoming.locations.delivery;
+      pickupPoint = mapbox.Point(
+        coordinates: mapbox.Position(pickup.longitude, pickup.latitude),
+      );
+      deliveryPoint = mapbox.Point(
+        coordinates: mapbox.Position(delivery.longitude, delivery.latitude),
+      );
     }
 
-    final pickup = activeOrder.routing.pickup;
-    final delivery = activeOrder.routing.delivery;
-
     final annotations = <mapbox.PointAnnotationOptions>[
-      if (pickup != null)
+      if (pickupPoint != null)
         mapbox.PointAnnotationOptions(
-          geometry: mapbox.Point(
-            coordinates: mapbox.Position(pickup.longitude, pickup.latitude),
-          ),
+          geometry: pickupPoint,
           textField: 'Pickup',
           textColor:
               (isDark ? AppPalette.darkPrimary : AppPalette.lightPrimary)
@@ -358,14 +484,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           textSize: 12,
           textOffset: [0, 2],
         ),
-      if (delivery != null)
+      if (deliveryPoint != null)
         mapbox.PointAnnotationOptions(
-          geometry: mapbox.Point(
-            coordinates: mapbox.Position(
-              delivery.longitude,
-              delivery.latitude,
-            ),
-          ),
+          geometry: deliveryPoint,
           textField: 'Delivery',
           textColor:
               (isDark ? AppPalette.darkTertiary : AppPalette.lightTertiary)
@@ -386,24 +507,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final activeOrder = ref.read(activeOrderProvider).valueOrNull;
-    if (activeOrder == null) {
-      return;
+    final nearbyOrders = ref.read(nearbyOrdersProvider).valueOrNull ?? [];
+
+    final hasActiveTrip = activeOrder != null;
+    final hasIncomingRequest = !hasActiveTrip && nearbyOrders.isNotEmpty;
+
+    double? pickupLat;
+    double? pickupLng;
+    double? deliveryLat;
+    double? deliveryLng;
+
+    if (hasActiveTrip) {
+      final pickup = activeOrder.routing.pickup;
+      final delivery = activeOrder.routing.delivery;
+      pickupLat = pickup?.latitude;
+      pickupLng = pickup?.longitude;
+      deliveryLat = delivery?.latitude;
+      deliveryLng = delivery?.longitude;
+    } else if (hasIncomingRequest) {
+      final incoming = nearbyOrders.first.order;
+      pickupLat = incoming.locations.pickup.latitude;
+      pickupLng = incoming.locations.pickup.longitude;
+      deliveryLat = incoming.locations.delivery.latitude;
+      deliveryLng = incoming.locations.delivery.longitude;
     }
 
-    final pickup = activeOrder.routing.pickup;
-    final delivery = activeOrder.routing.delivery;
-
     final points = <mapbox.Point>[
-      if (pickup != null)
+      if (pickupLat != null && pickupLng != null)
         mapbox.Point(
-          coordinates: mapbox.Position(pickup.longitude, pickup.latitude),
+          coordinates: mapbox.Position(pickupLng, pickupLat),
         ),
-      if (delivery != null)
+      if (deliveryLat != null && deliveryLng != null)
         mapbox.Point(
-          coordinates: mapbox.Position(
-            delivery.longitude,
-            delivery.latitude,
-          ),
+          coordinates: mapbox.Position(deliveryLng, deliveryLat),
         ),
       if (_currentLocation != null)
         mapbox.Point(
@@ -421,7 +557,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final camera = await _mapboxMap?.cameraForCoordinatesPadding(
       points,
       mapbox.CameraOptions(),
-      mapbox.MbxEdgeInsets(top: 60, left: 40, bottom: 320, right: 40),
+      mapbox.MbxEdgeInsets(top: 60, left: 40, bottom: 340, right: 40),
       null,
       null,
     );
@@ -528,6 +664,177 @@ class _SearchingPill extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Location Error Overlay ──────────────────────────────────────────
+
+class _LocationErrorOverlay extends StatelessWidget {
+  const _LocationErrorOverlay({
+    required this.errorType,
+    required this.onResolve,
+  });
+
+  final LocationErrorType errorType;
+  final VoidCallback onResolve;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final String title;
+    final String description;
+    final String actionText;
+    final IconData icon;
+    final List<Color> gradientColors;
+
+    switch (errorType) {
+      case LocationErrorType.servicesDisabled:
+        title = 'Location Services Disabled';
+        description = 'Your device location services are turned off. Please enable them to view and receive delivery orders near you.';
+        actionText = 'Enable Location';
+        icon = Icons.location_off_rounded;
+        gradientColors = isDark
+            ? [AppPalette.darkError, const Color(0xFFE05555)]
+            : [AppPalette.lightError, const Color(0xFFE05555)];
+        break;
+      case LocationErrorType.permissionDenied:
+        title = 'Location Permission Required';
+        description = 'Shipzy Driver requires location permissions to appear online, calculate delivery routes, and assign nearby trips.';
+        actionText = 'Grant Permission';
+        icon = Icons.location_searching_rounded;
+        gradientColors = isDark
+            ? [AppPalette.darkPrimary, const Color(0xFF4776E6)]
+            : [AppPalette.lightPrimary, const Color(0xFF4776E6)];
+        break;
+      case LocationErrorType.permissionPermanentlyDenied:
+        title = 'Location Access Denied';
+        description = 'Location access is permanently denied. To continue using the app, please open App Settings and enable location permissions.';
+        actionText = 'Open App Settings';
+        icon = Icons.gpp_bad_rounded;
+        gradientColors = isDark
+            ? [AppPalette.darkPrimary, const Color(0xFF4776E6)]
+            : [AppPalette.lightPrimary, const Color(0xFF4776E6)];
+        break;
+    }
+
+    return Positioned.fill(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.75),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          alignment: Alignment.center,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 340),
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: gradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradientColors.first.withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: gradientColors.first.withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onResolve,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: Text(
+                            actionText,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

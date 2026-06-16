@@ -1,3 +1,4 @@
+import { ElementType } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAnimatedCounter } from "@/hooks/use-animated-counter";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ type KPICardProps = {
     readonly value: number;
     readonly isPositive: boolean;
   };
+  readonly icon?: ElementType;
   readonly isLoading?: boolean;
   readonly className?: string;
 };
@@ -25,6 +27,7 @@ export function KPICard({
   subValue,
   subLabel,
   trend,
+  icon: Icon,
   isLoading = false,
   className,
 }: KPICardProps) {
@@ -32,9 +35,14 @@ export function KPICard({
   const displayValue = `${prefix}${animatedValue.toLocaleString()}${suffix}`;
 
   return (
-    <Card className={cn("overflow-hidden transition-all hover:shadow-[var(--shadow-ambient-md)]", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+    <Card className={cn("overflow-hidden transition-all hover:shadow-[var(--shadow-ambient-md)] bg-card border-outline-variant/30", className)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          {Icon && (
+            <div className="flex items-center justify-center size-8 rounded-full bg-primary/10 text-primary">
+              <Icon className="size-4" />
+            </div>
+          )}
           {title}
         </CardTitle>
         {trend && (

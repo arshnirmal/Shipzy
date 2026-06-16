@@ -17,7 +17,11 @@ type FulfillmentStepProps = {
 };
 
 export function FulfillmentStep({ data, value, onChange }: FulfillmentStepProps) {
-  const { deliveryTypes, vehicleCategories, paymentMethods } = data;
+  const { 
+    deliveryTypes = [], 
+    vehicleCategories = [], 
+    paymentMethods = [] 
+  } = data || {};
 
   const updateField = (field: keyof DraftFulfillment, newVal: number) => {
     onChange({ ...value, [field]: newVal });

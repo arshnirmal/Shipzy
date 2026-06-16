@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../models/active_order.dart';
+import '../../../models/order_address.dart';
 import '../../../models/order_types.dart';
 import '../../../providers/home_provider.dart';
 import '../../../theme/app_palette.dart';
 import '../../../theme/app_theme_extension.dart';
+import '../../../utils/app_routes.dart';
 
 class ActiveTripCard extends ConsumerWidget {
   const ActiveTripCard({super.key});
@@ -31,6 +35,71 @@ class ActiveTripCard extends ConsumerWidget {
     }
   }
 
+  _TripCardPhase _phaseFor(ActiveAssignment order) {
+    switch (order.assignmentStatus.order) {
+      case AssignmentOrderStatus.accepted:
+        return _TripCardPhase(
+          stepLabel: 'HEAD TO PICKUP',
+          actionLabel: 'Continue Pickup',
+          actionIcon: Icons.route_outlined,
+          address: order.routing.pickup,
+          isPickupPhase: true,
+        );
+      case AssignmentOrderStatus.pickedUp:
+        return _TripCardPhase(
+          stepLabel: 'READY FOR DROPOFF',
+          actionLabel: 'Start Drop-off',
+          actionIcon: Icons.navigation_rounded,
+          address: order.routing.delivery,
+        );
+      case AssignmentOrderStatus.inTransit:
+        return _TripCardPhase(
+          stepLabel: 'HEAD TO DROP-OFF',
+          actionLabel: 'Continue Delivery',
+          actionIcon: Icons.location_on_outlined,
+          address: order.routing.delivery,
+        );
+      case AssignmentOrderStatus.undeliverable:
+        return _TripCardPhase(
+          stepLabel: 'UNDELIVERABLE',
+          actionLabel: 'Start Return',
+          actionIcon: Icons.assignment_return_outlined,
+          address: order.routing.pickup,
+          isExceptionPhase: true,
+        );
+      case AssignmentOrderStatus.returning:
+        return _TripCardPhase(
+          stepLabel: 'RETURN TO SENDER',
+          actionLabel: 'Continue Return',
+          actionIcon: Icons.u_turn_left_rounded,
+          address: order.routing.pickup,
+          isExceptionPhase: true,
+        );
+      case AssignmentOrderStatus.returned:
+        return _TripCardPhase(
+          stepLabel: 'RETURNED',
+          actionLabel: 'Review Return',
+          actionIcon: Icons.check_circle_outline,
+          address: order.routing.pickup,
+          isExceptionPhase: true,
+        );
+      case AssignmentOrderStatus.delivered:
+        return _TripCardPhase(
+          stepLabel: 'DELIVERED',
+          actionLabel: 'Add Proof',
+          actionIcon: Icons.fact_check_outlined,
+          address: order.routing.delivery,
+        );
+      default:
+        return _TripCardPhase(
+          stepLabel: 'ACTIVE TRIP',
+          actionLabel: 'Open Trip',
+          actionIcon: Icons.open_in_new_rounded,
+          address: order.routing.delivery ?? order.routing.pickup,
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeOrderAsync = ref.watch(activeOrderProvider);
@@ -43,32 +112,22 @@ class ActiveTripCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final assignmentStatus = order.assignmentStatus.order;
-    final isEnRouteToPickup = assignmentStatus == AssignmentOrderStatus.accepted;
-    final hasArrivedAtPickup =
-        order.deliveryAttempt?.arrivedAt != null && isEnRouteToPickup;
-    final isPickedUp =
-        assignmentStatus == AssignmentOrderStatus.pickedUp ||
-        assignmentStatus == AssignmentOrderStatus.inTransit;
-    // TODO(backend): DeliveryAttempt.arrivedAt is a single field shared by both
-    // pickup and drop-off arrival events. If the backend does not clear/replace
-    // this field when status transitions to picked_up, hasArrivedAtDelivery will
-    // be true immediately (using the stale pickup timestamp), skipping the
-    // "Arrived at Drop-off" step. Confirm backend resets arrivedAt on pick-up,
-    // or add a separate deliveryArrivedAt field to DeliveryAttempt.
-    final hasArrivedAtDelivery =
-        order.deliveryAttempt?.arrivedAt != null && isPickedUp;
-
-    final pickup = order.routing.pickup;
-    final dropoff = order.routing.delivery;
-    final targetAddress = isEnRouteToPickup ? pickup : dropoff;
+    final phase = _phaseFor(order);
+    final targetAddress = phase.address;
 
     final targetLat = targetAddress?.latitude ?? 0.0;
     final targetLng = targetAddress?.longitude ?? 0.0;
 
-    // Gradient: indigo for pickup phase, red for drop phase
-    final barGradient = isEnRouteToPickup
+    final barGradient = phase.isPickupPhase
         ? (themeExt?.primaryGradient ?? AppPalette.primaryGradientLight)
+        : phase.isExceptionPhase
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [AppPalette.darkTertiary, const Color(0xFF2E7D62)]
+                : [AppPalette.lightTertiary, const Color(0xFF2E7D62)],
+          )
         : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -76,51 +135,6 @@ class ActiveTripCard extends ConsumerWidget {
                 ? [AppPalette.darkError, const Color(0xFFE05555)]
                 : [AppPalette.lightError, const Color(0xFFE05555)],
           );
-
-    // Button label / icon / action based on phase + arrival state
-    final String buttonLabel;
-    final IconData buttonIcon;
-    final VoidCallback onButtonPressed;
-
-    if (isEnRouteToPickup) {
-      if (hasArrivedAtPickup) {
-        buttonLabel = 'Pick Up Package';
-        buttonIcon = Icons.inventory_2_outlined;
-        onButtonPressed = () =>
-            ref.read(driverHomeProvider.notifier).updateOrderStatus(
-              order.assignment.orderId,
-              AssignmentOrderStatus.pickedUp,
-            );
-      } else {
-        buttonLabel = 'Arrived at Pickup';
-        buttonIcon = Icons.storefront_outlined;
-        onButtonPressed = () =>
-            ref.read(driverHomeProvider.notifier).arriveAtLocation(
-              order.assignment.orderId,
-              targetLat,
-              targetLng,
-            );
-      }
-    } else {
-      if (hasArrivedAtDelivery) {
-        buttonLabel = 'Complete Delivery';
-        buttonIcon = Icons.check_circle_outline;
-        onButtonPressed = () =>
-            ref.read(driverHomeProvider.notifier).updateOrderStatus(
-              order.assignment.orderId,
-              AssignmentOrderStatus.delivered,
-            );
-      } else {
-        buttonLabel = 'Arrived at Drop-off';
-        buttonIcon = Icons.location_on_outlined;
-        onButtonPressed = () =>
-            ref.read(driverHomeProvider.notifier).arriveAtLocation(
-              order.assignment.orderId,
-              targetLat,
-              targetLng,
-            );
-      }
-    }
 
     final contactName = targetAddress?.contactName ?? 'Customer';
     final contactPhone = targetAddress?.contactPhone ?? '';
@@ -134,11 +148,15 @@ class ActiveTripCard extends ConsumerWidget {
     final orderNumber =
         order.assignment.orderNumber ?? 'ORD-${order.assignment.orderId}';
 
-    final accentColor = isEnRouteToPickup
+    final accentColor = phase.isPickupPhase
         ? (isDark ? AppPalette.darkPrimary : AppPalette.lightPrimary)
+        : phase.isExceptionPhase
+        ? (isDark ? AppPalette.darkTertiary : AppPalette.lightTertiary)
         : (isDark ? AppPalette.darkError : AppPalette.lightError);
-    final accentBgColor = isEnRouteToPickup
+    final accentBgColor = phase.isPickupPhase
         ? theme.colorScheme.primaryContainer
+        : phase.isExceptionPhase
+        ? theme.colorScheme.tertiaryContainer
         : theme.colorScheme.errorContainer;
 
     return Container(
@@ -160,8 +178,7 @@ class ActiveTripCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _TopBar(
-            stepLabel:
-                isEnRouteToPickup ? 'HEAD TO PICKUP' : 'HEAD TO DROP-OFF',
+            stepLabel: phase.stepLabel,
             areaName: areaName,
             address: fullAddress,
             gradient: barGradient,
@@ -195,10 +212,14 @@ class ActiveTripCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 14),
                 _TripActionButton(
-                  label: buttonLabel,
-                  icon: buttonIcon,
+                  label: phase.actionLabel,
+                  icon: phase.actionIcon,
                   gradient: barGradient,
-                  onPressed: onButtonPressed,
+                  onPressed: () => context.push(
+                    AppRoutes.activeDeliveryPath(
+                      order.assignment.orderId.toString(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -207,6 +228,24 @@ class ActiveTripCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _TripCardPhase {
+  const _TripCardPhase({
+    required this.stepLabel,
+    required this.actionLabel,
+    required this.actionIcon,
+    required this.address,
+    this.isPickupPhase = false,
+    this.isExceptionPhase = false,
+  });
+
+  final String stepLabel;
+  final String actionLabel;
+  final IconData actionIcon;
+  final OrderAddress? address;
+  final bool isPickupPhase;
+  final bool isExceptionPhase;
 }
 
 // ── Gradient top bar ──────────────────────────────────────────────
@@ -275,8 +314,7 @@ class _TopBar extends StatelessWidget {
           GestureDetector(
             onTap: onNavigate,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
@@ -356,11 +394,7 @@ class _OrderInfoRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: Icon(
-            Icons.inventory_2_outlined,
-            color: accentColor,
-            size: 16,
-          ),
+          child: Icon(Icons.inventory_2_outlined, color: accentColor, size: 16),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -439,11 +473,7 @@ class _CustomerRow extends StatelessWidget {
                   : null,
             ),
             alignment: Alignment.center,
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 16,
-            ),
+            child: const Icon(Icons.person, color: Colors.white, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -482,10 +512,11 @@ class _CustomerRow extends StatelessWidget {
                       : AppPalette.lightTertiary,
                   boxShadow: [
                     BoxShadow(
-                      color: (isDark
-                              ? AppPalette.darkTertiary
-                              : AppPalette.lightTertiary)
-                          .withValues(alpha: 0.35),
+                      color:
+                          (isDark
+                                  ? AppPalette.darkTertiary
+                                  : AppPalette.lightTertiary)
+                              .withValues(alpha: 0.35),
                       blurRadius: 10,
                       offset: const Offset(0, 3),
                     ),

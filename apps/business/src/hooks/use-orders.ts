@@ -100,7 +100,7 @@ export async function downloadOrdersCsv(filters: Partial<OrderFilters>): Promise
 export function useBulkCreateOrders() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (orders: unknown[]) =>
+    mutationFn: (orders: import("@/types/business").BulkOrderRow[]) =>
       apiRequest<BulkOrderResponse>("/business/orders/bulk", {
         method: "POST",
         body: JSON.stringify({ orders }),

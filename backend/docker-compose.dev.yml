@@ -4,6 +4,7 @@ services:
   # ============================================
   postgres:
     image: postgis/postgis:17-3.6-alpine
+    platform: linux/amd64
     container_name: shipzy-postgres-dev
     restart: unless-stopped
     environment:
@@ -59,7 +60,7 @@ services:
     working_dir: /app
     restart: unless-stopped
     volumes:
-      - .:/app:ro
+      - .:/app:cached
       - /app/node_modules
     environment:
       NODE_ENV: development
@@ -123,6 +124,7 @@ services:
   # ============================================
   ngrok:
     image: ngrok/ngrok:latest
+    platform: linux/amd64
     container_name: shipzy-ngrok-dev
     restart: unless-stopped
     environment:

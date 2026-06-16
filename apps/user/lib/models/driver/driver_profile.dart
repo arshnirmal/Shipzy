@@ -2,9 +2,9 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'vehicle.dart';
 import 'earnings.dart';
 import 'rating.dart';
+import 'vehicle.dart';
 
 part 'driver_profile.freezed.dart';
 part 'driver_profile.g.dart';

@@ -6,9 +6,7 @@ class DateUtils {
   static const Duration istOffset = Duration(hours: 5, minutes: 30);
 
   /// Converts a UTC DateTime to IST.
-  static DateTime toIst(DateTime utcDateTime) {
-    return utcDateTime.toUtc().add(istOffset);
-  }
+  static DateTime toIst(DateTime utcDateTime) => utcDateTime.toUtc().add(istOffset);
 
   /// Parses a string (usually ISO UTC) and returns a DateTime in IST.
   static DateTime? parseIst(String? dateString) {
@@ -59,6 +57,14 @@ class NullableIstDateTimeConverter implements JsonConverter<DateTime?, String?> 
     return object.subtract(DateUtils.istOffset).toUtc().toIso8601String();
   }
 }
+
+DateTime istDateTimeFromJson(String json) => const IstDateTimeConverter().fromJson(json);
+
+String istDateTimeToJson(DateTime value) => const IstDateTimeConverter().toJson(value);
+
+DateTime? nullableIstDateTimeFromJson(String? json) => const NullableIstDateTimeConverter().fromJson(json);
+
+String? nullableIstDateTimeToJson(DateTime? value) => const NullableIstDateTimeConverter().toJson(value);
 
 extension DateTimeIstX on DateTime {
   /// Returns a new DateTime instance adjusted to IST (+5:30).

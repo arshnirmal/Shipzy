@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import { OrderDetailView, OrderDetailSkeleton } from "@/components/orders/order-detail-view";
 import { ErrorBoundary } from "@/components/shared/error-boundary";

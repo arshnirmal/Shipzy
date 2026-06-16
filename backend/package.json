@@ -104,6 +104,10 @@
     "pnpm": ">=10.0.0"
   },
   "pnpm": {
+    "supportedArchitectures": {
+      "os": ["current", "linux", "darwin"],
+      "cpu": ["current", "x64", "arm64"]
+    },
     "onlyBuiltDependencies": [
       "@firebase/util",
       "bcrypt",

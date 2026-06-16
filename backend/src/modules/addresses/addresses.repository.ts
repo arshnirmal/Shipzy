@@ -102,6 +102,29 @@ class AddressesRepository {
     return response.data?.features ?? [];
   }
 
+  async forwardGeocode(params: {
+    query: string;
+    limit?: number;
+    language?: string;
+    bbox?: string;
+  }): Promise<MapboxFeatureRaw[]> {
+    const queryParams: Record<string, any> = {
+      q: params.query,
+      access_token: this.mapboxAccessToken,
+      limit: params.limit || 1,
+      language: params.language || "en",
+    };
+    if (params.bbox) {
+      queryParams.bbox = params.bbox;
+    }
+    
+    const response = await this.client.get("/search/geocode/v6/forward", {
+      params: queryParams,
+    });
+
+    return response.data?.features ?? [];
+  }
+
   async directions(
     profile: "driving" | "walking" | "cycling",
     coords: string,

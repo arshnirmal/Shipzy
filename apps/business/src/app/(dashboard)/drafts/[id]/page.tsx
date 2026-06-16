@@ -10,8 +10,11 @@ export default async function DraftEditorPage({ params }: DraftEditorPageProps) 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Draft Editor</h1>
-        <p className="text-muted-foreground">Complete the missing details to submit this order.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Edit Draft</h1>
+        <p className="text-muted-foreground">
+          Continue editing this saved draft. Use <span className="font-medium">Save Draft</span> to persist
+          changes, or <span className="font-medium">Submit Order</span> on the Review step to convert it to a live order.
+        </p>
       </div>
       
       <DraftEditor draftId={Number.parseInt(id, 10)} />

@@ -73,6 +73,18 @@ const searchCache = new NodeCache({
   checkperiod: 600,
 });
 
+const geocodeCache = new NodeCache({
+  stdTTL: 86400, // 24 hours
+  maxKeys: 5000,
+  checkperiod: 3600,
+});
+
+const matrixCache = new NodeCache({
+  stdTTL: 86400, // 24 hours
+  maxKeys: 5000,
+  checkperiod: 3600,
+});
+
 class AddressesService {
   private readonly mapboxAccessToken: string;
 
@@ -254,6 +266,67 @@ class AddressesService {
     }
   }
 
+  async forwardGeocode(addressText: string) {
+    if (!this.mapboxAccessToken) {
+      throw new AppError("Address provider is not configured", 500);
+    }
+
+    const cacheKey = this._normalizeText(addressText).toLowerCase();
+    const cachedResult = geocodeCache.get<any>(cacheKey);
+    if (cachedResult) {
+      logger.info({ msg: "Geocode cache hit", address: cacheKey });
+      return cachedResult;
+    }
+
+    try {
+      const features = await addressesRepository.forwardGeocode({
+        query: addressText,
+        limit: 1,
+        bbox: "72.6,15.6,80.9,22.0", // Regional bias for Maharashtra
+      });
+
+      if (features.length === 0 || !features[0]) {
+        throw new ValidationError(`Could not find coordinates for address: ${addressText}`);
+      }
+
+      const feature = features[0];
+      const extracted = this._extractFeatureCoordinates(feature);
+      if (!extracted) {
+        throw new ValidationError(`Found address but no coordinates for: ${addressText}`);
+      }
+
+      const featureProperties = feature.properties as Record<string, unknown> || {};
+      const contextParsed = this._parseContext(featureProperties?.context || (feature as any).context);
+
+      const city = contextParsed.place || contextParsed.locality || undefined;
+      const state = contextParsed.region || undefined;
+      const postalCode = contextParsed.postcode || undefined;
+
+      const fullAddress = this._asString(featureProperties.full_address) || 
+                          this._asString(featureProperties.place_formatted) || 
+                          this._asString((feature as any).place_name) || 
+                          addressText;
+
+      const matchCode = featureProperties.match_code as Record<string, any> | undefined;
+      const confidence = (matchCode?.confidence as string) || "high";
+
+      const result = {
+        latitude: extracted.latitude,
+        longitude: extracted.longitude,
+        fullAddress,
+        city,
+        state,
+        postalCode,
+        confidence
+      };
+
+      geocodeCache.set(cacheKey, result);
+      return result;
+    } catch (error) {
+      this._handleMapboxError(error, "forward geocoding");
+    }
+  }
+
   async getDirections(
     origin: Coordinates,
     destination: Coordinates,
@@ -333,6 +406,23 @@ class AddressesService {
 
     const coordinates = `${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}`;
 
+    const rLat1 = pickup.lat.toFixed(3);
+    const rLng1 = pickup.lng.toFixed(3);
+    const rLat2 = drop.lat.toFixed(3);
+    const rLng2 = drop.lng.toFixed(3);
+    const cacheKey = `${rLat1},${rLng1}-${rLat2},${rLng2}`;
+
+    const cachedResult = matrixCache.get<{ distance: number; distanceKm: number }>(cacheKey);
+    if (cachedResult) {
+      logger.info({ msg: "Distance matrix cache hit", key: cacheKey });
+      return {
+        distance: cachedResult.distance,
+        distanceKm: cachedResult.distanceKm,
+        pickup: { latitude: pickup.lat, longitude: pickup.lng },
+        drop: { latitude: drop.lat, longitude: drop.lng },
+      };
+    }
+
     try {
       const distanceInMeters =
         await addressesRepository.distanceMatrix(coordinates);
@@ -358,6 +448,8 @@ class AddressesService {
           longitude: drop.lng,
         },
       };
+
+      matrixCache.set(cacheKey, { distance: result.distance, distanceKm: result.distanceKm });
 
       logger.info({
         msg: "Distance matrix completed",

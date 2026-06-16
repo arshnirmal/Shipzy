@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PlusCircle, Search, Trash2, Edit2, Play, LayoutTemplate, MoreHorizontal } from "lucide-react";
+import { PlusCircle, Search, Trash2, Edit2, Play, LayoutTemplate, MoreHorizontal, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -16,50 +16,38 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TemplateFormDialog } from "@/components/templates/template-form-dialog";
-import { 
-  useTemplates, 
-  useDeleteTemplate, 
-  useCreateDraftFromTemplate 
-} from "@/hooks/use-templates";
+
+import { useTemplates, useDeleteTemplate } from "@/hooks/use-templates";
 import type { Template } from "@/types/business";
 
 export default function TemplatesPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   
   const { data, isLoading } = useTemplates(true); // active only
   const deleteTemplate = useDeleteTemplate();
-  const createDraft = useCreateDraftFromTemplate();
 
   const handleCreateNew = () => {
-    setEditingTemplate(null);
-    setDialogOpen(true);
+    router.push("/templates/new");
   };
 
   const handleEdit = (template: Template) => {
-    setEditingTemplate(template);
-    setDialogOpen(true);
+    router.push(`/templates/${template.templateId}`);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this template?")) {
+  const handleDeleteConfirm = (id: number) => {
+    if (window.confirm("Are you sure you want to delete this template?")) {
       deleteTemplate.mutate(id, {
-        onSuccess: () => toast.success("Template deleted")
+        onSuccess: () => {
+          toast.success("Template deleted");
+        }
       });
     }
   };
 
   const handleUseTemplate = (id: number) => {
-    createDraft.mutate(id, {
-      onSuccess: (res) => {
-        toast.success("Draft created from template");
-        router.push(`/drafts/${res.data.draftId}`);
-      },
-      onError: (err: any) => toast.error(err.message || "Failed to create draft")
-    });
+    router.push(`/orders/new?templateId=${id}`);
   };
 
   const templates = data?.data.templates ?? [];
@@ -136,7 +124,7 @@ export default function TemplatesPage() {
                       <DropdownMenuItem onClick={() => handleEdit(template)}>
                         <Edit2 className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDelete(template.templateId)}>
+                      <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDeleteConfirm(template.templateId)}>
                          <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -147,19 +135,34 @@ export default function TemplatesPage() {
                   {template.name}
                 </h3>
                 
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2 min-h-10 flex-1">
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2 min-h-10">
                   {template.description || "No description provided."}
                 </p>
 
-                <div className="mt-4 pt-4 border-t w-full flex items-center justify-between">
+                {(template.pickupLocation || template.deliveryLocation) && (
+                  <div className="mt-3 space-y-1.5 flex-1">
+                    {template.pickupLocation && (
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span className="line-clamp-1">{template.pickupLocation.fullAddress}</span>
+                      </div>
+                    )}
+                    {template.deliveryLocation && (
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span className="line-clamp-1">{template.deliveryLocation.fullAddress}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 pt-4 border-t w-full flex items-center justify-between mt-auto">
                    <p className="text-[11px] text-muted-foreground">
                      Added {format(new Date(template.createdAt), "MMM d, yyyy")}
                    </p>
-                   {/* Create from template action */}
                    <Button 
                       size="sm" 
                       onClick={() => handleUseTemplate(template.templateId)}
-                      disabled={createDraft.isPending}
                       className="h-8"
                    >
                       <Play className="mr-2 h-3 w-3" />
@@ -176,12 +179,6 @@ export default function TemplatesPage() {
           )}
         </div>
       ) : null}
-
-      <TemplateFormDialog 
-        open={dialogOpen} 
-        onOpenChange={setDialogOpen} 
-        template={editingTemplate}
-      />
     </div>
   );
 }

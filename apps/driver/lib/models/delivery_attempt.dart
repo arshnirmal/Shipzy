@@ -1,14 +1,30 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../utils/date_utils.dart';
 
 part 'delivery_attempt.freezed.dart';
 part 'delivery_attempt.g.dart';
 
 @freezed
 class DeliveryAttempt with _$DeliveryAttempt {
+  @JsonSerializable(converters: [
+    IstDateTimeConverter(),
+  ])
   const factory DeliveryAttempt({
     required DateTime arrivedAt,
+    @JsonKey(
+      fromJson: nullableIstDateTimeFromJson,
+      toJson: nullableIstDateTimeToJson,
+    )
     DateTime? undeliverableAt,
+    @JsonKey(
+      fromJson: nullableIstDateTimeFromJson,
+      toJson: nullableIstDateTimeToJson,
+    )
     DateTime? returnStartedAt,
+    @JsonKey(
+      fromJson: nullableIstDateTimeFromJson,
+      toJson: nullableIstDateTimeToJson,
+    )
     DateTime? returnedAt,
     String? driverNote,
     String? photoUrl,

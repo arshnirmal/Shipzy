@@ -55,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             return;
           }
           SnackbarUtils.showSuccess(context, 'Welcome back, ${user.fullName}');
-          context.go(AppRoutes.splash);
+          context.go(AppRoutes.home);
         },
         error: (message) {
           AppLogger.e('Google sign in error: $message');
@@ -102,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           }
           FocusScope.of(context).unfocus();
           SnackbarUtils.showSuccess(context, 'Welcome back, ${user.fullName}');
-          context.go(AppRoutes.splash);
+          context.go(AppRoutes.home);
         },
         error: (message) {
           AppLogger.e('Login error: $message');

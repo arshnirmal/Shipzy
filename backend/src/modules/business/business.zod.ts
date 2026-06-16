@@ -112,10 +112,44 @@ export type ListTemplatesQuery = z.infer<typeof ListTemplatesQueryZ>;
 // BULK ORDERS
 // ============================================================================
 
-import { CreateOrderRequestZ } from "../orders/orders.zod.js";
+export const BulkOrderRowZ = z.object({
+  fulfillment: z.object({
+    deliveryTypeId: z.number().int().positive(),
+    vehicleCategoryId: z.number().int().positive(),
+    weightTierId: z.number().int().positive(),
+    packageTypeId: z.number().int().positive().nullable().optional(),
+    paymentMethodId: z.number().int().positive(),
+  }),
+  pickup: z.object({
+    address: z.string().min(5),
+    contactName: z.string().min(2),
+    contactPhone: z.string().min(10),
+    building: z.string().optional(),
+    floor: z.string().optional(),
+    flatNumber: z.string().optional(),
+    howToReach: z.string().optional(),
+  }),
+  delivery: z.object({
+    address: z.string().min(5),
+    contactName: z.string().min(2),
+    contactPhone: z.string().min(10),
+    building: z.string().optional(),
+    floor: z.string().optional(),
+    flatNumber: z.string().optional(),
+    howToReach: z.string().optional(),
+  }),
+  items: z.array(z.object({
+    itemName: z.string().min(1),
+    quantity: z.number().int().positive(),
+  })).optional(),
+  package: z.object({
+    description: z.string().optional(),
+    notifyRecipientSms: z.boolean().optional(),
+  }).optional(),
+});
 
 export const BulkOrderCreateRequestZ = z.object({
-  orders: z.array(CreateOrderRequestZ).min(1).max(50),
+  orders: z.array(BulkOrderRowZ).min(1).max(50),
 }).strict();
 export type BulkOrderCreateRequest = z.infer<typeof BulkOrderCreateRequestZ>;
 
@@ -129,6 +163,8 @@ export const BulkOrderResultZ = z.object({
         index: z.number().int().nonnegative(),
         success: z.boolean(),
         orderId: z.number().int().positive().optional(),
+        draftId: z.number().int().positive().optional(),
+        isDraft: z.boolean().optional(),
         error: z.string().optional(),
       }).strict()
     ),
