@@ -4,6 +4,7 @@ import 'delivery_attempt.dart';
 import 'earnings_breakdown.dart';
 import 'order_address.dart';
 import 'order_types.dart';
+import 'payment_models.dart';
 
 part 'active_order.freezed.dart';
 part 'active_order.g.dart';
@@ -21,6 +22,7 @@ class ActiveAssignment with _$ActiveAssignment {
     AssignmentPackage? package,
     AssignmentPricing? pricing,
     DeliveryAttempt? deliveryAttempt,
+    PaymentInfo? paymentInfo,
   }) = _ActiveAssignment;
 
   factory ActiveAssignment.fromJson(Map<String, dynamic> json) =>

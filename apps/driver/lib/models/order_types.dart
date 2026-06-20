@@ -38,6 +38,7 @@ class OrderFulfillment with _$OrderFulfillment {
     int? weightTierId,
     int? packageTypeId,
     int? paymentMethodId,
+    String? paymentMode,
   }) = _OrderFulfillment;
 
   factory OrderFulfillment.fromJson(Map<String, dynamic> json) =>

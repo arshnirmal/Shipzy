@@ -27,9 +27,11 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import businessRoutes from "./modules/business/business.routes.js";
 import driversRoutes from "./modules/drivers/drivers.routes.js";
 import ordersRoutes from "./modules/orders/orders.routes.js";
+import paymentsRoutes from "./modules/payments/payments.routes.js";
 import ratingsRoutes from "./modules/ratings/ratings.routes.js";
 import staticRoutes from "./modules/static/static.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
+import { startPayoutScheduler } from "./modules/payments/payout.scheduler.js";
 
 /**
  * Build Fastify application
@@ -217,12 +219,14 @@ export const buildApp = async (
   await app.register(usersRoutes, { prefix: "/api/v1/users" });
   await app.register(driversRoutes, { prefix: "/api/v1/drivers" });
   await app.register(ordersRoutes, { prefix: "/api/v1/orders" });
+  await app.register(paymentsRoutes, { prefix: "/api/v1/payments" });
   await app.register(ratingsRoutes, { prefix: "/api/v1/ratings" });
   await app.register(staticRoutes, { prefix: "/api/v1/static" });
 
   app.ready((err) => {
     if (err) throw err;
     startScheduler(app);
+    startPayoutScheduler(app);
   });
 
   return app;

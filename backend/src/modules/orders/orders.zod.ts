@@ -62,6 +62,7 @@ export const OrderFulfillmentZ = z
     weightTierId: z.number().int().positive().nullable().optional(),
     packageTypeId: z.number().int().positive().nullable().optional(),
     paymentMethodId: z.number().int().positive(),
+    paymentMode: z.enum(["prepaid", "collect_on_delivery"]).optional(),
   })
   .strict();
 
@@ -149,6 +150,7 @@ export const CreateOrderRequestZ = BaseOrderCoreZ.extend({
       weightTierId: z.number().int().positive(),
       packageTypeId: z.number().int().positive().nullable().optional(),
       paymentMethodId: z.number().int().positive(),
+      paymentMode: z.enum(["prepaid", "collect_on_delivery"]).optional().default("prepaid"),
     })
     .strict(),
   package: OrderPackageJSONBZ,
@@ -296,6 +298,8 @@ export type CalculateFareResponse = z.infer<typeof CalculateFareResponseZ>;
 export const CreateOrderResponseZ = z
   .object({
     order: BaseOrderZ,
+    razorpayOrderId: z.string().optional(),
+    paymentStatus: z.string().optional(),
   })
   .strict();
 export type CreateOrderResponse = z.infer<typeof CreateOrderResponseZ>;
@@ -320,6 +324,15 @@ export type OrderListItem = z.infer<typeof OrderListItemZ>;
 export const OrderDetailsZ = z
   .object({
     order: BaseOrderZ.extend({
+      paymentInfo: z
+        .object({
+          paymentMode: z.enum(["prepaid", "collect_on_delivery"]).optional(),
+          paymentStatus: z.string().optional(),
+          transactionId: z.number().nullable().optional(),
+          paidAt: z.iso.datetime().nullable().optional(),
+        })
+        .strict()
+        .optional(),
       assignment: z
         .object({
           assignmentId: z.number().int().positive(),
@@ -632,6 +645,7 @@ export type OrderRow = {
   weightTierId?: number | null;
   packageTypeId?: number | null;
   paymentMethodId: number;
+  paymentMode?: string | null;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   actualDistanceKm?: number | null;
@@ -674,6 +688,7 @@ export type OrderListRow = {
   weightTierId?: number | null;
   packageTypeId?: number | null;
   paymentMethodId: number;
+  paymentMode?: string | null;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   actualDistanceKm?: number | null;
@@ -704,6 +719,7 @@ export type AvailableOrderRow = {
   weightTierId?: number | null;
   packageTypeId?: number | null;
   paymentMethodId: number;
+  paymentMode?: string | null;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   createdAt: Date;

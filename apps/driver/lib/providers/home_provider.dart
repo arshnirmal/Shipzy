@@ -15,6 +15,7 @@ import '../services/api_service.dart';
 import '../services/local_notification_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
+import 'payment_provider.dart';
 
 part 'home_provider.g.dart';
 
@@ -248,10 +249,25 @@ class DriverHome extends _$DriverHome {
 @riverpod
 Future<DailyStats> dailyStats(Ref ref) async {
   final driverProfile = await ref.watch(driverProfileProvider.future);
+  
+  // Use the new payment module for earnings if available
+  double todayEarnings = (driverProfile.earnings?.today ?? 0).toDouble();
+  double weeklyEarnings = (driverProfile.earnings?.thisWeek ?? 0).toDouble();
+  
+  try {
+    final todayPayment = await ref.watch(paymentEarningsProvider('today').future);
+    todayEarnings = todayPayment.netEarnings;
+    
+    final weekPayment = await ref.watch(paymentEarningsProvider('week').future);
+    weeklyEarnings = weekPayment.netEarnings;
+  } catch (e) {
+    // Fallback to profile earnings if payment module fails
+  }
+
   return DailyStats(
-    earnings: (driverProfile.earnings?.today ?? 0).toDouble(),
+    earnings: todayEarnings,
     trips: driverProfile.status?.totalDeliveriesToday ?? 0,
-    weeklyEarnings: (driverProfile.earnings?.thisWeek ?? 0).toDouble(),
+    weeklyEarnings: weeklyEarnings,
     totalEarnings: (driverProfile.earnings?.total ?? 0).toDouble(),
   );
 }

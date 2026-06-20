@@ -12,6 +12,7 @@ import '../../theme/app_palette.dart';
 import '../../theme/app_theme_extension.dart';
 import '../../theme/design_tokens.dart';
 import '../../utils/app_routes.dart';
+import '../../providers/payment_provider.dart';
 
 // ─── Bar entry ─────────────────────────────────────────────────────────────────
 
@@ -182,10 +183,14 @@ class _HeroCard extends ConsumerWidget {
     final themeExt = Theme.of(context).extension<AppThemeExtension>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final currentEarnings =
-        tripsAsync.valueOrNull?.fold<double>(0, (s, t) => s + t.netEarning) ??
-            0.0;
-    final prevEarnings = prevAsync.valueOrNull ?? 0.0;
+    final paymentAsync = ref.watch(paymentEarningsProvider(period));
+    final prevPaymentAsync = ref.watch(paymentEarningsProvider(_previousPeriod(period)));
+
+    final currentEarnings = paymentAsync.valueOrNull?.netEarnings ?? 
+        tripsAsync.valueOrNull?.fold<double>(0, (s, t) => s + t.netEarning) ?? 0.0;
+        
+    final prevEarnings = prevPaymentAsync.valueOrNull?.netEarnings ?? prevAsync.valueOrNull ?? 0.0;
+    
     final deltaPercent = prevEarnings > 0
         ? (currentEarnings - prevEarnings) / prevEarnings * 100
         : 0.0;
@@ -583,8 +588,11 @@ class _StatGridSection extends ConsumerWidget {
     final isLoading = tripsAsync.isLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final paymentAsync = ref.watch(paymentEarningsProvider(period));
+    final paymentData = paymentAsync.valueOrNull;
+
     final delivered = trips.where((t) => t.status == 'delivered').toList();
-    final totalEarnings = trips.fold<double>(0, (s, t) => s + t.netEarning);
+    final totalEarnings = paymentData?.netEarnings ?? trips.fold<double>(0, (s, t) => s + t.netEarning);
     final avgPerTrip =
         delivered.isEmpty ? 0.0 : totalEarnings / delivered.length;
     final totalDistance = trips.fold<double>(0, (s, t) => s + t.distanceKm);
@@ -737,7 +745,10 @@ class _GoalCardSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final currentEarnings =
+    final paymentAsync = ref.watch(paymentEarningsProvider(period));
+    final paymentData = paymentAsync.valueOrNull;
+
+    final currentEarnings = paymentData?.netEarnings ?? 
         tripsAsync.valueOrNull?.fold<double>(0, (s, t) => s + t.netEarning) ??
             0.0;
     final goalAmount = goals[period] ?? 500.0;
@@ -1447,6 +1458,16 @@ String _periodLabel(String period) {
       return 'Yearly';
     default:
       return '';
+  }
+}
+
+String _previousPeriod(String period) {
+  switch (period) {
+    case 'today': return 'yesterday';
+    case 'week': return 'last_week';
+    case 'month': return 'last_month';
+    case 'year': return 'last_year';
+    default: return period;
   }
 }
 

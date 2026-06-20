@@ -103,6 +103,21 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "refunded",
   "cancelled",
 ]);
+export const paymentModeEnum = pgEnum("payment_mode", [
+  "prepaid",
+  "collect_on_delivery",
+]);
+export const payoutStatusEnum = pgEnum("payout_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+]);
+export const earningsStatusEnum = pgEnum("earnings_status", [
+  "pending",
+  "settled",
+  "failed",
+]);
 
 // Weight Tiers
 export const weightTiers = pgTable(

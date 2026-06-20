@@ -152,6 +152,8 @@ export const CourierAssignmentDbZ = z
     timeline: AssignmentTimelineJSONBZ.nullable().optional(),
 
     totalPrice: z.union([z.number(), z.string()]).nullable().optional(),
+    paymentMode: z.string().nullable().optional(),
+    paymentStatus: z.string().nullable().optional(),
     estimatedDistanceKm: z
       .union([z.number(), z.string()])
       .nullable()

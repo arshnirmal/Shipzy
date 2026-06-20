@@ -429,6 +429,12 @@ class DriversService {
               assignedAt: toIsoDateTimeOrNull(assignment.assignedAt),
               acceptedAt: assignment.timeline?.acceptedAt ?? null,
             },
+            paymentInfo: {
+              isCollectOnDelivery: assignment.paymentMode === "collect_on_delivery",
+              status: assignment.paymentStatus ?? "pending",
+              mode: assignment.paymentMode ?? "prepaid",
+              amount: assignment.totalPrice != null ? Number(assignment.totalPrice) : 0,
+            },
           };
         }),
       );

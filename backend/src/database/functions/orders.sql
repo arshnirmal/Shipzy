@@ -181,6 +181,7 @@ DECLARE
     v_delivery_type_id     INT;
     v_vehicle_category_id  INT;
     v_payment_method_id    INT;
+    v_payment_mode         payment_mode;
     v_weight_tier_id       INT;
     v_package_type_id      INT;
     v_order_id             INT;
@@ -235,6 +236,7 @@ BEGIN
     v_delivery_type_id    := (p_order_data -> 'fulfillment' ->> 'deliveryTypeId')::INT;
     v_vehicle_category_id := (p_order_data -> 'fulfillment' ->> 'vehicleCategoryId')::INT;
     v_payment_method_id   := (p_order_data -> 'fulfillment' ->> 'paymentMethodId')::INT;
+    v_payment_mode        := COALESCE(p_order_data -> 'fulfillment' ->> 'paymentMode', 'prepaid')::payment_mode;
     v_weight_tier_id      := (p_order_data -> 'fulfillment' ->> 'weightTierId')::INT;
     v_package_type_id     := (p_order_data -> 'fulfillment' ->> 'packageTypeId')::INT;
 
@@ -404,7 +406,7 @@ BEGIN
     -- Insert order with consolidated JSONB columns
     INSERT INTO orders.requests (
         client_id, delivery_type_id, vehicle_category_id, weight_tier_id,
-        package_type_id, payment_method_id, status,
+        package_type_id, payment_method_id, payment_mode, status,
         pickup_location, delivery_location, items,
         pricing, schedule, package, snapshot,
         estimated_distance_km, total_price,
@@ -412,7 +414,7 @@ BEGIN
     )
     VALUES (
         v_client_id, v_delivery_type_id, v_vehicle_category_id, v_weight_tier_id,
-        v_package_type_id, v_payment_method_id, v_status,
+        v_package_type_id, v_payment_method_id, v_payment_mode, v_status,
         v_pickup_location, v_delivery_location, v_items,
         v_pricing, v_schedule, v_package, v_snapshot,
         (p_order_data -> 'pricing' ->> 'distanceKm')::NUMERIC,

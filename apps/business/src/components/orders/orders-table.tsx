@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { OrderStatusBadge } from "./order-status-badge";
+import { PaymentModeBadge } from "./payment-status-badge";
 import type { OrderFilters, OrderListItem, Pagination } from "@/types/orders";
 
 const col = createColumnHelper<OrderListItem>();
@@ -191,6 +192,13 @@ export function OrdersTable({
             getValue(),
             row.original.order.pricing.currency ?? "INR",
           ),
+      }),
+      col.accessor((row) => row.order.fulfillment.paymentMode ?? "prepaid", {
+        id: "paymentMode",
+        header: "Payment",
+        cell: ({ getValue }) => (
+          <PaymentModeBadge mode={getValue()} />
+        ),
       }),
       col.accessor((row) => row.order.timeline.createdAt, {
         id: "createdAt",

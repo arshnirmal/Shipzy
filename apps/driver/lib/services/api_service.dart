@@ -11,6 +11,7 @@ import '../models/driver_profile.dart';
 import '../models/driver_rating.dart';
 import '../models/earnings_summary.dart';
 import '../models/location_meta.dart';
+import '../models/payment_models.dart';
 import '../models/proof_of_delivery_result.dart';
 import '../models/static/static_vehicle_category.dart';
 import '../providers/dio_provider.dart';
@@ -380,5 +381,47 @@ class ApiService {
     final response = await _dio.get('/orders/$orderId');
     _ensureSuccess(response, 'Failed to fetch order details');
     return response.data['data'] as Map<String, dynamic>;
+  }
+
+  // ── Payment API ──────────────────────────────────────────────────────────────
+
+  /// Generate a UPI QR code for collect-on-delivery payment.
+  Future<QRCodeResult> generateCollectionQR(int orderId) async {
+    final response = await _dio.post(
+      '/payments/generate-qr',
+      data: {'orderId': orderId},
+    );
+    final data = _extractDataMap(response, 'Failed to generate QR code');
+    return QRCodeResult.fromJson(data);
+  }
+
+  /// Get payment status for an order.
+  Future<PaymentStatusResult> getPaymentStatus(int orderId) async {
+    final response = await _dio.get('/payments/order/$orderId/status');
+    final data = _extractDataMap(response, 'Failed to fetch payment status');
+    return PaymentStatusResult.fromJson(data);
+  }
+
+  /// Get driver earnings from the payment module.
+  Future<PaymentEarningsResponse> getPaymentEarnings(String period) async {
+    final response = await _dio.get(
+      '/payments/driver/earnings',
+      queryParameters: {'period': period},
+    );
+    final data = _extractDataMap(response, 'Failed to fetch payment earnings');
+    return PaymentEarningsResponse.fromJson(data);
+  }
+
+  /// Get driver payout history.
+  Future<PayoutListResponse> getDriverPayouts({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final response = await _dio.get(
+      '/payments/driver/payouts',
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final data = _extractDataMap(response, 'Failed to fetch payouts');
+    return PayoutListResponse.fromJson(data);
   }
 }

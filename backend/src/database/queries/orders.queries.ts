@@ -65,6 +65,7 @@ export default {
       o.weight_tier_id       AS "weightTierId",
       o.package_type_id      AS "packageTypeId",
       o.payment_method_id    AS "paymentMethodId",
+      o.payment_mode         AS "paymentMode",
 
       -- Operational scalars
       o.total_price          AS "totalPrice",
@@ -127,6 +128,7 @@ export default {
       o.weight_tier_id        AS "weightTierId",
       o.package_type_id       AS "packageTypeId",
       o.payment_method_id     AS "paymentMethodId",
+      o.payment_mode          AS "paymentMode",
 
       -- Operational scalars
       o.total_price           AS "totalPrice",

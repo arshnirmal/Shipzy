@@ -49,7 +49,7 @@ type WizardState = {
 const DEFAULT_STATE: WizardState = {
   pickup:      null,
   delivery:    null,
-  fulfillment: { deliveryTypeId: 0, vehicleCategoryId: 0, paymentMethodId: 1 },
+  fulfillment: { deliveryTypeId: 0, vehicleCategoryId: 0, paymentMethodId: 1, paymentMode: "prepaid" },
   pkg:         { notifyRecipientSms: true },
   items:       [],
   schedule:    {},

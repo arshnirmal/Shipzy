@@ -14,6 +14,7 @@ import {
 import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { PricingTable } from "@/components/orders/pricing-table";
+import { PaymentModeBadge } from "@/components/orders/payment-status-badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 
@@ -185,6 +186,9 @@ export function ReviewStep({
                     <p className="text-xs text-muted-foreground mt-1">
                       Payment: {paymentMethod}
                     </p>
+                    <div className="mt-2">
+                      <PaymentModeBadge mode={draft.fulfillment?.paymentMode ?? "prepaid"} />
+                    </div>
                   </div>
                   <div>
                     <h4 className="flex items-center gap-2 font-medium text-sm text-muted-foreground">

@@ -162,12 +162,15 @@ export default {
       o.total_price        AS "totalPrice",
       o.estimated_distance_km AS "estimatedDistanceKm",
       o.actual_distance_km    AS "actualDistanceKm",
+      o.payment_mode          AS "paymentMode",
+      pt.status               AS "paymentStatus",
 
       ca.assigned_at       AS "assignedAt",
       ca.timeline          AS "timeline"
 
     FROM orders.courier_assignments ca
     JOIN orders.requests o ON ca.order_id = o.order_id
+    LEFT JOIN payments.transactions pt ON o.order_id = pt.order_id
     WHERE ca.courier_id = $1
       AND ca.status NOT IN ('delivered', 'cancelled', 'rejected', 'returned')
     ORDER BY ca.assigned_at DESC

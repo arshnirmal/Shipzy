@@ -18,6 +18,7 @@ type OrderDetailResponse = {
  */
 export type OrderDetails = {
   order: import("@/types/orders").BaseOrder & {
+    paymentInfo?: import("@/types/orders").PaymentInfo | null;
     cancellation?: { reason?: string | null };
     assignment?: {
       assignmentId: number;

@@ -75,6 +75,7 @@
     "pino": "^9.14.0",
     "pino-pretty": "^11.3.0",
     "qrcode": "^1.5.4",
+    "razorpay": "^2.9.6",
     "zod": "^4.3.6",
     "zod-to-json-schema": "^3.25.1"
   },
@@ -105,8 +106,16 @@
   },
   "pnpm": {
     "supportedArchitectures": {
-      "os": ["current", "linux", "darwin"],
-      "cpu": ["current", "x64", "arm64"]
+      "os": [
+        "current",
+        "linux",
+        "darwin"
+      ],
+      "cpu": [
+        "current",
+        "x64",
+        "arm64"
+      ]
     },
     "onlyBuiltDependencies": [
       "@firebase/util",

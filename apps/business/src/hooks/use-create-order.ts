@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, getErrorMessage } from "@/lib/api";
 import { toast } from "sonner";
-import type { FareBreakdown, OrderLocation } from "@/types/orders";
+import type { FareBreakdown, OrderLocation, PaymentMode } from "@/types/orders";
 import type { DraftFulfillment, DraftItem, DraftPackage, DraftSchedule } from "@/types/business";
 
 // ── Payload ───────────────────────────────────────────────────────────────────
@@ -15,6 +15,7 @@ export type CreateOrderPayload = {
     weightTierId?: number | null;
     packageTypeId?: number | null;
     paymentMethodId: number;
+    paymentMode?: PaymentMode;
   };
   locations: {
     pickup: OrderLocation;
@@ -96,6 +97,7 @@ export function buildCreateOrderPayload(opts: {
       weightTierId: opts.fulfillment.weightTierId ?? null,
       packageTypeId: opts.fulfillment.packageTypeId ?? null,
       paymentMethodId: opts.fulfillment.paymentMethodId,
+      paymentMode: opts.fulfillment.paymentMode ?? "prepaid",
     },
     locations: {
       pickup: opts.pickup,

@@ -14,6 +14,7 @@ import '../../services/cloudinary_service.dart';
 import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
 import '../../widgets/map_widget.dart';
+import 'widgets/payment_qr_bottom_sheet.dart';
 
 class ActiveDeliveryScreen extends ConsumerStatefulWidget {
   const ActiveDeliveryScreen({required this.orderId, super.key});
@@ -235,22 +236,51 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     Order notifier,
     Duration remaining,
   ) {
+    final assignment = ref.watch(activeOrderProvider).valueOrNull;
+    final isCollectOnDelivery = assignment?.paymentInfo?.isCollectOnDelivery ?? false;
+    final isPaymentPending = assignment?.paymentInfo?.isPending ?? false;
+    final requiresPaymentCollection = isCollectOnDelivery && isPaymentPending;
+
     switch (state.status) {
       case OrderStatus.arrivedAtDropoff:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ElevatedButton(
-              onPressed: _isActionInProgress
-                  ? null
-                  : () => _runAction(() async {
-                      await notifier.completeDelivery(widget.orderId);
-                    }),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
+            if (requiresPaymentCollection)
+              ElevatedButton.icon(
+                onPressed: _isActionInProgress
+                    ? null
+                    : () {
+                        showPaymentQRBottomSheet(
+                          context: context,
+                          orderId: int.parse(widget.orderId),
+                          onPaymentComplete: () {
+                            Navigator.pop(context); // Close the sheet
+                            ref.invalidate(activeOrderProvider); // Refresh payment info
+                            SnackbarUtils.showSuccess(context, 'Payment collected successfully');
+                          },
+                        );
+                      },
+                icon: const Icon(Icons.qr_code),
+                label: const Text('Collect Payment (₹)'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              )
+            else
+              ElevatedButton(
+                onPressed: _isActionInProgress
+                    ? null
+                    : () => _runAction(() async {
+                        await notifier.completeDelivery(widget.orderId);
+                      }),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                ),
+                child: Text(_getPrimaryActionText(state.status)),
               ),
-              child: Text(_getPrimaryActionText(state.status)),
-            ),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _isActionInProgress || !state.waitElapsed

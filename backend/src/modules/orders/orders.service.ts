@@ -10,6 +10,7 @@ import ordersRepository from "./orders.repository.js";
 import fcmService from "../../services/fcm.service.js";
 import { drizzlePool } from "../../database/drizzle.js";
 import driversQueries from "../../database/queries/drivers.queries.js";
+import paymentsService from "../payments/payments.service.js";
 
 import type {
   AcceptOrderResult,
@@ -66,6 +67,7 @@ class OrdersService {
         weightTierId: row.weightTierId ?? null,
         packageTypeId: row.packageTypeId ?? null,
         paymentMethodId: row.paymentMethodId,
+        paymentMode: (row.paymentMode as "prepaid" | "collect_on_delivery") ?? "prepaid",
       },
       locations: {
         pickup: row.pickup,
@@ -362,10 +364,17 @@ class OrdersService {
     }
 
     const baseOrder = this.toBaseOrderFromRow(order);
+    const paymentStatusResult = await paymentsService.getPaymentStatus(orderId);
 
     return {
       order: {
         ...baseOrder,
+        paymentInfo: {
+          paymentMode: paymentStatusResult.paymentMode,
+          paymentStatus: paymentStatusResult.paymentStatus,
+          transactionId: paymentStatusResult.transactionId,
+          paidAt: paymentStatusResult.paidAt,
+        },
         assignment: order.assignmentId
           ? {
               assignmentId: order.assignmentId,
@@ -609,6 +618,31 @@ class OrdersService {
 
     if (status === "delivered") {
       const delivered = await ordersRepository.deliverOrder(orderId, courierId);
+      
+      // Calculate and create earnings entry for driver
+      try {
+        const orderInfo = await drizzlePool.query(
+          "SELECT (pricing->>'totalPrice')::numeric as total_price FROM orders.requests WHERE order_id = $1",
+          [orderId]
+        );
+        const grossAmount = orderInfo.rows[0]?.total_price || 0;
+        if (order.assignmentId) {
+          await paymentsService.createEarningsEntry(
+            courierId,
+            orderId,
+            order.assignmentId,
+            Number(grossAmount)
+          );
+        }
+      } catch (err) {
+        logger.error({
+          msg: "Failed to create earnings entry",
+          orderId,
+          courierId,
+          error: (err as Error).message,
+        });
+      }
+
       return {
         order: {
           orderId: delivered.orderId,
@@ -960,6 +994,17 @@ class OrdersService {
     }
     if (!order.assignmentId) {
       throw new AppError("No assignment found for this order", 500);
+    }
+
+    // Verify payment is collected if it's COD
+    const paymentStatus = await paymentsService.getPaymentStatus(orderId);
+    if (
+      paymentStatus.paymentMode === "collect_on_delivery" &&
+      paymentStatus.paymentStatus !== "completed"
+    ) {
+      throw new ValidationError(
+        "Payment must be collected before submitting proof of delivery. Please show the QR code to the customer.",
+      );
     }
 
     const proof = await ordersRepository.insertProofOfDelivery({

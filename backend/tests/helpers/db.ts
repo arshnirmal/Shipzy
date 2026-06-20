@@ -52,6 +52,10 @@ export const applyTestEnv = (): void => {
 
   const testDbName = getTestDbName();
   process.env.DB_NAME = testDbName;
+  process.env.DB_USER = "postgres";
+  process.env.DB_PASSWORD = "postgres";
+  process.env.RAZORPAY_KEY_ID = "rzp_test_mock123";
+  process.env.RAZORPAY_KEY_SECRET = "mock_secret_123";
 
   const explicitTestUrl =
     process.env.DB_TEST_URL || process.env.DATABASE_URL_TEST;

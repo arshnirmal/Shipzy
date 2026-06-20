@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   CheckCircle2,
+  CreditCard,
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest } from "@/lib/api";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PricingTable } from "@/components/orders/pricing-table";
+import { PaymentModeBadge } from "@/components/orders/payment-status-badge";
 import type { CreateOrderData, DraftFulfillment, DraftItem, DraftPackage, DraftSchedule } from "@/types/business";
 import type { FareBreakdown, OrderLocation } from "@/types/orders";
 
@@ -170,6 +172,9 @@ export function NewOrderReviewStep({
                     <p className="text-xs text-muted-foreground mt-1">
                       Payment: {paymentMethod}
                     </p>
+                    <div className="mt-2">
+                      <PaymentModeBadge mode={fulfillment.paymentMode ?? "prepaid"} />
+                    </div>
                   </div>
                   <div>
                     <h4 className="flex items-center gap-2 font-medium text-sm text-muted-foreground">

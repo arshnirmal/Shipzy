@@ -284,6 +284,14 @@ export const ActiveAssignmentZ = z
         acceptedAt: z.iso.datetime().nullable().optional(),
       })
       .strict(),
+    paymentInfo: z
+      .object({
+        isCollectOnDelivery: z.boolean(),
+        status: z.string(),
+        mode: z.string(),
+        amount: z.number(),
+      })
+      .strict(),
   })
   .strict();
 export type ActiveAssignment = z.infer<typeof ActiveAssignmentZ>;

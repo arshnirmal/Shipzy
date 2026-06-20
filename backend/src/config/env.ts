@@ -29,6 +29,17 @@ interface Config {
   cors: CorsConfig;
   rateLimit: RateLimitConfig;
   logging: LoggerConfig & { logQueries: boolean };
+  razorpay: {
+    keyId: string;
+    keySecret: string;
+    webhookSecret: string;
+    accountNumber: string;
+  };
+  payments: {
+    driverCommissionPct: number;
+    payoutScheduleHour: number;
+    qrExpiryMinutes: number;
+  };
 }
 
 const config: Config = {
@@ -96,6 +107,21 @@ const config: Config = {
     prettyPrint: process.env.NODE_ENV === "development",
     logQueries: process.env.LOG_QUERIES === "true",
     redact: ["password", "token", "authorization"],
+  },
+
+  // Razorpay
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID || "",
+    keySecret: process.env.RAZORPAY_KEY_SECRET || "",
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+    accountNumber: process.env.RAZORPAY_ACCOUNT_NUMBER || "",
+  },
+
+  // Payment Settings
+  payments: {
+    driverCommissionPct: parseFloat(process.env.DRIVER_COMMISSION_PCT || "15"),
+    payoutScheduleHour: parseInt(process.env.PAYOUT_SCHEDULE_HOUR || "23", 10),
+    qrExpiryMinutes: parseInt(process.env.QR_EXPIRY_MINUTES || "30", 10),
   },
 };
 

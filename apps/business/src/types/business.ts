@@ -1,4 +1,4 @@
-import type { FareBreakdown, OrderLocation } from "./orders";
+import type { FareBreakdown, OrderLocation, PaymentMode } from "./orders";
 
 // ============================================================================
 // DRAFT
@@ -12,6 +12,7 @@ export type DraftFulfillment = {
   weightTierId?: number | null;
   packageTypeId?: number | null;
   paymentMethodId: number;
+  paymentMode?: PaymentMode;
 };
 
 export type DraftPackage = {
@@ -262,6 +263,7 @@ export type BulkOrderRow = {
     weightTierId: number;
     packageTypeId?: number | null;
     paymentMethodId: number;
+    paymentMode?: PaymentMode;
   };
   pickup: {
     address: string;

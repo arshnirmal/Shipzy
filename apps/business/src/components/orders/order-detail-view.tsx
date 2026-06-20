@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import {
   Ban,
   CalendarClock,
+  CreditCard,
   MapPin,
   Package,
   Phone,
@@ -22,6 +23,7 @@ import { PricingTable } from "./pricing-table";
 import { OrderTrackingView } from "./order-tracking-view";
 import { CancelOrderDialog } from "./cancel-order-dialog";
 import { DriverRatingCard } from "./driver-rating-card";
+import { PaymentModeBadge, PaymentStatusBadge } from "./payment-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -280,6 +282,45 @@ export function OrderDetailView({ id }: { id: string }) {
                 </Card>
 
                 <PricingTable pricing={order.pricing} />
+
+                {/* Payment Information */}
+                {order.paymentInfo && (
+                  <Card>
+                    <CardHeader className="border-b bg-muted/30 pb-4">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <CreditCard className="size-4 text-muted-foreground" /> Payment
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Mode</span>
+                          <PaymentModeBadge mode={order.paymentInfo.paymentMode} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Status</span>
+                          <PaymentStatusBadge status={order.paymentInfo.paymentStatus} />
+                        </div>
+                        {order.paymentInfo.paidAt && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Paid At</span>
+                            <span className="text-sm font-medium">
+                              {format(new Date(order.paymentInfo.paidAt), "PPp")}
+                            </span>
+                          </div>
+                        )}
+                        {order.paymentInfo.transactionId && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">Transaction</span>
+                            <span className="text-xs font-mono text-muted-foreground">
+                              #{order.paymentInfo.transactionId}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {order.status === "delivered" && actors.courier && (
                   <DriverRatingCard driverId={actors.courier.userId} />

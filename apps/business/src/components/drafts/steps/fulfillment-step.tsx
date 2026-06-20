@@ -8,13 +8,29 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import type { CreateOrderData, DraftFulfillment } from "@/types/business";
-import { Truck } from "lucide-react";
+import type { PaymentMode } from "@/types/orders";
+import { Truck, CreditCard, QrCode } from "lucide-react";
 
 type FulfillmentStepProps = {
   readonly data: CreateOrderData;
   readonly value: DraftFulfillment;
   readonly onChange: (v: DraftFulfillment) => void;
 };
+
+const PAYMENT_MODES: { value: PaymentMode; label: string; description: string; icon: typeof CreditCard }[] = [
+  {
+    value: "prepaid",
+    label: "Prepaid (Online)",
+    description: "Customer pays before delivery via UPI",
+    icon: CreditCard,
+  },
+  {
+    value: "collect_on_delivery",
+    label: "Collect on Delivery",
+    description: "Driver collects payment at delivery via UPI QR",
+    icon: QrCode,
+  },
+];
 
 export function FulfillmentStep({ data, value, onChange }: FulfillmentStepProps) {
   const { 
@@ -23,7 +39,7 @@ export function FulfillmentStep({ data, value, onChange }: FulfillmentStepProps)
     paymentMethods = [] 
   } = data || {};
 
-  const updateField = (field: keyof DraftFulfillment, newVal: number) => {
+  const updateField = (field: keyof DraftFulfillment, newVal: number | string) => {
     onChange({ ...value, [field]: newVal });
   };
 
@@ -90,7 +106,45 @@ export function FulfillmentStep({ data, value, onChange }: FulfillmentStepProps)
         </RadioGroup>
       </div>
 
-      {/* Payment Method */}
+      {/* Payment Mode */}
+      <div className="space-y-4 border-t pt-6">
+        <div>
+          <h3 className="text-lg font-medium">Payment Mode</h3>
+          <p className="text-sm text-muted-foreground">How should the customer pay for this delivery?</p>
+        </div>
+        <RadioGroup 
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+          value={value.paymentMode ?? "prepaid"}
+          onValueChange={(v) => updateField("paymentMode", v)}
+        >
+          {PAYMENT_MODES.map(pm => {
+            const Icon = pm.icon;
+            return (
+              <div key={pm.value} className="relative">
+                <RadioGroupItem
+                  value={pm.value}
+                  id={`pm-${pm.value}`}
+                  className="peer sr-only"
+                />
+                <Label
+                  htmlFor={`pm-${pm.value}`}
+                  className="flex cursor-pointer items-start gap-4 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted/80 peer-data-[state=checked]:bg-primary/10">
+                    <Icon className="size-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{pm.label}</span>
+                    <span className="mt-1 text-xs text-muted-foreground">{pm.description}</span>
+                  </div>
+                </Label>
+              </div>
+            );
+          })}
+        </RadioGroup>
+      </div>
+
+      {/* Payment Method (dropdown) */}
       <div className="space-y-4 border-t pt-6">
         <div>
           <h3 className="text-lg font-medium">Payment Method</h3>
