@@ -6,7 +6,7 @@ import logger from "../../config/logger.js";
 import { drizzlePool } from "../../database/drizzle.js";
 import paymentQueries from "../../database/queries/payments.queries.js";
 import { AppError, NotFoundError } from "../../utils/error.util.js";
-import { getPaymentProvider, getPayoutProvider } from "./provider-factory.js";
+import registry from "./provider-registry.js";
 import type {
   PaymentOrderResponse,
   PaymentVerifyResponse,
@@ -27,9 +27,9 @@ class PaymentsService {
     paymentMethodId: number,
     amount: number,
   ): Promise<PaymentOrderResponse> {
-    const provider = getPaymentProvider();
+    const provider = registry.collection();
 
-    // Create Razorpay order (amount in paise)
+    // Create provider order (amount in paise)
     const amountPaise = Math.round(amount * 100);
     const result = await provider.createPaymentOrder({
       orderId,
@@ -50,11 +50,11 @@ class PaymentsService {
         null, // external_transaction_id (set after verification)
         "razorpay",
         null, // upi_vpa
-        JSON.stringify({ razorpayOrderId: result.providerOrderId }),
+        JSON.stringify({ providerOrderId: result.providerOrderId }),
       ],
     );
 
-    // Store razorpay_order_id on the transaction
+    // Store provider order id on the transaction
     const transactionId = txn.rows[0]?.transactionId;
     if (transactionId) {
       await drizzlePool.query(paymentQueries.UPDATE_RAZORPAY_ORDER_ID, [
@@ -65,10 +65,10 @@ class PaymentsService {
     }
 
     return {
-      razorpayOrderId: result.providerOrderId,
+      providerOrderId: result.providerOrderId,
       amount: amount,
       currency: "INR",
-      razorpayKeyId: config.razorpay.keyId,
+      publishableKey: config.razorpay.keyId,
       orderId,
     };
   }
@@ -83,7 +83,7 @@ class PaymentsService {
     razorpayPaymentId: string,
     razorpaySignature: string,
   ): Promise<PaymentVerifyResponse> {
-    const provider = getPaymentProvider();
+    const provider = registry.collection();
 
     const verification = await provider.verifyPayment({
       providerOrderId: razorpayOrderId,
@@ -183,7 +183,7 @@ class PaymentsService {
       transactionId = txnResult.rows[0].transactionId;
     }
 
-    const provider = getPaymentProvider();
+    const provider = registry.qr();
     const amountPaise = Math.round(amount * 100);
 
     const qr = await provider.generateQRCode({
@@ -275,38 +275,38 @@ class PaymentsService {
   }
 
   /**
-   * Process a Razorpay webhook event.
+   * Process a provider webhook event.
    * Idempotent — safe to call multiple times for the same event.
    */
   async processWebhook(
-    body: unknown,
+    provider: string,
+    rawBody: string,
     headers: Record<string, string>,
-  ): Promise<void> {
-    const provider = getPaymentProvider();
-    const result = await provider.handleWebhook(body, headers);
+  ): Promise<{ statusCode: number; status: string }> {
+    const event = await registry.webhook(provider).verifyAndParse(rawBody, headers);
 
-    if (!result.handled) {
-      return;
+    if (!event.handled) {
+      return { statusCode: 200, status: "ignored" };
     }
 
-    switch (result.status) {
+    switch (event.status) {
       case "captured": {
         // Prepaid payment confirmed — find transaction and mark complete
-        if (result.providerOrderId) {
+        if (event.providerOrderId) {
           const txn = await drizzlePool.query(
             paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
-            [result.providerOrderId],
+            [event.providerOrderId],
           );
           if (txn.rows.length > 0) {
             const tid = txn.rows[0].transactionId;
             // Idempotent — only update if still pending
             if (txn.rows[0].status === "pending") {
               await drizzlePool.query(paymentQueries.MARK_PAYMENT_COMPLETED, [tid]);
-              if (result.providerPaymentId) {
+              if (event.providerPaymentId) {
                 await drizzlePool.query(paymentQueries.UPDATE_PAYMENT_DETAILS, [
                   tid,
-                  result.providerPaymentId,
-                  result.vpa || null,
+                  event.providerPaymentId,
+                  event.vpa || null,
                 ]);
               }
             }
@@ -317,20 +317,20 @@ class PaymentsService {
 
       case "qr_credited": {
         // Collect-on-delivery QR payment received
-        if (result.qrCodeId) {
+        if (event.qrCodeId) {
           const txn = await drizzlePool.query(
             paymentQueries.GET_TRANSACTION_BY_QR_CODE,
-            [result.qrCodeId],
+            [event.qrCodeId],
           );
           if (txn.rows.length > 0) {
             const tid = txn.rows[0].transactionId;
             if (txn.rows[0].status === "pending") {
               await drizzlePool.query(paymentQueries.MARK_PAYMENT_COMPLETED, [tid]);
-              if (result.providerPaymentId) {
+              if (event.providerPaymentId) {
                 await drizzlePool.query(paymentQueries.UPDATE_PAYMENT_DETAILS, [
                   tid,
-                  result.providerPaymentId,
-                  result.vpa || null,
+                  event.providerPaymentId,
+                  event.vpa || null,
                 ]);
               }
             }
@@ -340,10 +340,10 @@ class PaymentsService {
       }
 
       case "failed": {
-        if (result.providerOrderId) {
+        if (event.providerOrderId) {
           const txn = await drizzlePool.query(
             paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
-            [result.providerOrderId],
+            [event.providerOrderId],
           );
           if (txn.rows.length > 0) {
             await drizzlePool.query(paymentQueries.MARK_PAYMENT_FAILED, [
@@ -356,10 +356,16 @@ class PaymentsService {
       }
 
       case "refunded":
-        // Handled by the refund flow
-        logger.info({ msg: "Refund webhook processed", result });
+        logger.info({ msg: "Refund webhook processed", event });
+        break;
+
+      case "payout_processed":
+      case "payout_failed":
+        logger.info({ msg: "Payout webhook received", event });
         break;
     }
+
+    return { statusCode: 200, status: "ok" };
   }
 
   /**
@@ -505,7 +511,7 @@ class PaymentsService {
       return;
     }
 
-    const payoutProvider = getPayoutProvider();
+    const payoutProvider = registry.payout();
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
     for (const driverSummary of unsettled.rows) {

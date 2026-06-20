@@ -2,6 +2,7 @@
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import rawBody from "fastify-raw-body";
 import Fastify, { FastifyInstance } from "fastify";
 import config from "./config/env.js";
 import logger from "./config/logger.js";
@@ -78,6 +79,9 @@ export const buildApp = async (
 
   // Rate limiting
   await app.register(rateLimit, rateLimitConfig);
+
+  // Raw body capture — opt-in per route via { config: { rawBody: true } }
+  await app.register(rawBody, { field: "rawBody", global: false, encoding: "utf8", runFirst: true });
 
   // OpenAPI / Swagger (optional - register only if plugin is installed)
   try {

@@ -18,18 +18,12 @@ async function paymentsRoutes(fastify: FastifyInstance, _options: unknown) {
 
   // ─── Webhook (no auth — verified via signature) ─────────────────────────
 
-  // POST /api/v1/payments/webhook/razorpay
+  // POST /api/v1/payments/webhook/:provider
+  // No auth — verified via provider signature on raw body
   fastify.post(
-    "/webhook/razorpay",
-    {
-      config: {
-        // @ts-expect-error Fastify 4 config type missing rawBody from fastify-raw-body plugin in some environments
-        rawBody: true, // Need raw body for signature verification
-      },
-    },
-    asRouteHandler(
-      paymentsController.handleWebhook.bind(paymentsController),
-    ),
+    "/webhook/:provider",
+    { config: { rawBody: true } },
+    asRouteHandler(paymentsController.handleWebhook.bind(paymentsController)),
   );
 
   // ─── Authenticated routes ───────────────────────────────────────────────

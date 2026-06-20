@@ -53,10 +53,10 @@ export type DriverPayoutsQuery = z.infer<typeof DriverPayoutsQueryZ>;
 // ─── Response Schemas ────────────────────────────────────────────────────────
 
 export const PaymentOrderResponseZ = z.object({
-  razorpayOrderId: z.string(),
+  providerOrderId: z.string(),
   amount: z.number(),
   currency: z.string(),
-  razorpayKeyId: z.string(),
+  publishableKey: z.string(),
   orderId: z.number(),
 });
 export type PaymentOrderResponse = z.infer<typeof PaymentOrderResponseZ>;

@@ -38,7 +38,7 @@ class PaymentsController {
       logger.info({
         msg: "POST /api/v1/payments/create-order",
         orderId,
-        razorpayOrderId: result.razorpayOrderId,
+        providerOrderId: result.providerOrderId,
       });
 
       return successResponse(
@@ -153,28 +153,27 @@ class PaymentsController {
   }
 
   /**
-   * POST /api/v1/payments/webhook/razorpay
-   * Razorpay webhook handler — no auth, verified via signature
+   * POST /api/v1/payments/webhook/:provider
+   * Provider webhook handler — no auth, verified via raw-body signature
    */
   async handleWebhook(
-    request: FastifyRequest,
+    request: FastifyRequest<{ Params: { provider: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      await paymentsService.processWebhook(
-        request.body,
+      const rawBody = (request as unknown as { rawBody?: string }).rawBody ?? "";
+      const outcome = await paymentsService.processWebhook(
+        request.params.provider,
+        rawBody,
         request.headers as Record<string, string>,
       );
-
-      // Razorpay expects 200 OK
-      return reply.status(200).send({ status: "ok" });
+      return reply.status(outcome.statusCode).send({ status: outcome.status });
     } catch (error) {
       logger.error({
         msg: "Webhook processing error",
         error: (error as Error).message,
       });
-      // Still return 200 to prevent Razorpay retries for signature failures
-      return reply.status(200).send({ status: "error" });
+      return reply.status(500).send({ status: "error" });
     }
   }
 
