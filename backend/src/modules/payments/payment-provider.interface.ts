@@ -131,10 +131,9 @@ export interface PayoutStatusResult {
  * The core PaymentProvider interface.
  * All payment gateways must implement this.
  *
- * To add a new provider:
- * 1. Create a new file in providers/ (e.g., cashfree.provider.ts)
- * 2. Implement this interface
- * 3. Register in provider-factory.ts
+ * NOTE: This monolithic interface is retained only for the shared param/result
+ * types below. Providers are now composed from the capability interfaces in
+ * capabilities.ts and wired up via provider-registry.ts.
  */
 export interface PaymentProvider {
   readonly name: string;

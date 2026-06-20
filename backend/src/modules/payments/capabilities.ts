@@ -10,7 +10,7 @@ export interface WebhookEvent {
   handled: boolean;
   eventId: string;
   eventType: string;
-  status: "captured" | "failed" | "refunded" | "qr_credited" | "payout_processed" | "payout_failed";
+  status: "captured" | "failed" | "refunded" | "qr_credited" | "payout_processed" | "payout_failed" | "unknown";
   providerOrderId?: string;
   providerPaymentId?: string;
   qrCodeId?: string;

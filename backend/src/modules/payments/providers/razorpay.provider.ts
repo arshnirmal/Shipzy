@@ -509,7 +509,7 @@ async function verifyAndParse(
         handled: false,
         eventId,
         eventType,
-        status: "captured" as WebhookEvent["status"],
+        status: "unknown",
         raw: payload,
       };
   }

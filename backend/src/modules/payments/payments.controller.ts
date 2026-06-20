@@ -173,6 +173,12 @@ class PaymentsController {
         msg: "Webhook processing error",
         error: (error as Error).message,
       });
+      // Signature/validation failures are permanent (AppError 4xx) — return that
+      // status so the provider does not retry. Unexpected errors are transient →
+      // 500 so the provider retries (idempotency makes retries safe).
+      if (error instanceof AppError) {
+        return reply.status(error.statusCode).send({ status: "error" });
+      }
       return reply.status(500).send({ status: "error" });
     }
   }
