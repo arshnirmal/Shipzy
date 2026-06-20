@@ -803,6 +803,26 @@ class OrdersRepository {
       throw error;
     }
   }
+
+  /**
+   * Get the gross order amount from the pricing JSONB (for earnings calculation)
+   */
+  async getOrderGrossAmount(orderId: number): Promise<number> {
+    try {
+      const result = await drizzlePool.query(
+        ordersQueries.GET_ORDER_GROSS_AMOUNT,
+        [orderId],
+      );
+      return Number(result.rows[0]?.totalPrice ?? 0);
+    } catch (error) {
+      logger.error({
+        msg: "Error getting order gross amount",
+        error: (error as Error).message,
+        orderId,
+      });
+      throw error;
+    }
+  }
 }
 
 export default new OrdersRepository();

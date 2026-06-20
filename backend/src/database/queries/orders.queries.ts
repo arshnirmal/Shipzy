@@ -358,4 +358,12 @@ export default {
     )
     RETURNING event_id AS "eventId", timestamp AS "timestamp"
   `,
+
+  /**
+   * Get order gross amount from pricing JSONB (used for driver earnings calculation)
+   */
+  GET_ORDER_GROSS_AMOUNT: `
+    SELECT (pricing->>'totalPrice')::numeric AS "totalPrice"
+    FROM orders.requests WHERE order_id = $1
+  `,
 };

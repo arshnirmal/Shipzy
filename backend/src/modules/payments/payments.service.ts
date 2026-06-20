@@ -1,12 +1,11 @@
-// services/backend/src/modules/payments/payments.service.ts
+// src/modules/payments/payments.service.ts
 // Payment orchestration service — coordinates between providers, DB, and order flow
 
 import config from "../../config/env.js";
 import logger from "../../config/logger.js";
-import { drizzlePool } from "../../database/drizzle.js";
-import paymentQueries from "../../database/queries/payments.queries.js";
 import { AppError, NotFoundError } from "../../utils/error.util.js";
 import registry from "./provider-registry.js";
+import paymentsRepository from "./payments.repository.js";
 import type {
   PaymentOrderResponse,
   PaymentVerifyResponse,
@@ -40,28 +39,25 @@ class PaymentsService {
     });
 
     // Record transaction in DB
-    const txn = await drizzlePool.query(
-      paymentQueries.CREATE_PAYMENT_TRANSACTION,
-      [
-        orderId,
-        paymentMethodId,
-        amount,
-        "INR",
-        null, // external_transaction_id (set after verification)
-        "razorpay",
-        null, // upi_vpa
-        JSON.stringify({ providerOrderId: result.providerOrderId }),
-      ],
-    );
+    const txn = await paymentsRepository.createTransaction([
+      orderId,
+      paymentMethodId,
+      amount,
+      "INR",
+      null, // external_transaction_id (set after verification)
+      "razorpay",
+      null, // upi_vpa
+      JSON.stringify({ providerOrderId: result.providerOrderId }),
+    ]);
 
     // Store provider order id on the transaction
-    const transactionId = txn.rows[0]?.transactionId;
+    const transactionId = txn?.transactionId;
     if (transactionId) {
-      await drizzlePool.query(paymentQueries.UPDATE_RAZORPAY_ORDER_ID, [
+      await paymentsRepository.setProviderOrderId(
         transactionId,
         result.providerOrderId,
         "prepaid",
-      ]);
+      );
     }
 
     return {
@@ -96,28 +92,25 @@ class PaymentsService {
     }
 
     // Find the transaction for this order
-    const txnResult = await drizzlePool.query(
-      paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
-      [razorpayOrderId],
+    const txnRow = await paymentsRepository.getTransactionByProviderOrder(
+      razorpayOrderId,
     );
 
-    if (txnResult.rows.length === 0) {
+    if (!txnRow) {
       throw new NotFoundError("Transaction not found for this payment");
     }
 
-    const transactionId = txnResult.rows[0].transactionId;
+    const transactionId = txnRow.transactionId;
 
     // Mark as completed
-    await drizzlePool.query(paymentQueries.MARK_PAYMENT_COMPLETED, [
-      transactionId,
-    ]);
+    await paymentsRepository.markCompleted(transactionId);
 
     // Update with Razorpay payment details
-    await drizzlePool.query(paymentQueries.UPDATE_PAYMENT_DETAILS, [
+    await paymentsRepository.updatePaymentDetails(
       transactionId,
       razorpayPaymentId,
       verification.vpa || null,
-    ]);
+    );
 
     logger.info({
       msg: "Payment verified and completed",
@@ -143,44 +136,35 @@ class PaymentsService {
     paymentMethodId: number = 1,
   ): Promise<QRCodeResponse> {
     // Get order amount from existing transaction or order
-    const existingTxn = await drizzlePool.query(
-      paymentQueries.GET_PAYMENT_BY_ORDER,
-      [orderId],
-    );
+    const existingTxn = await paymentsRepository.getPaymentByOrder(orderId);
 
     let amount: number;
     let transactionId: number;
 
-    if (existingTxn.rows.length > 0 && existingTxn.rows[0].paymentStatus === "pending") {
+    if (existingTxn && existingTxn.paymentStatus === "pending") {
       // Re-use existing pending transaction
-      amount = Number(existingTxn.rows[0].amount);
-      transactionId = existingTxn.rows[0].transactionId;
+      amount = Number(existingTxn.amount);
+      transactionId = existingTxn.transactionId;
     } else {
       // Get the order amount to create a new transaction
-      const orderResult = await drizzlePool.query(
-        paymentQueries.GET_ORDER_AMOUNT,
-        [orderId],
-      );
-      if (orderResult.rows.length === 0) {
+      const orderRow = await paymentsRepository.getOrderAmount(orderId);
+      if (!orderRow) {
         throw new NotFoundError("Order not found");
       }
-      amount = Number(orderResult.rows[0].totalPrice);
+      amount = Number(orderRow.totalPrice);
 
       // Create pending transaction
-      const txnResult = await drizzlePool.query(
-        paymentQueries.CREATE_PAYMENT_TRANSACTION,
-        [
-          orderId,
-          paymentMethodId,
-          amount,
-          "INR",
-          null,
-          "razorpay",
-          null,
-          JSON.stringify({ paymentMode: "collect_on_delivery" }),
-        ],
-      );
-      transactionId = txnResult.rows[0].transactionId;
+      const txnResult = await paymentsRepository.createTransaction([
+        orderId,
+        paymentMethodId,
+        amount,
+        "INR",
+        null,
+        "razorpay",
+        null,
+        JSON.stringify({ paymentMode: "collect_on_delivery" }),
+      ]);
+      transactionId = txnResult!.transactionId;
     }
 
     const provider = registry.qr();
@@ -195,13 +179,13 @@ class PaymentsService {
     });
 
     // Store QR details on the transaction
-    await drizzlePool.query(paymentQueries.UPDATE_QR_DETAILS, [
+    await paymentsRepository.updateQrDetails(
       transactionId,
       qr.qrId,
       qr.imageUrl,
       qr.expiresAt.toISOString(),
       "collect_on_delivery",
-    ]);
+    );
 
     logger.info({
       msg: "QR code generated for collect-on-delivery",
@@ -223,20 +207,11 @@ class PaymentsService {
    * Get payment status for an order.
    */
   async getPaymentStatus(orderId: number): Promise<PaymentStatusResponse> {
-    const result = await drizzlePool.query(
-      paymentQueries.GET_PAYMENT_BY_ORDER,
-      [orderId],
-    );
+    const txn = await paymentsRepository.getPaymentByOrder(orderId);
+    const orderRow = await paymentsRepository.getOrderPaymentMode(orderId);
+    const paymentMode = (orderRow?.paymentMode || "prepaid") as "prepaid" | "collect_on_delivery";
 
-    // Get payment mode from order
-    const orderResult = await drizzlePool.query(
-      paymentQueries.GET_ORDER_PAYMENT_MODE,
-      [orderId],
-    );
-
-    const paymentMode = orderResult.rows[0]?.paymentMode || "prepaid";
-
-    if (result.rows.length === 0) {
+    if (!txn) {
       return {
         orderId,
         paymentMode,
@@ -253,7 +228,6 @@ class PaymentsService {
       };
     }
 
-    const txn = result.rows[0];
     return {
       orderId,
       paymentMode,
@@ -293,21 +267,20 @@ class PaymentsService {
       case "captured": {
         // Prepaid payment confirmed — find transaction and mark complete
         if (event.providerOrderId) {
-          const txn = await drizzlePool.query(
-            paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
-            [event.providerOrderId],
+          const txnRow = await paymentsRepository.getTransactionByProviderOrder(
+            event.providerOrderId,
           );
-          if (txn.rows.length > 0) {
-            const tid = txn.rows[0].transactionId;
+          if (txnRow) {
+            const tid = txnRow.transactionId;
             // Idempotent — only update if still pending
-            if (txn.rows[0].status === "pending") {
-              await drizzlePool.query(paymentQueries.MARK_PAYMENT_COMPLETED, [tid]);
+            if (txnRow.status === "pending") {
+              await paymentsRepository.markCompleted(tid);
               if (event.providerPaymentId) {
-                await drizzlePool.query(paymentQueries.UPDATE_PAYMENT_DETAILS, [
+                await paymentsRepository.updatePaymentDetails(
                   tid,
                   event.providerPaymentId,
                   event.vpa || null,
-                ]);
+                );
               }
             }
           }
@@ -318,20 +291,19 @@ class PaymentsService {
       case "qr_credited": {
         // Collect-on-delivery QR payment received
         if (event.qrCodeId) {
-          const txn = await drizzlePool.query(
-            paymentQueries.GET_TRANSACTION_BY_QR_CODE,
-            [event.qrCodeId],
+          const txnRow = await paymentsRepository.getTransactionByQrCode(
+            event.qrCodeId,
           );
-          if (txn.rows.length > 0) {
-            const tid = txn.rows[0].transactionId;
-            if (txn.rows[0].status === "pending") {
-              await drizzlePool.query(paymentQueries.MARK_PAYMENT_COMPLETED, [tid]);
+          if (txnRow) {
+            const tid = txnRow.transactionId;
+            if (txnRow.status === "pending") {
+              await paymentsRepository.markCompleted(tid);
               if (event.providerPaymentId) {
-                await drizzlePool.query(paymentQueries.UPDATE_PAYMENT_DETAILS, [
+                await paymentsRepository.updatePaymentDetails(
                   tid,
                   event.providerPaymentId,
                   event.vpa || null,
-                ]);
+                );
               }
             }
           }
@@ -341,15 +313,14 @@ class PaymentsService {
 
       case "failed": {
         if (event.providerOrderId) {
-          const txn = await drizzlePool.query(
-            paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
-            [event.providerOrderId],
+          const txnRow = await paymentsRepository.getTransactionByProviderOrder(
+            event.providerOrderId,
           );
-          if (txn.rows.length > 0) {
-            await drizzlePool.query(paymentQueries.MARK_PAYMENT_FAILED, [
-              txn.rows[0].transactionId,
+          if (txnRow) {
+            await paymentsRepository.markFailed(
+              txnRow.transactionId,
               "Payment failed via webhook",
-            ]);
+            );
           }
         }
         break;
@@ -383,7 +354,7 @@ class PaymentsService {
     );
     const netAmount = Number((grossAmount - commissionAmt).toFixed(2));
 
-    await drizzlePool.query(paymentQueries.CREATE_EARNINGS_ENTRY, [
+    await paymentsRepository.createEarningsEntry(
       driverId,
       orderId,
       assignmentId,
@@ -391,7 +362,7 @@ class PaymentsService {
       commissionPct,
       commissionAmt,
       netAmount,
-    ]);
+    );
 
     logger.info({
       msg: "Driver earnings entry created",
@@ -409,12 +380,9 @@ class PaymentsService {
     driverId: number,
     period: string,
   ): Promise<DriverEarningsResponse> {
-    const result = await drizzlePool.query(
-      paymentQueries.GET_DRIVER_EARNINGS,
-      [driverId, period],
-    );
+    const rows = await paymentsRepository.getDriverEarnings(driverId, period);
 
-    const entries = result.rows.map((row: any) => ({
+    const entries = rows.map((row: any) => ({
       ledgerId: row.ledgerId,
       orderId: row.orderId,
       grossAmount: Number(row.grossAmount),
@@ -459,20 +427,11 @@ class PaymentsService {
   ): Promise<DriverPayoutsResponse> {
     const offset = (page - 1) * limit;
 
-    const result = await drizzlePool.query(
-      paymentQueries.GET_DRIVER_PAYOUTS,
-      [driverId, limit, offset],
-    );
-
-    const countResult = await drizzlePool.query(
-      paymentQueries.COUNT_DRIVER_PAYOUTS,
-      [driverId],
-    );
-
-    const total = parseInt(countResult.rows[0]?.count || "0", 10);
+    const rows = await paymentsRepository.getDriverPayouts(driverId, limit, offset);
+    const total = await paymentsRepository.countDriverPayouts(driverId);
 
     return {
-      payouts: result.rows.map((row: any) => ({
+      payouts: rows.map((row: any) => ({
         payoutId: row.payoutId,
         totalDeliveries: row.totalDeliveries,
         grossAmount: Number(row.grossAmount),
@@ -502,30 +461,25 @@ class PaymentsService {
     logger.info({ msg: "Starting daily payout processing" });
 
     // Get all drivers with unsettled earnings
-    const unsettled = await drizzlePool.query(
-      paymentQueries.GET_UNSETTLED_EARNINGS_BY_DRIVER,
-    );
+    const unsettledRows = await paymentsRepository.getUnsettledEarningsByDriver();
 
-    if (unsettled.rows.length === 0) {
+    if (unsettledRows.length === 0) {
       logger.info({ msg: "No unsettled earnings to process" });
       return;
     }
 
     const payoutProvider = registry.payout();
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split("T")[0] ?? ""; // YYYY-MM-DD
 
-    for (const driverSummary of unsettled.rows) {
+    for (const driverSummary of unsettledRows) {
       const { driverId, totalDeliveries, grossTotal, commissionTotal, netTotal } =
         driverSummary;
 
       try {
         // Get driver's UPI ID (from profile)
-        const driverInfo = await drizzlePool.query(
-          paymentQueries.GET_DRIVER_PAYOUT_INFO,
-          [driverId],
-        );
+        const driverInfo = await paymentsRepository.getDriverPayoutInfo(driverId);
 
-        const upiId = driverInfo.rows[0]?.upiId;
+        const upiId = driverInfo?.upiId;
         if (!upiId) {
           logger.warn({
             msg: "Driver has no UPI ID configured, skipping payout",
@@ -535,21 +489,18 @@ class PaymentsService {
         }
 
         // Create payout record
-        const payoutResult = await drizzlePool.query(
-          paymentQueries.CREATE_PAYOUT_RECORD,
-          [
-            driverId,
-            totalDeliveries,
-            grossTotal,
-            commissionTotal,
-            netTotal,
-            "upi",
-            upiId,
-            today,
-          ],
+        const payoutResult = await paymentsRepository.createPayoutRecord(
+          driverId,
+          totalDeliveries,
+          grossTotal,
+          commissionTotal,
+          netTotal,
+          "upi",
+          upiId as string,
+          today,
         );
 
-        const payoutId = payoutResult.rows[0].payoutId;
+        const payoutId = payoutResult!.payoutId;
 
         // Initiate payout via provider
         const amountPaise = Math.round(Number(netTotal) * 100);
@@ -562,19 +513,16 @@ class PaymentsService {
         });
 
         // Update payout record with external ID
-        await drizzlePool.query(paymentQueries.UPDATE_PAYOUT_EXTERNAL_ID, [
+        await paymentsRepository.updatePayoutExternalId(
           payoutId,
           payoutResponse.payoutId,
           payoutResponse.success ? "processing" : "failed",
           payoutResponse.success ? null : "Provider returned failure",
-        ]);
+        );
 
         // Mark earnings as settled
         if (payoutResponse.success) {
-          await drizzlePool.query(paymentQueries.SETTLE_DRIVER_EARNINGS, [
-            driverId,
-            payoutId,
-          ]);
+          await paymentsRepository.settleDriverEarnings(driverId, payoutId);
         }
 
         logger.info({

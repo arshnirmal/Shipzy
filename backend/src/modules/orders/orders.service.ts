@@ -618,20 +618,16 @@ class OrdersService {
 
     if (status === "delivered") {
       const delivered = await ordersRepository.deliverOrder(orderId, courierId);
-      
+
       // Calculate and create earnings entry for driver
       try {
-        const orderInfo = await drizzlePool.query(
-          "SELECT (pricing->>'totalPrice')::numeric as total_price FROM orders.requests WHERE order_id = $1",
-          [orderId]
-        );
-        const grossAmount = orderInfo.rows[0]?.total_price || 0;
+        const grossAmount = await ordersRepository.getOrderGrossAmount(orderId);
         if (order.assignmentId) {
           await paymentsService.createEarningsEntry(
             courierId,
             orderId,
             order.assignmentId,
-            Number(grossAmount)
+            grossAmount,
           );
         }
       } catch (err) {
