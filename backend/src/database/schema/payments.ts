@@ -181,3 +181,17 @@ export const driverPayouts = paymentsSchema.table(
     index("idx_payouts_status").on(table.status),
   ],
 );
+
+// Webhook event deduplication log — prevents double-processing of provider events
+export const paymentWebhookEvents = paymentsSchema.table(
+  "payment_webhook_events",
+  {
+    provider: varchar("provider", { length: 50 }).notNull(),
+    eventId: varchar("event_id", { length: 255 }).primaryKey(),
+    eventType: varchar("event_type", { length: 100 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("received"),
+    payload: jsonb("payload").notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+  },
+);

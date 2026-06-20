@@ -3,7 +3,11 @@
 // Each method wraps exactly one parameterized query — no business logic here.
 
 import { drizzlePool } from "../../database/drizzle.js";
+import logger from "../../config/logger.js";
 import paymentQueries from "../../database/queries/payments.queries.js";
+import webhookEventQueries from "../../database/queries/webhook-events.queries.js";
+import { rawTransaction } from "../../database/transaction.js";
+import type { WebhookEvent } from "./capabilities.js";
 
 class PaymentsRepository {
   /**
@@ -299,6 +303,163 @@ class PaymentsRepository {
       driverId,
       payoutId,
     ]);
+  }
+
+  // ── Webhook idempotency ─────────────────────────────────────────────────────
+
+  /**
+   * Insert a webhook event row if its event_id has not been seen before.
+   * Returns true when a new row was created; false when it was a duplicate.
+   */
+  async insertWebhookEventIfNew(
+    provider: string,
+    eventId: string,
+    eventType: string,
+    payloadJson: string,
+  ): Promise<boolean> {
+    const r = await drizzlePool.query(webhookEventQueries.INSERT_EVENT_IF_NEW, [
+      provider,
+      eventId,
+      eventType,
+      payloadJson,
+    ]);
+    return r.rows.length > 0;
+  }
+
+  /**
+   * Mark a previously-inserted webhook event as processed.
+   */
+  async markWebhookProcessed(eventId: string): Promise<void> {
+    await drizzlePool.query(webhookEventQueries.MARK_EVENT_PROCESSED, [
+      eventId,
+    ]);
+  }
+
+  /**
+   * Complete a transaction only if it is still pending AND the stored amount
+   * (rupees) matches the webhook amount (paise). Amount mismatch → returns false.
+   */
+  async completeTransactionIfPending(
+    transactionId: number,
+    providerPaymentId: string,
+    vpa: string | null | undefined,
+    amountPaise: number,
+  ): Promise<boolean> {
+    const r = await drizzlePool.query(paymentQueries.COMPLETE_TXN_IF_PENDING, [
+      transactionId,
+      providerPaymentId,
+      vpa ?? null,
+      amountPaise,
+    ]);
+    return r.rows.length > 0;
+  }
+
+  /**
+   * Apply a parsed webhook event inside a single DB transaction.
+   *
+   * - captured / qr_credited: looks up the transaction, then applies the
+   *   amount-guarded completion query.  If event.amount is missing the event
+   *   is treated as un-actionable and a warning is logged.
+   * - failed: looks up the transaction and marks it failed (no amount guard).
+   * - All other statuses are intentional no-ops here (handled elsewhere/later).
+   */
+  async applyWebhookEvent(event: WebhookEvent): Promise<void> {
+    await rawTransaction(async (client) => {
+      switch (event.status) {
+        case "captured": {
+          if (!event.providerOrderId) return;
+          if (event.amount === undefined) {
+            logger.warn({
+              msg: "Webhook 'captured' event missing amount — skipping completion",
+              eventId: event.eventId,
+              providerOrderId: event.providerOrderId,
+            });
+            return;
+          }
+          const txnRes = await client.query(
+            paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
+            [event.providerOrderId],
+          );
+          const txn = txnRes.rows[0];
+          if (!txn) return;
+          const completed = await client.query(
+            paymentQueries.COMPLETE_TXN_IF_PENDING,
+            [
+              txn.transactionId,
+              event.providerPaymentId ?? null,
+              event.vpa ?? null,
+              event.amount,
+            ],
+          );
+          if (completed.rows.length === 0) {
+            logger.warn({
+              msg: "Webhook 'captured': transaction not updated (wrong status or amount mismatch)",
+              transactionId: txn.transactionId,
+              webhookAmountPaise: event.amount,
+            });
+          }
+          break;
+        }
+
+        case "qr_credited": {
+          if (!event.qrCodeId) return;
+          if (event.amount === undefined) {
+            logger.warn({
+              msg: "Webhook 'qr_credited' event missing amount — skipping completion",
+              eventId: event.eventId,
+              qrCodeId: event.qrCodeId,
+            });
+            return;
+          }
+          const txnRes = await client.query(
+            paymentQueries.GET_TRANSACTION_BY_QR_CODE,
+            [event.qrCodeId],
+          );
+          const txn = txnRes.rows[0];
+          if (!txn) return;
+          const completed = await client.query(
+            paymentQueries.COMPLETE_TXN_IF_PENDING,
+            [
+              txn.transactionId,
+              event.providerPaymentId ?? null,
+              event.vpa ?? null,
+              event.amount,
+            ],
+          );
+          if (completed.rows.length === 0) {
+            logger.warn({
+              msg: "Webhook 'qr_credited': transaction not updated (wrong status or amount mismatch)",
+              transactionId: txn.transactionId,
+              webhookAmountPaise: event.amount,
+            });
+          }
+          break;
+        }
+
+        case "failed": {
+          if (!event.providerOrderId) return;
+          const txnRes = await client.query(
+            paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
+            [event.providerOrderId],
+          );
+          const txn = txnRes.rows[0];
+          if (!txn) return;
+          await client.query(paymentQueries.MARK_PAYMENT_FAILED, [
+            txn.transactionId,
+            "Payment failed via webhook",
+          ]);
+          break;
+        }
+
+        // Intentional no-ops for now — handled elsewhere or in a future task
+        case "refunded":
+        case "payout_processed":
+        case "payout_failed":
+        case "unknown":
+        default:
+          break;
+      }
+    });
   }
 }
 

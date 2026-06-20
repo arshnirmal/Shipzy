@@ -1,6 +1,6 @@
 {
-  "id": "514f4780-e229-4de3-88c1-242da2a9b4b5",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "0f67b59b-c94e-4c01-be64-2c49b3e5aeba",
+  "prevId": "514f4780-e229-4de3-88c1-242da2a9b4b5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1466,6 +1466,14 @@
           "primaryKey": false,
           "notNull": true
         },
+        "payment_mode": {
+          "name": "payment_mode",
+          "type": "payment_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'prepaid'"
+        },
         "status": {
           "name": "status",
           "type": "order_status",
@@ -2356,6 +2364,342 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "payments.driver_earnings_ledger": {
+      "name": "driver_earnings_ledger",
+      "schema": "payments",
+      "columns": {
+        "ledger_id": {
+          "name": "ledger_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "driver_id": {
+          "name": "driver_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignment_id": {
+          "name": "assignment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gross_amount": {
+          "name": "gross_amount",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "commission_pct": {
+          "name": "commission_pct",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "commission_amt": {
+          "name": "commission_amt",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "net_amount": {
+          "name": "net_amount",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "earnings_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "payout_id": {
+          "name": "payout_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "earned_at": {
+          "name": "earned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_earnings_driver_status": {
+          "name": "idx_earnings_driver_status",
+          "columns": [
+            {
+              "expression": "driver_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_earnings_driver_earned": {
+          "name": "idx_earnings_driver_earned",
+          "columns": [
+            {
+              "expression": "driver_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "earned_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "driver_earnings_ledger_order_id_requests_order_id_fk": {
+          "name": "driver_earnings_ledger_order_id_requests_order_id_fk",
+          "tableFrom": "driver_earnings_ledger",
+          "tableTo": "requests",
+          "schemaTo": "orders",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "order_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "driver_earnings_ledger_assignment_id_courier_assignments_assignment_id_fk": {
+          "name": "driver_earnings_ledger_assignment_id_courier_assignments_assignment_id_fk",
+          "tableFrom": "driver_earnings_ledger",
+          "tableTo": "courier_assignments",
+          "schemaTo": "orders",
+          "columnsFrom": [
+            "assignment_id"
+          ],
+          "columnsTo": [
+            "assignment_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "earnings_gross_non_negative_chk": {
+          "name": "earnings_gross_non_negative_chk",
+          "value": "\"payments\".\"driver_earnings_ledger\".\"gross_amount\" >= 0"
+        },
+        "earnings_net_non_negative_chk": {
+          "name": "earnings_net_non_negative_chk",
+          "value": "\"payments\".\"driver_earnings_ledger\".\"net_amount\" >= 0"
+        },
+        "earnings_commission_pct_range_chk": {
+          "name": "earnings_commission_pct_range_chk",
+          "value": "\"payments\".\"driver_earnings_ledger\".\"commission_pct\" BETWEEN 0 AND 100"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "payments.driver_payouts": {
+      "name": "driver_payouts",
+      "schema": "payments",
+      "columns": {
+        "payout_id": {
+          "name": "payout_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "driver_id": {
+          "name": "driver_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_deliveries": {
+          "name": "total_deliveries",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gross_amount": {
+          "name": "gross_amount",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_commission": {
+          "name": "total_commission",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "net_amount": {
+          "name": "net_amount",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payout_method": {
+          "name": "payout_method",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'upi'"
+        },
+        "payout_upi_id": {
+          "name": "payout_upi_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_payout_id": {
+          "name": "external_payout_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "payout_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "failure_reason": {
+          "name": "failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payout_date": {
+          "name": "payout_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initiated_at": {
+          "name": "initiated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_payouts_driver_date": {
+          "name": "idx_payouts_driver_date",
+          "columns": [
+            {
+              "expression": "driver_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "payout_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_payouts_status": {
+          "name": "idx_payouts_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "payout_net_non_negative_chk": {
+          "name": "payout_net_non_negative_chk",
+          "value": "\"payments\".\"driver_payouts\".\"net_amount\" >= 0"
+        },
+        "payout_gross_non_negative_chk": {
+          "name": "payout_gross_non_negative_chk",
+          "value": "\"payments\".\"driver_payouts\".\"gross_amount\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "payments.payment_methods": {
       "name": "payment_methods",
       "schema": "payments",
@@ -2438,6 +2782,14 @@
           "primaryKey": false,
           "notNull": true
         },
+        "payment_mode": {
+          "name": "payment_mode",
+          "type": "payment_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'prepaid'"
+        },
         "amount": {
           "name": "amount",
           "type": "numeric(10, 2)",
@@ -2451,6 +2803,12 @@
           "notNull": true,
           "default": "'INR'"
         },
+        "razorpay_order_id": {
+          "name": "razorpay_order_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "external_transaction_id": {
           "name": "external_transaction_id",
           "type": "varchar(255)",
@@ -2461,11 +2819,30 @@
           "name": "payment_gateway",
           "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'razorpay'"
         },
         "upi_vpa": {
           "name": "upi_vpa",
           "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qr_code_id": {
+          "name": "qr_code_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qr_image_url": {
+          "name": "qr_image_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qr_expires_at": {
+          "name": "qr_expires_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -2558,6 +2935,63 @@
           "value": "(\"payments\".\"transactions\".\"status\" <> 'completed' OR \"payments\".\"transactions\".\"payment_completed_at\" IS NOT NULL) AND (\"payments\".\"transactions\".\"status\" <> 'failed' OR \"payments\".\"transactions\".\"payment_failed_at\" IS NOT NULL)"
         }
       },
+      "isRLSEnabled": false
+    },
+    "payments.payment_webhook_events": {
+      "name": "payment_webhook_events",
+      "schema": "payments",
+      "columns": {
+        "provider": {
+          "name": "provider",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "varchar(255)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'received'"
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "payments.refunds": {
@@ -3154,6 +3588,15 @@
         "firebase"
       ]
     },
+    "public.earnings_status": {
+      "name": "earnings_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "settled",
+        "failed"
+      ]
+    },
     "public.monthly_volume": {
       "name": "monthly_volume",
       "schema": "public",
@@ -3211,6 +3654,14 @@
         "returned"
       ]
     },
+    "public.payment_mode": {
+      "name": "payment_mode",
+      "schema": "public",
+      "values": [
+        "prepaid",
+        "collect_on_delivery"
+      ]
+    },
     "public.payment_status": {
       "name": "payment_status",
       "schema": "public",
@@ -3220,6 +3671,16 @@
         "failed",
         "refunded",
         "cancelled"
+      ]
+    },
+    "public.payout_status": {
+      "name": "payout_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "processing",
+        "completed",
+        "failed"
       ]
     },
     "public.refund_status": {

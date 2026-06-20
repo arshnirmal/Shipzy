@@ -251,90 +251,32 @@ class PaymentsService {
   /**
    * Process a provider webhook event.
    * Idempotent — safe to call multiple times for the same event.
+   * Deduplicates by event_id before applying amount-guarded completion.
    */
   async processWebhook(
     provider: string,
     rawBody: string,
     headers: Record<string, string>,
   ): Promise<{ statusCode: number; status: string }> {
+    // Throws AppError(400) on bad signature — bubbles to controller as-is
     const event = await registry.webhook(provider).verifyAndParse(rawBody, headers);
 
     if (!event.handled) {
       return { statusCode: 200, status: "ignored" };
     }
 
-    switch (event.status) {
-      case "captured": {
-        // Prepaid payment confirmed — find transaction and mark complete
-        if (event.providerOrderId) {
-          const txnRow = await paymentsRepository.getTransactionByProviderOrder(
-            event.providerOrderId,
-          );
-          if (txnRow) {
-            const tid = txnRow.transactionId;
-            // Idempotent — only update if still pending
-            if (txnRow.status === "pending") {
-              await paymentsRepository.markCompleted(tid);
-              if (event.providerPaymentId) {
-                await paymentsRepository.updatePaymentDetails(
-                  tid,
-                  event.providerPaymentId,
-                  event.vpa || null,
-                );
-              }
-            }
-          }
-        }
-        break;
-      }
-
-      case "qr_credited": {
-        // Collect-on-delivery QR payment received
-        if (event.qrCodeId) {
-          const txnRow = await paymentsRepository.getTransactionByQrCode(
-            event.qrCodeId,
-          );
-          if (txnRow) {
-            const tid = txnRow.transactionId;
-            if (txnRow.status === "pending") {
-              await paymentsRepository.markCompleted(tid);
-              if (event.providerPaymentId) {
-                await paymentsRepository.updatePaymentDetails(
-                  tid,
-                  event.providerPaymentId,
-                  event.vpa || null,
-                );
-              }
-            }
-          }
-        }
-        break;
-      }
-
-      case "failed": {
-        if (event.providerOrderId) {
-          const txnRow = await paymentsRepository.getTransactionByProviderOrder(
-            event.providerOrderId,
-          );
-          if (txnRow) {
-            await paymentsRepository.markFailed(
-              txnRow.transactionId,
-              "Payment failed via webhook",
-            );
-          }
-        }
-        break;
-      }
-
-      case "refunded":
-        logger.info({ msg: "Refund webhook processed", event });
-        break;
-
-      case "payout_processed":
-      case "payout_failed":
-        logger.info({ msg: "Payout webhook received", event });
-        break;
+    const isNew = await paymentsRepository.insertWebhookEventIfNew(
+      provider,
+      event.eventId,
+      event.eventType,
+      JSON.stringify(event.raw),
+    );
+    if (!isNew) {
+      return { statusCode: 200, status: "duplicate" };
     }
+
+    await paymentsRepository.applyWebhookEvent(event);
+    await paymentsRepository.markWebhookProcessed(event.eventId);
 
     return { statusCode: 200, status: "ok" };
   }

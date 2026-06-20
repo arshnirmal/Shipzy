@@ -73,12 +73,32 @@ export default {
    */
   MARK_PAYMENT_COMPLETED: `
       UPDATE payments.transactions
-      SET 
+      SET
           status = 'completed',
           payment_completed_at = NOW(),
           updated_at = NOW()
       WHERE transaction_id = $1
       RETURNING transaction_id AS "transactionId", payment_completed_at AS "paymentCompletedAt"
+  `,
+
+  /**
+   * Idempotent, amount-guarded completion via webhook.
+   * Only updates if the transaction is still pending AND the stored amount
+   * (in rupees) matches the webhook amount (in paise) after rounding.
+   * Returns the transaction_id on success; empty result on status/amount mismatch.
+   * $1 = transaction_id, $2 = external_transaction_id, $3 = upi_vpa, $4 = amount_paise
+   */
+  COMPLETE_TXN_IF_PENDING: `
+    UPDATE payments.transactions
+    SET status = 'completed',
+        external_transaction_id = $2,
+        upi_vpa = COALESCE($3, upi_vpa),
+        payment_completed_at = NOW(),
+        updated_at = NOW()
+    WHERE transaction_id = $1
+      AND status = 'pending'
+      AND ROUND(amount * 100) = $4
+    RETURNING transaction_id AS "transactionId"
   `,
 
   /**
