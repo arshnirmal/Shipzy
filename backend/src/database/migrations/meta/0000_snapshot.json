@@ -1,6 +1,6 @@
 {
-  "id": "f92b5e2f-ef01-49ca-a9e6-0e188f59ace7",
-  "prevId": "634e46ae-818b-41ac-8128-a895ede7953b",
+  "id": "a190bd31-ffe6-489c-9a11-c1bc29130fb2",
+  "prevId": "f92b5e2f-ef01-49ca-a9e6-0e188f59ace7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1473,6 +1473,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'prepaid'"
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "payment_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
         },
         "status": {
           "name": "status",

@@ -27,6 +27,7 @@ import {
   orderStatusEnum,
   assignmentStatusEnum,
   paymentModeEnum,
+  paymentStatusEnum,
 } from "./public.js";
 import { paymentMethods } from "./payments.js";
 import type {
@@ -73,6 +74,7 @@ export const orderRequests = ordersSchema.table(
       .notNull()
       .references(() => paymentMethods.methodId),
     paymentMode: paymentModeEnum("payment_mode").notNull().default("prepaid"),
+    paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending"),
 
     status: orderStatusEnum("status").notNull(),
 

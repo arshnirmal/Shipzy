@@ -1,0 +1,1 @@
+ALTER TABLE "orders"."requests" ADD COLUMN "payment_status" "payment_status" DEFAULT 'pending' NOT NULL;
