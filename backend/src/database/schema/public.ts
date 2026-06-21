@@ -102,6 +102,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "failed",
   "refunded",
   "cancelled",
+  "expired",
 ]);
 export const paymentModeEnum = pgEnum("payment_mode", [
   "prepaid",

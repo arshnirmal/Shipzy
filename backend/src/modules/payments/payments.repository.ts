@@ -601,6 +601,69 @@ class PaymentsRepository {
     );
     return r.rows[0]?.courierId ?? null;
   }
+
+  /**
+   * Look up a transaction by its internal transaction_id.
+   */
+  async getTransactionById(
+    transactionId: number,
+  ): Promise<{ transactionId: number; orderId: number; amount: string; status: string; externalTransactionId: string | null } | undefined> {
+    const r = await drizzlePool.query(paymentQueries.GET_TRANSACTION_BY_ID, [
+      transactionId,
+    ]);
+    return r.rows[0];
+  }
+
+  /**
+   * Insert a new refund row. Returns the new refund_id.
+   */
+  async createRefund(
+    transactionId: number,
+    orderId: number,
+    amount: number,
+    reason: string,
+    status: string,
+  ): Promise<{ refundId: number }> {
+    const r = await drizzlePool.query(paymentQueries.CREATE_REFUND, [
+      transactionId,
+      orderId,
+      amount,
+      reason,
+      status,
+    ]);
+    return r.rows[0];
+  }
+
+  /**
+   * Mark a refund as processed with the provider's external refund id.
+   */
+  async markRefundProcessed(
+    refundId: number,
+    externalRefundId: string,
+  ): Promise<void> {
+    await drizzlePool.query(paymentQueries.MARK_REFUND_PROCESSED, [
+      refundId,
+      externalRefundId,
+    ]);
+  }
+
+  /**
+   * Mark the transaction's status as 'refunded'.
+   */
+  async markTransactionRefunded(transactionId: number): Promise<void> {
+    await drizzlePool.query(paymentQueries.MARK_TRANSACTION_REFUNDED, [
+      transactionId,
+    ]);
+  }
+
+  /**
+   * Expire all pending QR transactions past their expiry time.
+   * Returns the count of rows that were expired.
+   */
+  async expireStaleQRs(): Promise<number> {
+    const r = await drizzlePool.query(paymentQueries.EXPIRE_STALE_QR_TXNS);
+    return r.rows.length;
+  }
 }
 
 export default new PaymentsRepository();

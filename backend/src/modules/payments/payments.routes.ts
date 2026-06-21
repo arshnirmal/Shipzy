@@ -9,6 +9,7 @@ import {
   getPaymentStatusSchema,
   driverEarningsSchema,
   driverPayoutsSchema,
+  refundSchema,
 } from "./payments.schema.js";
 
 async function paymentsRoutes(fastify: FastifyInstance, _options: unknown) {
@@ -101,6 +102,16 @@ async function paymentsRoutes(fastify: FastifyInstance, _options: unknown) {
     asRouteHandler(
       paymentsController.getDriverPayouts.bind(paymentsController),
     ),
+  );
+
+  // POST /api/v1/payments/:transactionId/refund — Admin refunds a completed transaction
+  fastify.post(
+    "/:transactionId/refund",
+    {
+      schema: refundSchema,
+      preHandler: [authorize("admin")],
+    },
+    asRouteHandler(paymentsController.refund.bind(paymentsController)),
   );
 }
 

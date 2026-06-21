@@ -13,6 +13,9 @@ import {
   DriverEarningsResponseZ,
   DriverPayoutsQueryZ,
   DriverPayoutsResponseZ,
+  PaymentParamsZ,
+  RefundRequestZ,
+  RefundResponseZ,
 } from "./payments.zod.js";
 import {
   COMMON_ERROR_RESPONSES,
@@ -65,5 +68,14 @@ export const driverPayoutsSchema: FastifySchema = {
   response: {
     ...COMMON_ERROR_RESPONSES,
     200: successEnvelope(toJsonSchema(DriverPayoutsResponseZ)),
+  },
+};
+
+export const refundSchema: FastifySchema = {
+  params: toJsonSchema(PaymentParamsZ),
+  body: toJsonSchema(RefundRequestZ),
+  response: {
+    ...COMMON_ERROR_RESPONSES,
+    200: successEnvelope(toJsonSchema(RefundResponseZ)),
   },
 };

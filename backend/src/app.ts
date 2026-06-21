@@ -33,6 +33,7 @@ import ratingsRoutes from "./modules/ratings/ratings.routes.js";
 import staticRoutes from "./modules/static/static.routes.js";
 import usersRoutes from "./modules/users/users.routes.js";
 import { startPayoutScheduler } from "./modules/payments/payout.scheduler.js";
+import { startQrExpirySweep } from "./modules/payments/qr-expiry.scheduler.js";
 
 /**
  * Build Fastify application
@@ -231,6 +232,7 @@ export const buildApp = async (
     if (err) throw err;
     startScheduler(app);
     startPayoutScheduler(app);
+    startQrExpirySweep(app);
   });
 
   return app;

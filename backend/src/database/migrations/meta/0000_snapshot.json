@@ -1,6 +1,6 @@
 {
-  "id": "634e46ae-818b-41ac-8128-a895ede7953b",
-  "prevId": "0f67b59b-c94e-4c01-be64-2c49b3e5aeba",
+  "id": "f92b5e2f-ef01-49ca-a9e6-0e188f59ace7",
+  "prevId": "634e46ae-818b-41ac-8128-a895ede7953b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3671,7 +3671,8 @@
         "completed",
         "failed",
         "refunded",
-        "cancelled"
+        "cancelled",
+        "expired"
       ]
     },
     "public.payout_status": {

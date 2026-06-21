@@ -443,4 +443,53 @@ export default {
     SET status = 'failed', failure_reason = $2
     WHERE payout_id = $1
   `,
+
+  /**
+   * Get a transaction by its internal transaction_id.
+   * $1 = transaction_id
+   */
+  GET_TRANSACTION_BY_ID: `
+    SELECT
+      transaction_id AS "transactionId",
+      order_id AS "orderId",
+      amount AS "amount",
+      status AS "status",
+      external_transaction_id AS "externalTransactionId"
+    FROM payments.transactions
+    WHERE transaction_id = $1
+  `,
+
+  /**
+   * Insert a new refund row in 'pending' status.
+   * $1 = transaction_id, $2 = order_id, $3 = refund_amount, $4 = refund_reason, $5 = refund_status
+   */
+  CREATE_REFUND: `
+    INSERT INTO payments.refunds (transaction_id, order_id, refund_amount, refund_reason, refund_status)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING refund_id AS "refundId"
+  `,
+
+  /**
+   * Mark the transaction as refunded after a successful refund.
+   * $1 = transaction_id
+   */
+  MARK_TRANSACTION_REFUNDED: `
+    UPDATE payments.transactions
+    SET status = 'refunded'
+    WHERE transaction_id = $1
+  `,
+
+  /**
+   * Expire all pending QR transactions whose qr_expires_at is in the past.
+   * Returns the transaction_ids that were updated.
+   */
+  EXPIRE_STALE_QR_TXNS: `
+    UPDATE payments.transactions
+    SET status = 'expired'
+    WHERE status = 'pending'
+      AND qr_code_id IS NOT NULL
+      AND qr_expires_at IS NOT NULL
+      AND qr_expires_at < NOW()
+    RETURNING transaction_id AS "transactionId"
+  `,
 };

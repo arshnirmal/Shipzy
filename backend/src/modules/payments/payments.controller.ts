@@ -190,6 +190,27 @@ class PaymentsController {
   }
 
   /**
+   * POST /api/v1/payments/:transactionId/refund
+   * Admin initiates a refund for a completed transaction
+   */
+  async refund(
+    request: FastifyRequest<{ Params: PaymentParams; Body: RefundRequest }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { transactionId } = request.params;
+      const { reason } = request.body;
+      const result = await paymentsService.refund(transactionId, reason);
+      return successResponse(reply, result, "Refund processed successfully");
+    } catch (error) {
+      if (error instanceof AppError) {
+        return errorResponse(reply, error.message, error.statusCode);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * GET /api/v1/payments/driver/earnings
    * Get driver earnings summary
    */

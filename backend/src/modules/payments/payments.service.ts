@@ -461,6 +461,80 @@ class PaymentsService {
   }
 
   /**
+   * Initiate a refund for a completed transaction. Admin-only.
+   * Creates a refund row, calls the provider, and on success marks both
+   * the refund and the parent transaction as completed/refunded.
+   */
+  async refund(
+    transactionId: number,
+    reason: string,
+  ): Promise<RefundResponse> {
+    const txn = await paymentsRepository.getTransactionById(transactionId);
+    if (!txn) throw new NotFoundError("Transaction not found");
+
+    if (txn.status !== "completed") {
+      throw new AppError("Only completed payments can be refunded", 400);
+    }
+
+    if (!txn.externalTransactionId) {
+      throw new AppError("No provider payment id on this transaction", 400);
+    }
+
+    const amount = Number(txn.amount);
+    const amountPaise = Math.round(amount * 100);
+
+    // Create the refund row in 'pending' status
+    const refundRow = await paymentsRepository.createRefund(
+      transactionId,
+      txn.orderId,
+      amount,
+      reason,
+      "pending",
+    );
+    const refundId = refundRow.refundId;
+
+    // Call the provider
+    const result = await registry.refund().initiateRefund({
+      providerPaymentId: txn.externalTransactionId,
+      amount: amountPaise,
+      reason,
+    });
+
+    let status: string;
+    if (result.success) {
+      await paymentsRepository.markRefundProcessed(refundId, result.refundId);
+      await paymentsRepository.markTransactionRefunded(transactionId);
+      status = "completed";
+    } else {
+      status = "pending";
+    }
+
+    logger.info({
+      msg: "Refund processed",
+      transactionId,
+      refundId,
+      amount,
+      success: result.success,
+    });
+
+    return { refundId, transactionId, amount, status };
+  }
+
+  /**
+   * Expire all pending QR-based transactions that are past their expiry time.
+   * Called by the QR expiry sweep scheduler every 5 minutes.
+   */
+  async expireStaleQRs(): Promise<void> {
+    const count = await paymentsRepository.expireStaleQRs();
+    if (count > 0) {
+      logger.info({
+        msg: "Expired stale QR transactions",
+        count,
+      });
+    }
+  }
+
+  /**
    * Process daily payouts for all drivers with unsettled earnings.
    * Called by the payout scheduler at 11 PM IST.
    *
