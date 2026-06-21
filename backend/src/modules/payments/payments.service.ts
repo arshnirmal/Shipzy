@@ -463,92 +463,137 @@ class PaymentsService {
   /**
    * Process daily payouts for all drivers with unsettled earnings.
    * Called by the payout scheduler at 11 PM IST.
+   *
+   * Crash-safety: earnings are marked 'processing' (linked to the payout record)
+   * BEFORE any provider call. If the process crashes after the provider call but
+   * before we update the DB, earnings stay 'processing' and are NOT re-queued
+   * for the next run. The webhook reconciliation (applyWebhookEvent) settles or
+   * reverts them when RazorpayX delivers the payout_processed / payout_failed event.
+   *
+   * Concurrency: a PostgreSQL advisory lock ensures only one scheduler instance
+   * runs at a time across all pods/workers.
    */
   async processDailyPayouts(): Promise<void> {
     logger.info({ msg: "Starting daily payout processing" });
 
-    // Get all drivers with unsettled earnings
-    const unsettledRows = await paymentsRepository.getUnsettledEarningsByDriver();
+    await paymentsRepository.runWithPayoutLock(async () => {
+      // Only pick up pending earnings — 'processing' rows belong to an
+      // in-flight payout already and will be reconciled by the webhook.
+      const unsettledRows = await paymentsRepository.getUnsettledEarningsByDriver();
 
-    if (unsettledRows.length === 0) {
-      logger.info({ msg: "No unsettled earnings to process" });
-      return;
-    }
-
-    const payoutProvider = registry.payout();
-    const today = new Date().toISOString().split("T")[0] ?? ""; // YYYY-MM-DD
-
-    for (const driverSummary of unsettledRows) {
-      const { driverId, totalDeliveries, grossTotal, commissionTotal, netTotal } =
-        driverSummary;
-
-      try {
-        // Get driver's UPI ID (from profile)
-        const driverInfo = await paymentsRepository.getDriverPayoutInfo(driverId);
-
-        const upiId = driverInfo?.upiId;
-        if (!upiId) {
-          logger.warn({
-            msg: "Driver has no UPI ID configured, skipping payout",
-            driverId,
-          });
-          continue;
-        }
-
-        // Create payout record
-        const payoutResult = await paymentsRepository.createPayoutRecord(
-          driverId,
-          totalDeliveries,
-          grossTotal,
-          commissionTotal,
-          netTotal,
-          "upi",
-          upiId as string,
-          today,
-        );
-
-        const payoutId = payoutResult!.payoutId;
-
-        // Initiate payout via provider
-        const amountPaise = Math.round(Number(netTotal) * 100);
-        const payoutResponse = await payoutProvider.initiatePayout({
-          driverId: Number(driverId),
-          amount: amountPaise,
-          upiId,
-          referenceId: `payout_${payoutId}_${today}`,
-          narration: `Shipzy earnings for ${today}`,
-        });
-
-        // Update payout record with external ID
-        await paymentsRepository.updatePayoutExternalId(
-          payoutId,
-          payoutResponse.payoutId,
-          payoutResponse.success ? "processing" : "failed",
-          payoutResponse.success ? null : "Provider returned failure",
-        );
-
-        // Mark earnings as settled
-        if (payoutResponse.success) {
-          await paymentsRepository.settleDriverEarnings(driverId, payoutId);
-        }
-
-        logger.info({
-          msg: "Driver payout processed",
-          driverId,
-          payoutId,
-          netAmount: netTotal,
-          success: payoutResponse.success,
-        });
-      } catch (error) {
-        logger.error({
-          msg: "Failed to process payout for driver",
-          driverId,
-          error: (error as Error).message,
-        });
+      if (unsettledRows.length === 0) {
+        logger.info({ msg: "No unsettled earnings to process" });
+        return;
       }
-    }
 
-    logger.info({ msg: "Daily payout processing completed" });
+      const payoutProvider = registry.payout();
+      const today = new Date().toISOString().split("T")[0] ?? ""; // YYYY-MM-DD
+
+      for (const driverSummary of unsettledRows) {
+        const { driverId, totalDeliveries, grossTotal, commissionTotal, netTotal } =
+          driverSummary;
+
+        let payoutId: number | undefined;
+
+        try {
+          // Get driver's UPI ID (from profile)
+          const driverInfo = await paymentsRepository.getDriverPayoutInfo(driverId);
+
+          const upiId = driverInfo?.upiId;
+          if (!upiId) {
+            logger.warn({
+              msg: "Driver has no UPI ID configured, skipping payout",
+              driverId,
+            });
+            continue;
+          }
+
+          // 1. Create payout record first so we have an id to link earnings to.
+          const payoutResult = await paymentsRepository.createPayoutRecord(
+            driverId,
+            totalDeliveries,
+            grossTotal,
+            commissionTotal,
+            netTotal,
+            "upi",
+            upiId as string,
+            today,
+          );
+          payoutId = payoutResult!.payoutId;
+
+          // 2. Atomically claim earnings BEFORE any provider call.
+          //    If a crash happens between step 2 and 4, earnings stay 'processing'
+          //    and are reconciled by the webhook — no double-pay.
+          const claimed = await paymentsRepository.markEarningsProcessing(driverId, payoutId);
+          if (claimed === 0) {
+            // No earnings to settle for this driver (race: another run claimed them).
+            await paymentsRepository.failPayout(payoutId, "No pending earnings");
+            logger.warn({ msg: "No pending earnings to claim for driver", driverId, payoutId });
+            continue;
+          }
+
+          // 3. Initiate payout via provider.
+          const amountPaise = Math.round(Number(netTotal) * 100);
+          const payoutResponse = await payoutProvider.initiatePayout({
+            driverId: Number(driverId),
+            amount: amountPaise,
+            upiId,
+            referenceId: `payout_${payoutId}_${today}`,
+            narration: `Shipzy earnings for ${today}`,
+          });
+
+          // 4. Record provider result. On success, leave earnings as 'processing'
+          //    — the webhook (payout_processed) will settle them atomically.
+          //    On provider failure, revert earnings to 'pending' for the next run.
+          if (payoutResponse.success) {
+            await paymentsRepository.updatePayoutExternalId(
+              payoutId,
+              payoutResponse.payoutId,
+              "processing",
+              null,
+            );
+            // Earnings remain 'processing' until webhook fires.
+          } else {
+            await paymentsRepository.updatePayoutExternalId(
+              payoutId,
+              "",
+              "failed",
+              "Provider returned failure",
+            );
+            await paymentsRepository.revertProcessingEarnings(payoutId);
+          }
+
+          logger.info({
+            msg: "Driver payout initiated",
+            driverId,
+            payoutId,
+            netAmount: netTotal,
+            success: payoutResponse.success,
+          });
+        } catch (error) {
+          logger.error({
+            msg: "Failed to process payout for driver",
+            driverId,
+            error: (error as Error).message,
+          });
+          // Best-effort: revert earnings so they're included in the next run.
+          if (payoutId !== undefined) {
+            try {
+              await paymentsRepository.revertProcessingEarnings(payoutId);
+            } catch (revertErr) {
+              logger.error({
+                msg: "Failed to revert processing earnings after payout error",
+                driverId,
+                payoutId,
+                error: (revertErr as Error).message,
+              });
+            }
+          }
+        }
+      }
+
+      logger.info({ msg: "Daily payout processing completed" });
+    });
   }
 }
 

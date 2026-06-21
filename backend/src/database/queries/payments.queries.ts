@@ -377,4 +377,70 @@ export default {
     WHERE order_id = $1 AND status NOT IN ('rejected','cancelled')
     ORDER BY created_at DESC LIMIT 1
   `,
+
+  // ─── Crash-safe payout queries (3.1) ─────────────────────────────────────
+
+  /**
+   * Atomically claim all pending earnings for a driver by marking them
+   * 'processing' and linking them to the payout record before any provider
+   * call. Returns the ledger rows that were claimed.
+   * $1 = driver_id, $2 = payout_id
+   */
+  MARK_EARNINGS_PROCESSING: `
+    UPDATE payments.driver_earnings_ledger
+    SET status = 'processing', payout_id = $2
+    WHERE driver_id = $1 AND status = 'pending'
+    RETURNING ledger_id AS "ledgerId"
+  `,
+
+  /**
+   * Settle all earnings linked to a payout once the provider confirms success.
+   * $1 = payout_id
+   */
+  SETTLE_PROCESSING_EARNINGS: `
+    UPDATE payments.driver_earnings_ledger
+    SET status = 'settled', settled_at = NOW()
+    WHERE payout_id = $1 AND status = 'processing'
+  `,
+
+  /**
+   * Revert earnings back to 'pending' on payout failure or crash, so they
+   * are included in the next run.
+   * $1 = payout_id
+   */
+  REVERT_PROCESSING_EARNINGS: `
+    UPDATE payments.driver_earnings_ledger
+    SET status = 'pending', payout_id = NULL
+    WHERE payout_id = $1 AND status = 'processing'
+  `,
+
+  // ─── Payout reconciliation queries (3.2) ─────────────────────────────────
+
+  /**
+   * Look up the internal payout_id from the provider's external payout id.
+   * $1 = external_payout_id
+   */
+  GET_PAYOUT_BY_EXTERNAL_ID: `
+    SELECT payout_id AS "payoutId" FROM payments.driver_payouts WHERE external_payout_id = $1
+  `,
+
+  /**
+   * Mark a payout completed (webhook: payout_processed).
+   * $1 = payout_id
+   */
+  COMPLETE_PAYOUT: `
+    UPDATE payments.driver_payouts
+    SET status = 'completed', completed_at = NOW()
+    WHERE payout_id = $1 AND status = 'processing'
+  `,
+
+  /**
+   * Mark a payout failed with a reason (webhook: payout_failed or error).
+   * $1 = payout_id, $2 = failure_reason
+   */
+  FAIL_PAYOUT: `
+    UPDATE payments.driver_payouts
+    SET status = 'failed', failure_reason = $2
+    WHERE payout_id = $1
+  `,
 };

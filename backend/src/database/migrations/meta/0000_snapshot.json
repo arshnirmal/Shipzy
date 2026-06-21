@@ -1,6 +1,6 @@
 {
-  "id": "0f67b59b-c94e-4c01-be64-2c49b3e5aeba",
-  "prevId": "514f4780-e229-4de3-88c1-242da2a9b4b5",
+  "id": "634e46ae-818b-41ac-8128-a895ede7953b",
+  "prevId": "0f67b59b-c94e-4c01-be64-2c49b3e5aeba",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3593,6 +3593,7 @@
       "schema": "public",
       "values": [
         "pending",
+        "processing",
         "settled",
         "failed"
       ]

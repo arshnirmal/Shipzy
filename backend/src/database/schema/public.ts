@@ -115,6 +115,7 @@ export const payoutStatusEnum = pgEnum("payout_status", [
 ]);
 export const earningsStatusEnum = pgEnum("earnings_status", [
   "pending",
+  "processing",
   "settled",
   "failed",
 ]);

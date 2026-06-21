@@ -1,0 +1,1 @@
+ALTER TYPE "public"."earnings_status" ADD VALUE 'processing' BEFORE 'settled';

@@ -294,6 +294,7 @@ class PaymentsRepository {
 
   /**
    * Mark a driver's pending earnings as settled against a payout record.
+   * @deprecated Settlement now happens via webhook reconciliation (settleProcessingEarnings).
    */
   async settleDriverEarnings(
     driverId: number,
@@ -303,6 +304,85 @@ class PaymentsRepository {
       driverId,
       payoutId,
     ]);
+  }
+
+  // ── Crash-safe payout helpers (3.1) ────────────────────────────────────────
+
+  /**
+   * Atomically mark all pending earnings for a driver as 'processing',
+   * linking them to the payout record BEFORE any provider call.
+   * Returns the number of ledger rows claimed.
+   * $1 = driver_id, $2 = payout_id
+   */
+  async markEarningsProcessing(driverId: number, payoutId: number): Promise<number> {
+    const r = await drizzlePool.query(paymentQueries.MARK_EARNINGS_PROCESSING, [
+      driverId,
+      payoutId,
+    ]);
+    return r.rows.length;
+  }
+
+  /**
+   * Settle all 'processing' earnings for a payout (called by webhook reconciliation).
+   */
+  async settleProcessingEarnings(payoutId: number): Promise<void> {
+    await drizzlePool.query(paymentQueries.SETTLE_PROCESSING_EARNINGS, [payoutId]);
+  }
+
+  /**
+   * Revert 'processing' earnings back to 'pending' on payout failure or crash.
+   */
+  async revertProcessingEarnings(payoutId: number): Promise<void> {
+    await drizzlePool.query(paymentQueries.REVERT_PROCESSING_EARNINGS, [payoutId]);
+  }
+
+  /**
+   * Look up the internal payout_id from the provider's external payout id.
+   * Returns null if not found.
+   */
+  async getPayoutByExternalId(externalId: string): Promise<number | null> {
+    const r = await drizzlePool.query(paymentQueries.GET_PAYOUT_BY_EXTERNAL_ID, [externalId]);
+    return r.rows[0]?.payoutId ?? null;
+  }
+
+  /**
+   * Mark a payout as completed (status: processing → completed).
+   */
+  async completePayout(payoutId: number): Promise<void> {
+    await drizzlePool.query(paymentQueries.COMPLETE_PAYOUT, [payoutId]);
+  }
+
+  /**
+   * Mark a payout as failed with a reason.
+   */
+  async failPayout(payoutId: number, reason: string): Promise<void> {
+    await drizzlePool.query(paymentQueries.FAIL_PAYOUT, [payoutId, reason]);
+  }
+
+  /**
+   * Acquire a PostgreSQL session-level advisory lock (key 91823) on a dedicated
+   * pooled client so two concurrent payout scheduler runs cannot overlap.
+   * The lock is held for the duration of the payout loop — NOT inside a
+   * transaction — so provider network calls don't hold a DB transaction open.
+   *
+   * Returns null and logs a warning if another run holds the lock.
+   */
+  async runWithPayoutLock<T>(fn: () => Promise<T>): Promise<T | null> {
+    const client = await drizzlePool.connect();
+    try {
+      const res = await client.query("SELECT pg_try_advisory_lock(91823) AS locked");
+      if (!res.rows[0]?.locked) {
+        logger.warn({ msg: "Payout run already in progress; skipping" });
+        return null;
+      }
+      try {
+        return await fn();
+      } finally {
+        await client.query("SELECT pg_advisory_unlock(91823)");
+      }
+    } finally {
+      client.release();
+    }
   }
 
   // ── Webhook idempotency ─────────────────────────────────────────────────────
@@ -451,10 +531,49 @@ class PaymentsRepository {
           break;
         }
 
-        // Intentional no-ops for now — handled elsewhere or in a future task
+        // Intentional no-op
         case "refunded":
-        case "payout_processed":
-        case "payout_failed":
+          break;
+
+        case "payout_processed": {
+          if (!event.providerPayoutId) return;
+          const payoutRes = await client.query(
+            paymentQueries.GET_PAYOUT_BY_EXTERNAL_ID,
+            [event.providerPayoutId],
+          );
+          const payoutId: number | undefined = payoutRes.rows[0]?.payoutId;
+          if (!payoutId) return;
+          await client.query(paymentQueries.COMPLETE_PAYOUT, [payoutId]);
+          await client.query(paymentQueries.SETTLE_PROCESSING_EARNINGS, [payoutId]);
+          logger.info({
+            msg: "Payout reconciled: completed and earnings settled",
+            providerPayoutId: event.providerPayoutId,
+            payoutId,
+          });
+          break;
+        }
+
+        case "payout_failed": {
+          if (!event.providerPayoutId) return;
+          const payoutRes = await client.query(
+            paymentQueries.GET_PAYOUT_BY_EXTERNAL_ID,
+            [event.providerPayoutId],
+          );
+          const payoutId: number | undefined = payoutRes.rows[0]?.payoutId;
+          if (!payoutId) return;
+          await client.query(paymentQueries.FAIL_PAYOUT, [
+            payoutId,
+            "Payout failed via webhook",
+          ]);
+          await client.query(paymentQueries.REVERT_PROCESSING_EARNINGS, [payoutId]);
+          logger.warn({
+            msg: "Payout reconciled: failed and earnings reverted to pending",
+            providerPayoutId: event.providerPayoutId,
+            payoutId,
+          });
+          break;
+        }
+
         case "unknown":
         default:
           break;
