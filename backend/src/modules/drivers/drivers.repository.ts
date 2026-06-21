@@ -391,6 +391,23 @@ class DriversRepository {
   }
 
   /**
+   * Find online, idle couriers within a given radius of a pickup point.
+   * Returns an array of courier user IDs.
+   */
+  async findNearbyCouriers(
+    lat: number,
+    lng: number,
+    radiusKm: number,
+    limit: number,
+  ): Promise<number[]> {
+    const result = await drizzlePool.query<{ courier_id: number }>(
+      driversQueries.CALL_FIND_NEARBY_COURIERS,
+      [lat, lng, radiusKm, limit],
+    );
+    return result.rows.map((r) => r.courier_id);
+  }
+
+  /**
    * Get paginated trip history for a courier
    */
   async getTripHistory(

@@ -8,9 +8,8 @@ import {
 import { toIsoDateTime } from "../../utils/datetime.util.js";
 import ordersRepository from "./orders.repository.js";
 import fcmService from "../../services/fcm.service.js";
-import { drizzlePool } from "../../database/drizzle.js";
-import driversQueries from "../../database/queries/drivers.queries.js";
 import paymentsService from "../payments/payments.service.js";
+import orderDispatchService from "./order-dispatch.service.js";
 
 import type {
   AcceptOrderResult,
@@ -270,7 +269,7 @@ class OrdersService {
       );
     } else {
       // Fire-and-forget: notify nearby online couriers of the new order.
-      this.broadcastNewOrderToNearbyCouriers({
+      orderDispatchService.broadcastNewOrder({
         orderId: result.order.identifiers.orderId,
         orderNumber: result.order.identifiers.orderNumber ?? "",
         pickupLat: orderData.locations.pickup.latitude,
@@ -278,7 +277,7 @@ class OrdersService {
         totalPrice: pricing.totalPrice,
       }).catch((err) => {
         logger.warn({
-          msg: "broadcastNewOrderToNearbyCouriers failed",
+          msg: "broadcastNewOrder failed",
           error: (err as Error).message,
         });
       });
@@ -287,44 +286,6 @@ class OrdersService {
     return {
       order: result.order,
     };
-  }
-
-  /**
-   * Notify online, idle couriers within radius about a freshly created order.
-   * Uses logistics.find_nearby_couriers() then dispatches FCM via fcmService.
-   */
-  private async broadcastNewOrderToNearbyCouriers(params: {
-    orderId: number;
-    orderNumber: string;
-    pickupLat: number;
-    pickupLng: number;
-    totalPrice: number;
-  }): Promise<void> {
-    try {
-      const radiusKm = 10;
-      const limit = 25;
-      const result = await drizzlePool.query<{ courier_id: number }>(
-        driversQueries.CALL_FIND_NEARBY_COURIERS,
-        [params.pickupLat, params.pickupLng, radiusKm, limit],
-      );
-      const courierIds = result.rows.map((r) => r.courier_id);
-      if (courierIds.length === 0) return;
-
-      await fcmService.sendToUsers(courierIds, {
-        title: "New delivery nearby",
-        body: `₹${params.totalPrice} · Tap to view pickup`,
-        data: {
-          type: "order.available",
-          orderId: String(params.orderId),
-          orderNumber: params.orderNumber,
-        },
-      });
-    } catch (error) {
-      logger.warn({
-        msg: "Error broadcasting new order to nearby couriers",
-        error: (error as Error).message,
-      });
-    }
   }
 
   async releaseScheduledOrders() {
