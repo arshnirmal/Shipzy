@@ -354,8 +354,8 @@ export default {
   GET_DRIVER_PAYOUT_INFO: `
       SELECT
           up.user_id AS "driverId",
-          up.metadata->>'payoutUpiId' AS "upiId"
-      FROM users.user_profiles up
+          up.onboarding->>'payoutUpiId' AS "upiId"
+      FROM users.profiles up
       WHERE up.user_id = $1
   `,
 
