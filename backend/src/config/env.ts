@@ -150,4 +150,19 @@ if (missingEnvVars.length > 0) {
   );
 }
 
+// Razorpay credentials are required outside of tests (where the provider is mocked).
+if (process.env.NODE_ENV !== "test") {
+  const missingPaymentVars = [
+    "RAZORPAY_KEY_ID",
+    "RAZORPAY_KEY_SECRET",
+    "RAZORPAY_WEBHOOK_SECRET",
+  ].filter((varName) => !process.env[varName]);
+
+  if (missingPaymentVars.length > 0) {
+    throw new Error(
+      `Missing required payment environment variables: ${missingPaymentVars.join(", ")}`,
+    );
+  }
+}
+
 export default config;
