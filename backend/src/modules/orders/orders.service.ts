@@ -268,19 +268,23 @@ class OrdersService {
         "Order scheduled at creation",
       );
     } else {
-      // Fire-and-forget: notify nearby online couriers of the new order.
-      orderDispatchService.broadcastNewOrder({
-        orderId: result.order.identifiers.orderId,
-        orderNumber: result.order.identifiers.orderNumber ?? "",
-        pickupLat: orderData.locations.pickup.latitude,
-        pickupLng: orderData.locations.pickup.longitude,
-        totalPrice: pricing.totalPrice,
-      }).catch((err) => {
-        logger.warn({
-          msg: "broadcastNewOrder failed",
-          error: (err as Error).message,
-        });
-      });
+      // COD broadcasts immediately; prepaid stays dormant until payment completes (see payments.service).
+      if (orderData.fulfillment.paymentMode === "collect_on_delivery") {
+        orderDispatchService
+          .broadcastNewOrder({
+            orderId: result.order.identifiers.orderId,
+            orderNumber: result.order.identifiers.orderNumber ?? "",
+            pickupLat: orderData.locations.pickup.latitude,
+            pickupLng: orderData.locations.pickup.longitude,
+            totalPrice: pricing.totalPrice,
+          })
+          .catch((err) => {
+            logger.warn({
+              msg: "broadcastNewOrder failed",
+              error: (err as Error).message,
+            });
+          });
+      }
     }
 
     return {

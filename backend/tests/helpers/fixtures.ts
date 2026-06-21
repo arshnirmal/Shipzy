@@ -225,6 +225,7 @@ export const createOrder = async (
   const delivery =
     (overrides.delivery as Record<string, unknown>) ||
     defaultAddress("Delivery", 12.9352, 77.6245);
+  const paymentMode = (overrides.paymentMode as string) || undefined;
 
   const paymentMethod = catalog.paymentMethods[0];
   const packageTypeIds = (catalog.packageTypes || [])
@@ -331,6 +332,7 @@ export const createOrder = async (
           weightTierId: combo.weightTierId,
           packageTypeId: combo.packageTypeId,
           paymentMethodId: combo.paymentMethodId,
+          ...(paymentMode ? { paymentMode } : {}),
         },
         locations: {
           pickup,

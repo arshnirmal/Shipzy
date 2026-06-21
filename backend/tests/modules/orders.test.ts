@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import type { FastifyInstance } from "fastify";
 import { buildTestApp, inject, authHeaders } from "../helpers/app.js";
 import {
@@ -8,6 +8,7 @@ import {
   createCourier,
   createOrder,
 } from "../helpers/fixtures.js";
+import orderDispatchService from "../../src/modules/orders/order-dispatch.service.js";
 
 describe("Orders Module", () => {
   let app: FastifyInstance;
@@ -455,5 +456,29 @@ describe("Orders Module", () => {
     expect(
       typeof body.message === "string" || typeof body.error === "string",
     ).toBe(true);
+  });
+
+  describe("broadcast gating on payment mode", () => {
+    it("does not broadcast a prepaid order at creation", async () => {
+      const client = await createClient(app);
+      const spy = jest
+        .spyOn(orderDispatchService, "broadcastNewOrder")
+        .mockResolvedValue(undefined);
+      await createOrder(app, client.accessToken, { paymentMode: "prepaid" });
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it("broadcasts a collect_on_delivery order at creation", async () => {
+      const client = await createClient(app);
+      const spy = jest
+        .spyOn(orderDispatchService, "broadcastNewOrder")
+        .mockResolvedValue(undefined);
+      await createOrder(app, client.accessToken, {
+        paymentMode: "collect_on_delivery",
+      });
+      expect(spy).toHaveBeenCalledTimes(1);
+      spy.mockRestore();
+    });
   });
 });
