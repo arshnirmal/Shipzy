@@ -31,8 +31,7 @@ class PaymentsController {
       const { orderId } = request.body;
       const result = await paymentsService.initiatePayment(
         orderId,
-        1, // default UPI payment method
-        0, // amount will be fetched from order
+        request.user!.userId,
       );
 
       logger.info({
@@ -73,6 +72,7 @@ class PaymentsController {
 
       const result = await paymentsService.verifyPayment(
         orderId,
+        request.user!.userId,
         razorpayOrderId,
         razorpayPaymentId,
         razorpaySignature,
@@ -104,7 +104,10 @@ class PaymentsController {
     try {
       const { orderId } = request.body;
 
-      const result = await paymentsService.generateCollectionQR(orderId);
+      const result = await paymentsService.generateCollectionQR(
+        orderId,
+        request.user!.userId,
+      );
 
       logger.info({
         msg: "POST /api/v1/payments/generate-qr",
@@ -137,7 +140,10 @@ class PaymentsController {
     try {
       const { orderId } = request.params;
 
-      const result = await paymentsService.getPaymentStatus(orderId);
+      const result = await paymentsService.getPaymentStatusForCaller(
+        orderId,
+        request.user!,
+      );
 
       return successResponse(
         reply,

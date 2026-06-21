@@ -461,6 +461,27 @@ class PaymentsRepository {
       }
     });
   }
+
+  /**
+   * Get the client (business) user id that owns an order, or null if missing.
+   */
+  async getOrderOwner(orderId: number): Promise<number | null> {
+    const r = await drizzlePool.query(paymentQueries.GET_ORDER_OWNER, [
+      orderId,
+    ]);
+    return r.rows[0]?.clientId ?? null;
+  }
+
+  /**
+   * Get the courier id currently assigned to an order, or null if unassigned.
+   */
+  async getAssignedCourier(orderId: number): Promise<number | null> {
+    const r = await drizzlePool.query(
+      paymentQueries.GET_ORDER_ASSIGNED_COURIER,
+      [orderId],
+    );
+    return r.rows[0]?.courierId ?? null;
+  }
 }
 
 export default new PaymentsRepository();

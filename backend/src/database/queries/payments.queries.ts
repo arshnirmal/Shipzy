@@ -358,4 +358,23 @@ export default {
       FROM users.user_profiles up
       WHERE up.user_id = $1
   `,
+
+  /**
+   * Get the client (business) user who owns an order.
+   * Returns client_id or nothing if the order doesn't exist.
+   */
+  GET_ORDER_OWNER: `
+    SELECT client_id AS "clientId" FROM orders.requests WHERE order_id = $1
+  `,
+
+  /**
+   * Get the courier currently assigned to an order.
+   * Active assignment = status NOT IN ('rejected', 'cancelled').
+   * Returns the most-recent active courier_id, or nothing if unassigned.
+   */
+  GET_ORDER_ASSIGNED_COURIER: `
+    SELECT courier_id AS "courierId" FROM orders.courier_assignments
+    WHERE order_id = $1 AND status NOT IN ('rejected','cancelled')
+    ORDER BY created_at DESC LIMIT 1
+  `,
 };

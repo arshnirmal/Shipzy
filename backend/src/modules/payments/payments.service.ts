@@ -16,20 +16,60 @@ import type {
   DriverPayoutsResponse,
 } from "./payments.zod.js";
 
+// Internal default payment method id (UPI). Never sourced from the client.
+const DEFAULT_PAYMENT_METHOD_ID = 1;
+
 class PaymentsService {
+  /**
+   * Ensure the caller is the business/client that owns the order.
+   */
+  private async assertBusinessOwnsOrder(
+    orderId: number,
+    userId: number,
+  ): Promise<void> {
+    const ownerId = await paymentsRepository.getOrderOwner(orderId);
+    if (ownerId === null) throw new NotFoundError("Order not found");
+    if (ownerId !== userId) {
+      throw new AppError("Not authorized for this order", 403);
+    }
+  }
+
+  /**
+   * Ensure the caller is the courier currently assigned to the order.
+   */
+  private async assertCourierAssigned(
+    orderId: number,
+    userId: number,
+  ): Promise<void> {
+    const courierId = await paymentsRepository.getAssignedCourier(orderId);
+    if (courierId !== userId) {
+      throw new AppError("Not authorized for this order", 403);
+    }
+  }
+
   /**
    * Initiate a prepaid payment order.
    * Creates a Razorpay order and records it in payments.transactions.
+   * The amount is sourced server-side from the order — never from the client.
    */
   async initiatePayment(
     orderId: number,
-    paymentMethodId: number,
-    amount: number,
+    businessUserId: number,
   ): Promise<PaymentOrderResponse> {
+    await this.assertBusinessOwnsOrder(orderId, businessUserId);
+
+    const orderRow = await paymentsRepository.getOrderAmount(orderId);
+    if (!orderRow) {
+      throw new NotFoundError("Order not found");
+    }
+    const amount = Number(orderRow.totalPrice);
+    const amountPaise = Math.round(amount * 100);
+    if (amountPaise < 100) {
+      throw new AppError("Order amount too small for online payment", 400);
+    }
+
     const provider = registry.collection();
 
-    // Create provider order (amount in paise)
-    const amountPaise = Math.round(amount * 100);
     const result = await provider.createPaymentOrder({
       orderId,
       amount: amountPaise,
@@ -38,10 +78,10 @@ class PaymentsService {
       notes: { orderId: String(orderId) },
     });
 
-    // Record transaction in DB
+    // Record transaction in DB (amount stored in rupees)
     const txn = await paymentsRepository.createTransaction([
       orderId,
-      paymentMethodId,
+      DEFAULT_PAYMENT_METHOD_ID,
       amount,
       "INR",
       null, // external_transaction_id (set after verification)
@@ -75,10 +115,13 @@ class PaymentsService {
    */
   async verifyPayment(
     orderId: number,
+    businessUserId: number,
     razorpayOrderId: string,
     razorpayPaymentId: string,
     razorpaySignature: string,
   ): Promise<PaymentVerifyResponse> {
+    await this.assertBusinessOwnsOrder(orderId, businessUserId);
+
     const provider = registry.collection();
 
     const verification = await provider.verifyPayment({
@@ -133,8 +176,10 @@ class PaymentsService {
    */
   async generateCollectionQR(
     orderId: number,
-    paymentMethodId: number = 1,
+    courierUserId: number,
   ): Promise<QRCodeResponse> {
+    await this.assertCourierAssigned(orderId, courierUserId);
+
     // Get order amount from existing transaction or order
     const existingTxn = await paymentsRepository.getPaymentByOrder(orderId);
 
@@ -156,7 +201,7 @@ class PaymentsService {
       // Create pending transaction
       const txnResult = await paymentsRepository.createTransaction([
         orderId,
-        paymentMethodId,
+        DEFAULT_PAYMENT_METHOD_ID,
         amount,
         "INR",
         null,
@@ -246,6 +291,26 @@ class PaymentsService {
         ? new Date(txn.qrExpiresAt).toISOString()
         : null,
     };
+  }
+
+  /**
+   * Get payment status for an order, enforcing caller authorization.
+   * Admins may view any order; couriers must be assigned; everyone else
+   * (client/business) must own the order. Internal callers use the
+   * unguarded getPaymentStatus instead.
+   */
+  async getPaymentStatusForCaller(
+    orderId: number,
+    caller: { userId: number; role: string },
+  ): Promise<PaymentStatusResponse> {
+    if (caller.role === "admin") {
+      // no ownership restriction
+    } else if (caller.role === "courier") {
+      await this.assertCourierAssigned(orderId, caller.userId);
+    } else {
+      await this.assertBusinessOwnsOrder(orderId, caller.userId);
+    }
+    return this.getPaymentStatus(orderId);
   }
 
   /**
