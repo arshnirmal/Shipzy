@@ -63,6 +63,7 @@ export const OrderFulfillmentZ = z
     packageTypeId: z.number().int().positive().nullable().optional(),
     paymentMethodId: z.number().int().positive(),
     paymentMode: z.enum(["prepaid", "collect_on_delivery"]).optional(),
+    paymentStatus: z.string().optional(),
   })
   .strict();
 
@@ -646,6 +647,7 @@ export type OrderRow = {
   packageTypeId?: number | null;
   paymentMethodId: number;
   paymentMode?: string | null;
+  paymentStatus?: string | null;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   actualDistanceKm?: number | null;
@@ -689,6 +691,7 @@ export type OrderListRow = {
   packageTypeId?: number | null;
   paymentMethodId: number;
   paymentMode?: string | null;
+  paymentStatus?: string | null;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   actualDistanceKm?: number | null;
@@ -720,6 +723,7 @@ export type AvailableOrderRow = {
   packageTypeId?: number | null;
   paymentMethodId: number;
   paymentMode?: string | null;
+  paymentStatus?: string | null;
   totalPrice?: number | null;
   estimatedDistanceKm?: number | null;
   createdAt: Date;

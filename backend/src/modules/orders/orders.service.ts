@@ -67,6 +67,7 @@ class OrdersService {
         packageTypeId: row.packageTypeId ?? null,
         paymentMethodId: row.paymentMethodId,
         paymentMode: (row.paymentMode as "prepaid" | "collect_on_delivery") ?? "prepaid",
+        paymentStatus: (row.paymentStatus as string) ?? "pending",
       },
       locations: {
         pickup: row.pickup,

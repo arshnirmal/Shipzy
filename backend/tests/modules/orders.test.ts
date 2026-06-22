@@ -203,6 +203,24 @@ describe("Orders Module", () => {
         typeof body.message === "string" || typeof body.error === "string",
       ).toBe(true);
     });
+
+    it("exposes paymentStatus on returned orders for the business app", async () => {
+      const client = await createClient(app);
+      await createOrder(app, client.accessToken, { paymentMode: "prepaid" });
+
+      const response = await inject(app, {
+        method: "GET",
+        url: "/api/v1/orders?page=1&limit=1",
+        headers: authHeaders(client.accessToken),
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
+      const fulfillment = body.data[0].order.fulfillment;
+      expect(fulfillment.paymentStatus).toBe("pending");
+    });
   });
 
   describe("GET /api/v1/orders/available", () => {

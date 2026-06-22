@@ -66,6 +66,7 @@ export default {
       o.package_type_id      AS "packageTypeId",
       o.payment_method_id    AS "paymentMethodId",
       o.payment_mode         AS "paymentMode",
+      o.payment_status       AS "paymentStatus",
 
       -- Operational scalars
       o.total_price          AS "totalPrice",
@@ -129,6 +130,7 @@ export default {
       o.package_type_id       AS "packageTypeId",
       o.payment_method_id     AS "paymentMethodId",
       o.payment_mode          AS "paymentMode",
+      o.payment_status        AS "paymentStatus",
 
       -- Operational scalars
       o.total_price           AS "totalPrice",
