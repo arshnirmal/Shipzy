@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useCreateOrderData } from "@/hooks/use-static-data";
 import { useCreateDraft } from "@/hooks/use-drafts";
 import { useCreateOrder, buildCreateOrderPayload } from "@/hooks/use-create-order";
+import { usePayment } from "@/hooks/use-payment";
 import { useTemplate } from "@/hooks/use-templates";
 
 import { AddressSearchWidget } from "@/components/drafts/address-search-widget";
@@ -68,7 +69,9 @@ export function NewOrderWizard() {
   const { data: templateData, isLoading: templateLoading } = useTemplate(templateId);
   const createDraft  = useCreateDraft();
   const createOrder  = useCreateOrder();
+  const payment      = usePayment();
 
+  const [isPaying, setIsPaying] = useState(false);
   const [step, setStep] = useState(0);
   const [state, setState] = useState<WizardState>(DEFAULT_STATE);
   const [templateLoaded, setTemplateLoaded] = useState(false);
@@ -160,9 +163,24 @@ export function NewOrderWizard() {
     });
 
     createOrder.mutate(payload, {
-      onSuccess: (res) => {
-        toast.success("Order placed successfully!");
-        router.push(`/orders/${res.data.order.identifiers.orderId}`);
+      onSuccess: async (res) => {
+        const orderId = res.data.order.identifiers.orderId;
+
+        // Prepaid: the order is created dormant — collect payment now so it
+        // can go live. On cancel/failure the order stays pending-payment and
+        // can be paid later from the order page (Pay now).
+        if (payload.fulfillment.paymentMode === "prepaid") {
+          setIsPaying(true);
+          const result = await payment.payForOrder(orderId);
+          setIsPaying(false);
+          if (result.status !== "paid") {
+            toast.info("Order created — payment pending. You can pay from the order page.");
+          }
+        } else {
+          toast.success("Order placed successfully!");
+        }
+
+        router.push(`/orders/${orderId}`);
       },
       onError: (err: any) => {
         toast.error(err.message || "Failed to place order.");
@@ -276,7 +294,7 @@ export function NewOrderWizard() {
               fare={state.fare}
               onFareResolved={(f) => update("fare", f)}
               onPlaceOrder={handlePlaceOrder}
-              isPlacing={createOrder.isPending}
+              isPlacing={createOrder.isPending || isPaying}
             />
           )}
 
@@ -298,7 +316,7 @@ export function NewOrderWizard() {
             <Button
               variant="outline"
               onClick={handleSaveAsDraft}
-              disabled={createDraft.isPending || createOrder.isPending}
+              disabled={createDraft.isPending || createOrder.isPending || isPaying}
               className="text-muted-foreground"
             >
               {createDraft.isPending ? (
@@ -322,10 +340,10 @@ export function NewOrderWizard() {
             {isLastStep && (
               <Button
                 onClick={handlePlaceOrder}
-                disabled={!state.fare || createOrder.isPending}
+                disabled={!state.fare || createOrder.isPending || isPaying}
                 className="gradient-brand text-primary-foreground min-w-[160px]"
               >
-                {createOrder.isPending ? (
+                {createOrder.isPending || isPaying ? (
                   <span className="flex items-center gap-2">
                     <div className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-r-transparent" />
                     Placing Order...
