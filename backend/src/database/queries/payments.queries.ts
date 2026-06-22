@@ -194,6 +194,30 @@ export default {
   `,
 
   /**
+   * Set the denormalized payment_status on an order row.
+   * $1 = order_id, $2 = payment_status
+   */
+  SET_ORDER_PAYMENT_STATUS: `
+    UPDATE orders.requests SET payment_status = $2 WHERE order_id = $1
+  `,
+
+  /**
+   * Read the inputs needed to broadcast an order to nearby couriers:
+   * order number, pickup coordinates, and total price.
+   * $1 = order_id
+   */
+  GET_ORDER_FOR_BROADCAST: `
+    SELECT
+      order_id                              AS "orderId",
+      order_number                          AS "orderNumber",
+      (pickup_location->>'latitude')::float  AS "pickupLat",
+      (pickup_location->>'longitude')::float AS "pickupLng",
+      (pricing->>'totalPrice')::numeric      AS "totalPrice"
+    FROM orders.requests
+    WHERE order_id = $1
+  `,
+
+  /**
    * Get refund by order ID
    */
   GET_REFUND_BY_ORDER: `

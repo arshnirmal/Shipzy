@@ -6,6 +6,7 @@ import logger from "../../config/logger.js";
 import { AppError, NotFoundError } from "../../utils/error.util.js";
 import registry from "./provider-registry.js";
 import paymentsRepository from "./payments.repository.js";
+import orderDispatchService from "../orders/order-dispatch.service.js";
 import type {
   PaymentOrderResponse,
   PaymentVerifyResponse,
@@ -45,6 +46,37 @@ class PaymentsService {
     if (courierId !== userId) {
       throw new AppError("Not authorized for this order", 403);
     }
+  }
+
+  /**
+   * Fetch the broadcast inputs for an order and notify nearby couriers that it
+   * is now ready for pickup. Fire-and-forget: failures are logged, never thrown,
+   * so a broadcast hiccup can't fail payment completion.
+   */
+  private async broadcastOrderToFleet(orderId: number): Promise<void> {
+    const row = await paymentsRepository.getOrderForBroadcast(orderId);
+    if (!row) {
+      logger.warn({
+        msg: "Cannot broadcast order: not found",
+        orderId,
+      });
+      return;
+    }
+    void orderDispatchService
+      .broadcastNewOrder({
+        orderId: row.orderId,
+        orderNumber: row.orderNumber,
+        pickupLat: row.pickupLat,
+        pickupLng: row.pickupLng,
+        totalPrice: Number(row.totalPrice),
+      })
+      .catch((err: unknown) => {
+        logger.error({
+          msg: "Failed to broadcast order to fleet after payment completion",
+          orderId,
+          error: (err as Error).message,
+        });
+      });
   }
 
   /**
@@ -145,6 +177,11 @@ class PaymentsService {
 
     const transactionId = txnRow.transactionId;
 
+    // Only the transition pending → completed should sync the order's payment
+    // status and broadcast. If the webhook already completed this txn, skip the
+    // duplicate side effects (avoids a double-broadcast on the webhook+verify race).
+    const wasPending = txnRow.status === "pending";
+
     // Mark as completed
     await paymentsRepository.markCompleted(transactionId);
 
@@ -154,6 +191,12 @@ class PaymentsService {
       razorpayPaymentId,
       verification.vpa || null,
     );
+
+    if (wasPending) {
+      // Prepaid order becomes visible to the fleet only now that it is paid.
+      await paymentsRepository.setOrderPaymentStatus(orderId, "completed");
+      await this.broadcastOrderToFleet(orderId);
+    }
 
     logger.info({
       msg: "Payment verified and completed",
@@ -340,8 +383,28 @@ class PaymentsService {
       return { statusCode: 200, status: "duplicate" };
     }
 
-    await paymentsRepository.applyWebhookEvent(event);
+    const result = await paymentsRepository.applyWebhookEvent(event);
     await paymentsRepository.markWebhookProcessed(event.eventId);
+
+    // Sync the order's denormalized payment_status and, for newly-paid prepaid
+    // orders, broadcast to the fleet. FCM/broadcast logic lives here in the
+    // service, never inside the repository transaction.
+    switch (result.kind) {
+      case "prepaid_completed":
+        await paymentsRepository.setOrderPaymentStatus(result.orderId, "completed");
+        await this.broadcastOrderToFleet(result.orderId);
+        break;
+      case "cod_completed":
+        // COD orders are already visible to the fleet — sync status, no broadcast.
+        await paymentsRepository.setOrderPaymentStatus(result.orderId, "completed");
+        break;
+      case "failed":
+        await paymentsRepository.setOrderPaymentStatus(result.orderId, "failed");
+        break;
+      case "none":
+      default:
+        break;
+    }
 
     return { statusCode: 200, status: "ok" };
   }
@@ -504,6 +567,7 @@ class PaymentsService {
     if (result.success) {
       await paymentsRepository.markRefundProcessed(refundId, result.refundId);
       await paymentsRepository.markTransactionRefunded(transactionId);
+      await paymentsRepository.setOrderPaymentStatus(txn.orderId, "refunded");
       status = "completed";
     } else {
       status = "pending";

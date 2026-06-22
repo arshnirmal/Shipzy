@@ -9,6 +9,23 @@ import webhookEventQueries from "../../database/queries/webhook-events.queries.j
 import { rawTransaction } from "../../database/transaction.js";
 import type { WebhookEvent } from "./capabilities.js";
 
+/**
+ * Outcome of applying a webhook event, used by the service to decide whether to
+ * sync the order's denormalized payment_status and broadcast to the fleet.
+ *
+ * - prepaid_completed: a still-pending prepaid txn was moved to completed →
+ *   service sets order payment_status='completed' and broadcasts once.
+ * - cod_completed: a COD (QR) txn was completed → service sets order
+ *   payment_status='completed' but does NOT broadcast (COD already visible).
+ * - failed: a txn was marked failed → service sets order payment_status='failed'.
+ * - none: nothing actionable happened (no-op / mismatch / non-payment event).
+ */
+export type WebhookApplyResult =
+  | { kind: "prepaid_completed"; orderId: number }
+  | { kind: "cod_completed"; orderId: number }
+  | { kind: "failed"; orderId: number }
+  | { kind: "none" };
+
 class PaymentsRepository {
   /**
    * Insert a new payment transaction in 'pending' status.
@@ -117,6 +134,37 @@ class PaymentsRepository {
     const r = await drizzlePool.query(paymentQueries.GET_ORDER_PAYMENT_MODE, [
       orderId,
     ]);
+    return r.rows[0];
+  }
+
+  /**
+   * Set the denormalized payment_status on an order row.
+   * Drives the dormant-until-paid driver-visibility gate.
+   */
+  async setOrderPaymentStatus(orderId: number, status: string): Promise<void> {
+    await drizzlePool.query(paymentQueries.SET_ORDER_PAYMENT_STATUS, [
+      orderId,
+      status,
+    ]);
+  }
+
+  /**
+   * Read the inputs needed to broadcast an order to nearby couriers.
+   */
+  async getOrderForBroadcast(orderId: number): Promise<
+    | {
+        orderId: number;
+        orderNumber: string;
+        pickupLat: number;
+        pickupLng: number;
+        totalPrice: string;
+      }
+    | undefined
+  > {
+    const r = await drizzlePool.query(
+      paymentQueries.GET_ORDER_FOR_BROADCAST,
+      [orderId],
+    );
     return r.rows[0];
   }
 
@@ -442,26 +490,35 @@ class PaymentsRepository {
    *   is treated as un-actionable and a warning is logged.
    * - failed: looks up the transaction and marks it failed (no amount guard).
    * - All other statuses are intentional no-ops here (handled elsewhere/later).
+   *
+   * Returns a result describing the side effect the SERVICE must apply to the
+   * order's denormalized payment_status (and whether to broadcast). Order
+   * payment_status writes and FCM broadcasting live in the service layer — the
+   * repository only touches transaction rows here.
+   *
+   * `completed` is true only when this call actually moved a still-pending
+   * transaction to completed, so the service can broadcast exactly once and
+   * avoid a double-broadcast on a webhook+verify race.
    */
-  async applyWebhookEvent(event: WebhookEvent): Promise<void> {
-    await rawTransaction(async (client) => {
+  async applyWebhookEvent(event: WebhookEvent): Promise<WebhookApplyResult> {
+    return await rawTransaction(async (client): Promise<WebhookApplyResult> => {
       switch (event.status) {
         case "captured": {
-          if (!event.providerOrderId) return;
+          if (!event.providerOrderId) return { kind: "none" };
           if (event.amount === undefined) {
             logger.warn({
               msg: "Webhook 'captured' event missing amount — skipping completion",
               eventId: event.eventId,
               providerOrderId: event.providerOrderId,
             });
-            return;
+            return { kind: "none" };
           }
           const txnRes = await client.query(
             paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
             [event.providerOrderId],
           );
           const txn = txnRes.rows[0];
-          if (!txn) return;
+          if (!txn) return { kind: "none" };
           const completed = await client.query(
             paymentQueries.COMPLETE_TXN_IF_PENDING,
             [
@@ -477,26 +534,27 @@ class PaymentsRepository {
               transactionId: txn.transactionId,
               webhookAmountPaise: event.amount,
             });
+            return { kind: "none" };
           }
-          break;
+          return { kind: "prepaid_completed", orderId: txn.orderId };
         }
 
         case "qr_credited": {
-          if (!event.qrCodeId) return;
+          if (!event.qrCodeId) return { kind: "none" };
           if (event.amount === undefined) {
             logger.warn({
               msg: "Webhook 'qr_credited' event missing amount — skipping completion",
               eventId: event.eventId,
               qrCodeId: event.qrCodeId,
             });
-            return;
+            return { kind: "none" };
           }
           const txnRes = await client.query(
             paymentQueries.GET_TRANSACTION_BY_QR_CODE,
             [event.qrCodeId],
           );
           const txn = txnRes.rows[0];
-          if (!txn) return;
+          if (!txn) return { kind: "none" };
           const completed = await client.query(
             paymentQueries.COMPLETE_TXN_IF_PENDING,
             [
@@ -512,37 +570,38 @@ class PaymentsRepository {
               transactionId: txn.transactionId,
               webhookAmountPaise: event.amount,
             });
+            return { kind: "none" };
           }
-          break;
+          return { kind: "cod_completed", orderId: txn.orderId };
         }
 
         case "failed": {
-          if (!event.providerOrderId) return;
+          if (!event.providerOrderId) return { kind: "none" };
           const txnRes = await client.query(
             paymentQueries.GET_TRANSACTION_BY_RAZORPAY_ORDER,
             [event.providerOrderId],
           );
           const txn = txnRes.rows[0];
-          if (!txn) return;
+          if (!txn) return { kind: "none" };
           await client.query(paymentQueries.MARK_PAYMENT_FAILED, [
             txn.transactionId,
             "Payment failed via webhook",
           ]);
-          break;
+          return { kind: "failed", orderId: txn.orderId };
         }
 
         // Intentional no-op
         case "refunded":
-          break;
+          return { kind: "none" };
 
         case "payout_processed": {
-          if (!event.providerPayoutId) return;
+          if (!event.providerPayoutId) return { kind: "none" };
           const payoutRes = await client.query(
             paymentQueries.GET_PAYOUT_BY_EXTERNAL_ID,
             [event.providerPayoutId],
           );
           const payoutId: number | undefined = payoutRes.rows[0]?.payoutId;
-          if (!payoutId) return;
+          if (!payoutId) return { kind: "none" };
           await client.query(paymentQueries.COMPLETE_PAYOUT, [payoutId]);
           await client.query(paymentQueries.SETTLE_PROCESSING_EARNINGS, [payoutId]);
           logger.info({
@@ -550,17 +609,17 @@ class PaymentsRepository {
             providerPayoutId: event.providerPayoutId,
             payoutId,
           });
-          break;
+          return { kind: "none" };
         }
 
         case "payout_failed": {
-          if (!event.providerPayoutId) return;
+          if (!event.providerPayoutId) return { kind: "none" };
           const payoutRes = await client.query(
             paymentQueries.GET_PAYOUT_BY_EXTERNAL_ID,
             [event.providerPayoutId],
           );
           const payoutId: number | undefined = payoutRes.rows[0]?.payoutId;
-          if (!payoutId) return;
+          if (!payoutId) return { kind: "none" };
           await client.query(paymentQueries.FAIL_PAYOUT, [
             payoutId,
             "Payout failed via webhook",
@@ -571,12 +630,12 @@ class PaymentsRepository {
             providerPayoutId: event.providerPayoutId,
             payoutId,
           });
-          break;
+          return { kind: "none" };
         }
 
         case "unknown":
         default:
-          break;
+          return { kind: "none" };
       }
     });
   }

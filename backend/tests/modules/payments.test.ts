@@ -17,6 +17,7 @@ import {
   describe,
   expect,
   it,
+  jest,
 } from "@jest/globals";
 import type { FastifyInstance } from "fastify";
 
@@ -43,6 +44,8 @@ import type {
 import { AppError } from "../../src/utils/error.util.js";
 import { drizzlePool } from "../../src/database/drizzle.js";
 import paymentsService from "../../src/modules/payments/payments.service.js";
+import ordersRepository from "../../src/modules/orders/orders.repository.js";
+import orderDispatchService from "../../src/modules/orders/order-dispatch.service.js";
 
 // ---------------------------------------------------------------------------
 // Controllable fake provider state
@@ -234,6 +237,38 @@ async function countPendingEarnings(driverId: number): Promise<number> {
     [driverId],
   );
   return parseInt(r.rows[0]?.cnt ?? "0", 10);
+}
+
+/** Read the denormalized payment_status off an order row. */
+async function getOrderPaymentStatus(orderId: number): Promise<string> {
+  const pool = getTestPool();
+  const r = await pool.query<{ payment_status: string }>(
+    `SELECT payment_status FROM orders.requests WHERE order_id = $1`,
+    [orderId],
+  );
+  return r.rows[0]?.payment_status ?? "";
+}
+
+/** Directly set the denormalized payment_status on an order row. */
+async function setOrderPaymentStatus(
+  orderId: number,
+  status: string,
+): Promise<void> {
+  const pool = getTestPool();
+  await pool.query(
+    `UPDATE orders.requests SET payment_status = $2 WHERE order_id = $1`,
+    [orderId, status],
+  );
+}
+
+/** Whether an order id appears in the courier's available-orders list. */
+async function isOrderAvailableToCourier(
+  orderId: number,
+  lat = 12.9716,
+  lng = 77.5946,
+): Promise<boolean> {
+  const rows = await ordersRepository.findAvailableOrders(lat, lng, 25, 100);
+  return rows.some((row: any) => Number(row.orderId) === Number(orderId));
 }
 
 // ---------------------------------------------------------------------------
@@ -554,6 +589,145 @@ describe("Payments Module", () => {
       // Verify earnings are no longer pending (they're in 'processing' state after payout initiation)
       const pendingAfter = await countPendingEarnings(driverId);
       expect(pendingAfter).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. Availability gate (dormant-until-paid)
+  // -------------------------------------------------------------------------
+  describe("7. Availability gate (dormant-until-paid)", () => {
+    it("hides an unpaid prepaid order from couriers and reveals it once paid; COD is always visible", async () => {
+      const client = await createClient(app);
+
+      // Prepaid order starts dormant (payment_status='pending') → not visible.
+      const { order: prepaidOrder } = await createOrder(app, client.accessToken);
+      const prepaidId: number = prepaidOrder.identifiers.orderId;
+      expect(await getOrderPaymentStatus(prepaidId)).toBe("pending");
+      expect(await isOrderAvailableToCourier(prepaidId)).toBe(false);
+
+      // COD order is visible immediately, regardless of payment_status.
+      const { order: codOrder } = await createOrder(app, client.accessToken, {
+        paymentMode: "collect_on_delivery",
+      });
+      const codId: number = codOrder.identifiers.orderId;
+      expect(await isOrderAvailableToCourier(codId)).toBe(true);
+
+      // Mark the prepaid order paid → it becomes visible.
+      await setOrderPaymentStatus(prepaidId, "completed");
+      expect(await isOrderAvailableToCourier(prepaidId)).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 8. On-payment broadcast
+  // -------------------------------------------------------------------------
+  describe("8. On-payment broadcast", () => {
+    it("broadcasts a prepaid order on 'captured' webhook and syncs payment_status", async () => {
+      const client = await createClient(app);
+      const { order } = await createOrder(app, client.accessToken);
+      const orderId: number = order.identifiers.orderId;
+
+      // Seed a pending prepaid transaction for 500 rupees.
+      await seedPendingTransaction({
+        orderId,
+        razorpayOrderId: "order_broadcast_prepaid_1",
+        amountRupees: 500,
+      });
+
+      const broadcastSpy = jest
+        .spyOn(orderDispatchService, "broadcastNewOrder")
+        .mockResolvedValue(undefined);
+
+      try {
+        nextWebhookEvent = {
+          handled: true,
+          eventId: "evt_broadcast_prepaid_1",
+          eventType: "payment.captured",
+          status: "captured",
+          providerOrderId: "order_broadcast_prepaid_1",
+          providerPaymentId: "pay_broadcast_1",
+          amount: 50000,
+          vpa: "test@upi",
+          raw: {},
+        };
+
+        const res = await inject(app, {
+          method: "POST",
+          url: "/api/v1/payments/webhook/razorpay",
+          headers: {
+            "x-razorpay-signature": "ok",
+            "content-type": "application/json",
+          },
+          payload: JSON.stringify({ event: "payment.captured" }),
+        });
+        expect(res.statusCode).toBe(200);
+
+        // Order payment_status synced to completed.
+        expect(await getOrderPaymentStatus(orderId)).toBe("completed");
+
+        // Broadcast fired exactly once for this order.
+        expect(broadcastSpy).toHaveBeenCalledTimes(1);
+        expect(broadcastSpy.mock.calls[0]?.[0]).toMatchObject({ orderId });
+      } finally {
+        broadcastSpy.mockRestore();
+      }
+    });
+
+    it("does NOT broadcast a COD order on 'qr_credited' webhook but syncs payment_status", async () => {
+      const client = await createClient(app);
+      const { order } = await createOrder(app, client.accessToken, {
+        paymentMode: "collect_on_delivery",
+      });
+      const orderId: number = order.identifiers.orderId;
+
+      // Seed a pending COD (QR) transaction for 500 rupees.
+      const pool = getTestPool();
+      const r = await pool.query<{ transaction_id: number }>(
+        `INSERT INTO payments.transactions
+           (order_id, payment_method_id, status, amount, currency,
+            payment_gateway, qr_code_id, payment_mode, metadata, payment_initiated_at)
+         VALUES ($1, 1, 'pending', 500, 'INR', 'razorpay', $2, 'collect_on_delivery', '{}', NOW())
+         RETURNING transaction_id`,
+        [orderId, "qr_broadcast_cod_1"],
+      );
+      expect(r.rows[0]?.transaction_id).toBeDefined();
+
+      const broadcastSpy = jest
+        .spyOn(orderDispatchService, "broadcastNewOrder")
+        .mockResolvedValue(undefined);
+
+      try {
+        nextWebhookEvent = {
+          handled: true,
+          eventId: "evt_broadcast_cod_1",
+          eventType: "qr_code.credited",
+          status: "qr_credited",
+          qrCodeId: "qr_broadcast_cod_1",
+          providerPaymentId: "pay_cod_1",
+          amount: 50000,
+          vpa: "payer@upi",
+          raw: {},
+        };
+
+        const res = await inject(app, {
+          method: "POST",
+          url: "/api/v1/payments/webhook/razorpay",
+          headers: {
+            "x-razorpay-signature": "ok",
+            "content-type": "application/json",
+          },
+          payload: JSON.stringify({ event: "qr_code.credited" }),
+        });
+        expect(res.statusCode).toBe(200);
+
+        // Order payment_status synced to completed.
+        expect(await getOrderPaymentStatus(orderId)).toBe("completed");
+
+        // COD is already visible — no broadcast.
+        expect(broadcastSpy).not.toHaveBeenCalled();
+      } finally {
+        broadcastSpy.mockRestore();
+      }
     });
   });
 });

@@ -218,7 +218,11 @@ describe("Orders Module", () => {
       expect(empty.statusCode).toBe(200);
       expect(Array.isArray(empty.json().data)).toBe(true);
 
-      await createOrder(app, client.accessToken);
+      // COD orders are visible to the fleet immediately (dormant-until-paid gate
+      // only hides UNPAID prepaid orders).
+      await createOrder(app, client.accessToken, {
+        paymentMode: "collect_on_delivery",
+      });
 
       const withOrders = await inject(app, {
         method: "GET",

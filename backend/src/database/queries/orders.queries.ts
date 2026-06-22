@@ -156,6 +156,12 @@ export default {
       -- Freshness guard: only surface pending orders created within the last 30 minutes.
       -- Prevents drivers from seeing stale orders in the absence of a TTL worker (B6).
       AND o.created_at > NOW() - INTERVAL '30 minutes'
+      -- Dormant-until-paid gate: COD orders broadcast immediately; prepaid orders
+      -- stay invisible to the fleet until their payment_status is 'completed'.
+      AND (
+        o.payment_mode = 'collect_on_delivery'
+        OR o.payment_status = 'completed'
+      )
       AND NOT EXISTS (
           SELECT 1 FROM orders.courier_assignments ca
           WHERE ca.order_id = o.order_id

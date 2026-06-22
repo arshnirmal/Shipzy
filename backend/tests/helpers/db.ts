@@ -20,6 +20,9 @@ const STATIC_TABLES = new Set([
   "payments.payment_methods",
   "public._deployment_log",
   "drizzle.__drizzle_migrations",
+  // PostGIS reference data — must survive truncation so SRID 4326 lookups
+  // (e.g. available-orders distance gating) keep working between tests.
+  "public.spatial_ref_sys",
 ]);
 
 let testPool: Pool | null = null;
