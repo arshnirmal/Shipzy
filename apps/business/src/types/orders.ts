@@ -12,7 +12,13 @@ export type OrderStatus =
 
 export type PaymentMode = "prepaid" | "collect_on_delivery";
 
-export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "completed"
+  | "failed"
+  | "refunded"
+  | "cancelled"
+  | "expired";
 
 export type PaymentInfo = {
   paymentMode: PaymentMode;
@@ -68,6 +74,7 @@ export type BaseOrder = {
     packageTypeId?: number | null;
     paymentMethodId?: number | null;
     paymentMode?: PaymentMode;
+    paymentStatus?: PaymentStatus;
   };
   locations: {
     pickup: OrderLocation;

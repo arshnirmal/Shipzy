@@ -59,6 +59,16 @@ const STATUS_CONFIG: Record<PaymentStatus, { label: string; icon: typeof CheckCi
     icon: RotateCcw,
     className: "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/10",
   },
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircle,
+    className: "bg-muted text-muted-foreground border-border hover:bg-muted",
+  },
+  expired: {
+    label: "Expired",
+    icon: Clock,
+    className: "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/10",
+  },
 };
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
