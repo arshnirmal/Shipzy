@@ -100,6 +100,20 @@ class PaymentsService {
       throw new AppError("Order amount too small for online payment", 400);
     }
 
+    // Idempotency: if a reusable pending transaction already exists for this
+    // order (a pending txn with a provider order id), return it instead of
+    // creating a fresh provider order + transaction on every retry.
+    const existing = await paymentsRepository.getPaymentByOrder(orderId);
+    if (existing && existing.paymentStatus === "pending" && existing.razorpayOrderId) {
+      return {
+        providerOrderId: existing.razorpayOrderId,
+        amount,
+        currency: "INR",
+        publishableKey: config.razorpay.keyId,
+        orderId,
+      };
+    }
+
     const provider = registry.collection();
 
     const result = await provider.createPaymentOrder({

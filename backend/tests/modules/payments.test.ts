@@ -730,4 +730,63 @@ describe("Payments Module", () => {
       }
     });
   });
+
+  // -------------------------------------------------------------------------
+  // 9. create-order idempotency per order
+  // -------------------------------------------------------------------------
+  describe("9. create-order idempotency per order", () => {
+    it("reuses the existing pending transaction on retry (same providerOrderId, one pending txn)", async () => {
+      const client = await createClient(app);
+      const { order } = await createOrder(app, client.accessToken);
+      const orderId: number = order.identifiers.orderId;
+
+      // Make the fake provider return distinct, incrementing provider order ids
+      // so a second create call would otherwise produce a different id.
+      let seq = 0;
+      const createSpy = jest
+        .spyOn(fakeCollection, "createPaymentOrder")
+        .mockImplementation(async (p) => {
+          seq += 1;
+          return {
+            providerOrderId: `idem_order_${p.orderId}_${seq}`,
+            amount: p.amount,
+            currency: p.currency,
+          };
+        });
+
+      try {
+        const res1 = await inject(app, {
+          method: "POST",
+          url: "/api/v1/payments/create-order",
+          headers: authHeaders(client.accessToken),
+          payload: { orderId },
+        });
+        expect(res1.statusCode).toBe(201);
+        const providerOrderId1 = res1.json().data.providerOrderId;
+
+        const res2 = await inject(app, {
+          method: "POST",
+          url: "/api/v1/payments/create-order",
+          headers: authHeaders(client.accessToken),
+          payload: { orderId },
+        });
+        expect(res2.statusCode).toBe(201);
+        const providerOrderId2 = res2.json().data.providerOrderId;
+
+        // Both calls return the SAME provider order id.
+        expect(providerOrderId2).toBe(providerOrderId1);
+
+        // Exactly ONE pending transaction exists for the order.
+        const pool = getTestPool();
+        const countRes = await pool.query<{ cnt: string }>(
+          `SELECT COUNT(*) AS cnt FROM payments.transactions
+           WHERE order_id = $1 AND status = 'pending'`,
+          [orderId],
+        );
+        expect(parseInt(countRes.rows[0]?.cnt ?? "0", 10)).toBe(1);
+      } finally {
+        createSpy.mockRestore();
+      }
+    });
+  });
 });
