@@ -34,8 +34,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { OrderStatusBadge } from "./order-status-badge";
-import { PaymentModeBadge } from "./payment-status-badge";
-import type { OrderFilters, OrderListItem, Pagination } from "@/types/orders";
+import { PaymentModeBadge, PaymentStatusBadge } from "./payment-status-badge";
+import { usePayment } from "@/hooks/use-payment";
+import { useQueryClient } from "@tanstack/react-query";
+import type { OrderFilters, OrderListItem, Pagination, PaymentStatus } from "@/types/orders";
 
 const col = createColumnHelper<OrderListItem>();
 
@@ -97,10 +99,29 @@ export function OrdersTable({
   onBulkCancel,
 }: OrdersTableProps) {
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [payingId, setPayingId] = useState<number | null>(null);
+  const payment = usePayment();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setRowSelection({});
   }, [filters.page, filters.search, filters.status, data]);
+
+  // Inline prepaid payment from an unpaid row; refresh the list on success.
+  const handlePay = async (orderId: number) => {
+    setPayingId(orderId);
+    const result = await payment.payForOrder(orderId);
+    setPayingId(null);
+    if (result.status === "paid") {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    }
+  };
+
+  const unpaidPrepaid = (row: OrderListItem) =>
+    (row.order.fulfillment.paymentMode ?? "prepaid") === "prepaid" &&
+    ["pending", "failed", "expired"].includes(
+      row.order.fulfillment.paymentStatus ?? "pending",
+    );
 
   const columns = useMemo(
     () => [
@@ -200,6 +221,33 @@ export function OrdersTable({
           <PaymentModeBadge mode={getValue()} />
         ),
       }),
+      col.accessor(
+        (row) => (row.order.fulfillment.paymentStatus ?? "pending") as PaymentStatus,
+        {
+          id: "paymentStatus",
+          header: "Payment Status",
+          cell: ({ getValue, row }) => (
+            <div className="flex flex-col items-start gap-1.5">
+              <PaymentStatusBadge status={getValue()} />
+              {unpaidPrepaid(row.original) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  disabled={payingId === row.original.order.identifiers.orderId}
+                  onClick={() => handlePay(row.original.order.identifiers.orderId)}
+                >
+                  {payingId === row.original.order.identifiers.orderId
+                    ? "Processing..."
+                    : getValue() === "pending"
+                      ? "Pay"
+                      : "Retry"}
+                </Button>
+              )}
+            </div>
+          ),
+        },
+      ),
       col.accessor((row) => row.order.timeline.createdAt, {
         id: "createdAt",
         header: () => (
@@ -240,7 +288,8 @@ export function OrdersTable({
           ),
       }),
     ],
-    [filters.sortBy, filters.sortOrder, onFiltersChange],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePay/unpaidPrepaid are stable enough; payingId drives the inline-pay button state
+    [filters.sortBy, filters.sortOrder, onFiltersChange, payingId],
   );
 
   const table = useReactTable({

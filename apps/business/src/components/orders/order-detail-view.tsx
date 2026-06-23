@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Ban,
@@ -24,6 +25,7 @@ import { OrderTrackingView } from "./order-tracking-view";
 import { CancelOrderDialog } from "./cancel-order-dialog";
 import { DriverRatingCard } from "./driver-rating-card";
 import { PaymentModeBadge, PaymentStatusBadge } from "./payment-status-badge";
+import { usePayment } from "@/hooks/use-payment";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -93,6 +95,19 @@ export function OrderDetailView({ id }: { id: string }) {
   const query = useOrder(id);
   const { data, isLoading, isFetching, refetch } = query;
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const payment = usePayment();
+  const queryClient = useQueryClient();
+
+  // Collect prepaid payment for a still-unpaid order; refresh on success.
+  const handlePayNow = async (orderId: number) => {
+    setIsPaying(true);
+    const result = await payment.payForOrder(orderId);
+    setIsPaying(false);
+    if (result.status === "paid") {
+      queryClient.invalidateQueries({ queryKey: ["orders", "detail", id] });
+    }
+  };
 
   // Loading skeleton (first fetch only)
   if (isLoading) {
@@ -317,6 +332,27 @@ export function OrderDetailView({ id }: { id: string }) {
                             </span>
                           </div>
                         )}
+                        {order.paymentInfo.paymentMode === "prepaid" &&
+                          ["pending", "failed", "expired"].includes(
+                            order.paymentInfo.paymentStatus,
+                          ) && (
+                            <Button
+                              onClick={() => handlePayNow(order.identifiers.orderId)}
+                              disabled={isPaying}
+                              className="w-full gradient-brand text-primary-foreground"
+                            >
+                              {isPaying ? (
+                                <span className="flex items-center gap-2">
+                                  <div className="size-4 animate-spin rounded-full border-2 border-primary-foreground border-r-transparent" />
+                                  Processing...
+                                </span>
+                              ) : order.paymentInfo.paymentStatus === "pending" ? (
+                                "Pay now"
+                              ) : (
+                                "Retry payment"
+                              )}
+                            </Button>
+                          )}
                       </div>
                     </CardContent>
                   </Card>
