@@ -11,6 +11,7 @@ import '../../providers/home_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/cloudinary_service.dart';
+import '../../services/dio/api_exception.dart';
 import '../../utils/driver_upload_image_picker.dart';
 import '../../utils/snackbar_utils.dart';
 import '../../widgets/map_widget.dart';
@@ -697,7 +698,59 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
     noteController.dispose();
   }
 
+  /// Guides the driver to collect payment before any proof-of-delivery action
+  /// on an unpaid collect-on-delivery order, and opens the QR sheet directly.
+  void _promptCollectPaymentFirst() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Collect payment first'),
+        content: const Text(
+          'This is a collect-on-delivery order. Show the QR code to the '
+          'customer and collect payment before submitting proof of delivery.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              showPaymentQRBottomSheet(
+                context: context,
+                orderId: int.parse(widget.orderId),
+                onPaymentComplete: () {
+                  Navigator.pop(context);
+                  ref.invalidate(activeOrderProvider);
+                  SnackbarUtils.showSuccess(
+                    context,
+                    'Payment collected successfully',
+                  );
+                },
+              );
+            },
+            icon: const Icon(Icons.qr_code),
+            label: const Text('Show QR'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showProofOfDeliveryBottomSheet() async {
+    // Gate: a collect-on-delivery order must be paid before proof of delivery.
+    // The backend enforces this too (400); pre-checking avoids a raw error and
+    // sends the driver straight to the QR.
+    final paymentInfo = ref.read(activeOrderProvider).valueOrNull?.paymentInfo;
+    final needsCollectionFirst =
+        (paymentInfo?.isCollectOnDelivery ?? false) &&
+        !(paymentInfo?.isPaid ?? false);
+    if (needsCollectionFirst) {
+      _promptCollectPaymentFirst();
+      return;
+    }
+
     final recipientNameController = TextEditingController();
     final signatureUrlController = TextEditingController();
     final notesController = TextEditingController();
@@ -768,10 +821,21 @@ class _ActiveDeliveryScreenState extends ConsumerState<ActiveDeliveryScreen> {
               }
             } catch (e) {
               if (context.mounted) {
-                SnackbarUtils.showError(
-                  context,
-                  'Failed to submit proof of delivery: $e',
-                );
+                // Fallback for the backend payment gate (400): guide the driver
+                // to collect first instead of showing a raw error.
+                if (e is ApiException &&
+                    e.statusCode == 400 &&
+                    e.message.toLowerCase().contains(
+                      'payment must be collected',
+                    )) {
+                  Navigator.pop(context);
+                  _promptCollectPaymentFirst();
+                } else {
+                  SnackbarUtils.showError(
+                    context,
+                    'Failed to submit proof of delivery: $e',
+                  );
+                }
               }
             } finally {
               if (context.mounted) {
