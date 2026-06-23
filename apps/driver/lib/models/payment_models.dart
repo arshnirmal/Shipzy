@@ -15,6 +15,8 @@ abstract final class PaymentStatusValues {
   static const String completed = 'completed';
   static const String failed = 'failed';
   static const String refunded = 'refunded';
+  static const String cancelled = 'cancelled';
+  static const String expired = 'expired';
 }
 
 /// Mirrors API paymentInfo block from GET /orders/:id
@@ -96,6 +98,11 @@ class PaymentStatusResult with _$PaymentStatusResult {
 
   bool get isPaid => paymentStatus == PaymentStatusValues.completed;
   bool get isPending => paymentStatus == PaymentStatusValues.pending;
+  bool get isExpired => paymentStatus == PaymentStatusValues.expired;
+  bool get isFailed => paymentStatus == PaymentStatusValues.failed;
+
+  /// No further polling is useful once a terminal state is reached.
+  bool get isTerminal => isPaid || isExpired || isFailed;
   bool get isCollectOnDelivery =>
       paymentMode == PaymentModeValues.collectOnDelivery;
 }

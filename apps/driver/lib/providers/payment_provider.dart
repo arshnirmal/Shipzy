@@ -68,8 +68,9 @@ class PaymentPollingNotifier extends AutoDisposeFamilyAsyncNotifier<PaymentStatu
             await ref.read(apiServiceProvider).getPaymentStatus(orderId);
         state = AsyncData(result);
 
-        // Stop polling once payment is completed
-        if (result.isPaid) {
+        // Stop polling once payment reaches a terminal state
+        // (completed, expired, or failed).
+        if (result.isTerminal) {
           _timer?.cancel();
         }
       } catch (e) {

@@ -151,6 +151,37 @@ class PaymentQRBottomSheet extends ConsumerWidget {
                         ],
                       );
                     }
+                    if (statusData.isExpired) {
+                      return Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.timer_off,
+                                  color: Colors.orange[700]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'QR expired',
+                                style: TextStyle(
+                                  color: Colors.orange[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              // Regenerate the QR and restart status polling.
+                              ref.invalidate(collectionQRProvider(orderId));
+                              ref.invalidate(paymentPollingProvider(orderId));
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Regenerate QR'),
+                          ),
+                        ],
+                      );
+                    }
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
