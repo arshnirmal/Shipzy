@@ -10,7 +10,8 @@
       "Bash(flutter analyze *)",
       "mcp__lean-ctx__ctx_edit",
       "mcp__lean-ctx__ctx_outline",
-      "Skill(scaffold-flutter-screen)"
+      "Skill(scaffold-flutter-screen)",
+      "Skill(git-commit)"
     ]
   }
 }
